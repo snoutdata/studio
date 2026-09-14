@@ -4,146 +4,126 @@
 
 # SnoutData
 
-### An AI-driven SQL IDE
+### Where your agents meet your data
 
-A fast, native SQL workbench with a built-in AI assistant that understands your schema.
-Connect, explore, write, and run, with smart completion and an assistant that proposes
-SQL grounded in your actual tables.
+A full-stack cloud backend to build on. A desktop workbench to explore your data and work with
+coding agents.
+
+**Helping thousands of developers to build their projects.**
 
 [![Download](https://img.shields.io/github/v/release/snoutdata/app?style=for-the-badge&label=Download&color=1c1c1c)](https://github.com/snoutdata/app/releases/latest)
 &nbsp;
 [![Platform](https://img.shields.io/badge/Windows%20%7C%20macOS%20%7C%20Linux-1c1c1c?style=for-the-badge)](https://github.com/snoutdata/app/releases/latest)
+&nbsp;
+[![Docs](https://img.shields.io/badge/Docs-1c1c1c?style=for-the-badge)](https://docs.snoutdata.com)
 
 </div>
 
 ---
 
-## What it is
+This repository is the public release feed for **SnoutData Desktop**: the installers, the
+auto-update manifests the app reads, and the components it downloads on demand. Grab a build from
+[the latest release](https://github.com/snoutdata/app/releases/latest).
 
-SnoutData is a desktop SQL IDE for working with your databases: relational, document
-(**MongoDB**), and vector (**Pinecone**), all in one window. Explore them with the same
-schema-aware editor and query them with the same SQL you already know. It pairs that
-editor with an AI assistant that reads your database structure, so the help you get is
-specific to *your* data, not generic boilerplate. Manage your connections, browse the
-schema, write queries with real completion and hover docs, run them against a live grid,
-and ask the assistant when you get stuck.
+## Two products, one account
 
-## Familiar feel, built from scratch
+| | |
+| --- | --- |
+| **[SnoutData Cloud](https://snoutdata.com/cloud)** | Your app's backend: hosted Postgres with auth, file storage, realtime, a REST and GraphQL API and your own TypeScript functions, set up from a terminal with one command. |
+| **[SnoutData Desktop](https://snoutdata.com/desktop)** | A workbench for every database and cloud log you already have, with your own coding agent running inside it. |
 
-Open SnoutData and it'll feel like home: the editor, the command palette, the icons, the
-light and dark themes all take after the tools you already love, VSCode and Cursor. That's
-intentional. We're big fans of both, and we build on the same wonderful open-source
-foundation they do, the **Monaco Editor** that powers the VSCode text surface powers ours
-too.
+One plan covers both, and either works without the other.
 
-But SnoutData is **not a fork of VSCode**. It's an in-house build, and that was a
-deliberate choice we want to be open about:
+<p align="center">
+  <a href="https://raw.githubusercontent.com/snoutdata/app/main/assets/screenshots/orbit.png"><img src="https://raw.githubusercontent.com/snoutdata/app/main/assets/screenshots/orbit.png" alt="SnoutData Orbit drawing a 500-table Postgres database as a 3D world, with live queries moving through it" width="100%" /></a>
+</p>
+<p align="center"><b>Orbit: your database as a world, with the traffic on it</b><br/><sub>Every table a star, every foreign key a filament, and statements travelling the graph as they run.</sub></p>
 
-- **VSCode was best-in-class for its era, and eras move on.** It set the standard when it
-  arrived, and it earned every bit of its success. A general-purpose editor of that scale
-  also carries a decade of layers built for a much bigger job. Inheriting all of that would
-  mean inheriting its weight and its technical debt, and that debt only grows with time.
-- **We'd rather be small and stay focused.** SnoutData does one thing, databases, and we
-  want every part of it pointed at that. A lean app we own end to end loads faster, stays
-  simpler, and lets us make the database experience the best it can be instead of
-  re-skinning a platform built for everything.
-- **Owning the whole thing lets us go all in.** No upstream to track and no merge tax means
-  when we want the schema explorer, the AI assistant, or the editor to feel just right, we
-  simply build it.
+## SnoutData Desktop
 
-So you get the comfort and polish of the editors you already know, on a foundation we built
-deliberately for one purpose. The familiar parts are a gift from the open-source community
-we're proud to be part of; the focus is all ours.
+### Every database, one workbench
+- **Relational:** PostgreSQL, MySQL and Amazon Aurora, MariaDB, SQL Server, Oracle, IBM Db2,
+  SQLite, DuckDB, Snowflake, Amazon Redshift and SAP HANA.
+- **Document and vector:** MongoDB and Pinecone, queried with the SQL you already know (transcribed
+  to a native pipeline or vector query) or in their own language.
+- **Cloud logs:** Amazon CloudWatch Logs, Azure Monitor Logs and Google Cloud Logging, where each
+  log group is a table you query with SQL and read in a log reader.
+- A schema-aware editor with completion and hover, a results grid that pages through millions of
+  rows and edits cells inline, charts, live dashboards, schema diff, and index advice.
 
-## Features
+### Your coding agent, inside the app
+- **Claude Code, Codex and opencode** run in a dock in SnoutData, in your workspace, with your
+  connections handed over the moment they start. No `.env` file and no connection string in a repo.
+- The agent **never receives your credentials**: it is handed capabilities, while passwords and
+  keys stay in your operating system's keychain.
+- It **drives the app**: opens tabs, builds dashboards, and draws results into the window instead
+  of printing text. Anything that changes the app waits for your approval.
+- Prefer your agent where it already lives? The same access is available over MCP.
 
-### Schema-aware AI assistant
-- A chat assistant that **proposes SQL grounded in your live schema**: it ranks the
-  tables most relevant to your question, follows foreign-key relationships, and feeds
-  the model the columns that actually matter.
-- Beyond proposing SQL, the assistant can **act on the app itself**: open and manage
-  connections, design tables, change settings, edit the active editor, and read the logs.
-- Replies render as rich **markdown**, with a per-conversation **token tally** so you
-  always know the cost of a thread.
-- **Insert proposed SQL** straight into the current editor or a fresh tab, one click.
-- **Persistent chat history**: every conversation is saved and reopenable, with search
-  and pagination.
-- Stop a streaming reply mid-flight and keep the partial answer; start a new chat anytime.
+### An assistant that knows your schema
+- Ask in plain English and get SQL grounded in your real tables and foreign keys, dropped into the
+  editor. Fix a failed query with the error and your schema in context.
+- On Plus and Pro, bring your own OpenAI, OpenRouter or Anthropic key.
 
-### A real SQL editor
-- **Multi-tab editing** powered by the Monaco editor with **schema-aware completion and
-  hover** (tables, columns, and relationships, served by a dedicated language server).
-- **Open and save `.sql` files** with familiar shortcuts (Ctrl+N/O/S/W, Ctrl+Enter to run).
-- A **command palette** (Ctrl+Shift+P) for fast, keyboard-first navigation.
-- SQL formatting built in.
+### Data flows
+- Bring data in from **files and PDFs, web pages, other databases, Amazon S3 and S3-compatible
+  storage** (Cloudflare R2, MinIO, Backblaze B2, Wasabi, Ceph) and **CloudWatch log groups**, then
+  reshape it and land it in a table, a collection or a file.
+- Typed columns proposed with reasons, the exact statements shown before they run, schedules that
+  pick up new files and new events, and a ledger of every run.
 
-### Beyond SQL: documents and vectors
-- **MongoDB**: browse collections like tables and query them with the **same SQL you
-  already know** (translated to aggregation pipelines for you), or drop into a **native
-  pipeline editor** for full power. Edit documents right in the grid, create and drop
-  collections and indexes, and let the AI assistant propose pipelines grounded in your
-  collections.
-- **Pinecone**: connect a vector project and explore its indexes alongside everything
-  else, querying them with SQL like the rest of your data.
-- One window, many databases: **SQL is the common language** across all of them, so
-  moving between a relational table, a Mongo collection, and a Pinecone index feels the
-  same.
+### Orbit
+- Your database drawn as a 3D world you fly through, clustered by schema. Hover a filament for the
+  real constraint name; click a table to isolate its neighbourhood.
+- **Pulse** draws the traffic: what this app ran, or, when you switch it on, what the whole database
+  is running. No model is called on any frame.
 
-### Connections & schema explorer
-- Manage multiple connections across a growing range of databases: **relational (SQL),
-  document (MongoDB), and vector (Pinecone)**.
-- A tree explorer drills from **connections → databases → tables → columns**.
-- **Production connections are flagged**, with a destructive-statement guardrail that
-  warns before you run something dangerous against prod.
-- **SSH tunnel** support for reaching databases behind a bastion.
-- A **live schema index** keeps completion and the AI assistant current as your database
-  changes.
+### Move a database
+- Copy a whole Postgres database between your computer and SnoutData Cloud, in either direction,
+  into a database that already exists or one the move creates.
+- Both ends are checked before anything runs, a copy of a hosted project is saved before it is
+  replaced, and the report compares every table's row count on both sides.
 
-### Workspace & files
-- Keep your `.sql` scripts in a **workspace folder on disk**: browse, create, rename,
-  delete, and **search them by name and contents** from the activity bar. Saving an
-  untitled tab files it straight into the workspace.
-- **Import** `.sql` scripts from your computer or from an existing DBeaver workspace.
+## SnoutData Cloud
 
-### Results & history
-- Run queries against a clean, sortable **results grid**.
-- **Query history** and **saved queries** are kept across sessions, so nothing you ran
-  is ever lost.
+```bash
+npx snoutdata login
+npx snoutdata init --env        # a Postgres 17 database, and DATABASE_URL in .env
+npx snoutdata functions deploy hello
+```
 
-### Secure by design
-- Database passwords, SSH keys/passphrases, and API keys are encrypted with your OS
-  keychain (via Electron `safeStorage`) and never written to plain config files.
-- Editor completion and hover are **fully deterministic and local**: no model is ever
-  called on keystrokes, and nothing about your editing leaves the machine for those
-  features.
+- **Postgres 17 with pgvector**, reachable from anywhere over TLS, so any Postgres client works.
+- **In front of it:** auth, file storage, realtime, a REST and GraphQL API, and Snout Functions,
+  your own TypeScript. The client library your application is already written against works by
+  changing one URL.
+- **Built for agents:** every command takes `--json`, and `npx -y snoutdata mcp` serves the same
+  operations as MCP tools to Codex, Claude Code or opencode.
+- A free project sleeps when idle and wakes on the next connection. Auth, storage, realtime
+  broadcast and functions are on every plan; the REST and GraphQL API and table-change
+  subscriptions need a paid plan.
+- We host your data and your project's password, encrypted. You can reveal or rotate it, and every
+  change to a project is on your audit log. (Credentials that never leave your machine are the
+  desktop app's promise, not the cloud's.)
 
-### Polished desktop experience
-- Native **light and dark themes**.
-- Resizable, collapsible panes you can lay out the way you work.
-- **In-app notifications** keep you posted on updates, long-running tasks, and connection
-  status.
-- **Automatic updates**: SnoutData checks for new versions on launch, downloads in the
-  background, and installs on restart, with release notes shown in-app.
+SnoutData Cloud is in private testing: databases and functions are self-serve, and the rest is
+switched on per project on request. Start at [dashboard.snoutdata.com](https://dashboard.snoutdata.com)
+or read [the docs](https://docs.snoutdata.com/cloud/getting-started).
 
-## Download & install
+## Download and install
 
-Head to the [**latest release**](https://github.com/snoutdata/app/releases/latest) and
-grab the build for your platform.
-
-**Platforms:** Windows 10/11, macOS (Apple Silicon), and Linux (Ubuntu/Debian). Built on
-Electron.
+**Platforms:** Windows 10/11, macOS (Apple Silicon) and Linux (Ubuntu/Debian). The app keeps itself
+up to date.
 
 ### Windows
-Download **`SnoutData-Setup-<version>.exe`** (installer) or **`SnoutData-<version>.exe`**
-(portable) and run it. SmartScreen may warn on the unsigned installer, choose **More info →
-Run anyway**.
+Download **`SnoutData-Setup-<version>.exe`** and run it. The installer is signed, and SnoutData is
+also on the Microsoft Store.
 
 ### macOS (Apple Silicon)
-Download **`SnoutData-<version>-arm64.dmg`**, open it, and drag **SnoutData** into your
-Applications folder.
+Download **`SnoutData-<version>-arm64.dmg`**, open it, and drag **SnoutData** into Applications.
+Builds are signed and notarized.
 
 ### Linux (Ubuntu / Debian)
-Download and install the `.deb`, or add the signed apt repo so future releases land with
+Download and install the `.deb`, or add the signed apt repository so new releases arrive with
 `apt upgrade`:
 
 ```bash
@@ -154,8 +134,6 @@ echo "deb [signed-by=/usr/share/keyrings/snoutdata-archive-keyring.gpg] https://
 sudo apt update && sudo apt install snoutdata
 ```
 
-Once installed, SnoutData keeps itself up to date automatically.
-
 ## Screenshots
 
 <sub>Click any screenshot to view it full size.</sub>
@@ -163,37 +141,35 @@ Once installed, SnoutData keeps itself up to date automatically.
 <table>
   <tr>
     <td width="50%" valign="top">
-      <a href="https://raw.githubusercontent.com/snoutdata/app/main/assets/screenshots/agent-build-report.png"><img src="https://raw.githubusercontent.com/snoutdata/app/main/assets/screenshots/agent-build-report.png" alt="The AI assistant building a multi-table sales report grounded in the real schema" width="100%" /></a>
-      <p><b>Ask in plain English, get schema-grounded SQL</b><br/><sub>The assistant reads your live tables, columns, and foreign keys, writes runnable SQL, and explains it. One click drops it into the editor.</sub></p>
+      <a href="https://raw.githubusercontent.com/snoutdata/app/main/assets/screenshots/agent-console.png"><img src="https://raw.githubusercontent.com/snoutdata/app/main/assets/screenshots/agent-console.png" alt="Claude Code running inside SnoutData and building a live dashboard" width="100%" /></a>
+      <p><b>Your agent, in the app</b><br/><sub>Claude Code in the dock, asked for a dashboard, building it in the window.</sub></p>
     </td>
     <td width="50%" valign="top">
-      <a href="https://raw.githubusercontent.com/snoutdata/app/main/assets/screenshots/agent-query-fixing.png"><img src="https://raw.githubusercontent.com/snoutdata/app/main/assets/screenshots/agent-query-fixing.png" alt="The AI assistant diagnosing and correcting a failed query" width="100%" /></a>
-      <p><b>Paste a failing query, get the fix</b><br/><sub>Hand it the error and the SQL that produced it. It diagnoses the cause against your real schema and returns corrected SQL.</sub></p>
+      <a href="https://raw.githubusercontent.com/snoutdata/app/main/assets/screenshots/move-database.png"><img src="https://raw.githubusercontent.com/snoutdata/app/main/assets/screenshots/move-database.png" alt="Move a database: a local Postgres going into a new SnoutData Cloud project" width="100%" /></a>
+      <p><b>Move a database</b><br/><sub>A local Postgres into a new cloud project, checked on both ends before anything is written.</sub></p>
     </td>
   </tr>
   <tr>
     <td width="50%" valign="top">
-      <a href="https://raw.githubusercontent.com/snoutdata/app/main/assets/screenshots/table-telemetry.png"><img src="https://raw.githubusercontent.com/snoutdata/app/main/assets/screenshots/table-telemetry.png" alt="The per-table telemetry view showing storage, schema, and recent queries" width="100%" /></a>
-      <p><b>Know your tables at a glance</b><br/><sub>Per-table storage and index sizes, schema facts (keys, indexes, engine), and the queries that recently touched it.</sub></p>
+      <a href="https://raw.githubusercontent.com/snoutdata/app/main/assets/screenshots/agent-build-report.png"><img src="https://raw.githubusercontent.com/snoutdata/app/main/assets/screenshots/agent-build-report.png" alt="The AI assistant building a multi-table sales report grounded in the real schema" width="100%" /></a>
+      <p><b>Ask in plain English, get schema-grounded SQL</b><br/><sub>The assistant reads your live tables, columns and foreign keys, and writes SQL that runs.</sub></p>
     </td>
     <td width="50%" valign="top">
-      <a href="https://raw.githubusercontent.com/snoutdata/app/main/assets/screenshots/themes.png"><img src="https://raw.githubusercontent.com/snoutdata/app/main/assets/screenshots/themes.png" alt="SnoutData in its light theme" width="100%" /></a>
-      <p><b>Light and dark</b><br/><sub>A polished light theme and a deep dark theme, both tuned for long sessions staring at results.</sub></p>
+      <a href="https://raw.githubusercontent.com/snoutdata/app/main/assets/screenshots/table-telemetry.png"><img src="https://raw.githubusercontent.com/snoutdata/app/main/assets/screenshots/table-telemetry.png" alt="The per-table view showing storage, schema facts and recent queries" width="100%" /></a>
+      <p><b>Know your tables at a glance</b><br/><sub>Storage and index sizes, keys and indexes, and the queries that recently touched it.</sub></p>
     </td>
   </tr>
 </table>
 
-## Getting started
+## Links
 
-1. **Add a connection** from the sidebar (host, port, credentials; optional SSH tunnel).
-2. **Browse the schema** in the explorer to see your tables and columns.
-3. **Open a tab and write SQL**, with completion and hover guiding you.
-4. **Run** with Ctrl+Enter and read the results in the grid.
-5. **Open the AI panel** and ask a question, the assistant answers using your schema and
-   can drop the SQL right into your editor.
+- **Website:** [snoutdata.com](https://snoutdata.com), with plans and the [blog](https://snoutdata.com/blog)
+- **Docs:** [docs.snoutdata.com](https://docs.snoutdata.com)
+- **Cloud dashboard:** [dashboard.snoutdata.com](https://dashboard.snoutdata.com)
+- **CLI:** [`snoutdata` on npm](https://www.npmjs.com/package/snoutdata)
 
 ---
 
 <div align="center">
-<sub>SnoutData · An AI-driven SQL IDE · <a href="https://github.com/snoutdata/app/releases">Releases</a></sub>
+<sub>SnoutData · Where your agents meet your data · <a href="https://github.com/snoutdata/app/releases">Releases</a></sub>
 </div>
