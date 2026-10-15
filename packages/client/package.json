@@ -1,6 +1,6 @@
 {
 	"name": "@snoutdata/client",
-	"version": "0.4.0",
+	"version": "0.4.1",
 	"description": "The JavaScript client for SnoutData Cloud: the data API, auth, storage, realtime and Snout Functions of one project, from one URL and one key. No dependencies.",
 	"license": "Apache-2.0",
 	"author": "SnoutData",

@@ -6,4 +6,4 @@
 // Written by scripts/version.mjs from package.json, which npm runs on `npm version`.
 
 /** This client's version, as published to npm. */
-export const VERSION = '0.4.0';
+export const VERSION = '0.4.1';
