@@ -23,12 +23,13 @@
 #          three files are redistributable).
 #
 # Licences: the Windows bundle carries two LGPL-2.1 libraries from upstream, libiconv-2.dll (GNU
-# libiconv 1.15) and libintl-9.dll (GNU gettext 0.19.8), read off their version resources in the
-# 17.11.0 bundle. The open-source tree's NOTICE (at its root) names those exact versions, links their
-# source and carries the LGPL written offer, so a VERSION bump re-reads them and updates it:
+# libiconv 1.19) and libintl-9.dll (GNU gettext 0.19.8), read off their version resources in the
+# 18.6.0 bundle (17.11.0 carried libiconv 1.15). The open-source tree's NOTICE (at its root)
+# names those exact versions, links their source and carries the LGPL written offer, so a VERSION
+# bump re-reads them and updates it:
 #   python3 -c "import sys;t=open(sys.argv[1],'rb').read().decode('utf-16-le','ignore');i=t.find('ProductVersion');print(t[i:i+40])" bin/libiconv-2.dll
 #
-# Symlinks: the linux libpq is a link chain (libpq.so.5 -> libpq.so.5.17), and the loader wants the
+# Symlinks: the linux libpq is a link chain (libpq.so.5 -> libpq.so.5.18), and the loader wants the
 # SONAME, so this must run on Linux (a container is fine) and zip with -y, which keeps
 # the links: flattening or dereferencing them gives a directory with every byte present and nothing
 # loadable.
@@ -37,7 +38,7 @@
 #   VCRT_DIR=/path/with/vcruntime140.dll OUT=/somewhere bash deploy/build-pgtools-component.sh
 set -euo pipefail
 
-VERSION="17.11.0"          # keep in sync with the pgtools spec in componentStore.ts
+VERSION="18.6.0"          # keep in sync with the pgtools spec in componentStore.ts
 OUT="${OUT:-$(pwd)/release/components}"
 VCRT_DIR="${VCRT_DIR:-}"
 WORK="$(mktemp -d)"
@@ -148,7 +149,7 @@ for entry in "${TARGETS[@]}"; do
 
 	# Run the one bundle this host can run, on a system that has only what a user's would.
 	if [ "$KEY" = "linux-x64" ] && [ "$(uname -m)" = "x86_64" ]; then
-		# It prints "pg_dump (PostgreSQL) 17.11", without the patch-level zero.
+		# It prints "pg_dump (PostgreSQL) 18.6", without the patch-level zero.
 		if ! "$PKG/bin/pg_dump" --version | grep -q "PostgreSQL) ${VERSION%.0}"; then
 			echo "  FAILED: the linux-x64 bundle does not start here"; ldd "$PKG/bin/pg_dump" || true; exit 1
 		fi

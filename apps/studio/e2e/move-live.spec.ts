@@ -14,7 +14,7 @@ import { closeApp, launchApp, MOD, type AppHandle } from './helpers';
  * server, started from the review sheet, verified by row counts, reported on the screen. Opt-in,
  * like the package's own live test:
  *
- *   SNOUT_MOVE_TEST_TOOLS=<a Postgres 17 bin directory, for this spec's own psql>
+ *   SNOUT_MOVE_TEST_TOOLS=<a Postgres bin directory, for this spec's own psql>
  *   SNOUT_MOVE_TEST_PG=<host>:<port>:<user>:<password>
  *   SNOUT_MOVE_TEST_SOURCE=<a database on that server with tables in it>
  *

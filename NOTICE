@@ -113,21 +113,24 @@ pg_restore, psql), used by Move        PostgreSQL Licence  Copyright (c) The Pos
   macOS and Windows)                                  https://www.openssl.org
   LZ4 (liblz4; Windows)                 BSD-2-Clause  Copyright (c) 2011-2020, Yann Collet
   Zstandard (libzstd; Windows)          BSD-3-Clause  Copyright (c) Meta Platforms, Inc. and affiliates
-  GNU libiconv 1.15 (libiconv-2.dll;    LGPL-2.1-or-later  Copyright (C) 1999-2017 Free Software
+  GNU libiconv 1.19 (libiconv-2.dll;    LGPL-2.1-or-later  Copyright (C) 1999-2026 Free Software
   Windows)                                            Foundation, Inc.
-                                                      Source: https://ftp.gnu.org/gnu/libiconv/libiconv-1.15.tar.gz
+                                                      Source: https://ftp.gnu.org/gnu/libiconv/libiconv-1.19.tar.gz
   GNU gettext 0.19.8 runtime            LGPL-2.1-or-later  Copyright (C) 1995-2010 Free Software
   (libintl-9.dll; Windows)                            Foundation, Inc.
                                                       Source: https://ftp.gnu.org/gnu/gettext/gettext-0.19.8.tar.gz
-  The two LGPL libraries are unmodified binaries, exactly as the PostgreSQL 17.11.0 Windows build
-  above ships them (their version resources read libiconv 1.15 and gettext 0.19.8), dynamically
+  The two LGPL libraries are unmodified binaries, exactly as the PostgreSQL 18.6.0 Windows build
+  above ships them (their version resources read libiconv 1.19 and gettext 0.19.8), dynamically
   loaded by the tools from the bundle's bin folder: you may replace either with your own build of a
   compatible version, and modify and reverse engineer the bundle for debugging such changes. The
   corresponding source for those exact versions is at the two links above. Written offer (LGPL 2.1,
   section 6): for at least three years after we last distribute this bundle, SNOUTDATA INC. will
   give anyone who asks a complete machine-readable copy of that source, on a medium customarily used
   for software interchange or by download, for no more than the cost of providing it. Write to
-  legal@snoutdata.com and name the bundle (pgtools 17.11.0, win32-x64).
+  legal@snoutdata.com and name the bundle (pgtools 18.6.0, win32-x64). The earlier bundle,
+  pgtools 17.11.0 (win32-x64), which earlier releases download, carries libiconv 1.15 (source:
+  https://ftp.gnu.org/gnu/libiconv/libiconv-1.15.tar.gz) and the same gettext 0.19.8, on the
+  same terms and under the same offer.
   mingw-w64 winpthreads                 MIT and BSD-3-Clause  Copyright (c) 2011 mingw-w64 project
   (libwinpthread-1; Windows)                          https://www.mingw-w64.org
   Microsoft Visual C++ runtime          Microsoft Visual C++ Redistributable licence terms

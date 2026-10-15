@@ -18,7 +18,7 @@ import { runMove, type MoveRunHost } from './run.js';
 /*
  * A real move between two databases on a real Postgres, with the real tools. Opt-in:
  *
- *   SNOUT_MOVE_TEST_TOOLS=<a Postgres 17 bin directory>
+ *   SNOUT_MOVE_TEST_TOOLS=<a Postgres bin directory, at least as new as the server>
  *   SNOUT_MOVE_TEST_PG=<host>:<port>:<user>:<password>   (a user that may create databases)
  *
  * It creates `move_live_src` and `move_live_dst` and drops both at the end.

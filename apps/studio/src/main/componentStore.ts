@@ -145,21 +145,24 @@ const COMPONENTS: ComponentSpec[] = [
 	},
 	{
 		// The Postgres client tools a move runs: pg_dump, pg_restore and psql with the libraries
-		// they load, from theseus-rs/postgresql-binaries 17.11.0 (PostgreSQL Licence, verified
+		// they load, from theseus-rs/postgresql-binaries 18.6.0 (PostgreSQL Licence, verified
 		// against upstream's own hashes). NOT a driver: nothing connects through it, and it is
 		// installed from the move's "tools missing" card. Built by
 		// deploy/build-pgtools-component.sh on Linux (the linux libpq is a symlink chain), which
 		// also runs the linux-x64 bundle. The Windows bundle carries the VC++ runtime DLLs, which
-		// upstream omits and a clean Windows lacks.
+		// upstream omits and a clean Windows lacks. 18 because the tools must be at least as new as
+		// the newest server a move touches, and new Cloud projects run 18; pg_dump and pg_restore 18
+		// still move a 17 server's database both ways. The 17.11.0 zips stay on the feed: released
+		// builds up to 1.0.53 pin them.
 		id: 'pgtools',
 		displayName: 'Postgres tools',
-		version: '17.11.0',
+		version: '18.6.0',
 		bundles: {
-			'win32-x64': { url: RUNTIME_URL('pgtools-17.11.0-win32-x64.zip'), sha256: 'c4150badc3774e69193b72ec2c93d22c261fb38bce77011f74174fba2b6f1d81', bytes: 5_046_772 },
-			'linux-x64': { url: RUNTIME_URL('pgtools-17.11.0-linux-x64.zip'), sha256: 'f664a78d2358d2308239ccc440499fdd9e12266d01d482e0f6752af53d8a4ca9', bytes: 783_109 },
-			'linux-arm64': { url: RUNTIME_URL('pgtools-17.11.0-linux-arm64.zip'), sha256: 'bfd26152821e3bce36037a804eb04a1688175205b3a74b9422845f4e83c9fb65', bytes: 757_124 },
-			'darwin-arm64': { url: RUNTIME_URL('pgtools-17.11.0-darwin-arm64.zip'), sha256: '7c3e1379c8dc3fa59a86622e2d4d14060d5870216fba97100f74aff3287375b8', bytes: 3_330_326 },
-			'darwin-x64': { url: RUNTIME_URL('pgtools-17.11.0-darwin-x64.zip'), sha256: '2371ac9ae22303671b4bf1221cebd95ba480f4efe184d0ef600c459115a80b79', bytes: 3_120_098 },
+			'win32-x64': { url: RUNTIME_URL('pgtools-18.6.0-win32-x64.zip'), sha256: '9e3a38483ad847a1e713f5f644d7c0cf37c84fcff66ff9f42476c06d9739bafd', bytes: 5_046_437 },
+			'linux-x64': { url: RUNTIME_URL('pgtools-18.6.0-linux-x64.zip'), sha256: '9d752b090b9c307263bd09cc988f456b9bda74e82afeb4acea42c2c8102a5ba8', bytes: 827_319 },
+			'linux-arm64': { url: RUNTIME_URL('pgtools-18.6.0-linux-arm64.zip'), sha256: '3ed7e21d580081e1ecdc6f5980a84d907ca2ae0eaac8648ae8fc12bd6151532a', bytes: 809_482 },
+			'darwin-arm64': { url: RUNTIME_URL('pgtools-18.6.0-darwin-arm64.zip'), sha256: '16500d80ffc545223278ff038e7aaaf7a1c783da8d3afc5ad90622649c11ea7d', bytes: 3_370_550 },
+			'darwin-x64': { url: RUNTIME_URL('pgtools-18.6.0-darwin-x64.zip'), sha256: 'dab620a06a41680e9c3e8857e327a92caa99a59c470155de61f672003c8de57e', bytes: 3_156_697 },
 		},
 	},
 ];
