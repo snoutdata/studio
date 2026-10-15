@@ -1,0 +1,38 @@
+# Dependencies and build output, at any depth (apps/studio and packages/*)
+node_modules/
+out/
+dist/
+release/
+.vite/
+*.tsbuildinfo
+coverage/
+.nyc_output/
+
+# Test output (Playwright traces, videos, screenshots, reports)
+test-results/
+playwright-report/
+blob-report/
+e2e/.results/
+e2e/.artifacts/
+e2e/.auth-profile/
+
+# Logs and crash dumps
+*.log
+npm-debug.log*
+*.stackdump
+*.dmp
+*.mdmp
+hs_err_pid*.log
+
+# Local settings and secrets
+.env
+.env.*
+!.env.example
+*.local.env
+
+# Editors and operating systems
+.DS_Store
+Thumbs.db
+desktop.ini
+.idea/
+*.swp

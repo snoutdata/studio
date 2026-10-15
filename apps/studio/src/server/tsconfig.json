@@ -1,0 +1,14 @@
+{
+	"compilerOptions": {
+		"module": "ESNext",
+		"moduleResolution": "Bundler",
+		"target": "ES2022",
+		"lib": ["ES2022"],
+		"strict": true,
+		"esModuleInterop": true,
+		"skipLibCheck": true,
+		"noEmit": true
+	},
+	"// shared": "../shared/** is included so the server typechecks the contracts it imports; esbuild inlines them at build time.",
+	"include": ["src/**/*.ts", "../shared/**/*.ts"]
+}

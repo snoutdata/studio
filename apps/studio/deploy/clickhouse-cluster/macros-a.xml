@@ -1,0 +1,15 @@
+<!--
+	Copyright (c) 2026 SNOUTDATA INC. All rights reserved.
+	Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
+-->
+
+<!-- Per-server macros. ReplicatedMergeTree's Keeper path and replica name are written with
+     {shard}/{replica} by every real deployment and by the app's own DDL emitter, and without
+     these a CREATE fails with "No macro 'shard' in config". -->
+<clickhouse>
+	<macros>
+		<shard>01</shard>
+		<replica>ch-a</replica>
+		<cluster>default</cluster>
+	</macros>
+</clickhouse>

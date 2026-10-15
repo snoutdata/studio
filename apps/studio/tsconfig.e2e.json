@@ -1,0 +1,19 @@
+{
+	// The e2e specs were in NO tsconfig, so `npm run typecheck` had never looked at them: 400 tests
+	// against the real app, type-checked by nothing. That is not a theoretical gap: a spec reading a
+	// field under a name the shape no longer had cost a live run to find out.
+	//
+	// Separate from tsconfig.node.json because these files are the only ones that are BOTH Node (the
+	// spec body, spawning the app) and DOM (everything inside `page.evaluate`), which no other
+	// project here is.
+	"extends": "./tsconfig.node.json",
+	"compilerOptions": {
+		"composite": false,
+		"lib": ["ES2022", "DOM", "DOM.Iterable"],
+		"types": ["node", "vite/client"],
+		// A spec may import the renderer's modules by path with the extension, which is how it
+		// reaches them at all.
+		"allowImportingTsExtensions": true
+	},
+	"include": ["e2e/**/*.ts", "src/renderer/src/global.d.ts", "src/shared/**/*.ts", "../../packages/liby-stub/studio/name.ts"]
+}

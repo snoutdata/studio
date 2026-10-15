@@ -1,0 +1,12 @@
+Servers\Portable\Host<|||>1<|||>10.0.0.5
+Servers\Portable\User<|||>1<|||>admin
+Servers\Portable\Password<|||>1<|||>7668667568773
+Servers\Portable\Port<|||>1<|||>3306
+Servers\Portable\NetType<|||>3<|||>2
+Servers\Portable\SSHtunnelHost<|||>1<|||>jump.example
+Servers\Portable\SSHtunnelHostPort<|||>3<|||>2200
+Servers\Portable\SSHtunnelUser<|||>1<|||>tunnel
+Servers\Portable\SSHtunnelPrivateKey<|||>1<|||>C:\keys\jump.ppk
+Servers\Lite\Host<|||>1<|||>C:\data\app.db
+Servers\Lite\NetType<|||>3<|||>9
+LastSessions<|||>1<|||>Portable

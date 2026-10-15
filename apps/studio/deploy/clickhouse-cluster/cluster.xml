@@ -1,0 +1,52 @@
+<!--
+	Copyright (c) 2026 SNOUTDATA INC. All rights reserved.
+	Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
+-->
+
+<!--
+	The `default` cluster: one shard, two replicas, for the multi-node work. Dropped into both
+	servers' config.d.
+
+	`replace="replace"` matters: the shipped config already defines a `default` cluster with one
+	local replica, and without it ClickHouse MERGES the two and the cluster comes out with three
+	replicas, one of which is `localhost`.
+
+	The hosts are container names, which is the whole reason the pair needs a user-defined docker
+	network: the default bridge has no name resolution, so `zookeeper` and `remote_servers` would
+	point at nothing.
+-->
+<clickhouse>
+	<remote_servers>
+		<default replace="replace">
+			<shard>
+				<internal_replication>true</internal_replication>
+				<replica>
+					<host>ch-a</host>
+					<port>9000</port>
+					<user>default</user>
+					<password>pw</password>
+				</replica>
+				<replica>
+					<host>ch-b</host>
+					<port>9000</port>
+					<user>default</user>
+					<password>pw</password>
+				</replica>
+			</shard>
+		</default>
+	</remote_servers>
+
+	<!-- Keeper runs inside ch-a. One node is not highly available and is not meant to be: this is
+	     a test fixture, and what it has to provide is a real coordination layer so
+	     ReplicatedMergeTree, ON CLUSTER and system.zookeeper behave like the real thing. -->
+	<zookeeper>
+		<node>
+			<host>ch-a</host>
+			<port>9181</port>
+		</node>
+	</zookeeper>
+
+	<distributed_ddl>
+		<path>/clickhouse/task_queue/ddl</path>
+	</distributed_ddl>
+</clickhouse>

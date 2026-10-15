@@ -1,0 +1,143 @@
+SnoutData Studio
+Copyright 2026 SNOUTDATA INC.
+
+This product is licensed under the Apache License, Version 2.0 (see LICENSE).
+
+"SnoutData", "SnoutData Studio" and "Liby" are trademarks of SNOUTDATA INC. The Apache License
+grants no rights to them (see TRADEMARKS.md). Liby is not part of this product (see LIBY-LICENSE.md).
+
+
+Third-party software
+====================
+
+SnoutData Studio is built on the following open source software. Each component is used under its
+own licence, a copy of which is in that component's package (node_modules/<name>/) after `npm ci`
+and in the packaged app's THIRD-PARTY-LICENSES file, which the build writes and which the app shows
+under About, Third-party licences. Each also has dependencies of its own, under the licences
+recorded in their packages; THIRD-PARTY-LICENSES lists those too, with their licence texts. This
+list covers the direct dependencies.
+
+Included in the app
+-------------------
+
+Electron                                MIT           Copyright (c) Electron contributors,
+                                                      Copyright (c) 2013-2020 GitHub Inc.
+  Electron includes Chromium and Node.js, under their own licences; the full list ships beside
+  the app binary as LICENSES.chromium.html.
+
+monaco-editor                           MIT           Copyright (c) 2016 - present Microsoft Corporation
+@vscode/codicons                        CC BY 4.0 (the icon font and images),
+                                        MIT (its code)
+                                                      Copyright (c) Microsoft Corporation
+  The Codicons font is used unmodified. Licence: https://creativecommons.org/licenses/by/4.0/
+  Source: https://github.com/microsoft/vscode-codicons
+lobe-icons (two drawings)               MIT           Copyright (c) 2023 LobeHub
+  The OpenAI and opencode marks in the renderer's BrandMark.tsx, unmodified; the
+  licence text is in that file. The marks themselves are their owners' trademarks.
+  Source: https://github.com/lobehub/lobe-icons
+
+react, react-dom                        MIT           Copyright (c) Facebook, Inc. and its affiliates
+recharts                                MIT           Copyright (c) 2015-present recharts
+three                                   MIT           Copyright (c) 2010-2026 three.js authors
+@xterm/xterm, @xterm/addon-fit,
+@xterm/addon-search                     MIT           Copyright (c) 2017-2019, The xterm.js authors
+node-pty                                MIT           Copyright (c) 2012-2015, Christopher Jeffrey,
+                                                      Copyright (c) Microsoft Corporation
+vscode-jsonrpc, vscode-languageserver,
+vscode-languageserver-protocol,
+vscode-languageserver-textdocument      MIT           Copyright (c) Microsoft Corporation
+node-sql-parser                         Apache-2.0    https://github.com/taozhi8833998/node-sql-parser
+sql-formatter                           MIT           Copyright (c) 2016-2020 ZeroTurnaround LLC
+marked                                  MIT           Copyright (c) 2018+, MarkedJS
+dompurify                               Apache-2.0 or MPL-2.0 (used under Apache-2.0)
+                                                      Copyright (c) Cure53 and other contributors
+better-sqlite3                          MIT           Copyright (c) 2017 Joshua Wise
+mammoth                                 BSD-2-Clause  Copyright (c) 2013, Michael Williamson
+pdf-parse                               Apache-2.0    https://github.com/mehmet-kozan/pdf-parse
+pdfjs-dist                              Apache-2.0    Copyright 2024 Mozilla Foundation
+                                                      https://github.com/mozilla/pdf.js
+electron-updater                        MIT           Copyright (c) 2015 Loopline Systems
+electron-builder                        MIT           Copyright (c) 2015 Loopline Systems
+  The Linux package's install script (build/linux/after-install.sh, run by the .deb when it is
+  installed) is adapted from electron-builder's after-install.tpl and ships in the package; it
+  carries the MIT notice in its header.
+@sentry/electron                        MIT           Copyright (c) 2018 Functional Software, Inc. dba Sentry
+@snoutdata/client                       Apache-2.0    Copyright 2026 SNOUTDATA INC.
+  Built from its source in this repository (packages/client), with its own LICENSE and NOTICE.
+
+Database and cloud drivers
+--------------------------
+
+pg                                      MIT           Copyright (c) 2010 - 2021 Brian Carlson
+mysql2                                  MIT           Copyright (c) 2016 Andrey Sidorov and contributors
+mssql                                   MIT           Copyright (c) 2013-2018 Patrik Simek and contributors
+oracledb                                Apache-2.0 or UPL-1.0 (used under Apache-2.0)
+                                                      Copyright (c) 2015, 2025, Oracle and/or its affiliates
+mongodb                                 Apache-2.0    https://github.com/mongodb/node-mongodb-native
+ssh2                                    MIT           Copyright Brian White
+@aws-sdk/client-cloudwatch-logs,
+@aws-sdk/client-secrets-manager,
+@aws-sdk/credential-providers           Apache-2.0    Copyright 2018-2020 Amazon.com, Inc. or its affiliates
+                                                      https://github.com/aws/aws-sdk-js-v3
+@azure/identity                         MIT           Copyright (c) Microsoft Corporation
+google-auth-library                     Apache-2.0    https://github.com/googleapis/google-cloud-node-core
+
+Drivers and tools that are not in the installer. The app downloads each the first time it is
+needed, as a copy SnoutData packages and hosts on its release feed (the components-v1 release of
+https://github.com/snoutdata/studio), and checks it against a SHA-256 hash built into the app:
+
+snowflake-sdk                           Apache-2.0    https://github.com/snowflakedb/snowflake-connector-nodejs
+Node.js runtime (node.exe 22.22.1,      MIT           Copyright Node.js contributors
+Windows x64), which runs ibm_db
+  Node.js includes third-party components under their own licences, all listed in its LICENSE:
+  https://github.com/nodejs/node/blob/v22.22.1/LICENSE
+ibm_db                                  MIT           Copyright (c) 2010 IBM Corporation
+  IBM's Db2 client driver (clidriver), which ibm_db needs, is not in SnoutData's copy. The app
+  downloads it from IBM's own server (public.dhe.ibm.com, one pinned version, checked against a
+  SHA-256 hash built into the app); it is under IBM's own licence.
+@duckdb/node-api                        MIT           Copyright 2018-2025 Stichting DuckDB Foundation
+SAP HANA client (@sap/hana-client)      SAP Developer License (not open source). Not a dependency
+                                        of this repository, and SnoutData does not host it: the
+                                        first time you connect to a HANA database, the app downloads
+                                        SAP's own package from the npm registry (with its MIT
+                                        dependencies debug and ms), checks it against npm's
+                                        integrity hash for that version, built into the app, and
+                                        keeps only your platform's files; it is used under SAP's
+                                        terms.
+PostgreSQL client tools (pg_dump,
+pg_restore, psql), used by Move        PostgreSQL Licence  Copyright (c) The PostgreSQL Global
+                                                      Development Group
+  Built by https://github.com/theseus-rs/postgresql-binaries. Beside the tools, the bundle carries
+  the libraries they load (libpq is PostgreSQL's own):
+  OpenSSL 3 (libssl, libcrypto;         Apache-2.0    Copyright The OpenSSL Project Authors
+  macOS and Windows)                                  https://www.openssl.org
+  LZ4 (liblz4; Windows)                 BSD-2-Clause  Copyright (c) 2011-2020, Yann Collet
+  Zstandard (libzstd; Windows)          BSD-3-Clause  Copyright (c) Meta Platforms, Inc. and affiliates
+  GNU libiconv 1.15 (libiconv-2.dll;    LGPL-2.1-or-later  Copyright (C) 1999-2017 Free Software
+  Windows)                                            Foundation, Inc.
+                                                      Source: https://ftp.gnu.org/gnu/libiconv/libiconv-1.15.tar.gz
+  GNU gettext 0.19.8 runtime            LGPL-2.1-or-later  Copyright (C) 1995-2010 Free Software
+  (libintl-9.dll; Windows)                            Foundation, Inc.
+                                                      Source: https://ftp.gnu.org/gnu/gettext/gettext-0.19.8.tar.gz
+  The two LGPL libraries are unmodified binaries, exactly as the PostgreSQL 17.11.0 Windows build
+  above ships them (their version resources read libiconv 1.15 and gettext 0.19.8), dynamically
+  loaded by the tools from the bundle's bin folder: you may replace either with your own build of a
+  compatible version, and modify and reverse engineer the bundle for debugging such changes. The
+  corresponding source for those exact versions is at the two links above. Written offer (LGPL 2.1,
+  section 6): for at least three years after we last distribute this bundle, SNOUTDATA INC. will
+  give anyone who asks a complete machine-readable copy of that source, on a medium customarily used
+  for software interchange or by download, for no more than the cost of providing it. Write to
+  legal@snoutdata.com and name the bundle (pgtools 17.11.0, win32-x64).
+  mingw-w64 winpthreads                 MIT and BSD-3-Clause  Copyright (c) 2011 mingw-w64 project
+  (libwinpthread-1; Windows)                          https://www.mingw-w64.org
+  Microsoft Visual C++ runtime          Microsoft Visual C++ Redistributable licence terms
+  (vcruntime140, vcruntime140_1,                      Copyright (c) Microsoft Corporation
+  msvcp140; Windows)                                  Not open source; Microsoft's files, unmodified.
+
+Used only to build and test
+---------------------------
+
+TypeScript (Apache-2.0), esbuild (MIT), Vite (MIT), electron-vite (MIT), @vitejs/plugin-react (MIT),
+electron-builder (MIT), @electron/rebuild (MIT), @electron/fuses (MIT), Playwright (Apache-2.0,
+Copyright (c) Microsoft Corporation, with code derived from Puppeteer under Apache-2.0), png-to-ico
+(MIT), and type definitions from DefinitelyTyped (MIT).

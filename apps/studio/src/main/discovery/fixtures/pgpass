@@ -1,0 +1,7 @@
+# host:port:database:username:password
+localhost:5432:app:app_user:s3cr3t
+db.example.com:*:*:reader:with\:colon\\slash
+*:*:*:postgres:ignored
+/var/run/postgresql:5432:app:local:pw
+short:line
+

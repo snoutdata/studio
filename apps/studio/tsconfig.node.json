@@ -1,0 +1,34 @@
+{
+	"compilerOptions": {
+		"composite": true,
+		"module": "ESNext",
+		"moduleResolution": "Bundler",
+		"target": "ES2022",
+		"lib": ["ES2022"],
+		"types": ["node"],
+		"strict": true,
+		"esModuleInterop": true,
+		"skipLibCheck": true,
+		"noEmit": true,
+		"paths": {
+			"@snout/review-core": ["../../packages/review-core/dist/index.d.ts"],
+			"@snout/move": ["../../packages/move/dist/index.d.ts"],
+			"@snout/liby/name": ["../../packages/liby-stub/studio/name.ts"],
+			"@snout/studio-pro/main": ["../../packages/studio-pro-stub/main.ts"],
+			"@snout/studio/*": ["./src/*"],
+			"@snoutdata/client": ["../../packages/client/dist/index.d.ts"],
+			"@snout/move-runner": ["../../packages/move/dist/runner/index.d.ts"]
+		}
+	},
+	"include": [
+		"scripts/**/*.ts",
+		"src/main/**/*.ts",
+		"src/preload/**/*.ts",
+		"src/server/**/*.ts",
+		"src/shared/**/*.ts",
+		"electron.vite.config.ts",
+		"esbuild.server.mjs",
+		"../../packages/liby-stub/studio/name.ts",
+		"../../packages/studio-pro-stub/main.ts"
+	]
+}

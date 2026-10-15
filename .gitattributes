@@ -1,0 +1,7 @@
+# Shell scripts must stay LF: they run on Linux (the .deb postinst, CI) and a CRLF in the shebang
+# breaks them.
+*.sh text eol=lf
+# Batch files must be CRLF: cmd misreads `goto`/`call :label` in a file with bare LF endings, and
+# deploy/start.bat jumps to labels.
+*.bat text eol=crlf
+*.cmd text eol=crlf

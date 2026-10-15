@@ -1,0 +1,29 @@
+{
+	// main, the server child and the scripts as the OPEN-SOURCE tree compiles them: Data Flows' and
+	// Liby's halves are the stubs. Run by scripts/typecheck-public.mjs (`npm run typecheck:public`),
+	// which leaves out any private file sitting beside these.
+	"extends": "./tsconfig.node.json",
+	"compilerOptions": {
+		"composite": false,
+		"paths": {
+			"@snout/review-core": ["../../packages/review-core/dist/index.d.ts"],
+			"@snout/move": ["../../packages/move/dist/index.d.ts"],
+			"@snout/move-runner": ["../../packages/move/dist/runner/index.d.ts"],
+			"@snout/liby/name": ["../../packages/liby-stub/studio/name.ts"],
+			"@snout/studio-pro/main": ["../../packages/studio-pro-stub/main.ts"],
+			"@snout/studio/*": ["./src/*"],
+			"@snoutdata/client": ["../../packages/client/dist/index.d.ts"]
+		}
+	},
+	"include": [
+		"scripts/**/*.ts",
+		"src/main/**/*.ts",
+		"src/preload/**/*.ts",
+		"src/server/**/*.ts",
+		"src/shared/**/*.ts",
+		"electron.vite.config.ts",
+		"esbuild.server.mjs",
+		"../../packages/liby-stub/studio/name.ts",
+		"../../packages/studio-pro-stub/main.ts"
+	]
+}

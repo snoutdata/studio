@@ -1,0 +1,21 @@
+{
+	"name": "snout-sql-server",
+	"description": "SQL language server for SnoutData Studio (schema-aware completion, introspection, query execution).",
+	"version": "0.0.1",
+	"license": "Apache-2.0",
+	"main": "./out/server.js",
+	"dependencies": {
+		"mysql2": "^3.11.0",
+		"pg": "^8.21.0",
+		"ssh2": "^1.16.0",
+		"vscode-languageserver": "^9.0.1",
+		"vscode-languageserver-textdocument": "^1.0.12"
+	},
+	"devDependencies": {
+		"@types/node": "22.x",
+		"@types/pg": "^8.20.0",
+		"@types/ssh2": "^1.15.0",
+		"typescript": "^5.6.0"
+	},
+	"//": "mysql2, pg and ssh2 are esbuild externals (kept out of the bundle, resolved from this package's node_modules at runtime)."
+}

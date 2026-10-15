@@ -1,0 +1,17 @@
+{
+	"name": "@snout/liby-stub",
+	"version": "0.0.0-stub",
+	"private": true,
+	"description": "Stands in for Liby in a build of SnoutData Studio from the open-source tree. Same exports as the private @snout/liby, none of her: she renders nothing, says nothing and goes nowhere.",
+	"license": "Apache-2.0",
+	"type": "module",
+	"main": "./src/index.ts",
+	"types": "./src/index.ts",
+	"exports": {
+		".": "./src/index.ts",
+		"./studio": "./studio/index.ts"
+	},
+	"peerDependencies": {
+		"react": ">=18"
+	}
+}

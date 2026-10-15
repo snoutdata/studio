@@ -1,0 +1,52 @@
+<?xml version="1.0"?>
+<data grt_format="2.0">
+  <value _ptr_="0x600003a4c000" type="list" content-type="object" content-struct-name="db.mgmt.Connection">
+    <value type="object" struct-name="db.mgmt.Connection" id="7C4B1A2E-1111-4B4B-9C0D-000000000001" struct-checksum="0x96ba47d8">
+      <link type="object" struct-name="db.mgmt.Driver" key="driver">com.mysql.rdbms.mysql.driver.native</link>
+      <value type="string" key="hostIdentifier">Mysql@127.0.0.1:3306</value>
+      <value type="int" key="isDefault">1</value>
+      <value _ptr_="0x600003a4c0a0" type="dict" key="modules"/>
+      <value _ptr_="0x600003a4c0f0" type="dict" key="parameterValues">
+        <value type="string" key="SQL_MODE"></value>
+        <value type="string" key="hostName">127.0.0.1</value>
+        <value type="int" key="lowerCaseTableNames">2</value>
+        <value type="string" key="password"></value>
+        <value type="int" key="port">3306</value>
+        <value type="string" key="schema">shop</value>
+        <value type="string" key="serverVersion">8.0.36</value>
+        <value type="string" key="socket"></value>
+        <value type="string" key="sshHost"></value>
+        <value type="string" key="sshKeyFile"></value>
+        <value type="string" key="sshPassword"></value>
+        <value type="string" key="sshUserName"></value>
+        <value type="int" key="useSSL">1</value>
+        <value type="string" key="userName">root</value>
+      </value>
+      <value type="string" key="name">Local instance 3306</value>
+      <link type="object" struct-name="GrtObject" key="owner">0x600003a4c000</link>
+    </value>
+    <value type="object" struct-name="db.mgmt.Connection" id="7C4B1A2E-1111-4B4B-9C0D-000000000002" struct-checksum="0x96ba47d8">
+      <link type="object" struct-name="db.mgmt.Driver" key="driver">com.mysql.rdbms.mysql.driver.native_sshtun</link>
+      <value type="string" key="hostIdentifier">Mysql@db.internal:3307@bastion.example.com:2222</value>
+      <value _ptr_="0x600003a4c1e0" type="dict" key="parameterValues">
+        <value type="string" key="hostName">db.internal</value>
+        <value type="int" key="port">3307</value>
+        <value type="string" key="schema"></value>
+        <value type="string" key="sshHost">bastion.example.com:2222</value>
+        <value type="string" key="sshKeyFile">/Users/dev/.ssh/id_ed25519</value>
+        <value type="string" key="sshUserName">deploy</value>
+        <value type="int" key="useSSL">4</value>
+        <value type="string" key="userName">app_ro</value>
+      </value>
+      <value type="string" key="name">Prod &amp; replica (via bastion)</value>
+    </value>
+    <value type="object" struct-name="db.mgmt.Connection" id="7C4B1A2E-1111-4B4B-9C0D-000000000003" struct-checksum="0x96ba47d8">
+      <link type="object" struct-name="db.mgmt.Driver" key="driver">com.mysql.rdbms.mysql.driver.native_socket</link>
+      <value _ptr_="0x600003a4c2d0" type="dict" key="parameterValues">
+        <value type="string" key="socket">/tmp/mysql.sock</value>
+        <value type="string" key="userName">root</value>
+      </value>
+      <value type="string" key="name">Socket</value>
+    </value>
+  </value>
+</data>

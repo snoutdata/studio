@@ -1,0 +1,137 @@
+#---------------------------------------------------------------------------------------------
+#  Copyright (c) 2026 SNOUTDATA INC. All rights reserved.
+#  Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
+#---------------------------------------------------------------------------------------------
+
+# CI for the open source tree. It uses no secrets: what it builds is exactly what anyone gets from
+# a clone, so a green run is the proof that the README's build steps work.
+#
+# On every push and pull request: typecheck, unit tests and the end-to-end `app` suite, on Linux.
+# Packaging on all three platforms runs only when started by hand (Actions > CI > Run workflow).
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      package:
+        description: "Also package the app (unsigned) on Linux, macOS and Windows"
+        type: boolean
+        default: true
+      debug:
+        description: "Print Electron's own output during the end-to-end tests"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    working-directory: apps/studio
+
+jobs:
+  test:
+    name: Typecheck, unit and e2e (Linux)
+    runs-on: ubuntu-latest
+    # Install, build, unit and e2e take about ten minutes; a run past this is stuck, not slow.
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: apps/studio/package-lock.json
+
+      # Also installs packages/review-core, packages/move and packages/client (the app's postinstall),
+      # and rebuilds the native modules for Electron.
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Unit tests
+        run: npm test
+
+      # Ubuntu 24.04 blocks the unprivileged user namespaces Electron's sandbox needs.
+      - name: Allow Electron's sandbox
+        run: sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+
+      # Every launch records a video, and without Playwright's ffmpeg the window never reaches the
+      # test: each spec waits out its hook timeout instead of failing with a reason.
+      - name: Install Playwright's ffmpeg
+        run: npx playwright install ffmpeg
+
+      # Stops after three failures: when the app cannot launch, every spec fails the same way after
+      # a minute's wait, and the rest of the suite says nothing the first three did not.
+      - name: End-to-end tests (app)
+        env:
+          NODE_OPTIONS: --max-old-space-size=4096
+          DEBUG: ${{ inputs.debug && 'pw:browser' || '' }}
+        run: xvfb-run -a npm run e2e:app -- --max-failures=3
+
+      # The built output must hold nothing from the two closed packages. They are not in this tree,
+      # so this can only fail if a path to them was hard-coded somewhere; it is a tripwire.
+      - name: No closed package in the build
+        run: |
+          if grep -rlE 'packages/(studio-pro|liby)/' out/; then
+            echo "The build references a package that is not in this repository." >&2
+            exit 1
+          fi
+
+      - name: Upload test results
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-results
+          path: apps/studio/e2e/.results
+          include-hidden-files: true
+          retention-days: 7
+          if-no-files-found: ignore
+
+  package:
+    name: Package (${{ matrix.os }})
+    if: github.event_name == 'workflow_dispatch' && inputs.package
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-15, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    env:
+      # Unsigned: never look for a signing identity.
+      CSC_IDENTITY_AUTO_DISCOVERY: "false"
+      NODE_OPTIONS: --max-old-space-size=4096
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: apps/studio/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      # `npm run package:dir`, with signing switched off on macOS and Windows.
+      - name: Package (unpacked)
+        shell: bash
+        run: |
+          npm run rebuild:native
+          npm run build
+          # An open-source build must carry nothing of the closed packages.
+          node scripts/assert-build.mjs
+          npx electron-builder --dir -c.mac.identity=null -c.win.azureSignOptions=null
+          # The package carries the third-party licences, NOTICE and LICENSE the build wrote.
+          node scripts/assert-build.mjs --package

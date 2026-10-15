@@ -1,0 +1,33 @@
+
+HKEY_CURRENT_USER\Software\HeidiSQL\Servers
+
+HKEY_CURRENT_USER\Software\HeidiSQL\Servers\Local MySQL
+    Host    REG_SZ    127.0.0.1
+    User    REG_SZ    root
+    Password    REG_SZ    7668667568773
+    Port    REG_SZ    3306
+    NetType    REG_DWORD    0x0
+    Databases    REG_SZ    shop;crm
+    ServerVersionFull    REG_SZ    10.11.6-MariaDB-0+deb12u1
+
+HKEY_CURRENT_USER\Software\HeidiSQL\Servers\Work
+    Folder    REG_DWORD    0x1
+
+HKEY_CURRENT_USER\Software\HeidiSQL\Servers\Work\SQL Server box
+    Host    REG_SZ    sqlbox\REPORTS
+    User    REG_SZ    
+    Password    REG_SZ    
+    Port    REG_SZ    1433
+    NetType    REG_DWORD    0x4
+    WindowsAuth    REG_DWORD    0x1
+
+HKEY_CURRENT_USER\Software\HeidiSQL\Servers\Work\Pg
+    Host    REG_SZ    pg.work
+    User    REG_SZ    me
+    Port    REG_SZ    5432
+    NetType    REG_DWORD    0x8
+    WantSSL    REG_DWORD    0x1
+
+HKEY_CURRENT_USER\Software\HeidiSQL\Servers\Work\Fire
+    Host    REG_SZ    fb.work
+    NetType    REG_DWORD    0xd

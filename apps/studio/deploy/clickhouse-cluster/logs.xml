@@ -1,0 +1,25 @@
+<!--
+	Copyright (c) 2026 SNOUTDATA INC. All rights reserved.
+	Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
+-->
+
+<!--
+	Logging to a table, tuned for a test.
+
+	The official image already writes `system.text_log` (a container nobody configured had 2.5
+	million rows in it), so this does NOT switch the feature on: what it changes is the flush
+	interval, from seven seconds to one, so a spec that runs a failing query and then looks for its
+	log lines waits a second rather than most of a minute.
+
+	`system.text_log` is the only place a client can read what the server said WHILE running a
+	statement, under its query_id. The one line a failed query comes back with is the end of that
+	story, not the whole of it.
+-->
+<clickhouse>
+	<text_log>
+		<database>system</database>
+		<table>text_log</table>
+		<flush_interval_milliseconds>1000</flush_interval_milliseconds>
+		<level>debug</level>
+	</text_log>
+</clickhouse>

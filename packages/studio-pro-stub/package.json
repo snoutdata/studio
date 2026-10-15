@@ -1,0 +1,11 @@
+{
+	"name": "@snout/studio-pro-stub",
+	"version": "0.0.0-stub",
+	"private": true,
+	"description": "Stands in for Data Flows in a build of SnoutData Studio from the open-source tree. Same interface as the private studio-pro, nothing behind it.",
+	"license": "Apache-2.0",
+	"type": "module",
+	"exports": {
+		"./main": "./main.ts"
+	}
+}

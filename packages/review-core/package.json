@@ -1,0 +1,31 @@
+{
+	"name": "@snout/review-core",
+	"version": "0.1.0",
+	"private": true,
+	"description": "The database pull-request reviewer, as a pure library: a diff and (optionally) a destination schema in, findings and a markdown comment out. No I/O, no dependencies.",
+	"license": "Apache-2.0",
+	"author": "SnoutData <security@snoutdata.com>",
+	"type": "module",
+	"main": "./dist/index.js",
+	"types": "./dist/index.d.ts",
+	"exports": {
+		".": {
+			"types": "./dist/index.d.ts",
+			"default": "./dist/index.js"
+		},
+		"./src/*": "./src/*"
+	},
+	"files": [
+		"dist",
+		"src"
+	],
+	"scripts": {
+		"build": "tsc -p tsconfig.json",
+		"typecheck": "tsc -p tsconfig.json --noEmit",
+		"test": "tsc -p tsconfig.json && node --test \"dist/**/*.test.js\""
+	},
+	"devDependencies": {
+		"@types/node": "^22.10.0",
+		"typescript": "^5.7.0"
+	}
+}

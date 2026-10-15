@@ -1,0 +1,43 @@
+{
+	// Azure Data Studio user settings
+	"workbench.colorTheme": "Default Dark Azure Data Studio",
+	"datasource.connectionGroups": [
+		{ "name": "ROOT", "id": "C777F06B-202E-4480-B475-FA416154D458" },
+	],
+	"datasource.connections": [
+		{
+			"options": {
+				"server": "sql01.corp.example,14330",
+				"database": "Sales",
+				"authenticationType": "SqlLogin",
+				"user": "reporter",
+				"password": "",
+				"connectionName": "Sales // reporting",
+				"encrypt": "Mandatory",
+				"trustServerCertificate": true,
+				"applicationName": "azdata",
+			},
+			"groupId": "C777F06B-202E-4480-B475-FA416154D458",
+			"providerName": "MSSQL",
+			"savePassword": true,
+			"id": "a1b2c3d4-0001",
+		},
+		{
+			"options": {
+				"server": "DESKTOP-1\\SQLEXPRESS",
+				"authenticationType": "Integrated",
+				"user": "",
+				"connectionName": "",
+			},
+			"providerName": "MSSQL",
+			"id": "a1b2c3d4-0002"
+		},
+		/* a Postgres through the PG extension */
+		{
+			"options": { "host": "localhost", "port": 5433, "dbname": "analytics", "user": "postgres", "sslmode": "verify-full", "connectionName": "Analytics" },
+			"providerName": "PGSQL",
+			"id": "a1b2c3d4-0003"
+		},
+		{ "options": { "server": "kusto.example" }, "providerName": "KUSTO", "id": "a1b2c3d4-0004" }
+	]
+}

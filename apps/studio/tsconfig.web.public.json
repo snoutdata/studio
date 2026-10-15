@@ -1,0 +1,36 @@
+{
+	// The renderer as the OPEN-SOURCE tree compiles it: Liby is the stub (packages/liby-stub), and
+	// nothing of the private package is in the program. `npm run typecheck:public`; part of
+	// `npm run typecheck`, so a Studio import the stub does not provide fails here, not in a
+	// stranger's clone.
+	"extends": "./tsconfig.web.json",
+	"compilerOptions": {
+		"composite": false,
+		"paths": {
+			"@snout/review-core": ["../../packages/review-core/dist/index.d.ts"],
+			"@snout/move": ["../../packages/move/dist/index.d.ts"],
+			"@snout/liby/name": ["../../packages/liby-stub/studio/name.ts"],
+			"@snout/liby": ["../../packages/liby-stub/src/index.ts"],
+			"@snout/liby/studio": ["../../packages/liby-stub/studio/index.ts"],
+			"@snout/studio/*": ["./src/*"],
+			"@snout/studio-pro/renderer": ["../../packages/studio-pro-stub/renderer/index.tsx"],
+			"@snout/studio-pro/wizard": ["../../packages/studio-pro-stub/renderer/FlowWizardView.tsx"],
+			"@snout/studio-pro/vector-search": ["../../packages/studio-pro-stub/renderer/VectorSearchView.tsx"],
+			"@snout/studio-pro/settings": ["../../packages/studio-pro-stub/renderer/settings.tsx"],
+			"@snout/studio-pro/capabilities": ["../../packages/studio-pro-stub/renderer/capabilities.ts"],
+			"react": ["./node_modules/@types/react"],
+			"react/*": ["./node_modules/@types/react/*"],
+			"react-dom": ["./node_modules/@types/react-dom"],
+			"react-dom/*": ["./node_modules/@types/react-dom/*"],
+			"three": ["./node_modules/@types/three"],
+			"three/*": ["./node_modules/@types/three/*"]
+		}
+	},
+	"include": [
+		"src/renderer/**/*.ts",
+		"src/renderer/**/*.tsx",
+		"src/shared/**/*.ts",
+		"../../packages/liby-stub/**/*.ts",
+		"../../packages/liby-stub/**/*.tsx"
+	]
+}

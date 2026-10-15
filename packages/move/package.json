@@ -1,0 +1,35 @@
+{
+	"name": "@snout/move",
+	"version": "0.1.0",
+	"private": true,
+	"description": "Moving a database from one place to another, written once for the desktop app and the snoutdata CLI: the spec, the preflight rules and their fixes, and the tool arguments. The core has no I/O.",
+	"license": "Apache-2.0",
+	"author": "SnoutData <security@snoutdata.com>",
+	"type": "module",
+	"main": "./dist/index.js",
+	"types": "./dist/index.d.ts",
+	"exports": {
+		".": {
+			"types": "./dist/index.d.ts",
+			"default": "./dist/index.js"
+		},
+		"./runner": {
+			"types": "./dist/runner/index.d.ts",
+			"default": "./dist/runner/index.js"
+		},
+		"./src/*": "./src/*"
+	},
+	"files": [
+		"dist",
+		"src"
+	],
+	"scripts": {
+		"build": "tsc -p tsconfig.json",
+		"typecheck": "tsc -p tsconfig.json --noEmit",
+		"test": "tsc -p tsconfig.json && node --test \"dist/**/*.test.js\""
+	},
+	"devDependencies": {
+		"@types/node": "^22.10.0",
+		"typescript": "^5.7.0"
+	}
+}

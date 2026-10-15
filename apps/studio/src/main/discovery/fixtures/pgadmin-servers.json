@@ -1,0 +1,28 @@
+{
+    "Servers": {
+        "1": {
+            "Name": "Local Postgres",
+            "Group": "Servers",
+            "Host": "localhost",
+            "Port": 5432,
+            "MaintenanceDB": "postgres",
+            "Username": "postgres",
+            "ConnectionParameters": { "sslmode": "prefer", "connect_timeout": 10 }
+        },
+        "2": {
+            "Name": "RDS prod",
+            "Group": "AWS",
+            "Host": "prod.abc123.us-west-2.rds.amazonaws.com",
+            "Port": 5432,
+            "MaintenanceDB": "app",
+            "Username": "admin",
+            "SSLMode": "require",
+            "UseSSHTunnel": 1,
+            "TunnelHost": "bastion.example.com",
+            "TunnelPort": "22",
+            "TunnelUsername": "ec2-user",
+            "TunnelIdentityFile": "/home/me/.ssh/bastion.pem"
+        },
+        "3": { "Name": "Via service", "Group": "Servers", "Port": 5432, "Service": "reporting" }
+    }
+}

@@ -1,0 +1,54 @@
+#---------------------------------------------------------------------------------------------
+#  Copyright (c) 2026 SNOUTDATA INC. All rights reserved.
+#  Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
+#---------------------------------------------------------------------------------------------
+
+# The Contributor License Agreement check (CLA.md). A pull request from someone who has not signed
+# gets a comment with the sentence to post; posting it signs, once, for every later pull request.
+# Signatures are kept in this repository, on the `cla-signatures` branch, never on main (main is
+# published from SnoutData's private repository and rewritten by it).
+#
+# `pull_request_target` runs with a write token even for a fork's pull request, which is safe here
+# only because nothing from the pull request is checked out or run: the job reads its author and
+# comments. Keep it that way. The action is pinned to a commit, not a tag, for the same reason.
+
+name: CLA
+
+on:
+  issue_comment:
+    types: [created]
+  pull_request_target:
+    types: [opened, closed, synchronize]
+
+permissions:
+  actions: write
+  contents: write
+  pull-requests: write
+  statuses: write
+
+jobs:
+  cla:
+    if: >-
+      github.event_name == 'pull_request_target' ||
+      (github.event.issue.pull_request &&
+        (github.event.comment.body == 'recheck' ||
+         github.event.comment.body == 'I have read the CLA Document and I hereby sign the CLA'))
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: contributor-assistant/github-action@ca4a40a7d1004f18d9960b404b97e5f30a505a08 # v2.6.1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          path-to-signatures: signatures/cla.json
+          path-to-document: https://github.com/snoutdata/studio/blob/main/CLA.md
+          branch: cla-signatures
+          # The mirror's own account and the bots never sign.
+          allowlist: snout-dev,dependabot[bot],github-actions[bot]
+          custom-notsigned-prcomment: >-
+            Thank you for your pull request. Before we can take it, please read our
+            [Contributor License Agreement](https://github.com/snoutdata/studio/blob/main/CLA.md)
+            and sign it by posting the comment below. You sign once; it covers every later pull request
+            here. You keep the copyright in your work.
+          custom-allsigned-prcomment: Everyone on this pull request has signed the CLA. Thank you.
+          lock-pullrequest-aftermerge: false

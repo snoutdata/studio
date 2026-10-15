@@ -1,0 +1,239 @@
+#---------------------------------------------------------------------------------------------
+#  Copyright (c) 2026 SNOUTDATA INC. All rights reserved.
+#  Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
+#---------------------------------------------------------------------------------------------
+
+# electron-builder packaging config. The renderer/main/preload come from electron-vite
+# (out/), and the SQL language server from esbuild (out/server). electron-builder also
+# bundles the production dependencies (mysql2/pg/ssh2/@aws-sdk/vscode-jsonrpc, …).
+#
+# asar is ENABLED (was disabled until v0.0.26). With asar:false the NSIS installer copied
+# the entire unpacked node_modules tree (tens of thousands of tiny files) on every update,
+# making the install-on-restart take minutes (per-file + antivirus overhead). Packing the
+# app into a single archive makes the update install in seconds — the actual fix for
+# "seamless restart" updates (file COUNT, not byte size, is what makes Windows installs slow).
+#
+# The SQL server child (ELECTRON_RUN_AS_NODE) still `require()`s mysql2/pg/ssh2/mssql at
+# runtime: pure-JS modules resolve fine from inside the asar (Electron patches fs), and the
+# server script at app.asar/out/server/server.js spawns fine the same way. The ONLY things
+# that must sit on the real filesystem are native binaries (a `.node` can't be dlopen'd from
+# inside an asar): better-sqlite3's, node-pty's, oracledb's, and ssh2's optional `cpu-features`.
+# asarUnpack (below) handles that; the driver trees are unpacked too, defensively, in case any
+# does a path-based file read.
+# A build from the open-source tree is NOT the official app: its own id, name and package name
+# (package.json), so it installs beside the official one and keeps its own profile.
+appId: com.snoutdata.studio.oss
+productName: SnoutData Studio (source build)
+# Override the packaged app's description so the Windows exe FileDescription (the program's name
+# as Windows shows it) reads the product name rather than package.json's long sentence (which
+# itself contained "Electron"). package.json keeps its descriptive text; on Linux only the .deb
+# .desktop Comment is also affected (harmless).
+extraMetadata:
+  description: SnoutData Studio (source build)
+directories:
+  output: release
+  buildResources: build
+# afterPack hook, two jobs. (1) Trims Electron's locales/ to en-US.pak on Linux only (the app is
+# English-only), shaving ~46 MB of unused locale data so the .deb fits under GitHub's 100 MB host
+# limit. (2) Sets the Electron FUSES, before anything is signed: NODE_OPTIONS and --inspect are
+# refused and the app loads only from app.asar. RunAsNode stays on (the SQL server child and the
+# staged update need it) and asar integrity is not on yet. This is electron-builder 26's
+# `electronFuses` option done by hand, since this file is pinned to 25.1.8; build/afterPack.cjs says why.
+afterPack: build/afterPack.cjs
+asar: true
+# Skip electron-builder's own native-module rebuild against Electron's ABI. It would compile every
+# native module in the tree, and one of them cannot: `cpu-features` (an OPTIONAL transitive dep of
+# ssh2), whose `nan` does not build against Electron 42's V8 (the new External::New pointer-tag
+# signature; nan has no fix as of 2.27). ssh2 wraps `require('cpu-features')` in try/catch and
+# falls back to pure-JS crypto, so it is not needed. The native modules the app does load are
+# handled without this step: the prebuilt binaries of node-pty, oracledb and @napi-rs/canvas are
+# N-API (no per-ABI build), better-sqlite3 is rebuilt by scripts/rebuild-native.mjs (below), and
+# the database clients with native parts (Db2, HANA, DuckDB) are not in the installer: they arrive
+# as on-demand components. Leaving the rebuild on fails the whole build on a module we don't need.
+npmRebuild: false
+# better-sqlite3 (the monitors' sample store, among others) is the one native module we DO need
+# rebuilt against Electron's ABI, and this file is NOT where that happens. `npmRebuild: false`
+# returns from installOrRebuild() BEFORE electron-builder resolves `beforeBuild`, so a beforeBuild
+# hook here never runs — which is how v1.0.17 shipped a Node-ABI binary and died on launch.
+# The rebuild lives in `scripts/rebuild-native.mjs` (npm postinstall + every package/release
+# script), and it asserts the result.
+# Keep native binaries (and the DB driver trees that may read sibling files by path) on the
+# real filesystem — they live under app.asar.unpacked and require() resolves them transparently.
+asarUnpack:
+  - "**/*.node"
+  # node-pty (the agent console's terminal). It is N-API, so it needs no Electron rebuild, but on
+  # Windows it launches HELPER EXECUTABLES by path (build/Release/conpty/OpenConsole.exe +
+  # conpty.dll) which are not .node files and cannot be run from inside an asar.
+  - "node_modules/node-pty/**/*"
+  - "node_modules/mysql2/**/*"
+  - "node_modules/pg/**/*"
+  - "node_modules/ssh2/**/*"
+  - "node_modules/mssql/**/*"
+  - "node_modules/oracledb/**/*"
+  - "node_modules/cpu-features/**/*"
+# Auto-update feed. Releases live in a dedicated PUBLIC repo (snoutdata/studio):
+# electron-updater fetches latest.yml + the installer over plain HTTPS with no token in the
+# shipped app. `npm run release` builds
+# + publishes the installers and the latest.yml manifest the updater polls there.
+# Only the OFFICIAL build reads this feed: a build from the open-source tree never checks it or
+# installs from it (src/shared/officialBuild.ts), and is updated by building the source again.
+publish:
+  provider: github
+  owner: snoutdata
+  repo: studio
+  # WINDOWS UPDATE SIGNATURE CHECK. Written into the packaged
+  # resources/app-update.yml, where electron-updater's NsisUpdater reads it and refuses a
+  # downloaded installer whose Authenticode signature is not valid AND from this publisher
+  # (ERR_UPDATER_INVALID_SIGNATURE). The sha512 in latest.yml cannot do this on its own: it sits
+  # in the same GitHub release as the installer, so it vouches for nothing a release could not
+  # also replace. It is set HERE, on the publish
+  # entry, and NOT as win.publisherName: that one is passed to the TrustedSigning module, which
+  # no longer accepts it (see the win block). PublishManager prefers this value when present.
+  # The staged swap (src/main/updater.ts) checks the same names again before it unpacks, since a
+  # cached download is reused without the stock check; WINDOWS_PUBLISHER_NAMES in
+  # src/main/updateSignature.ts must list exactly these, and its test reads this file to say so.
+  # Read from the shipped SnoutData-Setup-1.0.49.exe, whose subject also names a locality and a
+  # province. Every key given must match, so those are left out to survive a re-validation.
+  # IF THE SIGNING SUBJECT EVER CHANGES (a new identity validation, a new cert profile under
+  # another name), add the new DN here in a release signed with the OLD one first: the version a
+  # user is running decides what the next download must be signed by, so a release signed by a
+  # subject its predecessor does not list is refused by every Windows install.
+  publisherName:
+    - "CN=SNOUTDATA, O=SNOUTDATA, C=CA"
+# No URL scheme: `snoutdata://` belongs to the official app. A build from source signs in through a
+# one-shot listener on 127.0.0.1 instead (src/main/authStore.ts).
+files:
+  - out/**/*
+  - package.json
+  # ibm_db (the IBM Db2 client) is not a dependency of this tree: it is downloaded on demand as a
+  # "component" the first time a user connects to Db2 (src/main/componentStore.ts), after its
+  # licence is accepted. Excluded anyway, so a copy installed by hand is never packed.
+  - "!node_modules/ibm_db/**/*"
+  # The `files` entries above are ADDITIVE to electron-builder's default `**/*`, so anything
+  # else sitting in the working tree is packed into app.asar too. That is invisible in CI (clean
+  # checkout) but not locally: `npm test` leaves ~117 MB of bundles in out/tests, and an e2e run
+  # leaves Playwright traces/videos + a Chromium auth profile in e2e/.results + e2e/.auth-profile.
+  # A local .deb built from a used working tree came out 149 MB vs CI's 99 MB — over GitHub's
+  # 100 MB asset limit, which is exactly what a locally built release publishes. None of it
+  # is needed at runtime (out/tests is for `node --test`; e2e/ is Playwright-only), so exclude it
+  # explicitly rather than relying on the checkout being clean.
+  - "!out/tests/**/*"
+  - "!e2e/**/*"
+  # The renderer is minified and emits HIDDEN sourcemaps (electron.vite.config.ts): nothing at
+  # runtime fetches them, they exist only to be uploaded to Sentry for symbolication. Shipping
+  # them would add ~26 MB to the installer that no user ever reads, and file COUNT + size is what
+  # makes an NSIS update slow.
+  - "!out/renderer/assets/*.map"
+  # No sourcemap is read at runtime anywhere: out/server/server.js.map alone is 21 MB.
+  - "!**/*.map"
+  - "!**/*.d.{ts,mts,cts}"
+  # main requires node-sql-parser's index.js only; the per-dialect build/ and the browser umd/
+  # are 69 MB of the package.
+  - "!node_modules/node-sql-parser/{build,umd}/**/*"
+  # main imports pdfjs-dist/legacy/build only; the modern build, the viewer and its types are
+  # not reached.
+  - "!node_modules/pdfjs-dist/{build,web,types}/**/*"
+  - "!node_modules/pdfjs-dist/legacy/web/**/*"
+  # Renderer-only dependencies: Vite has already bundled them into out/renderer, and no main,
+  # preload or server bundle requires them (checked against each bundle's require() list).
+  - "!node_modules/three/**/*"
+  - "!node_modules/@xterm/**/*"
+  - "!node_modules/@vscode/codicons/**/*"
+  - "!node_modules/dompurify/**/*"
+  - "!node_modules/marked/**/*"
+  - "!node_modules/sql-formatter/**/*"
+  - "!node_modules/vscode-languageserver/**/*"
+  - "!node_modules/vscode-languageserver-protocol/**/*"
+  - "!node_modules/vscode-languageserver-textdocument/**/*"
+# Icons: Windows takes build/icon.ico and macOS build/icon.png, but Linux needs the SIZE SET in
+# build/icons/ (see the linux block) — a lone 1024x1024 png installs to a hicolor directory that
+# isn't in index.theme, so the launcher shows a generic icon. Regenerate BOTH the .ico and the
+# Linux set from the master build/icon.png with `npm run icons`.
+win:
+  icon: build/icon.ico
+  target:
+    - nsis
+  # Code signing is NOT configured here, so a build from this file is unsigned and needs no
+  # credentials. A signed Windows build adds it with `--config electron-builder.win-signing.cjs`,
+  # which extends this file and takes the Azure Trusted Signing account from the environment.
+# Force a space-free installer filename. electron-builder's NSIS default builds the
+# installer as "SnoutData Setup X.Y.Z.exe" (spaces) and only dash-sanitizes it at publish
+# time, but Azure Trusted Signing signs the intermediate and passes the path UNQUOTED to
+# signtool, so a space splits the path and signing fails ("File not found: ...\SnoutData").
+# Naming it with dashes up front keeps the signed path space-free. Matches the prior
+# published asset name (SnoutData-Setup-X.Y.Z.exe), so the update feed is unaffected.
+nsis:
+  artifactName: ${productName}-Setup-${version}.${ext}
+mac:
+  icon: build/icon.png
+  # BOTH targets are required. The .dmg is the manual/first-install download; macOS
+  # auto-update goes through Squirrel.Mac, which can ONLY apply an update from a .zip of
+  # the .app (never a .dmg). With dmg-only, latest-mac.yml lists no zip and electron-updater
+  # throws "ZIP file not provided" on every check. The zip target makes electron-builder
+  # emit SnoutData-<ver>-arm64-mac.zip + reference it in latest-mac.yml so updates apply.
+  target:
+    - dmg
+    - zip
+  category: public.app-category.developer-tools
+  # Hardened runtime is required for notarization. It's inert on an unsigned build, so it's
+  # safe to leave on. Notarization itself is NOT enabled here: the release build turns
+  # it on (via -c.mac.notarize=true) only when signing + Apple API-key creds are in the env,
+  # so an unsigned local build still works. electron-builder's default entitlements already
+  # grant the JIT/unsigned-memory exceptions an Electron app needs under hardened runtime.
+  hardenedRuntime: true
+  # macOS 15+ blocks traffic to the local network until the user allows it, and shows this sentence
+  # when it asks. It is asked only when "Find databases" runs with "Also search my local network"
+  # on. NSBonjourServices lists the two mDNS types that search queries;
+  # without them the Bonjour browse is refused outright.
+  extendInfo:
+    NSLocalNetworkUsageDescription: "SnoutData looks for databases on your local network when you ask it to, so you can connect to them."
+    NSBonjourServices:
+      - _postgresql._tcp
+      - _mysql._tcp
+linux:
+  # A DIRECTORY of size-named PNGs, not build/icon.png. Given the single 1024x1024 source,
+  # electron-builder installed exactly one icon — /usr/share/icons/hicolor/1024x1024/apps/
+  # snoutdata-studio-oss.png — and `1024x1024` is not a directory listed in hicolor's index.theme on
+  # Debian/Ubuntu, so the freedesktop icon lookup skipped it and the dock/launcher showed a
+  # generic gear despite the .desktop entry being correct. With a directory, electron-builder
+  # installs one icon per standard hicolor size. Regenerate with `npm run icons`.
+  icon: build/icons
+  # The .deb target requires a package maintainer. A build from source is maintained by whoever
+  # builds it, never by SnoutData: set your own here and as package.json's `author` (TRADEMARKS.md).
+  maintainer: Built from source <nobody@example.invalid>
+  # Fix the running-window dock/taskbar icon. Electron sets the window WM_CLASS to app.getName()
+  # = package.json "name" ("snoutdata-studio-oss" in this tree, since there's no productName in
+  # package.json). electron-builder's default StartupWMClass is the productName, which then does
+  # NOT match the live window, so the dock can't map it to this .desktop entry and shows a
+  # generic icon. Pin StartupWMClass to the real WM_CLASS so the running app shows its own icon.
+  # (electron-builder's own LinuxTargetHelper comment: this "must be set to package.json name".)
+  desktop:
+    StartupWMClass: snoutdata-studio-oss
+  # Linux-only: drop the PDF/DOCX attachment stack from the bundle (platform `files` are ADDITIVE to
+  # the common ones) to keep the .deb under GitHub's 100 MB host limit. @napi-rs/canvas ships a
+  # ~30 MB native binary (pdfjs-dist needs it to polyfill DOMMatrix in Node), the single biggest
+  # removable blob. documentExtract.ts gates .pdf/.docx off when process.platform==='linux' so the
+  # absent modules are never imported; plain-text formats still attach. Win/macOS keep full support.
+  files:
+    - "!node_modules/@napi-rs/**/*"
+    - "!node_modules/pdf-parse/**/*"
+    - "!node_modules/pdfjs-dist/**/*"
+    - "!node_modules/mammoth/**/*"
+    # The working-tree exclusions have to be repeated HERE, not just in the common `files` block:
+    # for the app-source matcher the platform list is what's applied, so the common block's
+    # `!out/tests/**/*` / `!e2e/**/*` were silently ignored on Linux and the .deb still carried
+    # 141 out/tests + 193 e2e entries. (The node_modules matcher is separate and does honour the
+    # common block, which is why the four negations above work.) Verified by rebuilding with the
+    # patterns in each place. See the common `files` block for why these matter.
+    - "!out/tests/**/*"
+    - "!e2e/**/*"
+  # .deb only (no AppImage). A .deb built from source installs no apt source and no key, so it is
+  # updated by building it again. Its postinst chmods chrome-sandbox to 4755 (no --no-sandbox needed).
+  target:
+    - deb
+  category: Development
+deb:
+  # Custom postinst: ALWAYS chmod 4755 chrome-sandbox. electron-builder's stock script skips
+  # that on kernels with working user namespaces, but Ubuntu 23.10+ confines unprivileged
+  # userns via AppArmor, so the app aborts without the SUID sandbox. See the script header.
+  afterInstall: build/linux/after-install.sh

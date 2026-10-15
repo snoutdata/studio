@@ -1,0 +1,26 @@
+<!--
+	Copyright (c) 2026 SNOUTDATA INC. All rights reserved.
+	Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
+-->
+
+<!-- Embedded Keeper, on ch-a only. Without it there is no ReplicatedMergeTree, no ON CLUSTER and
+     nothing for a Keeper browser to read. -->
+<clickhouse>
+	<keeper_server>
+		<tcp_port>9181</tcp_port>
+		<server_id>1</server_id>
+		<log_storage_path>/var/lib/clickhouse/coordination/log</log_storage_path>
+		<snapshot_storage_path>/var/lib/clickhouse/coordination/snapshots</snapshot_storage_path>
+		<coordination_settings>
+			<operation_timeout_ms>10000</operation_timeout_ms>
+			<session_timeout_ms>30000</session_timeout_ms>
+		</coordination_settings>
+		<raft_configuration>
+			<server>
+				<id>1</id>
+				<hostname>ch-a</hostname>
+				<port>9234</port>
+			</server>
+		</raft_configuration>
+	</keeper_server>
+</clickhouse>

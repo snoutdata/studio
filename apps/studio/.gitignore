@@ -1,0 +1,21 @@
+# Local credentials the release and maintenance scripts read: tokens, connection strings and
+# signing settings. Never commit.
+deploy/*.token
+deploy/*.connstring
+*.local.env
+
+# Apple Developer ID signing material (private key, CSR, downloaded cert, exported .p12).
+# The .key/.p12 are SECRETS — never commit. CI reads them from its secrets instead
+# (APPLE_CSC_LINK / APPLE_CSC_KEY_PASSWORD).
+deploy/apple/
+
+
+# Playwright e2e output (traces, screenshots, per-run results)
+e2e/.results/
+# Screenshots a spec takes to be LOOKED AT. Artefacts of a run, like the videos and traces
+# beside them; the spec that writes them is what is committed.
+test-results/
+e2e/.artifacts/
+# The one e2e profile that is signed in by hand (encrypted session tokens; machine-bound)
+e2e/.auth-profile/
+playwright-report/

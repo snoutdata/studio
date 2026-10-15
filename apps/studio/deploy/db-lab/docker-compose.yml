@@ -1,0 +1,95 @@
+#---------------------------------------------------------------------------------------------
+#  Copyright (c) 2026 SNOUTDATA INC. All rights reserved.
+#  Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
+#---------------------------------------------------------------------------------------------
+
+# Local database lab for exercising SnoutData Studio's drivers against real engines.
+#
+#   docker compose -f deploy/db-lab/docker-compose.yml up -d     # start all
+#   docker compose -f deploy/db-lab/docker-compose.yml down      # stop (keeps data)
+#   docker compose -f deploy/db-lab/docker-compose.yml down -v   # stop + wipe data
+#
+# Each engine listens on its conventional port with the same lab credentials
+# (user/password: snout/snout, database: lab). SQL Server uses `sa` with the
+# strong password below (its complexity rules forbid a weak one). Every engine is
+# seeded with the same little customers/orders schema (PK + FK + index) so the
+# explorer, completion, query, grid-edit and designer paths all have something to chew
+# on. See README.md for the exact `SNOUTDATA_IT_*` invocation per engine.
+#
+# The passwords here are for a local lab only, and every port is published on 127.0.0.1 so the
+# lab is never reachable from the network.
+#
+# Adding an engine later (MariaDB, Oracle, …): copy a service block, give it a fresh
+# port + named volume, and drop a seed/<engine>.sql alongside the others.
+
+services:
+  mysql:
+    image: mysql:8
+    environment:
+      MYSQL_ROOT_PASSWORD: snout_root
+      MYSQL_DATABASE: lab
+      MYSQL_USER: snout
+      MYSQL_PASSWORD: snout
+    # Host port 3310 (not 3306) to avoid clashing with a MySQL already installed on the host.
+    ports:
+      - "127.0.0.1:3310:3306"
+    volumes:
+      - ./seed/mysql.sql:/docker-entrypoint-initdb.d/seed.sql:ro
+      - mysql-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-psnout_root"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: lab
+      POSTGRES_USER: snout
+      POSTGRES_PASSWORD: snout
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - ./seed/postgres.sql:/docker-entrypoint-initdb.d/seed.sql:ro
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U snout -d lab"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: "Snout_strong#1"
+      MSSQL_PID: Developer
+    ports:
+      - "127.0.0.1:1433:1433"
+    volumes:
+      - sqlserver-data:/var/opt/mssql
+
+  # One-shot: waits for SQL Server to accept connections, then creates + seeds the `lab`
+  # database. The server image ships no sqlcmd, so seeding runs from the tools image.
+  sqlserver-init:
+    image: mcr.microsoft.com/mssql-tools:latest
+    depends_on:
+      - sqlserver
+    volumes:
+      - ./seed/sqlserver.sql:/seed/sqlserver.sql:ro
+    restart: "no"
+    entrypoint:
+      - /bin/bash
+      - -c
+      - |
+        for i in $$(seq 1 40); do
+          /opt/mssql-tools/bin/sqlcmd -S sqlserver -U sa -P 'Snout_strong#1' -Q 'SELECT 1' && break
+          echo "waiting for sqlserver ($$i)…"; sleep 3
+        done
+        /opt/mssql-tools/bin/sqlcmd -S sqlserver -U sa -P 'Snout_strong#1' -i /seed/sqlserver.sql
+
+volumes:
+  mysql-data:
+  postgres-data:
+  sqlserver-data:
