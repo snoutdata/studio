@@ -161,10 +161,8 @@ installers, the update manifests the app reads, and the components it downloads 
 Two parts ship only in the official build, and are free there:
 
 - **Data Flows**: bringing files, PDFs, web pages, buckets and log groups into a database (running
-  them on a schedule needs a paid plan). We keep it closed because it is where most of our testing
-  has gone.
-- **Liby**, the butterfly who is the assistant's name and face. She is a character and a trademark
-  rather than code to fork ([LIBY-LICENSE.md](./LIBY-LICENSE.md)).
+  them on a schedule needs a paid plan).
+- **Liby**, the butterfly who is the assistant's name and face ([LIBY-LICENSE.md](./LIBY-LICENSE.md)).
 
 A build from this tree has everything else. Where Data Flows would be, it shows a short note and a
 link to the download, and the assistant is simply called "AI".
