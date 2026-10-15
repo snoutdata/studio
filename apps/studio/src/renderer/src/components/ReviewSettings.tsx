@@ -1093,7 +1093,7 @@ function RepoCard({ repo, connections, onPatch, onRemove }: RepoCardProps): JSX.
 			</p>
 			<p className="muted small">
 				The findings never move between these. Every one of them is decided by the rules and
-				measured against your database, on all four.
+				measured against your database, whichever one you pick.
 			</p>
 			</div>
 			</div>

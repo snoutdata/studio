@@ -13,7 +13,7 @@ import { DatabaseSync } from 'node:sqlite';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import { launchApp, closeApp, MOD, type AppHandle } from './helpers';
+import { launchApp, closeApp, MOD, PRO_BUILD, type AppHandle } from './helpers';
 
 /*
  * Snoutbot, the pull-request reviewer, driven end to end on this machine.
@@ -635,15 +635,23 @@ test('a review is written to disk, so a restart does not lose one nobody has rea
 	expect(after.some((r) => r.prNumber === 8)).toBe(false);
 });
 
-test('the four rungs, and a sentence about where the data goes that is COMPUTED', async () => {
+test('the rungs this build offers, and a sentence about where the data goes that is COMPUTED', async () => {
 	// The picker is the same ladder Data Flows offers for reading a file, and the findings do not
 	// move between its rungs. What is asserted here is the part a screen gets wrong on its own: the
 	// sentence under it comes from `reviewBoundary`, so it cannot say "nothing is sent anywhere"
 	// while the app sends it somewhere.
 	await openSettings();
 	const card = handle.page.locator('.review-repo').filter({ hasText: 'acme/api' });
-	const method = card.locator('select').filter({ has: handle.page.locator('option[value="localEngine"]') });
-	await expect(method.locator('option')).toHaveCount(4);
+	const method = card.locator('select').filter({ has: handle.page.locator('option[value="snoutAi"]') });
+	// The model on this computer is Data Flows' local runtime, so a build without Data Flows (the
+	// open-source one) offers the other three and not that one.
+	if (PRO_BUILD) {
+		await expect(method.locator('option')).toHaveCount(4);
+		await expect(method.locator('option[value="localEngine"]')).toBeEnabled();
+	} else {
+		await expect(method.locator('option')).toHaveCount(3);
+		await expect(method.locator('option[value="localEngine"]')).toHaveCount(0);
+	}
 
 	// The default, on a repository nobody has touched: the rules alone, no model anywhere.
 	await expect(method).toHaveValue('deterministic');
