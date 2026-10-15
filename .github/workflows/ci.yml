@@ -124,7 +124,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      # `npm run package:dir`, with signing switched off on macOS and Windows.
+      # `npm run package:dir`, with signing switched off on macOS. electron-builder.yml configures no
+      # Windows signing, so Windows needs nothing switched off (and `-c.win.azureSignOptions=null`
+      # would pass the STRING "null", which the config schema refuses).
       - name: Package (unpacked)
         shell: bash
         run: |
@@ -132,6 +134,6 @@ jobs:
           npm run build
           # An open-source build must carry nothing of the closed packages.
           node scripts/assert-build.mjs
-          npx electron-builder --dir -c.mac.identity=null -c.win.azureSignOptions=null
+          npx electron-builder --dir -c.mac.identity=null
           # The package carries the third-party licences, NOTICE and LICENSE the build wrote.
           node scripts/assert-build.mjs --package
