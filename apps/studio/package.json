@@ -1,6 +1,6 @@
 {
 	"name": "snoutdata-studio-oss",
-	"version": "1.0.53",
+	"version": "1.0.54",
 	"description": "The data workbench: your databases, your files, and the coding agent you already use, in one desktop app.",
 	"license": "Apache-2.0",
 	"author": "Built from source <nobody@example.invalid>",
