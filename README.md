@@ -18,6 +18,7 @@
   <a href="https://github.com/snoutdata/studio/releases/latest"><img src="https://img.shields.io/github/v/release/snoutdata/studio?style=flat-square&label=download&color=1c1c1c" alt="Latest release" /></a>
   <a href="#install"><img src="https://img.shields.io/badge/Windows%20%C2%B7%20macOS%20%C2%B7%20Linux-1c1c1c?style=flat-square" alt="Windows, macOS, Linux" /></a>
   <a href="./LICENSE"><img src="https://img.shields.io/github/license/snoutdata/studio?style=flat-square&color=1c1c1c" alt="Apache-2.0" /></a>
+  <a href="https://github.com/snoutdata/studio/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/snoutdata/studio/ci.yml?branch=main&style=flat-square&label=CI" alt="CI" /></a>
   <a href="https://github.com/snoutdata/studio/stargazers"><img src="https://img.shields.io/github/stars/snoutdata/studio?style=flat-square&color=1c1c1c" alt="GitHub stars" /></a>
 </p>
 
