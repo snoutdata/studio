@@ -10660,11 +10660,14 @@ kbd {
 }
 
 /* --- Onboarding: getting-started checklist ----------------------------------- */
+/* The card floats over the panes but UNDER Liby (her layers start at 85) and under a modal
+   (100): at 3500 it covered her while she pointed at it, and sat on top of the dialogs its own tasks
+   open. */
 .gs-pill {
 	position: fixed;
 	right: 16px;
 	bottom: 16px;
-	z-index: 3500;
+	z-index: 80;
 	display: inline-flex;
 	align-items: center;
 	gap: 8px;
@@ -10691,7 +10694,7 @@ kbd {
 	position: fixed;
 	right: 16px;
 	bottom: 16px;
-	z-index: 3500;
+	z-index: 80;
 	width: 320px;
 	max-width: calc(100vw - 24px);
 	background: var(--bg-widget);
