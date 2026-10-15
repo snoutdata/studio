@@ -12,7 +12,7 @@
 // official tree must produce a build WITH both, and an open tree (or SNOUT_PRO=0) one with NEITHER.
 import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { createRequire } from 'node:module';
-import { join, relative, resolve } from 'node:path';
+import { join, normalize, relative, resolve } from 'node:path';
 import { libyBuildMarker, libyPaths } from './liby.mjs';
 import { proPaths } from './pro.mjs';
 import { LICENSE_FILE, LICENSES_DIR, NOTICE_FILE, THIRD_PARTY_FILE } from './third-party-licenses.mjs';
@@ -89,7 +89,9 @@ if (process.argv.includes('--package')) {
 	for (const f of fresh) {
 		function readPacked(file) {
 			try {
-				return f.kind === 'asar' ? asar.extractFile(f.path, file).toString('utf8') : readFileSync(join(f.path, file), 'utf8');
+				// The asar library walks an archive path split on the PLATFORM separator, so on Windows a
+				// forward-slash path finds nothing; normalize gives it the separator it splits on.
+				return f.kind === 'asar' ? asar.extractFile(f.path, normalize(file)).toString('utf8') : readFileSync(join(f.path, file), 'utf8');
 			} catch { return null; }
 		}
 		const where = relative(app, f.path);
