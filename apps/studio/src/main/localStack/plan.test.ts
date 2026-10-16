@@ -13,7 +13,7 @@ import {
 	projectState, settingsFromEnv, slugify, stackImageFrom, composeVocabulary, envKey, STACK_IMAGE, suggestPort, versionAtLeast, type EngineFacts,
 	apiKey, exportName, restoreScript, restoreSwapSql, isExportName, mailEnv, mailTemplateProblem, memoryMb, overrideStale, ownerPasswordSql,
 	downloadStack, STACK_COMMIT, STACK_FILES, STACK_SOURCE, stackFileProblem,
-	rotatedKeys, scramVerifier, secretNameProblem, secretNames, secretValueProblem, settingsProblem, withSecret,
+	keyRoles, rotatedKeys, scramVerifier, secretNameProblem, secretNames, secretValueProblem, settingsProblem, withSecret,
 } from './plan';
 
 // Local projects: what the wizard writes into .env, what the requirements say, and what
@@ -352,7 +352,7 @@ test('the API keys are signed as the stack signs them', () => {
 	assert.equal(apiKey('a'.repeat(48), 'anon'), 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjQxMDI0NDQ4MDAsImlhdCI6MCwiaXNzIjoic25vdXRkYXRhIiwicm9sZSI6ImFub24ifQ.k38-Chr2FHViKLCPnDQJz9iiRdUjRZ2pOn395Du3Koc');
 	const keys = rotatedKeys();
 	assert.ok(keys.JWT_SECRET.length >= 32);
-	assert.equal(keys.ANON_KEY, apiKey(keys.JWT_SECRET, 'anon'));
+	assert.equal(keys.ANON_KEY, apiKey(keys.JWT_SECRET, 'anon'), 'a .env that names no layout is an old-layout stack');
 	assert.equal(keys.SERVICE_ROLE_KEY, apiKey(keys.JWT_SECRET, 'service_role'));
 	assert.equal(keys.APP_KEY, undefined, 'the stack reads ANON_KEY: nothing else is written into a .env that has neither');
 	assert.notEqual(rotatedKeys().JWT_SECRET, keys.JWT_SECRET);
@@ -371,6 +371,22 @@ test('a key is read under our name or the stack\'s, and rotated under each name 
 	assert.equal(both.APP_KEY, apiKey(both.JWT_SECRET, 'anon'));
 	assert.equal(both.SERVER_KEY, apiKey(both.JWT_SECRET, 'service_role'));
 	assert.equal(both.SERVICE_ROLE_KEY, undefined, 'a name the file does not carry is not added');
+});
+
+test('a key is signed with the role names its database has', () => {
+	const role = (key: string): string => JSON.parse(Buffer.from(key.split('.')[1], 'base64url').toString()).role;
+	// What snout-stack init writes from 0.1.6 on (the new layout), and 0.1.8 signs its keys for.
+	const fresh = parseEnv('ANON_KEY=a\nSERVICE_ROLE_KEY=s\nREST_ANON_ROLE=snout_app\n');
+	assert.deepEqual(keyRoles(fresh), { app: 'snout_app', server: 'snout_server' });
+	const rotated = rotatedKeys(fresh);
+	assert.equal(role(rotated.ANON_KEY), 'snout_app');
+	assert.equal(role(rotated.SERVICE_ROLE_KEY), 'snout_server');
+	assert.equal(rotated.SERVICE_ROLE_KEY, apiKey(rotated.JWT_SECRET, 'snout_server'));
+	// A stack made before the new layout has no REST_ANON_ROLE, and no snout_app role to run as.
+	const old = rotatedKeys(parseEnv('ANON_KEY=a\nSERVICE_ROLE_KEY=s\n'));
+	assert.equal(role(old.ANON_KEY), 'anon');
+	assert.equal(role(old.SERVICE_ROLE_KEY), 'service_role');
+	assert.deepEqual(keyRoles(parseEnv('REST_ANON_ROLE=anon\n')), { app: 'anon', server: 'service_role' });
 });
 
 test('the owner password reaches Postgres as a SCRAM verifier, never as text', () => {

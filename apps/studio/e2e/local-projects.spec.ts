@@ -17,6 +17,11 @@ function envOf(project: string, name: string): string {
 	return line.replace(/^(['"])(.*)\1$/, '$2');
 }
 
+/** The role a key is signed for. */
+function roleOf(key: string): string {
+	return String(JSON.parse(Buffer.from(key.split('.')[1] ?? '', 'base64url').toString('utf8')).role);
+}
+
 /** One statement as the project's owner, with the password .env holds now. */
 async function ownerSql(project: string, sql: string): Promise<string> {
 	const { Client } = await import('pg');
@@ -153,6 +158,9 @@ test('a real project: set up, keys, services, stop and remove (opt-in, SNOUTDATA
 	await expect(tab).toContainText('The app key was copied.');
 	const anon = await handle.app.evaluate(({ clipboard }) => clipboard.readText());
 	expect(anon.split('.').length).toBe(3);
+	// The pinned stack's init signs its keys with the new layout's role names.
+	expect(roleOf(anon)).toBe('snout_app');
+	expect(roleOf(envOf(target, 'SERVICE_ROLE_KEY'))).toBe('snout_server');
 	// The pinned stack serves our names (and the earlier ones beside them, which an older project's gateway alone serves).
 	const apiUrl = (await keys.locator('.cloud-actions .mono').first().textContent()) ?? '';
 	const res = await fetch(`${apiUrl}/v1/data/`, { headers: { 'Snout-Key': anon } });
@@ -332,6 +340,8 @@ test('a real project: set up, keys, services, stop and remove (opt-in, SNOUTDATA
 	await expect(tab).toContainText('New keys issued.', { timeout: 15 * 60 * 1000 });
 	expect((await fetch(`${apiUrl}/v1/data/`, { headers: { 'Snout-Key': anon } })).status).toBe(401);
 	expect((await fetch(`${apiUrl}/v1/data/`, { headers: { 'Snout-Key': envOf(target, 'ANON_KEY') } })).status).toBe(200);
+	expect(roleOf(envOf(target, 'ANON_KEY'))).toBe('snout_app');
+	expect(roleOf(envOf(target, 'SERVICE_ROLE_KEY'))).toBe('snout_server');
 
 	await tab.locator('button', { hasText: 'Stop' }).first().click();
 	await handle.page.locator('.modal button', { hasText: 'Stop it' }).click();

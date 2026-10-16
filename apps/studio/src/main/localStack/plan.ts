@@ -43,17 +43,17 @@ export const MIN_ENGINE_MEMORY = 2 * 1024 ** 3;
 // (never at `main`), and the image tag its compose.yaml names.
 
 /** The snout-stack commit a new project is made from. */
-export const STACK_COMMIT = '50ca8838abbe2293fa674010fef2e0df83eb5bc4';
+export const STACK_COMMIT = '69ceb27cc9d9e134adb57e58353bc863ea6f2098';
 
 /** Where the published stack is read from: that commit, never a branch. */
 export const STACK_SOURCE = `https://raw.githubusercontent.com/snoutdata/snout-stack/${STACK_COMMIT}`;
 
 /** The image the pinned compose file runs (and `snout-stack init` is run from): a tag, not a digest. */
-export const STACK_IMAGE = 'ghcr.io/snoutdata/snout-stack:0.1.7';
+export const STACK_IMAGE = 'ghcr.io/snoutdata/snout-stack:0.1.8';
 
 /** The files a project folder starts with, fetched from STACK_SOURCE, each with its SHA-256. */
 export const STACK_FILES: ReadonlyArray<{ path: string; sha256: string }> = [
-	{ path: 'compose.yaml', sha256: '8f1a556dba47853740c5290eacca864d3b4a1311797d10407597f6d70f7b89c2' },
+	{ path: 'compose.yaml', sha256: '86dff9dfe812e049ca42365d4e595b9cc4918f3826119833db1de4dffb40705f' },
 	{ path: 'functions/hello/index.ts', sha256: '741726834d88cf3c6d00bee959a991aee7b4ec0ec42b23530a389da7eb7065d9' },
 ];
 
@@ -990,12 +990,24 @@ export function signHs256(secret: string, claims: Record<string, unknown>): stri
 	return `${head}.${body}.${mac}`;
 }
 
-/** A project API key: the stack's claims (keys.rs `api_key`), keys in serde_json's sorted order.
- *  `anon` signs the app key and `service_role` the server key, as `snout-stack init` signs them
- *  (0.1.7 too): both are roles in either layout (the new layout keeps them as aliases of
- *  `snout_app`/`snout_server`), so a key rotated here works on a project of any age. */
-export function apiKey(secret: string, role: 'anon' | 'service_role'): string {
+/** The role names a project's keys carry. A stack `snout-stack init` made from 0.1.6 on is in the
+ *  new layout and has `snout_app`/`snout_server` (0.1.8's init signs its keys with them); one made
+ *  before is in the old layout and has only `anon`/`service_role`. */
+export type KeyRole = 'snout_app' | 'snout_server' | 'anon' | 'service_role';
+
+/** A project API key: the stack's claims (keys.rs `api_key`), keys in serde_json's sorted order. */
+export function apiKey(secret: string, role: KeyRole): string {
 	return signHs256(secret, { exp: 4102444800, iat: 0, iss: 'snoutdata', role });
+}
+
+/** The roles to sign a project's keys with: the new names when its `.env` says the database is in
+ *  the new layout (`REST_ANON_ROLE=snout_app`, which `init` writes and the README's move to the new
+ *  layout adds), else the old names, the only ones an old-layout database has. A key signed with
+ *  the old names keeps working in a new-layout database while they are alias roles of the new. */
+export function keyRoles(env: ReadonlyMap<string, string>): { app: KeyRole; server: KeyRole } {
+	return env.get('REST_ANON_ROLE') === 'snout_app'
+		? { app: 'snout_app', server: 'snout_server' }
+		: { app: 'anon', server: 'service_role' };
 }
 
 /** The `.env` names of the two keys, ours first: `snout-stack init` writes the earlier pair
@@ -1017,10 +1029,12 @@ export function envKey(env: ReadonlyMap<string, string>, which: keyof typeof KEY
 }
 
 /** A new JWT secret and the two keys signed with it: what rotating the keys writes into `.env`,
- *  under each name the file already carries (the stack's own when it carries neither). */
+ *  under each name the file already carries (the stack's own when it carries neither), signed with
+ *  the role names its database has (`keyRoles`). */
 export function rotatedKeys(env: ReadonlyMap<string, string> = new Map(), secret = randomSecret(48)): Record<string, string> {
 	const out: Record<string, string> = { JWT_SECRET: secret };
-	for (const [which, role] of [['app', 'anon'], ['server', 'service_role']] as const) {
+	const roles = keyRoles(env);
+	for (const [which, role] of [['app', roles.app], ['server', roles.server]] as const) {
 		const names = KEY_ENV[which].filter((name) => env.has(name));
 		for (const name of names.length > 0 ? names : [KEY_ENV[which][1]]) {
 			out[name] = apiKey(secret, role);
