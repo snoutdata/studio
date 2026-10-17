@@ -488,13 +488,15 @@ function ReplicaRow(props: { pod: ShardPod; of: string; columns: number }): JSX.
 function FailoverRow(props: { pod: ShardPod }): JSX.Element {
 	const { pod } = props;
 	const at = failoverStep(pod);
-	const failed = pod.failover === 'failed';
+	const failed = pod.failover === 'failed' || pod.failover === 'held';
 	return (
 		<div className="shards-join">
 			<div className="cloud-actions">
 				<span className="mono">{pod.ref}</span>
 				<span className={failed ? 'form-status error' : 'muted small'}>
-					{failed
+					{pod.failover === 'held'
+						? "Stopped, not replaced: its replica was behind and its last writes could not be copied to it, so nothing was given up. See Alerts."
+						: failed
 						? `Its replica could not take its place: ${pod.failoverError ?? "see Alerts"}`
 						: "This node was lost or damaged. Its replica is taking its place on its own, and queries that need its data may fail for a moment."}
 				</span>

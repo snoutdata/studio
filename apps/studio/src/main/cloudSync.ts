@@ -59,3 +59,24 @@ export async function syncCloudConnections(
 	}
 	return { account, added: missing, seen: [...seen] };
 }
+
+/**
+ * The connection for one project, added if there is none: the explicit half of the sync.
+ *
+ * "Show in Connections", "Open in Connections" and "Run a statement" name ONE project, so the
+ * seen rule does not apply to them. A person who deleted the connection and then asks for the
+ * database is asking for it back; leaving the button dead was the alternative.
+ */
+export async function ensureCloudConnection(
+	ref: string,
+	read: () => ConnectionConfig[],
+	add: (refs: string[]) => Promise<void>,
+): Promise<string | null> {
+	const find = (): string | null => read().find((c) => c.cloudProjectRef === ref)?.id ?? null;
+	const existing = find();
+	if (existing) {
+		return existing;
+	}
+	await add([ref]);
+	return find();
+}

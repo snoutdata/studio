@@ -912,7 +912,11 @@ export class LocalMcpServer {
 
 	private capabilityTools(): ToolDef[] {
 		const specs = this.capabilitySnapshot ?? this.deps.capabilities?.() ?? [];
-		return specs.map((spec) => ({
+		// A capability the assistant has under a name this server already serves (list_connections)
+		// is left out: the built-in answers that name in `callTool` anyway, and a tool list with the
+		// same name twice is one a client may refuse whole.
+		const builtIn = new Set(TOOLS.map((tool) => tool.name));
+		return specs.filter((spec) => !builtIn.has(spec.name)).map((spec) => ({
 			name: spec.name,
 			// Say which ones change things, and say it in a sentence that stays true. The tool list
 			// is frozen at connect (see capabilitySnapshot) and clients call tools/list once, so

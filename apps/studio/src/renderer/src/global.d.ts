@@ -83,10 +83,15 @@ export interface SqlApi {
 	cloudAsk(action: 'pause' | 'resume', ref: string): Promise<CloudActionOutcome>;
 	cloudCreate(form: CloudCreateForm): Promise<CloudCreateOutcome>;
 	cloudDelete(ref: string): Promise<CloudActionOutcome>;
+	/** The connection for one cloud project, added first if there is none. Its id, or null. */
+	cloudEnsureConnection(ref: string): Promise<string | null>;
+	/** A cloud project was asked to change somewhere other than the panel (the tray). */
+	onCloudChanged(handler: (ref: string) => void): () => void;
 	project: {
 		sql(target: ProjectTarget, sql: string): Promise<ProjectSqlResult>;
 		api(target: ProjectTarget, request: ProjectApiRequest): Promise<ProjectApiResponse>;
 		upload(target: ProjectTarget, bucket: string, prefix: string, upsert: boolean): Promise<ProjectActionOutcome | null>;
+		uploadDropped(target: ProjectTarget, bucket: string, prefix: string, upsert: boolean, files: File[]): Promise<ProjectActionOutcome | null>;
 		download(target: ProjectTarget, bucket: string, path: string): Promise<ProjectActionOutcome | null>;
 	};
 	local: {

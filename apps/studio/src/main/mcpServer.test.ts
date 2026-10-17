@@ -14,6 +14,7 @@ import type { DatabaseSchema } from '../shared/schema';
 import { mcpProblemNotice, type McpLockout, type McpLogInput } from '../shared/mcp';
 import type { ExecuteQueryResult } from '../shared/protocol';
 import type { ToolAuditRecord } from '../shared/engine';
+import type { CapabilityResult, CapabilitySpec } from '../shared/capabilities';
 
 const TOKEN = 'test-secret-token';
 
@@ -747,4 +748,14 @@ test('the notice names the taken port and says nothing moved by itself', () => {
 	assert.match(locked.detail, /The token was not changed/);
 	assert.match(locked.detail, /right token still get in/);
 	assert.doesNotMatch(locked.detail, /includes your own agents/);
+});
+
+test('a capability named like a built-in tool is not listed twice', async () => {
+	const spec = (name: string) => ({ name, description: name, parameters: { type: 'object', properties: {} }, mutates: false }) as unknown as CapabilitySpec;
+	await withServer({ capabilities: () => [spec('list_connections'), spec('open_query_tab')], invokeCapability: async () => ({ ok: true, summary: '' }) as unknown as CapabilityResult }, async (port) => {
+		const res = await fetch(`http://127.0.0.1:${port}/mcp`, { method: 'POST', headers: { 'content-type': 'application/json', authorization: `Bearer ${TOKEN}` }, body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'tools/list' }) });
+		const names: string[] = ((await res.json()) as { result: { tools: { name: string }[] } }).result.tools.map((tool: { name: string }) => tool.name);
+		assert.equal(names.filter((name) => name === 'list_connections').length, 1);
+		assert.ok(names.includes('open_query_tab'));
+	});
 });

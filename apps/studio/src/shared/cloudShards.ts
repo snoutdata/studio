@@ -62,7 +62,7 @@ export interface ShardPod {
 	/** The owner asked for a replica; a new one is made after a failover. */
 	wantsReplica?: boolean;
 	/** Its failover to its replica: stopping the node, promoting the replica, or stopped. */
-	failover?: 'fence' | 'promote' | 'failed' | null;
+	failover?: 'fence' | 'promote' | 'held' | 'failed' | null;
 	failoverError?: string | null;
 }
 
@@ -346,7 +346,7 @@ export function replicaStanding(pod: ShardPod): ReplicaStanding {
 	if (pod.failover === 'fence' || pod.failover === 'promote') {
 		return 'failing-over';
 	}
-	if (pod.failover === 'failed') {
+	if (pod.failover === 'failed' || pod.failover === 'held') {
 		return 'failover-failed';
 	}
 	if (pod.replicaOf === undefined) {

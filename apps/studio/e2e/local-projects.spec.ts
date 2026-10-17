@@ -165,6 +165,13 @@ test('a real project: set up, keys, services, stop and remove (opt-in, SNOUTDATA
 	const apiUrl = (await keys.locator('.cloud-actions .mono').first().textContent()) ?? '';
 	const res = await fetch(`${apiUrl}/v1/data/`, { headers: { 'Snout-Key': anon } });
 	expect(res.status).toBe(200);
+	// A table the stack's superuser makes is the server key's (0.1.9's setup), and not the app key's
+	// until somebody grants it.
+	execFileSync('docker', ['exec', '-i', `snout-${envOf(target, 'SNOUT_REF')}-db-1`, 'sh', '-c', `psql -X -q -v ON_ERROR_STOP=1 -U "$POSTGRES_USER" -d ${envOf(target, 'SNOUT_REF')}`], {
+		input: "create table public.e2e_admin_made (id int primary key); insert into e2e_admin_made values (1); notify pgrst, 'reload schema';"
+	});
+	await expect.poll(async () => (await fetch(`${apiUrl}/v1/data/e2e_admin_made`, { headers: { 'Snout-Key': envOf(target, 'SERVICE_ROLE_KEY') } })).status, { timeout: 15000 }).toBe(200);
+	expect((await fetch(`${apiUrl}/v1/data/e2e_admin_made`, { headers: { 'Snout-Key': anon } })).status).toBe(401);
 
 	const section = async (label: string): Promise<void> => {
 		await tab.locator('.settings-nav-item').filter({ hasText: new RegExp(`^${label}$`) }).click();

@@ -173,6 +173,10 @@ export function DashboardPanel(props: DashboardPanelProps): JSX.Element {
 		return () => clearInterval(timer);
 	}, [settling, refresh]);
 
+	// The tray starts and stops projects too: read the list again, and the settle poll above
+	// follows the project the rest of the way.
+	useEffect(() => window.sqlApi.onCloudChanged(() => { void refresh(true); }), [refresh]);
+
 	const refreshLocal = useCallback(async () => {
 		try {
 			setLocal(await window.sqlApi.local.list());

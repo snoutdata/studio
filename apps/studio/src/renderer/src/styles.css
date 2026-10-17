@@ -4950,6 +4950,16 @@ body.col-resizing {
 	margin-top: 6px;
 }
 
+/* A bucket's card while files are dragged over it: the selected tint and an accent edge. */
+.bucket-drop {
+	transition: border-color var(--dur) var(--ease), background-color var(--dur) var(--ease);
+}
+
+.bucket-drop.over {
+	border-color: var(--accent);
+	background: var(--bg-selected);
+}
+
 /* The Cloud project tab: the settings page's nav + content, hosted in a workbench tab instead of a
    full-window overlay. */
 .cloud-project-view {

@@ -43,17 +43,17 @@ export const MIN_ENGINE_MEMORY = 2 * 1024 ** 3;
 // (never at `main`), and the image tag its compose.yaml names.
 
 /** The snout-stack commit a new project is made from. */
-export const STACK_COMMIT = '69ceb27cc9d9e134adb57e58353bc863ea6f2098';
+export const STACK_COMMIT = '09258820691800198f59370e1645488550815566';
 
 /** Where the published stack is read from: that commit, never a branch. */
 export const STACK_SOURCE = `https://raw.githubusercontent.com/snoutdata/snout-stack/${STACK_COMMIT}`;
 
 /** The image the pinned compose file runs (and `snout-stack init` is run from): a tag, not a digest. */
-export const STACK_IMAGE = 'ghcr.io/snoutdata/snout-stack:0.1.8';
+export const STACK_IMAGE = 'ghcr.io/snoutdata/snout-stack:0.1.11';
 
 /** The files a project folder starts with, fetched from STACK_SOURCE, each with its SHA-256. */
 export const STACK_FILES: ReadonlyArray<{ path: string; sha256: string }> = [
-	{ path: 'compose.yaml', sha256: '86dff9dfe812e049ca42365d4e595b9cc4918f3826119833db1de4dffb40705f' },
+	{ path: 'compose.yaml', sha256: '50104ba95c4b4f7da1c86af27e46936b66b10dda183e84f26a6f7285081ef9b7' },
 	{ path: 'functions/hello/index.ts', sha256: '741726834d88cf3c6d00bee959a991aee7b4ec0ec42b23530a389da7eb7065d9' },
 ];
 

@@ -5,7 +5,7 @@
 
 import { ASSISTANT_NAME } from '../shared/assistant';
 import { app, BrowserWindow, clipboard, dialog, ipcMain, Menu, nativeImage, nativeTheme, Notification, powerMonitor, safeStorage, session, shell, type MenuItemConstructorOptions } from 'electron';
-import { basename, join, resolve } from 'node:path';
+import { basename, isAbsolute, join, resolve } from 'node:path';
 import { homedir, hostname, tmpdir } from 'node:os';
 import { existsSync, readdirSync, readFileSync, rmSync, statSync } from 'node:fs';
 import { spawn } from 'node:child_process';
@@ -107,7 +107,7 @@ import { runCloudProjectOp, type CloudProjectHost } from './cloudProjectOps';
 import { buildAndDeploy } from './containerBuild';
 import { uploadFile } from './netUpload';
 import type { ContainerBuildForm, ContainerBuildProgress } from '../shared/cloudContainers';
-import { syncCloudConnections } from './cloudSync';
+import { ensureCloudConnection, syncCloudConnections } from './cloudSync';
 import { rememberCloudRefs, seenCloudRefs } from './cloudSyncStore';
 import { readConnections, writeConnection } from './configStore';
 import { readTunnels } from './tunnelStore';
@@ -1352,6 +1352,11 @@ async function runProjectActionFromTray(target: ProjectTarget, verb: TrayProject
 			}
 		} else {
 			outcome = await askCloudProject(liveCloudApi, verb === 'pause' ? 'pause' : 'resume', target.ref, closeCloudConnections);
+			// The panel reads the cloud list only when it acts itself, so without this it kept
+			// saying "paused" with Start on, for a project the tray had just resumed.
+			if (outcome.ok) {
+				broadcast('cloud:changed', target.ref);
+			}
 		}
 	} catch (err) {
 		outcome = { ok: false, message: err instanceof Error ? err.message : String(err) };
@@ -2338,6 +2343,9 @@ function registerIpc(): void {
 		// Remembered for the tray's Dashboard submenu, which draws the panel's last reading.
 		return cloudProjectsView(liveCloudApi).then(rememberCloudProjects);
 	});
+	// One project's connection, added if there is none (deleted by the user, or not synced yet):
+	// the panel's "Show in Connections" and the tab's "Run a statement" ask for it by name.
+	ipcMain.handle('cloud:ensure-connection', (_event, ref: string) => ensureCloudConnection(ref, readConnections, addCloudConnections));
 	// Sets a DESIRED state and returns. The host agent does the work on its next tick, so
 	// the answer is "asked", never "done", and the panel re-reads the list to find out.
 	ipcMain.handle('cloud:ask', (_event, action: 'pause' | 'resume', ref: string) => askCloudProject(liveCloudApi, action, ref, closeCloudConnections));
@@ -2547,8 +2555,24 @@ function registerIpc(): void {
 	ipcMain.handle('projectCopy:state', (_event, id: string) => projectCopies.state(String(id)));
 	ipcMain.handle('project:sql', (_event, which: unknown, sql: string) => projectAccess.sql(target(which), String(sql)));
 	ipcMain.handle('project:api', (_event, which: unknown, request: ProjectApiRequest) => projectAccess.api(target(which), request));
-	ipcMain.handle('project:upload', async (event, which: unknown, bucket: string, prefix: string, upsert: boolean) => {
+	ipcMain.handle('project:upload', async (event, which: unknown, bucket: string, prefix: string, upsert: boolean, dropped?: unknown) => {
 		const project = target(which);
+		// Files dropped on the bucket: the preload turned them into paths with webUtils, which
+		// answers only for a file that is really on disk. Each must still be one, or nothing is sent.
+		if (Array.isArray(dropped) && dropped.length > 0) {
+			const paths = dropped.filter((p): p is string => typeof p === 'string' && isAbsolute(p));
+			const files = paths.filter((p) => {
+				try {
+					return statSync(p).isFile();
+				} catch {
+					return false;
+				}
+			});
+			if (files.length !== dropped.length) {
+				return { ok: false, message: "Only files can be dropped here, not folders. Nothing was uploaded." };
+			}
+			return projectAccess.upload(project, bucket, String(prefix ?? ''), files, upsert === true);
+		}
 		const win = BrowserWindow.fromWebContents(event.sender);
 		const options: Electron.OpenDialogOptions = { title: "Upload to " + bucket, properties: ['openFile', 'multiSelections'] };
 		const picked = win ? await dialog.showOpenDialog(win, options) : await dialog.showOpenDialog(options);

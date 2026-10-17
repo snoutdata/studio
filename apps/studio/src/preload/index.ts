@@ -113,11 +113,22 @@ const sqlApi = {
 	cloudAsk: (action: 'pause' | 'resume', ref: string): Promise<CloudActionOutcome> => ipcRenderer.invoke('cloud:ask', action, ref),
 	cloudCreate: (form: CloudCreateForm): Promise<CloudCreateOutcome> => ipcRenderer.invoke('cloud:create', form),
 	cloudDelete: (ref: string): Promise<CloudActionOutcome> => ipcRenderer.invoke('cloud:delete-project', ref),
+	/** The connection for one cloud project, added first if there is none. Its id, or null. */
+	cloudEnsureConnection: (ref: string): Promise<string | null> => ipcRenderer.invoke('cloud:ensure-connection', ref),
+	/** A cloud project was asked to change somewhere other than the panel (the tray). */
+	onCloudChanged: (handler: (ref: string) => void): (() => void) => {
+		const listener = (_event: IpcRendererEvent, ref: string): void => handler(ref);
+		ipcRenderer.on('cloud:changed', listener);
+		return () => ipcRenderer.removeListener('cloud:changed', listener);
+	},
 	/** A project's sections, local or cloud (shared/projects.ts): SQL as the owner, the gateway with the service key. */
 	project: {
 		sql: (target: ProjectTarget, sql: string): Promise<ProjectSqlResult> => ipcRenderer.invoke('project:sql', target, sql),
 		api: (target: ProjectTarget, request: ProjectApiRequest): Promise<ProjectApiResponse> => ipcRenderer.invoke('project:api', target, request),
 		upload: (target: ProjectTarget, bucket: string, prefix: string, upsert: boolean): Promise<ProjectActionOutcome | null> => ipcRenderer.invoke('project:upload', target, bucket, prefix, upsert),
+		/** Upload files dropped from the OS. Only their paths cross, and only real files have one. */
+		uploadDropped: (target: ProjectTarget, bucket: string, prefix: string, upsert: boolean, files: File[]): Promise<ProjectActionOutcome | null> =>
+			ipcRenderer.invoke('project:upload', target, bucket, prefix, upsert, files.map((file) => webUtils.getPathForFile(file))),
 		download: (target: ProjectTarget, bucket: string, path: string): Promise<ProjectActionOutcome | null> => ipcRenderer.invoke('project:download', target, bucket, path),
 	},
 	/** Local projects: the SnoutData stack in the user's own Docker. */

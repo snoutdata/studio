@@ -358,6 +358,7 @@ function BucketFiles(props: { project: ProjectHandle; bucket: Bucket; onChanged(
 	const [replace, setReplace] = useState(false);
 	const [said, setSaid] = useState<Said>(null);
 	const [busy, setBusy] = useState(false);
+	const [dropping, setDropping] = useState(false);
 	const [confirm, confirmDialog] = useConfirm();
 	const objects = useLoad(() => platformQuery<StoredObject>(target, objectsSql(bucket.id, search, page)), [projectKey(target), bucket.id, search, page]);
 
@@ -390,17 +391,31 @@ function BucketFiles(props: { project: ProjectHandle; bucket: Bucket; onChanged(
 		}
 	}
 
-	async function upload(): Promise<void> {
+	async function upload(dropped?: File[]): Promise<void> {
 		setBusy(true);
 		setSaid(null);
 		try {
-			const outcome = await window.sqlApi.project.upload(target, bucket.id, folder, replace);
+			const outcome = dropped
+				? await window.sqlApi.project.uploadDropped(target, bucket.id, folder, replace, dropped)
+				: await window.sqlApi.project.upload(target, bucket.id, folder, replace);
 			if (outcome) {
 				setSaid(outcome);
 				await objects.reload();
 			}
 		} finally {
 			setBusy(false);
+		}
+	}
+
+	// A drop on the bucket is an upload into it. It stops here, or the app window's own drop
+	// handler would open a Data Flow for the file instead.
+	function onDrop(event: React.DragEvent): void {
+		event.preventDefault();
+		event.stopPropagation();
+		setDropping(false);
+		const files = [...event.dataTransfer.files];
+		if (files.length > 0 && !busy) {
+			void upload(files);
 		}
 	}
 
@@ -428,7 +443,12 @@ function BucketFiles(props: { project: ProjectHandle; bucket: Bucket; onChanged(
 	const shown = list.slice(0, PAGE);
 
 	return (
-		<fieldset>
+		<fieldset
+			className={`bucket-drop${dropping ? ' over' : ''}`}
+			onDragOver={(event) => { event.preventDefault(); event.stopPropagation(); setDropping(true); }}
+			onDragLeave={(event) => { if (!event.currentTarget.contains(event.relatedTarget as Node | null)) { setDropping(false); } }}
+			onDrop={onDrop}
+		>
 			<legend>{bucket.name}</legend>
 			<label className="check">
 				<input
@@ -452,6 +472,7 @@ function BucketFiles(props: { project: ProjectHandle; bucket: Bucket; onChanged(
 				</label>
 				<button type="button" disabled={busy} onClick={() => void upload()}><Icon name="cloud-upload" /> Upload…</button>
 			</div>
+			<p className="field-hint">Or drop files anywhere on this card.</p>
 			<label>
 				Search
 				<input value={needle} onChange={(e) => setNeedle(e.target.value)} placeholder="File name" />

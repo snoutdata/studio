@@ -8,7 +8,7 @@ import { test } from 'node:test';
 
 import type { ConnectionConfig } from '../shared/connection';
 import type { CloudApi, CloudProjectSummary } from './cloudApi';
-import { syncCloudConnections } from './cloudSync';
+import { ensureCloudConnection, syncCloudConnections } from './cloudSync';
 
 // Cloud projects → connections. Adds what this account has never seen, and nothing else.
 
@@ -62,4 +62,15 @@ test('seen refs are per account', async () => {
 	const seenFor = (account: string): string[] => account === 'other@example.com' ? ['a'] : [];
 	const result = await syncCloudConnections(api([project('a')]), [], seenFor, async () => undefined);
 	assert.deepEqual(result.added, ['a']);
+});
+
+test('asking for one project database adds its connection even after it was deleted, and never twice', async () => {
+	const list: ConnectionConfig[] = [];
+	const adds: string[][] = [];
+	const add = async (refs: string[]): Promise<void> => { adds.push(refs); list.push(...refs.map(connection)); };
+	assert.equal(await ensureCloudConnection('a', () => list, add), 'a');
+	assert.equal(await ensureCloudConnection('a', () => list, add), 'a');
+	assert.deepEqual(adds, [['a']]);
+	// The add could not produce one (the project is gone): null, never a throw from here.
+	assert.equal(await ensureCloudConnection('gone', () => list, async () => undefined), null);
 });

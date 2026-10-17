@@ -2665,15 +2665,15 @@ export function App(): JSX.Element {
 	// A cloud project's database IS a connection: show Connections and put it on the focused tab.
 	// Asking main to sync first covers a project the background sync has not reached yet.
 	async function openCloudDatabase(ref: string): Promise<void> {
-		let config = state.connections.find((c) => c.cloudProjectRef === ref);
-		if (!config) {
-			await window.sqlApi.cloudProjects();
-			const fresh = await window.sqlApi.state();
-			config = fresh.connections.find((c) => c.cloudProjectRef === ref);
+		let id = state.connections.find((c) => c.cloudProjectRef === ref)?.id;
+		if (!id) {
+			// Added here even when the user deleted it: they just asked for this database by name.
+			id = (await window.sqlApi.cloudEnsureConnection(ref).catch(() => null)) ?? undefined;
+			setState(await window.sqlApi.state());
 		}
 		setDocks((d) => showTool(d, 'connections'));
-		if (config) {
-			selectConnection(config.id);
+		if (id) {
+			selectConnection(id);
 		}
 	}
 
@@ -2684,9 +2684,11 @@ export function App(): JSX.Element {
 		let config = find(state.connections);
 		if (!config) {
 			if (target.kind === 'cloud') {
-				await window.sqlApi.cloudProjects();
+				await window.sqlApi.cloudEnsureConnection(target.ref).catch(() => null);
 			}
-			config = find((await window.sqlApi.state()).connections);
+			const fresh = await window.sqlApi.state();
+			setState(fresh);
+			config = find(fresh.connections);
 		}
 		if (!config) {
 			return;
