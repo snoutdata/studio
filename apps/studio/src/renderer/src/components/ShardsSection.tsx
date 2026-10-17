@@ -10,7 +10,7 @@ import { formatBytes } from '../formatBytes';
 import { onShardsProposal, takeShardsProposal } from '../shardsProposal';
 import {
 	FAILOVER_STEPS, failoverStep, jobFinished, joinWords, nextRange, nodePods, nodeShade, planIsSentence, planSentence, proposalFromRequest, rangeShares, ranSentence,
-	replicaBlocked, replicaPods, replicaStanding, replicaWords, shardsOffered, shortBound, slotsSentence, spareSlots, splitAlerts,
+	homeReplicaStanding, replicaBlocked, replicaPods, replicaStanding, replicaWords, shardsOffered, shortBound, slotsSentence, spareSlots, splitAlerts,
 	type ShardAdvice, type ShardAlert, type ShardJob, type ShardKeyspace, type ShardPlan, type ShardPod, type ShardsRunAction, type ShardsStatus,
 } from '../../../shared/cloudShards';
 
@@ -93,6 +93,7 @@ const TITLES: Record<ShardsRunAction, string> = {
 
 /** What a replica is, in the words the review opens with. */
 const REPLICA_REASON = "A replica follows this node and takes its place on its own if the node is lost or corrupt. It takes one project slot.";
+const HOME_REPLICA_REASON = "A replica follows the home node and takes its place on its own, on the same address, if the home is lost or corrupt. Without one, a broken home takes the whole cluster down until it is repaired. It takes one project slot.";
 
 function review(action: ShardsRunAction, request: Record<string, unknown>, extra: Partial<Review> = {}): Review {
 	return { title: TITLES[action], action, verb: TITLES[action].split(' ')[0], request, danger: !QUIET.has(action), ...extra };
@@ -256,8 +257,10 @@ export function ShardsSection({ projectRef }: { projectRef: string }): JSX.Eleme
 									{nodes.map((n) => {
 										const facts = advice?.facts.nodes.find((f) => f.id === n.id);
 										const pod = podOf(n.name);
-										const standing = pod ? replicaStanding(pod) : 'unknown';
-										const blocked = pod ? replicaBlocked(pod, status) : null;
+										const standing = n.home ? homeReplicaStanding(status.home) : pod ? replicaStanding(pod) : 'unknown';
+										const blocked = pod ? replicaBlocked(pod, status) : n.home && status.projectsUsed !== null && status.maxProjects !== null && spareSlots(status) === 0 ? "A replica takes one project slot, and all of your plan's are in use." : null;
+										// 222: the home is the project, so its replica is asked for by the project's ref.
+										const replicaTarget = n.home ? (status.home ? status.home.ref : null) : pod ? pod.ref : null;
 										const replica = replicas.find((r) => r.replicaOf === n.name);
 										return (
 											<Fragment key={n.id}>
@@ -271,22 +274,20 @@ export function ShardsSection({ projectRef }: { projectRef: string }): JSX.Eleme
 													<td>{facts ? formatBytes(facts.db_bytes) : '-'}</td>
 													{knowsReplicas && (
 														<td>
-															{n.home
-																? <span className="muted" title="The home node holds the cluster's catalog and runs beside the router, and its failover is not built yet.">Not yet for the home node</span>
-																: <span className={`shards-replica ${standing}`}>{replicaWords(standing)}</span>}
+															<span className={`shards-replica ${standing}`}>{replicaWords(standing)}</span>
 														</td>
 													)}
 													<td className="cloud-table-action">
-														{!n.home && n.state !== 'removed' && (
+														{n.state !== 'removed' && (
 															<span className="shards-row-actions">
-																{pod && standing === 'none' && (
-																	<button type="button" className="table-action" disabled={blocked !== null} title={blocked ?? undefined} onClick={() => setCurrent(review('add-replica', { node: pod.ref }, { verb: "Add the replica", reason: REPLICA_REASON }))}>Add a replica</button>
+																{replicaTarget && standing === 'none' && (
+																	<button type="button" className="table-action" disabled={blocked !== null} title={blocked ?? undefined} onClick={() => setCurrent(review('add-replica', { node: replicaTarget }, { verb: "Add the replica", reason: n.home ? HOME_REPLICA_REASON : REPLICA_REASON }))}>Add a replica</button>
 																)}
-																{pod && (standing === 'protected' || standing === 'making') && (
-																	<button type="button" className="table-action" onClick={() => setCurrent(review('remove-replica', { node: pod.ref }, { verb: "Remove the replica", reason: "Without a replica, if this node is lost or corrupt its share of the data is unavailable until it is restored from its backups. Its project slot is freed." }))}>Remove replica</button>
+																{replicaTarget && (standing === 'protected' || standing === 'making') && (
+																	<button type="button" className="table-action" onClick={() => setCurrent(review('remove-replica', { node: replicaTarget }, { verb: "Remove the replica", reason: n.home ? "Without a replica, if the home node is lost or corrupt the whole cluster is unavailable until it is restored from its backups. Its project slot is freed." : "Without a replica, if this node is lost or corrupt its share of the data is unavailable until it is restored from its backups. Its project slot is freed." }))}>Remove replica</button>
 																)}
-																<button type="button" className="table-action" onClick={() => setCurrent(review('drain', { node: n.name }))}>Drain</button>
-																<button type="button" className="table-action" onClick={() => setCurrent(review('remove', { node: n.name }))}>Remove</button>
+																{!n.home && <button type="button" className="table-action" onClick={() => setCurrent(review('drain', { node: n.name }))}>Drain</button>}
+																{!n.home && <button type="button" className="table-action" onClick={() => setCurrent(review('remove', { node: n.name }))}>Remove</button>}
 															</span>
 														)}
 													</td>

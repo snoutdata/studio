@@ -100,6 +100,11 @@ export interface ShardsStatus {
 	automation?: { active: boolean; queue: string[]; queueJob: number | null; queueError: string | null } | null;
 	/** Open alerts first, then those resolved in the last day. Absent from a control plane without alerts. */
 	alerts?: ShardAlert[];
+	/**
+	 * The home node's replica and failover (migration 222), which no pod row carries: the home is the
+	 * project. Absent from a control plane older than 222, whose home could not have a replica.
+	 */
+	home?: { ref: string; wantsReplica: boolean; failover: 'fence' | 'swap' | 'held' | 'failed' | null; replica: string | null } | null;
 }
 
 /** A plan, from the router or (for a pod) the control plane, in one shape. */
@@ -356,6 +361,23 @@ export function replicaStanding(pod: ShardPod): ReplicaStanding {
 		return 'protected';
 	}
 	return pod.wantsReplica ? 'making' : 'none';
+}
+
+/** The home's standing (222), from the status's `home`; 'unknown' from a control plane older than it. */
+export function homeReplicaStanding(home: ShardsStatus['home']): ReplicaStanding {
+	if (!home) {
+		return 'unknown';
+	}
+	if (home.failover === 'fence' || home.failover === 'swap') {
+		return 'failing-over';
+	}
+	if (home.failover === 'held' || home.failover === 'failed') {
+		return 'failover-failed';
+	}
+	if (home.replica) {
+		return 'protected';
+	}
+	return home.wantsReplica ? 'making' : 'none';
 }
 
 /** The words for a standing, as the nodes table shows them. */
