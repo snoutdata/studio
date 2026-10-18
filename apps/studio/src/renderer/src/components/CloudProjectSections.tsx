@@ -405,11 +405,11 @@ export function CloudUsageSection({ projectRef }: { projectRef: string }): JSX.E
 						<tbody>
 							{days.map((d) => (
 								<tr key={d.day}>
-									<td>{d.day}</td>
-									<td>{bytes(d.dbBytes)}</td>
-									<td>{bytes(d.repoBytes)}</td>
+									<td className="cloud-when">{d.day}</td>
+									<td className="cloud-nowrap">{bytes(d.dbBytes)}</td>
+									<td className="cloud-nowrap">{bytes(d.repoBytes)}</td>
 									<td>{d.connections}</td>
-									<td>{Math.round(d.computeSeconds / 60)} min</td>
+									<td className="cloud-nowrap">{Math.round(d.computeSeconds / 60)} min</td>
 								</tr>
 							))}
 						</tbody>
@@ -558,12 +558,12 @@ export function CloudFunctionsSection({ projectRef }: { projectRef: string }): J
 						<tbody>
 							{data!.functions.map((f) => (
 								<tr key={f.name}>
-									<td className="mono">{f.name}</td>
-									<td>{f.verifyJwt ? "Required" : "Public"}</td>
-									<td>{bytes(f.bytes)}</td>
-									<td>{f.memoryMb == null ? '-' : `${f.memoryMb} MB`}</td>
-									<td>{f.concurrency ?? '-'}</td>
-									<td>{when(f.updatedAt)}</td>
+									<td className="mono cloud-word">{f.name}</td>
+									<td className="cloud-nowrap">{f.verifyJwt ? "Required" : "Public"}</td>
+									<td className="cloud-nowrap">{bytes(f.bytes)}</td>
+									<td className="cloud-nowrap">{f.memoryMb == null ? '-' : `${f.memoryMb} MB`}</td>
+									<td className="cloud-nowrap">{f.concurrency ?? '-'}</td>
+									<td className="cloud-when">{when(f.updatedAt)}</td>
 								</tr>
 							))}
 						</tbody>

@@ -670,7 +670,7 @@ export function RealtimeSection({ project }: SectionProps): JSX.Element {
 					<span className="muted">WebSocket</span><span className="mono">{ws}</span>
 					<span className="muted">Signals over HTTP</span><span className="mono">{project.apiUrl}{served(project, '/v1/live/signal')}</span>
 				</div>
-				<pre className="local-snippet">{`client.live.topic('room-1')
+				<pre className="local-snippet local-snippet-code">{`client.live.topic('room-1')
   .listen('changes', { event: '*', schema: 'public', table: 'notes' }, (change) => console.log(change))
   .join()`}</pre>
 			</fieldset>
@@ -959,17 +959,28 @@ from pg_available_extensions,
 order by (installed_version is null), name
 `.trim();
 
+/** An image carries seventy-odd extensions; ten at a time, as the online dashboard shows them. */
+const EXTENSIONS_PAGE = 10;
+
 export function ExtensionsSection({ project }: SectionProps): JSX.Element {
 	const all = useLoad(() => query<Extension>(project.target, EXTENSIONS_SQL), [projectKey(project.target)]);
 	const [filter, setFilter] = useState('');
+	const [page, setPage] = useState(0);
 	const [busy, setBusy] = useState<string | null>(null);
 	const [said, setSaid] = useState<Said>(null);
 	const [confirm, confirmDialog] = useConfirm();
 
-	const shown = useMemo(() => {
+	const matching = useMemo(() => {
 		const needle = filter.trim().toLowerCase();
 		return (all.data ?? []).filter((e) => !needle || e.name.includes(needle) || (e.comment ?? '').toLowerCase().includes(needle));
 	}, [all.data, filter]);
+	const pages = Math.max(1, Math.ceil(matching.length / EXTENSIONS_PAGE));
+	// A search starts again at page one, and a reload that shortened the list never strands the page past its end.
+	useEffect(() => {
+		setPage(0);
+	}, [filter]);
+	const at = Math.min(page, pages - 1);
+	const shown = matching.slice(at * EXTENSIONS_PAGE, (at + 1) * EXTENSIONS_PAGE);
 
 	async function change(extension: Extension, on: boolean): Promise<void> {
 		if (!on) {
@@ -1022,6 +1033,7 @@ export function ExtensionsSection({ project }: SectionProps): JSX.Element {
 					))}
 				</tbody>
 			</table>
+			<Pager page={at} pages={pages} hasMore={at < pages - 1} onPage={setPage} />
 			{confirmDialog}
 		</fieldset>
 	);

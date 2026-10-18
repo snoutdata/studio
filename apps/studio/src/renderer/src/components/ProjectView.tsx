@@ -5,6 +5,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Icon } from './Icon';
+import { PageMark } from '../art/Illustrations';
 import {
 	AuthUsers, CronSection, DataApiSection, ExtensionsSection, PostgresStatements, RealtimeSection, StorageBrowser, TimeSeriesSection,
 	WorkOnIt, type ProjectHandle,
@@ -142,6 +143,7 @@ export function ProjectView(props: ProjectViewProps): JSX.Element {
 									key={s.id}
 									type="button"
 									className={`settings-nav-item${s.id === current.id ? ' active' : ''}`}
+									title={s.label}
 									onClick={() => props.onSection(s.id)}
 								>
 									<Icon name={s.icon} className="settings-nav-icon" />
@@ -152,7 +154,7 @@ export function ProjectView(props: ProjectViewProps): JSX.Element {
 					))}
 				</nav>
 				<div className="settings-content">
-					<h3 className="settings-section-title">{current.label}</h3>
+					<h3 className="settings-section-title"><PageMark art={current.id} text={current.label} /></h3>
 					{missing && <div className="form-status warn">{missing}</div>}
 					{!missing && !found && <div className="field-hint">Loading…</div>}
 					{found && project && NEEDS_RUNNING.has(current.id) && !project.running && <div className="form-status warn">{stopped}</div>}

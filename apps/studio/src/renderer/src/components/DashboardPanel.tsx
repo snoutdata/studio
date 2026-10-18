@@ -293,26 +293,6 @@ export function DashboardPanel(props: DashboardPanelProps): JSX.Element {
 		});
 	}
 
-	async function remove(row: CloudProjectRow): Promise<void> {
-		const ok = await confirm({
-			title: `Delete ${row.name}?`,
-			body: `The project ${row.ref} and its data are deleted. It can be restored for your plan's grace period. Its connection is removed from your list.`,
-			confirmLabel: "Delete",
-			danger: true,
-		});
-		if (!ok) {
-			return;
-		}
-		setBusy(true);
-		try {
-			const outcome = await window.sqlApi.cloudDelete(row.ref);
-			setSaid((prev) => ({ ...prev, [row.ref]: outcome }));
-			await refresh();
-		} finally {
-			setBusy(false);
-		}
-	}
-
 	function statusLine(key: string): JSX.Element | null {
 		const outcome = said[key];
 		if (!outcome) {
@@ -499,19 +479,7 @@ export function DashboardPanel(props: DashboardPanelProps): JSX.Element {
 															</div>
 														)}
 														<div className="mono" title={`${row.user}@${row.host}/${row.database}`}>{row.host}</div>
-	
-														<div className="row cloud-actions">
-															<span className="spacer" />
-															<button
-																type="button"
-																className="danger small"
-																disabled={!row.canDelete || busy}
-																onClick={() => void remove(row)}
-															>
-																<Icon name="trash" /> Delete
-															</button>
-														</div>
-	
+
 														{row.pauseRefusal && !row.canPause && <div className="muted">{row.pauseRefusal}</div>}
 														{statusLine(row.ref)}
 													</div>

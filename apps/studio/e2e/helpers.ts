@@ -3,7 +3,8 @@
  *  Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { existsSync, mkdtempSync, readFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
+import { createServer } from 'node:net';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { _electron as electron, type ElectronApplication, type Page } from '@playwright/test';
@@ -151,6 +152,18 @@ export async function fillSsl(page: Page, cfg: DbConfig): Promise<void> {
 	await page.locator('label', { hasText: 'Certificate verification' }).locator('select').selectOption('system');
 }
 
+/** A port nothing on this machine listens on right now, asked of the OS. */
+function freePort(): Promise<number> {
+	return new Promise((resolve, reject) => {
+		const server = createServer();
+		server.once('error', reject);
+		server.listen(0, '127.0.0.1', () => {
+			const address = server.address();
+			server.close(() => (typeof address === 'object' && address ? resolve(address.port) : reject(new Error('no port'))));
+		});
+	});
+}
+
 /** Launch the built app (out/main/index.js) against a fresh scratch userData dir, wait for the
  *  UI to paint, and suppress first-run onboarding so the tour never covers the surface under
  *  test. Requires `npm run build` to have run (the `e2e` script does). `name` labels this
@@ -161,6 +174,12 @@ export async function launchApp(name: string, options: { profile?: string; env?:
 	// `profile` reuses a fixed directory instead of a scratch one — only the signed-in profile
 	// above does that, and only the live-model specs pass it.
 	const userData = options.profile ?? mkdtempSync(join(tmpdir(), 'snout-e2e-'));
+	// The agent server's port, chosen per launch. On the default (7311) a scratch app lost the port
+	// to any Studio already running on this machine, a dev build or the installed one, and every
+	// spec that talks to the agent server failed for a reason that had nothing to do with it.
+	if (!options.profile) {
+		writeFileSync(join(userData, 'mcp.json'), JSON.stringify({ port: await freePort() }));
+	}
 	const app = await electron.launch({
 		// SwiftShader, Chromium's software WebGL, as a FALLBACK only: a machine with a GPU still uses
 		// it. Chromium no longer falls back to it on its own, so on a CI runner or a container (no

@@ -22,8 +22,8 @@ This repository is published from SnoutData's main repository, which is private.
 is one change made there, copied across.
 
 So a pull request here is not merged with the merge button. When we accept it, we apply your change
-in the main repository with you as co-author (a `Co-authored-by:` line with your name and email),
-and the next sync brings it back here as a commit that credits you. Your pull request is then
+in the main repository with you as its author (your name and email, as in your pull request), and
+the next sync brings it back here as your commit, under your name. Your pull request is then
 closed with a link to that commit. The change reaches users in the next official release.
 
 ## Before you open a pull request

@@ -4946,8 +4946,32 @@ body.col-resizing {
 
 .cloud-actions {
 	display: flex;
+	flex-wrap: wrap;
 	gap: 6px;
 	margin-top: 6px;
+}
+
+/* Under a paged list: where you are on the left, the two steps on the right, all on one line. */
+.cloud-pager {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 12px;
+	margin-top: 10px;
+}
+
+.cloud-pager-steps {
+	display: inline-flex;
+	gap: 6px;
+}
+
+.cloud-pager-steps > button {
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+	height: 26px;
+	padding: 0 10px;
+	font-size: 12px;
 }
 
 /* A bucket's card while files are dragged over it: the selected tint and an accent edge. */
@@ -4968,6 +4992,50 @@ body.col-resizing {
 	min-height: 0;
 	flex-direction: column;
 	background: var(--bg);
+	container-type: inline-size;
+}
+
+/* A narrow tab (the side panel and the assistant both open beside it) keeps its content and gives
+   up the menu's words: the menu is its icons, each with its name on hover, so the section is not
+   squeezed into a column a word wide. */
+@container (max-width: 680px) {
+	.cloud-project-view .settings-nav {
+		flex-basis: 48px;
+		padding: 10px 6px;
+		align-items: center;
+	}
+
+	.cloud-project-view .settings-nav-item {
+		justify-content: center;
+		padding: 7px;
+	}
+
+	.cloud-project-view .settings-nav-item > span:not(.settings-nav-icon),
+	.cloud-project-view .settings-nav-group-label,
+	.cloud-project-view .cloud-project-nav-name {
+		display: none;
+	}
+
+	.cloud-project-view .settings-nav-group + .settings-nav-group {
+		margin-top: 6px;
+		padding-top: 6px;
+		border-top: 1px solid var(--border);
+	}
+
+	.cloud-project-view .cloud-project-nav-head {
+		padding: 4px 0 10px;
+	}
+
+	.cloud-project-view .settings-content {
+		padding: 18px 16px 32px;
+	}
+
+	/* A table wider than the card (functions, users, usage) scrolls sideways inside it. */
+	.cloud-project-view .cloud-table {
+		display: block;
+		max-width: 100%;
+		overflow-x: auto;
+	}
 }
 
 /* A fieldset's default `min-width: min-content` let one long line (the Realtime URLs and
@@ -4983,9 +5051,20 @@ body.col-resizing {
 	overflow-wrap: anywhere;
 }
 
+/* An address in a sentence ("Served at https://…") is one long word: it breaks rather than run
+   past its card. */
+.cloud-project-view .field-hint .mono {
+	overflow-wrap: anywhere;
+}
+
 /* A date is one token to a reader: it never breaks at its comma, and a badge after a name never
    breaks inside its own word. The name beside it is what gives way. */
-.cloud-table td.cloud-when {
+.cloud-table td.cloud-word {
+	overflow-wrap: break-word;
+}
+
+.cloud-table td.cloud-when,
+.cloud-table td.cloud-nowrap {
 	white-space: nowrap;
 	overflow-wrap: normal;
 }
@@ -5294,6 +5373,12 @@ body.col-resizing {
 	line-height: 1.45;
 	white-space: pre-wrap;
 	word-break: break-all;
+}
+
+/* Code to copy keeps its lines: it scrolls sideways inside its box instead of breaking mid-word. */
+.local-snippet.local-snippet-code {
+	white-space: pre;
+	word-break: normal;
 }
 
 .local-log.tall {

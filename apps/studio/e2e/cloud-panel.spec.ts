@@ -133,7 +133,7 @@ test.beforeAll(async () => {
 				} else if (sql.includes('from snout_files.spaces')) {
 					send(res, 200, { ref: body.ref, columns: ['id', 'name', 'public'], rows: [{ id: 'avatars', name: 'avatars', public: false, created_at: '2026-09-20T10:00:00Z', file_size_limit: null }], rowCount: 1, truncated: false, ms: 1, connectedMs: 1 });
 				} else if (sql.includes('from pg_available_extensions')) {
-					send(res, 200, { ref: body.ref, columns: ['name'], rows: [{ name: 'vector', defaultVersion: '0.8.0', installedVersion: '0.8.0', comment: 'vector data type', delegated: true }, { name: 'postgis', defaultVersion: '3.5', installedVersion: null, comment: 'spatial types', delegated: true }], rowCount: 2, truncated: false, ms: 1, connectedMs: 1 });
+					send(res, 200, { ref: body.ref, columns: ['name'], rows: [{ name: 'vector', defaultVersion: '0.8.0', installedVersion: '0.8.0', comment: 'vector data type', delegated: true }, { name: 'postgis', defaultVersion: '3.5', installedVersion: null, comment: 'spatial types', delegated: true }, ...Array.from({ length: 22 }, (_, i) => ({ name: `ext_${String(i).padStart(2, '0')}`, defaultVersion: '1.0', installedVersion: null, comment: 'an extension', delegated: true }))], rowCount: 24, truncated: false, ms: 1, connectedMs: 1 });
 				} else {
 					send(res, 200, { ref: body.ref, columns: [], rows: [], rowCount: 0, truncated: false, ms: 1, connectedMs: 1 });
 				}
@@ -403,8 +403,11 @@ test('a project created from the panel is a connection at once, and a delete is 
 	// "Created … It is starting" is news only until it has started: once the project is ready the
 	// line goes, instead of sitting above a green dot saying the opposite.
 	await expect(handle.page.locator('.sidebar')).not.toContainText('Created fffffffffffff');
+	// Deleting is in the project's Settings, as on the online dashboard, never in the panel.
 	await handle.page.click('.tree-row:has-text("made here")');
-	await handle.page.locator('.cloud-detail button:has-text("Delete")').click();
+	await expect(handle.page.locator('.cloud-detail button:has-text("Delete")')).toHaveCount(0);
+	await handle.page.locator('.sidebar .tree-row:has-text("Settings")').last().click();
+	await handle.page.locator('.cloud-project-view button:has-text("Delete project")').click();
 	await handle.page.click('.modal.confirm button:has-text("Delete")');
 	await expect.poll(() => asked.some((a) => a.action === 'delete' && a.ref === 'fffffffffffff')).toBe(true);
 	await expect(handle.page.locator('.tree-row:has-text("made here")')).toHaveCount(0);
@@ -462,6 +465,18 @@ test('the project tab walks every section against the control plane', async () =
 	// A shared section, read from the cloud project's own catalog.
 	await view.locator('.settings-nav-item:has-text("Extensions")').click();
 	await expect(view.locator('.cloud-table')).toContainText('postgis');
+	// Ten at a time: 24 extensions are three pages, and a search starts again at the first.
+	const extensions = view.locator('fieldset', { hasText: 'Extensions' });
+	await expect(extensions.locator('.cloud-table tr')).toHaveCount(10);
+	await expect(extensions).toContainText('Page 1 of 3');
+	await extensions.locator('button:has-text("Next")').click();
+	await expect(extensions).toContainText('Page 2 of 3');
+	await expect(extensions.locator('.cloud-table')).not.toContainText('postgis');
+	await extensions.locator('input[placeholder^="vector"]').fill('ext_2');
+	await expect(extensions.locator('.cloud-table tr')).toHaveCount(2);
+	await expect(extensions).not.toContainText('Page 1');
+	await extensions.locator('input[placeholder^="vector"]').fill('');
+	await expect(extensions).toContainText('Page 1 of 3');
 
 	await view.locator('.settings-nav-item:has-text("Functions")').click();
 	await expect(view.locator('.cloud-table').first()).toContainText('hello');

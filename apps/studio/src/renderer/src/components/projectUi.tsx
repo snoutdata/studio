@@ -62,16 +62,21 @@ export function useLoad<T>(load: () => Promise<T>, deps: unknown[]): { data: T |
 	return { data, error, loading, reload };
 }
 
-/** Previous / next over a page of `size`, where the query fetched `size + 1` to know if there is more. */
-export function Pager(props: { page: number; hasMore: boolean; onPage(page: number): void }): JSX.Element | null {
+/**
+ * Previous / next over a page of `size`, where the query fetched `size + 1` to know if there is more.
+ * A list held whole in memory knows how many pages it has, and passes `pages` to say so.
+ */
+export function Pager(props: { page: number; hasMore: boolean; pages?: number; onPage(page: number): void }): JSX.Element | null {
 	if (props.page === 0 && !props.hasMore) {
 		return null;
 	}
 	return (
-		<div className="cloud-actions">
-			<button type="button" className="secondary small" disabled={props.page === 0} onClick={() => props.onPage(props.page - 1)}><Icon name="chevron-left" /> Previous</button>
-			<span className="muted small">Page {props.page + 1}</span>
-			<button type="button" className="secondary small" disabled={!props.hasMore} onClick={() => props.onPage(props.page + 1)}><Icon name="chevron-right" /> Next</button>
+		<div className="cloud-pager">
+			<span className="muted small">Page {props.page + 1}{props.pages ? ` of ${props.pages}` : ''}</span>
+			<span className="cloud-pager-steps">
+				<button type="button" className="secondary" aria-label="Previous page" disabled={props.page === 0} onClick={() => props.onPage(props.page - 1)}><Icon name="chevron-left" /> Previous</button>
+				<button type="button" className="secondary" aria-label="Next page" disabled={!props.hasMore} onClick={() => props.onPage(props.page + 1)}>Next <Icon name="chevron-right" /></button>
+			</span>
 		</div>
 	);
 }

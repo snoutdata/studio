@@ -923,7 +923,233 @@ function SettingsMarkArt(): JSX.Element {
 	);
 }
 
+// A project tab's sections (shared/projects.ts), the same drawings the online dashboard puts on
+// its project tabs, so a section reads the same here.
+
+function ProjectMark({ children }: { children: JSX.Element | JSX.Element[] }): JSX.Element {
+	return (
+		<svg className="ill ill-mark" viewBox="0 0 120 100" aria-hidden="true" focusable="false">
+			<path className="ill-blob" d={MARK_BLOB} />
+			{children}
+		</svg>
+	);
+}
+
+/** Overview and Database: two databases, one of them green. */
+function DatabaseMarkArt(): JSX.Element {
+	return (
+		<ProjectMark>
+			<Drum cx={38} top={34} rx={20} ry={7} h={44} />
+			<Drum cx={84} top={26} rx={20} ry={7} h={52} fill="ill-accent" />
+			<path d="M10 88H112" />
+			<Spark x={104} y={14} s={0.8} />
+		</ProjectMark>
+	);
+}
+
+/** Extensions: two puzzle pieces, one of them green. */
+function ExtensionsMarkArt(): JSX.Element {
+	return (
+		<ProjectMark>
+			<path className="ill-paper" d="M14 30H34C32 22 38 18 42 18C46 18 52 22 50 30H62V46C70 44 74 50 74 54C74 58 70 64 62 62V78H14Z" />
+			<path className="ill-accent" d="M66 30H86C84 22 90 18 94 18C98 18 104 22 102 30H112V78H66V66C58 68 54 62 54 58C54 54 58 48 66 50Z" transform="translate(0 6)" />
+			<Spark x={60} y={12} s={0.6} />
+		</ProjectMark>
+	);
+}
+
+/** Cron: a clock over a calendar page. */
+function CronMarkArt(): JSX.Element {
+	return (
+		<ProjectMark>
+			<rect className="ill-paper" x="12" y="24" width="64" height="62" rx="6" />
+			<path className="ill-tint" d="M12 40V30a6 6 0 0 1 6-6h52a6 6 0 0 1 6 6v10Z" />
+			<path d="M26 18V30M62 18V30" />
+			<path d="M22 54H30M38 54H46M22 70H30" />
+			<path className="ill-accent" d="M37 63H47V75H37Z" />
+			<circle className="ill-paper" cx="88" cy="58" r="22" />
+			<path d="M88 40V44M88 72V76M70 58H74M102 58H106" />
+			<path d="M88 58V47M88 58L96 63" />
+			<circle className="ill-ink-dot" cx="88" cy="58" r="2.4" />
+		</ProjectMark>
+	);
+}
+
+/** Time series: a clock over a card with a green line rising across it. */
+function TimeSeriesMarkArt(): JSX.Element {
+	return (
+		<ProjectMark>
+			<rect className="ill-paper" x="40" y="18" width="70" height="58" rx="6" />
+			<path className="ill-accent" d="M52 66L64 52L76 58L90 38L100 44V66Z" />
+			<path d="M52 66H100" />
+			<circle className="ill-tint" cx="36" cy="62" r="24" />
+			<path d="M36 42V46M36 78V82M16 62H20M52 62H56" />
+			<path d="M36 62V50M36 62L45 67" />
+			<circle className="ill-ink-dot" cx="36" cy="62" r="2.4" />
+		</ProjectMark>
+	);
+}
+
+/** Cluster: three databases on one thread, the home one lit. */
+function ClusterMarkArt(): JSX.Element {
+	return (
+		<ProjectMark>
+			<path className="ill-thread" d="M40 42C48 30 72 30 80 42M30 70H90" />
+			<Drum cx={60} top={16} rx={16} ry={6} h={24} bands={1} fill="ill-accent" />
+			<Drum cx={26} top={50} rx={16} ry={6} h={24} bands={1} />
+			<Drum cx={94} top={50} rx={16} ry={6} h={24} bands={1} />
+		</ProjectMark>
+	);
+}
+
+/** Auth: a badge with a person on it, under a green tick. */
+function AuthMarkArt(): JSX.Element {
+	return (
+		<ProjectMark>
+			<rect className="ill-paper" x="22" y="20" width="62" height="70" rx="8" transform="rotate(-4 53 55)" />
+			<g transform="rotate(-4 53 55)">
+				<path className="ill-tint" d="M44 20H62V30H44Z" />
+				<circle className="ill-tint" cx="53" cy="50" r="10" />
+				<path d="M36 78C38 68 44 64 53 64C62 64 68 68 70 78" />
+			</g>
+			<circle className="ill-accent" cx="92" cy="28" r="14" />
+			<path d="M85 28L90 33L99 23" />
+		</ProjectMark>
+	);
+}
+
+/** Storage: an open box with files standing in it. */
+function StorageMarkArt(): JSX.Element {
+	return (
+		<ProjectMark>
+			<path className="ill-paper" d="M30 20H50L58 28V62H30Z" />
+			<path d="M50 20V28H58" />
+			<path className="ill-accent" d="M62 14H84V56H62Z" transform="rotate(8 73 35)" />
+			<path className="ill-paper" d="M22 52H98V84C98 88 95 90 92 90H28C25 90 22 88 22 84Z" />
+			<path className="ill-tint" d="M22 52L10 40H38L50 52Z" />
+			<path className="ill-tint" d="M98 52L110 40H82L70 52Z" />
+			<path d="M46 72H74" />
+		</ProjectMark>
+	);
+}
+
+/** Data API: braces on a card, on a thread into a green database. */
+function ApiMarkArt(): JSX.Element {
+	return (
+		<ProjectMark>
+			<path className="ill-thread" d="M64 52C76 52 80 56 86 58" />
+			<rect className="ill-paper" x="10" y="22" width="56" height="60" rx="6" transform="rotate(-3 38 52)" />
+			<g transform="rotate(-3 38 52)">
+				<path d="M30 34C24 34 24 38 24 44S22 52 18 52C22 52 24 54 24 60S24 70 30 70" />
+				<path d="M46 34C52 34 52 38 52 44S54 52 58 52C54 52 52 54 52 60S52 70 46 70" />
+				<circle className="ill-ink-dot" cx="38" cy="52" r="2.4" />
+			</g>
+			<Drum cx={98} top={44} rx={14} ry={5} h={30} bands={2} fill="ill-accent" />
+		</ProjectMark>
+	);
+}
+
+/** Functions: a code card with a green spark of lightning. */
+function FunctionsMarkArt(): JSX.Element {
+	return (
+		<ProjectMark>
+			<rect className="ill-paper" x="12" y="20" width="80" height="64" rx="6" transform="rotate(-3 52 52)" />
+			<g transform="rotate(-3 52 52)">
+				<path className="ill-tint" d="M12 34V26a6 6 0 0 1 6-6h68a6 6 0 0 1 6 6v8Z" />
+				<path d="M36 46L26 56L36 66M58 46L68 56L58 66M51 44L43 68" />
+			</g>
+			<path className="ill-accent" d="M100 20L86 50H98L92 76L112 42H100L106 20Z" />
+		</ProjectMark>
+	);
+}
+
+/** Containers: two ribbed shipping containers, the top one green, on a hook. */
+function ContainersMarkArt(): JSX.Element {
+	return (
+		<ProjectMark>
+			<path d="M64 8V20M58 20H70" />
+			<path className="ill-thread" d="M58 20L40 34M70 20L88 34" />
+			<rect className="ill-accent" x="34" y="34" width="60" height="24" rx="3" />
+			<path d="M46 38V54M58 38V54M70 38V54M82 38V54" />
+			<rect className="ill-paper" x="14" y="62" width="92" height="26" rx="3" />
+			<path d="M28 66V84M42 66V84M56 66V84M70 66V84M84 66V84" />
+			<Spark x={106} y={30} s={0.7} />
+		</ProjectMark>
+	);
+}
+
+/** Realtime: two databases talking over a wire, a message on its way. */
+function RealtimeMarkArt(): JSX.Element {
+	return (
+		<ProjectMark>
+			<path className="ill-wire" d="M34 50C52 26 68 74 86 50" />
+			<path className="ill-wire-flow" d="M34 50C52 26 68 74 86 50" />
+			<Drum cx={22} top={36} rx={14} ry={5} h={30} bands={1} />
+			<Drum cx={98} top={36} rx={14} ry={5} h={30} bands={1} />
+			<circle className="ill-accent" cx="60" cy="50" r="7" />
+			<Spark x={60} y={20} s={0.7} />
+		</ProjectMark>
+	);
+}
+
+/** Push: a bell with a green dot. */
+function PushMarkArt(): JSX.Element {
+	return (
+		<ProjectMark>
+			<path className="ill-paper" d="M60 18C44 18 34 30 34 46V62L24 74H96L86 62V46C86 30 76 18 60 18Z" />
+			<path d="M60 12V18" />
+			<path className="ill-tint" d="M50 78C50 86 70 86 70 78Z" />
+			<circle className="ill-accent" cx="88" cy="26" r="10" />
+			<path className="ill-wire" d="M102 46L110 44M100 58L108 60M18 46L10 44M20 58L12 60" />
+		</ProjectMark>
+	);
+}
+
+/** Logs: an open notebook and a pen. */
+function LogsMarkArt(): JSX.Element {
+	return (
+		<ProjectMark>
+			<path className="ill-paper" d="M58 30C46 24 30 22 14 26V80C30 76 46 78 58 84Z" />
+			<path className="ill-tint" d="M58 30C70 24 86 22 102 26V80C86 76 70 78 58 84Z" />
+			<path d="M24 40C32 38 42 38 50 42M24 52C32 50 42 50 50 54M24 64C30 62 36 62 42 64" />
+			<g transform="rotate(38 92 44)">
+				<rect className="ill-accent" x="86" y="14" width="10" height="46" rx="3" />
+				<path d="M86 60L91 70L96 60" />
+			</g>
+		</ProjectMark>
+	);
+}
+
+/** Domains: a globe on a stand with a green flag. */
+function DomainsMarkArt(): JSX.Element {
+	return (
+		<ProjectMark>
+			<circle className="ill-paper" cx="54" cy="48" r="30" />
+			<path d="M24 48H84M54 18C40 34 40 62 54 78C68 62 68 34 54 18Z" />
+			<path d="M30 32C40 36 68 36 78 32M30 64C40 60 68 60 78 64" />
+			<path d="M54 78V88M40 90H68" />
+			<path d="M92 14V52" />
+			<path className="ill-accent" d="M92 14H112L106 22L112 30H92Z" />
+		</ProjectMark>
+	);
+}
+
 const MARK_ART = {
+	overview: DatabaseMarkArt,
+	database: DatabaseMarkArt,
+	extensions: ExtensionsMarkArt,
+	cron: CronMarkArt,
+	timeSeries: TimeSeriesMarkArt,
+	shards: ClusterMarkArt,
+	auth: AuthMarkArt,
+	storage: StorageMarkArt,
+	dataApi: ApiMarkArt,
+	functions: FunctionsMarkArt,
+	containers: ContainersMarkArt,
+	realtime: RealtimeMarkArt,
+	push: PushMarkArt,
+	logs: LogsMarkArt,
+	domains: DomainsMarkArt,
 	settings: SettingsMarkArt,
 	account: AccountMarkArt,
 	appearance: AppearanceMarkArt,

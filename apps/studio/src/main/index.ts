@@ -2358,13 +2358,20 @@ function registerIpc(): void {
 			rememberCloudRefs(account, [ref]);
 		}
 	}));
-	ipcMain.handle('cloud:delete-project', (_event, ref: string) => deleteCloudProject(liveCloudApi, ref, async (projectRef) => {
-		const mine = readConnections().filter((c) => c.cloudProjectRef === projectRef);
-		for (const connection of mine) {
-			await connections.remove(connection.id);
+	ipcMain.handle('cloud:delete-project', async (_event, ref: string) => {
+		const outcome = await deleteCloudProject(liveCloudApi, ref, async (projectRef) => {
+			const mine = readConnections().filter((c) => c.cloudProjectRef === projectRef);
+			for (const connection of mine) {
+				await connections.remove(connection.id);
+			}
+			return mine.length;
+		});
+		// The delete is asked for from the project tab's Settings, so the panel learns of it here.
+		if (outcome.ok) {
+			broadcast('cloud:changed', ref);
 		}
-		return mine.length;
-	}));
+		return outcome;
+	});
 	// The Cloud project tab. A password or an API key
 	// goes to the clipboard here and never back over IPC.
 	const cloudProjectHost: CloudProjectHost = {
