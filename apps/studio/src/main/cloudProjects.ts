@@ -77,6 +77,7 @@ export function toRow(project: CloudProjectSummary): CloudProjectRow {
 		busy,
 		readOnly: project.readOnly,
 		wakesInstantly: project.wakesInstantly,
+		serverSilent: project.serverSilent === true,
 		sizeBytes: project.sizeBytes ?? null,
 		host: project.host,
 		database: project.database,

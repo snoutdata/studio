@@ -6,10 +6,13 @@
 import { randomUUID } from 'node:crypto';
 
 import { GATEWAY_EMBED_MODEL, observerModelFor } from '../shared/ai';
+import { gatewayRefusal, refusalSentence } from '../shared/gatewayRefusal';
 import { OFFICIAL_BUILD } from '../shared/officialBuild';
 import { BYOK_ANTHROPIC_MODELS, BYOK_PROVIDER_DEFAULTS, isByokProvider, isCompletionOnlyModel, isReasoningModel, supportsPromptCaching, usageWeightForCost, type AiAuditKind, type AiBudgetStatus, type AiCompletionOutcomeParams, type AiCompletionRecord, type AiEditParams, type AiModelInfo, type AiProviderId, type AiProviderStatus, type AiSettings, type AiToolEvent, type AmbientContext, type ByokProviderId, type ChatMessage, type CloudProviderId, type TokenUsage } from '../shared/ai';
-import { getModelCatalog, isCompletionModel, preferredCompletionModel, type ModelMeta } from './modelCatalog';
-import { getCloudClient } from './cloudClient';
+import { getModelCatalog, isCompletionModel, isEmbeddingModel, preferredCompletionModel, type ModelMeta } from './modelCatalog';
+import { ACCOUNTS_FUNCTIONS_URL, ACCOUNTS_URL, accountsAppKeyHeader, getCloudClient } from './cloudClient';
+import { projectModelInfos, projectRefusal, projectRelayBase } from '../shared/aiSources';
+import { createProjectAiSources } from './projectAiSources';
 import { readCreditBalance } from './creditBalance';
 import { autoRunBlocker, backendKindForDriver, dataAccessAllows, dataAccessPromptNote, dataAccessRefusal, gateValuesResult, limitAmbient, resolveDataAccess, strictestDataAccess, type DataAccessLevel, buildAgentPrompt, buildAmbientComment, buildCompletionPrompt, buildCompletionUser, buildEditPrompt, buildEditUser, buildGlossaryBlock, buildHistoryComment, buildKnowledgeDraftPrompt, buildKnowledgeDraftUser, buildSchemaComment, buildSystemPrompt, buildTableUsage, buildToolSpecs, cleanKnowledgeDraft, engineAiDisplayName, editDecoyTables, completionFocus, extractCompletion, guardCompletion, partialIdentifier, inlineAttachments, runTool, type BackendKind, type ConnectionHandle, type NativeQuery, type ToolAuditRecord, type ToolContext } from '../shared/engine';
 import type { DatabaseSchema } from '../shared/schema';
@@ -38,9 +41,11 @@ import { toToolSpec } from '../shared/capabilities';
 import type { AiModelChoice, LibyChatRequest, ToolSpec } from '../shared/ai';
 import type { ReviewMethod } from '../shared/review';
 
-/** Default public API base for the gateway; overridable via settings['positron-cloud'].baseUrl. */
+/** SnoutData Cloud's models: Psyche, the AI gateway, on the accounts backend, reached with the
+ *  signed-in user's own access token. Overridable via
+ *  settings['positron-cloud'].baseUrl. */
 const CLOUD_BASE: Record<CloudProviderId, string> = {
-	'positron-cloud': 'https://api.snoutdata.com/v1',
+	'positron-cloud': `${ACCOUNTS_URL}/ai/v1`,
 };
 
 const CLOUD_LABEL: Record<CloudProviderId, string> = {
@@ -163,10 +168,9 @@ function looksLikeToolUnsupported(err: unknown): boolean {
 	return message.includes('tool') && (message.includes('support') || message.includes('not') || message.includes('unknown') || message.includes('400'));
 }
 
-/** Whether a provider error is the gateway's "monthly budget exhausted" signal — LiteLLM returns
- *  a 400 whose body mentions the budget (e.g. "ExceededBudget", "Budget has been exceeded"). Drives
- *  the fallback to the top-up (credits) key. Kept broad on purpose; verify the exact string against
- *  the live gateway. A 429 rate-limit is NOT a budget error. */
+/** Whether a provider error is the gateway's "budget exhausted" signal: Psyche answers 429
+ *  `budget_exceeded` with a sentence naming the budget (and, when credits are on, what they have
+ *  left; Psyche spends credits itself once the wallet is full). A rate limit is NOT a budget error. */
 function isBudgetExceeded(err: unknown): boolean {
 	const message = (err instanceof Error ? err.message : String(err)).toLowerCase();
 	return message.includes('budget') && !message.includes('rate limit');
@@ -239,6 +243,18 @@ export type LocalProseResolver = (method: ReviewMethod) =>
 	| { ok: true; label: string; model: string; providerId: AiProviderId; ask(request: { system: string; user: string; signal?: AbortSignal }): Promise<string> }
 	| { ok: false; because: string };
 
+/** Asks the `cloud-project-ai` relay which projects' AI this user may use. Bounded, so a slow
+ *  control plane leaves the picker with SnoutData AI's models rather than waiting. */
+async function askRelayForSources(): Promise<unknown> {
+	const call = getCloudClient().fn.call('cloud-project-ai', { body: { action: 'ai-sources' } });
+	const timeout = new Promise<never>((_, reject) => setTimeout(() => reject(new Error('timed out')), 15_000).unref?.());
+	const { data, error } = await Promise.race([call, timeout]);
+	if (error) {
+		throw error instanceof Error ? error : new Error(String(error));
+	}
+	return data;
+}
+
 export class AiService {
 	/** Which interaction kinds the user wants recorded (mirrors Settings → AI Audit). Empty
 	 *  until the renderer pushes the setting on launch (no AI call can happen before then). */
@@ -273,11 +289,6 @@ export class AiService {
 	/** Dev blackbox logging: when on, every provider round-trip is wrapped + recorded (full
 	 *  system prompt + reply + usage) to aiDebug.jsonl. Off in production. */
 	private debugEnabled = false;
-	/** The user's wallet→credits switch. When false, the assistant pauses
-	 *  at the monthly limit; when true, it falls back to the persistent top-up (credits) key once
-	 *  the monthly wallet is exhausted. Set from `ai_preferences` on auth changes and when the user
-	 *  flips the toggle. Default false (explicit opt-in to spend real money). */
-	private creditsEnabled = false;
 	/** Cached per-model gateway prices (USD per 1M input/output tokens), keyed by model id. Warmed
 	 *  as a side effect of {@link providerStatus} (which the renderer calls on load), so the chat
 	 *  path never fetches prices itself — keeping per-turn cost estimation off the latency budget.
@@ -287,6 +298,9 @@ export class AiService {
 	/** The inline completion currently in flight, so a newer cursor can abandon it. Inline
 	 *  completion is strictly single-flight: an older answer is never wanted once the cursor moves. */
 	private completionAbort: AbortController | null = null;
+	/** The projects whose own AI gateway this user may use, read through the `cloud-project-ai`
+	 *  relay when the picker opens (never on boot) and cached for a minute. */
+	private readonly projectSources = createProjectAiSources(() => askRelayForSources());
 
 	constructor(
 		private readonly settings: AiSettingsStore,
@@ -325,6 +339,9 @@ export class AiService {
 	/** Record whether a user is signed in; gates every model call (the assistant is
 	 *  account-only — no signed-out access to the gateway). */
 	setSignedIn(signedIn: boolean): void {
+		if (signedIn !== this.signedIn) {
+			this.projectSources.clear();
+		}
 		this.signedIn = signedIn;
 	}
 
@@ -362,10 +379,16 @@ export class AiService {
 		return this.scriptedModel?.fimRequests ?? [];
 	}
 
-	/** Set the wallet→credits switch. Drives whether the chat path falls
-	 *  back to the top-up (credits) key when the monthly wallet is exhausted. */
-	setCreditsEnabled(enabled: boolean): void {
-		this.creditsEnabled = enabled;
+	/** The signed-in user's current access token, which Psyche takes as the bearer for SnoutData
+	 *  Cloud's models: no key is minted or stored. Asked per request, so the client refreshes an
+	 *  expired token rather than sending it. */
+	private async cloudToken(): Promise<string> {
+		const { data } = await getCloudClient().identity.currentSession();
+		const token = data.session?.access_token;
+		if (!token) {
+			throw new Error('Sign in to use the assistant.');
+		}
+		return token;
 	}
 
 	/** Guard a model call on being signed in. The renderer also hides the composer when
@@ -452,8 +475,7 @@ export class AiService {
 		const auditPrompt = this.recordingEnabled('chat') ? systemPrompt : undefined;
 
 		// One full attempt with a given provider (agent loop, with a one-shot fallback for models
-		// that can't do tool calls). Factored out so we can retry the whole turn on the top-up
-		// (credits) key if the monthly wallet is exhausted — see the budget fallback below.
+		// that can't do tool calls).
 		const attempt = async (p: ModelProvider): Promise<{ usage?: TokenUsage; responseId?: string }> => {
 			if (useTools) {
 				try {
@@ -469,24 +491,15 @@ export class AiService {
 		};
 
 		try {
-			let result: { usage?: TokenUsage; responseId?: string };
-			try {
-				result = await attempt(provider);
-			} catch (err) {
-				// The monthly wallet is exhausted. If the user opted into spending credits and has a
-				// top-up key, retry the whole turn once on it — but only when nothing streamed yet
-				// (fail-fast, never mid-stream). Otherwise surface the paused/limit error as before.
-				const topup = !streamed && this.creditsEnabled && isBudgetExceeded(err) ? this.buildTopupProvider(settings, providerId, model) : undefined;
-				if (!topup) {
-					throw err;
-				}
-				result = await attempt(topup);
-			}
+			// Credits are spent by Psyche itself once the wallet is full, so there is no second key to
+			// retry on: a budget refusal here is the answer.
+			const result: { usage?: TokenUsage; responseId?: string } = await attempt(provider);
 			this.record('chat', providerId, model, activeConnectionId, history, reply, startedAt, { ok: true, usage: result.usage }, auditPrompt);
 			// BYOK prompts go straight to the user's provider — we never see them, so there's no
 			// gateway response to attach a reward signal to. Drop the id so the renderer reports no
 			// outcome (the join key it pings against). Audit logging stays on; it's client-side.
-			return isByokProvider(providerId) ? { usage: result.usage } : result;
+			// A project's gateway is not ours either, so the same holds there.
+			return isByokProvider(providerId) || providerId === 'snout-project' ? { usage: result.usage } : result;
 		} catch (err) {
 			const explained = this.explain(err, settings, providerId);
 			// A user-stopped stream isn't a failure — keep the partial reply, no error.
@@ -1236,8 +1249,7 @@ export class AiService {
 		const settings = this.settings.get();
 		const cloud = settings['positron-cloud'];
 		const baseUrl = cloud.baseUrl?.trim() || CLOUD_BASE['positron-cloud'];
-		const apiKey = this.settings.apiKey('positron-cloud') ?? '';
-		const provider = new OpenAiProvider({ baseUrl, apiKey, model: EMBEDDING_MODEL, endUser: this.settings.endUser() });
+		const provider = new OpenAiProvider({ baseUrl, apiKey: () => this.cloudToken(), model: EMBEDDING_MODEL });
 		try {
 			return await provider.embeddings({ input: text, model: EMBEDDING_MODEL, signal });
 		} catch (err) {
@@ -1460,8 +1472,7 @@ export class AiService {
 		this.requireSignedIn();
 		const settings = this.settings.get();
 		const baseUrl = settings['positron-cloud'].baseUrl?.trim() || CLOUD_BASE['positron-cloud'];
-		const apiKey = this.settings.apiKey('positron-cloud') ?? '';
-		const provider = new OpenAiProvider({ baseUrl, apiKey, model: EMBEDDING_MODEL, endUser: this.settings.endUser() });
+		const provider = new OpenAiProvider({ baseUrl, apiKey: () => this.cloudToken(), model: EMBEDDING_MODEL });
 		try {
 			return await provider.embedMany({ inputs: texts, model: EMBEDDING_MODEL, signal });
 		} catch (err) {
@@ -1551,13 +1562,16 @@ export class AiService {
 				kind,
 				provider,
 				model,
+				projectRef: provider === 'snout-project' ? this.settings.get().project?.ref : undefined,
 				connectionId,
 				messages: messages.filter((m) => m.role !== 'system'),
 				response,
 				systemPrompt,
 				completion: outcome.completion,
 				usage: outcome.usage,
-				costUsd: this.estimateCostUsd(model, outcome.usage),
+				// The cached prices are SnoutData AI's: a BYOK or project model with the same id is
+				// billed by someone else, so it gets no wallet estimate.
+				costUsd: provider === 'positron-cloud' ? this.estimateCostUsd(model, outcome.usage) : undefined,
 				durationMs: Date.now() - startedAt,
 				ok: outcome.ok,
 				error: outcome.error,
@@ -1604,10 +1618,9 @@ export class AiService {
 		// hidden from the picker for now — so it isn't surfaced here. Flip OLLAMA_VISIBLE
 		// (or gate it) to bring it back: list its pulled models like the gateway does below.
 
-		// SnoutData Cloud — our own OpenAI-compatible gateway. It serves a small, curated model
-		// set we can enumerate cheaply, so (once a key is stored) we list the gateway's models
-		// rather than surfacing a single configured one.
-		const pcKey = this.settings.apiKey('positron-cloud');
+		// SnoutData Cloud: Psyche, our own OpenAI-compatible gateway, reached with the signed-in
+		// user's own token. It serves a small, curated model set we can enumerate cheaply, so we list
+		// the gateway's models rather than surfacing a single configured one.
 		// Signed out, the gateway cannot be used (every model call is refused up front, see
 		// requireSignedIn), and the catalog below only decorates the gateway's models. So nothing is
 		// asked of anybody: a signed-out app talks only to the databases the user configured. This is
@@ -1616,9 +1629,9 @@ export class AiService {
 		if (!this.signedIn) {
 			statuses.push({
 				provider: 'positron-cloud',
-				configured: Boolean(pcKey),
+				configured: false,
 				reachable: false,
-				detail: pcKey ? 'Sign in to use the assistant' : 'No API key: add it below',
+				detail: 'Sign in to use the assistant',
 				models: [],
 				completionModels: [],
 			});
@@ -1645,40 +1658,22 @@ export class AiService {
 				costs = new Map();
 			}
 		};
-		if (!pcKey) {
-			pcDetail = 'No API key: add it below';
-		} else {
+		{
 			const pc = settings['positron-cloud'];
 			const base = pc.baseUrl?.trim() || CLOUD_BASE['positron-cloud'];
 			try {
-				const provider = new OpenAiProvider({ baseUrl: base, apiKey: pcKey, model: pc.model });
+				const provider = new OpenAiProvider({ baseUrl: base, apiKey: () => this.cloudToken(), model: pc.model });
 				pcModels = await provider.listModels();
 				pcReachable = true;
 				await classifyCosts(provider);
 			} catch (err) {
-				// The monthly wallet is spent: LiteLLM refuses this key on every route — including
-				// /v1/models — so the list comes back empty even though the user may still run
-				// questions on pay-as-you-go credits. Never let a spent wallet hide the picker; the
-				// budget wall belongs at send time (see chat()), not here.
+				// A refusal that names the budget must not hide the picker: the budget wall belongs at
+				// send time (see chat()), not here.
 				if (isBudgetExceeded(err)) {
 					pcBudgetBlocked = true;
-					// Credits on + a top-up key: list via it (the same key the chat path falls back to),
-					// so the picker shows the real per-user model set and sends keep working.
-					const topupKey = this.creditsEnabled ? this.settings.topupKey() : undefined;
-					if (topupKey) {
-						try {
-							const topup = new OpenAiProvider({ baseUrl: base, apiKey: topupKey, model: pc.model });
-							pcModels = await topup.listModels();
-							pcReachable = true;
-							pcDetail = "Monthly limit reached, using your credits";
-							await classifyCosts(topup);
-						} catch {
-							// Credits dry or unreachable: fall through to the catalog fallback below.
-						}
-					}
 				} else {
 					// Name the real cause + host so Settings shows e.g. "net::ERR_TIMED_OUT reaching
-					// api.snoutdata.com" instead of a bare "Offline" (the key diagnostic on a corp network).
+					// accounts.snoutdata.com" instead of a bare "Offline" (the key diagnostic on a corp network).
 					let host = base;
 					try {
 						host = new URL(base).host;
@@ -1725,14 +1720,16 @@ export class AiService {
 		const byOrder = (a: string, b: string): number => sortKey(a) - sortKey(b) || a.localeCompare(b);
 		statuses.push({
 			provider: 'positron-cloud',
-			configured: Boolean(pcKey),
+			// Signed in is configured: the account's own token is the key.
+			configured: true,
 			reachable: pcReachable,
 			detail: pcDetail,
 			// Completion-only (base/FIM) models back inline completion, not chat — keep them out of
 			// the chat picker / model list so they're never selectable as the chat model, and
 			// surface them on their own for the Auto-completion picker (the inverse filter). The
 			// chat/completion split is server-owned (the catalog `role`), with a hard-coded fallback.
-			models: pcModels.filter((model) => !isCompletionModel(model, catalog)).sort(byOrder).map(decorate),
+			// The embedding model is in neither: vector flows name it themselves.
+			models: pcModels.filter((model) => !isCompletionModel(model, catalog) && !isEmbeddingModel(model, catalog)).sort(byOrder).map(decorate),
 			completionModels: pcModels.filter((model) => isCompletionModel(model, catalog)).map(decorate),
 		});
 
@@ -1747,6 +1744,17 @@ export class AiService {
 		}
 
 		return statuses;
+	}
+
+	/** The chat models of every SnoutData Cloud project whose AI this user may use, for the picker's
+	 *  project groups. Called when the picker opens, never on boot; cached for a minute (`force`
+	 *  asks again). Signed out, or in an e2e run with a scripted model, there are none. */
+	async projectModels(force = false): Promise<AiModelInfo[]> {
+		if (!this.signedIn || this.scriptedAccount) {
+			return [];
+		}
+		const disabled = new Set(this.settings.get().disabledModels ?? []);
+		return projectModelInfos(await this.projectSources.list(force), disabled);
 	}
 
 	/** Status for one BYOK provider. Surfaces ONLY the models the user curated (`byok[p].models`),
@@ -1809,14 +1817,28 @@ export class AiService {
 		if (this.scriptedAccount) {
 			return this.scriptedAccount.budget;
 		}
-		const apiKey = this.settings.apiKey('positron-cloud');
-		if (!apiKey) {
+		if (!this.signedIn) {
 			return null;
 		}
-		const cloud = this.settings.get()['positron-cloud'];
-		const baseUrl = cloud.baseUrl?.trim() || CLOUD_BASE['positron-cloud'];
 		try {
-			const status = await new OpenAiProvider({ baseUrl, apiKey, model: cloud.model }).keyInfo();
+			// The account's wallet as the account service reads it from Psyche (`ai-usage`, with the
+			// user's own session), so the app and the dashboard show one number.
+			const { data, error } = await getCloudClient().fn.call('ai-usage');
+			const usage = data as {
+				available?: boolean; metered?: boolean; spend?: number; maxBudget?: number; softBudget?: number;
+				percentUsed?: number; resetAt?: string;
+			} | null;
+			if (error || !usage?.available) {
+				return null;
+			}
+			const status: AiBudgetStatus = {
+				metered: usage.metered === true,
+				spend: typeof usage.spend === 'number' ? usage.spend : 0,
+				maxBudget: usage.maxBudget,
+				softBudget: usage.softBudget,
+				percentUsed: usage.percentUsed,
+				resetAt: usage.resetAt,
+			};
 			// The pay-as-you-go credit balance, when the user has bought any, so the Account screen
 			// can show it beside the monthly wallet. Best-effort: when it cannot be read the credits
 			// block is simply omitted.
@@ -1828,12 +1850,9 @@ export class AiService {
 	}
 
 	/** The pay-as-you-go credit balance as the account service reports it (the `ai-credits` Snout
-	 *  Function, with the user's own session), or null when the user has no top-up key (no credits
-	 *  bought) or the balance cannot be read. Never computed here. */
+	 *  Function, with the user's own session), or null when nothing was bought or the balance cannot
+	 *  be read. Never computed here. */
 	private async creditStatus(): Promise<AiBudgetStatus['credits'] | null> {
-		if (!this.settings.topupKey()) {
-			return null;
-		}
 		return readCreditBalance((name) => getCloudClient().fn.call(name));
 	}
 
@@ -1864,14 +1883,28 @@ export class AiService {
 	private explain(err: unknown, settings: AiSettings, providerId: AiProviderId): Error {
 		const message = err instanceof Error ? err.message : String(err);
 		const networkErr = isNetworkError(err);
-		// The gateway's monthly budget (or a BYO provider's spend cap) is exhausted. The raw body
-		// ("OpenAI 429: {…budget_exceeded…}") is useless to a user, so translate it before it can
-		// reach the chat. If we got here with credits enabled, the top-up key fallback also ran dry.
+		// SnoutData AI refused for a budget or a rate limit. The raw body ("OpenAI 429: {…}") names
+		// budgets by their internal names, so say whose it was instead: the user's own, their team's,
+		// or SnoutData AI's own daily ceiling, which is not theirs to fix.
+		const refusal = providerId === 'positron-cloud' ? gatewayRefusal(message) : null;
+		if (refusal) {
+			return new Error(refusalSentence(refusal));
+		}
+		// A project's own gateway: its refusals (switched off, no access, its own budgets) are the
+		// project's, never SnoutData AI's balance.
+		if (providerId === 'snout-project' && !networkErr) {
+			const project = settings.project;
+			const sentence = projectRefusal(message, project?.name || project?.ref || 'this project');
+			if (sentence) {
+				return new Error(sentence);
+			}
+		}
+		// A BYO provider's spend cap is exhausted (or a gateway's refusal this could not read).
 		if (isBudgetExceeded(err)) {
 			if (isByokProvider(providerId)) {
 				return new Error(`${BYOK_PROVIDER_DEFAULTS[providerId].label} reports your account has hit its spending limit. Raise the limit (or check billing) with ${BYOK_PROVIDER_DEFAULTS[providerId].label}, then try again.`);
 			}
-			return new Error("You've used up your monthly AI credits. Upgrade or manage your plan at snoutdata.com to keep using the assistant, or wait for them to reset next month.");
+			return new Error(refusalSentence({ code: 'budget_exceeded', scope: null, retryIn: null }));
 		}
 		if (providerId === 'ollama' && networkErr) {
 			return new Error(`Can't reach Ollama at ${settings.ollama.endpoint}. Start it (run "ollama serve") and make sure the model is pulled, then try again.`);
@@ -1930,32 +1963,25 @@ export class AiService {
 			const baseUrl = cfg.baseUrl?.trim() || BYOK_PROVIDER_DEFAULTS[providerId].baseUrl;
 			return new OpenAiProvider({ baseUrl, apiKey, model });
 		}
+		// A SnoutData Cloud project's own AI gateway, through the control plane's relay with the
+		// user's own sign-in (and the app key the functions door takes). The relay decides whether
+		// this user may use the project; no BYOK entitlement applies. No cache_control: the field is
+		// for our gateway, and the project's providers are the project's choice.
+		if (providerId === 'snout-project') {
+			const project = settings.project;
+			if (!project) {
+				throw new Error('Pick a model in the assistant\'s model picker.');
+			}
+			return new OpenAiProvider({ baseUrl: projectRelayBase(ACCOUNTS_FUNCTIONS_URL, project.ref), apiKey: () => this.cloudToken(), model, headers: accountsAppKeyHeader() });
+		}
 		const cloud = settings['positron-cloud'];
 		const baseUrl = cloud.baseUrl?.trim() || CLOUD_BASE['positron-cloud'];
-		const apiKey = this.settings.apiKey('positron-cloud') ?? '';
+		const apiKey = () => this.cloudToken();
 		// Cache the prompt prefix on the gateway path only, and only for models that actually
 		// support it: a non-Anthropic Bedrock model answers a cache_control request with a 500, so
 		// this is correctness, not tuning (see supportsPromptCaching). BYOK above leaves it off so
 		// the user's raw provider endpoint never sees the field.
-		return new OpenAiProvider({ baseUrl, apiKey, model, endUser: this.settings.endUser(), cacheControl: supportsPromptCaching(model) });
-	}
-
-	/** A provider that bills the persistent top-up (credits) key instead of the monthly key, for
-	 *  the credits fallback. Only applies to the gateway and only when a top-up key is stored;
-	 *  returns undefined otherwise so the caller surfaces the limit instead.
-	 *  Wrapped in {@link LoggingProvider} in dev like {@link buildProvider}. */
-	private buildTopupProvider(settings: AiSettings, providerId: AiProviderId, model: string): ModelProvider | undefined {
-		if (providerId !== 'positron-cloud') {
-			return undefined;
-		}
-		const topupKey = this.settings.topupKey();
-		if (!topupKey) {
-			return undefined;
-		}
-		const cloud = settings['positron-cloud'];
-		const baseUrl = cloud.baseUrl?.trim() || CLOUD_BASE['positron-cloud'];
-		const provider = new OpenAiProvider({ baseUrl, apiKey: topupKey, model, endUser: this.settings.endUser(), cacheControl: supportsPromptCaching(model) });
-		return this.debugEnabled ? new LoggingProvider(provider, { provider: providerId, model }) : provider;
+		return new OpenAiProvider({ baseUrl, apiKey, model, cacheControl: supportsPromptCaching(model) });
 	}
 
 	/** The (provider, model) for the chat assistant — the primary provider selection. */
@@ -1966,16 +1992,25 @@ export class AiService {
 	/** The (provider, model) for an inline edit: the model picked in the Ctrl+K widget when
 	 *  both fields are present, else the chat target. */
 	private editTarget(settings: AiSettings, params: AiEditParams): { providerId: AiProviderId; model: string } {
-		if (params.provider && params.model) {
+		if (params.provider && params.model && params.provider !== 'snout-project') {
 			return { providerId: params.provider, model: params.model };
 		}
-		return this.chatTarget(settings);
+		return this.nonChatTarget(settings);
+	}
+
+	/** The chat target for a call that is not the assistant's chat (an edit, a completion with no
+	 *  completion model): a project's model serves chat only, so
+	 *  while one is chosen these go to SnoutData AI's model, where they went before. */
+	private nonChatTarget(settings: AiSettings): { providerId: AiProviderId; model: string } {
+		const target = this.chatTarget(settings);
+		return target.providerId === 'snout-project' ? { providerId: 'positron-cloud', model: settings['positron-cloud'].model } : target;
 	}
 
 	private modelFor(settings: AiSettings, provider: AiProviderId): string {
 		switch (provider) {
 			case 'ollama': return settings.ollama.model;
 			case 'positron-cloud': return settings['positron-cloud'].model;
+			case 'snout-project': return settings.project?.model ?? '';
 			case 'byok-openai':
 			case 'byok-openrouter':
 			case 'byok-anthropic': return settings.byok[provider].model;
@@ -2014,7 +2049,7 @@ export class AiService {
 			}
 			return { providerId: choice.provider, model: choice.model };
 		}
-		return this.chatTarget(settings);
+		return this.nonChatTarget(settings);
 	}
 
 	/** Per-table query-history frequency for a connection (lowercased name → count), used to rank

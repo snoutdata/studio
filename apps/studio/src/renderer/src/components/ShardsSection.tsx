@@ -4,6 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { Fragment, useCallback, useEffect, useMemo, useState, type CSSProperties } from 'react';
+import { ClusterMap } from './ClusterMap';
 import { Icon } from './Icon';
 import { Status, type Said } from './projectUi';
 import { formatBytes } from '../formatBytes';
@@ -11,11 +12,13 @@ import { onShardsProposal, takeShardsProposal } from '../shardsProposal';
 import {
 	FAILOVER_STEPS, failoverStep, jobFinished, joinWords, nextRange, nodePods, nodeShade, planIsSentence, planSentence, proposalFromRequest, rangeShares, ranSentence,
 	homeReplicaStanding, replicaBlocked, replicaPods, replicaStanding, replicaWords, shardsOffered, shortBound, slotsSentence, spareSlots, splitAlerts,
+	checkSentence, severityWord, type CheckFinding, type DesignCheck,
 	type ShardAdvice, type ShardAlert, type ShardJob, type ShardKeyspace, type ShardPlan, type ShardPod, type ShardsRunAction, type ShardsStatus,
 } from '../../../shared/cloudShards';
+import { clusterMapModel } from '../../../shared/cloudClusterMap';
 
 /**
- * A cloud project's Cluster section: its nodes, each keyspace's
+ * A cloud project's Cluster section: a map of the cluster (`ClusterMap`), its nodes, each keyspace's
  * ranges as a bar over the hash space, the jobs with their progress, the advisor's
  * recommendations, and every operation as a REVIEW: what it needs, then the plan the router
  * computed (what moves, rows, copy time, expected write pause), then Run. Nothing runs on a click.
@@ -103,6 +106,8 @@ export function ShardsSection({ projectRef }: { projectRef: string }): JSX.Eleme
 	const [status, setStatus] = useState<ShardsStatus | null>(null);
 	const [jobs, setJobs] = useState<ShardJob[] | null>(null);
 	const [advice, setAdvice] = useState<ShardAdvice | null>(null);
+	const [check, setCheck] = useState<DesignCheck | null>(null);
+	const [checkError, setCheckError] = useState<string | null>(null);
 	const [message, setMessage] = useState<Said>(null);
 	const [current, setCurrent] = useState<Review | null>(null);
 
@@ -130,12 +135,24 @@ export function ShardsSection({ projectRef }: { projectRef: string }): JSX.Eleme
 		void refresh();
 	}, [refresh]);
 
+	// The design check: a read of the schema's keys, foreign keys and indexes. A router
+	// older than the check answers 404, which the group says in a line rather than an error.
+	const askCheck = useCallback(async () => {
+		try {
+			setCheck(await ask<DesignCheck>(projectRef, { action: 'check' }));
+			setCheckError(null);
+		} catch (e) {
+			setCheckError(e instanceof Error ? e.message : String(e));
+		}
+	}, [projectRef]);
+
 	const sharded = status?.sharded === true && status.cluster !== null;
 	useEffect(() => {
 		if (sharded) {
 			void askAdvisor(0);
+			void askCheck();
 		}
-	}, [sharded, askAdvisor]);
+	}, [sharded, askAdvisor, askCheck]);
 
 	// A proposal from the assistant, now or while the section is open.
 	useEffect(() => {
@@ -217,7 +234,7 @@ export function ShardsSection({ projectRef }: { projectRef: string }): JSX.Eleme
 					</p>
 					{shardsOffered(status) ? (
 						<>
-							<p className="field-hint">Each cluster node uses one of your plan's project slots, and you have {spareSlots(status)} free. Making it a cluster restarts the database once, and nothing moves until you add a cluster node.</p>
+							<p className="field-hint">Each cluster node uses one of your plan's project slots, and you have {spareSlots(status)} free. Making it a cluster keeps the database running (its services move to pods of their own, which can refuse a request for a few seconds), and nothing moves until you add a cluster node.</p>
 							<div className="cloud-actions">
 								<button type="button" onClick={() => setCurrent(review('enable', {}, { danger: true, verb: "Make it a cluster" }))}><Icon name="split-horizontal" /> Make it a cluster</button>
 							</div>
@@ -241,6 +258,15 @@ export function ShardsSection({ projectRef }: { projectRef: string }): JSX.Eleme
 					)}
 					{status.automation && !status.automation.queueError && (status.automation.queue.length > 0 || status.automation.queueJob !== null) && (
 						<div className="form-status">Spreading a table{status.automation.queueJob !== null ? ` (job ${status.automation.queueJob})` : ''}{status.automation.queue.length > 0 ? `; then ${status.automation.queue.join(', ')}` : ''}.</div>
+					)}
+					{nodes.length > 0 && (
+						<fieldset>
+							<legend>Cluster map</legend>
+							<ClusterMap
+								model={clusterMapModel(status, advice ? new Map(advice.facts.nodes.map((f) => [f.id, f.db_bytes])) : undefined, jobs)}
+								shadeOf={shadeOf}
+							/>
+						</fieldset>
 					)}
 					<fieldset>
 						<legend>Cluster nodes</legend>
@@ -366,6 +392,18 @@ export function ShardsSection({ projectRef }: { projectRef: string }): JSX.Eleme
 					<JobsGroup projectRef={projectRef} jobs={jobs} onChanged={finished} onError={(e) => setMessage(said(e))} />
 
 					<fieldset>
+						<legend>Design check</legend>
+						<p className="field-hint">Every row lives on the node its distribution key points to. Foreign keys, unique keys and joins work on one node only when they include that key, so this reads the tables, foreign keys and indexes and says what to change.</p>
+						{!check && !checkError && <div className="field-hint">Checking the design…</div>}
+						{checkError && <div className="form-status warn">{checkError}</div>}
+						{check && <p className="field-hint">{checkSentence(check)}</p>}
+						{check && <Findings findings={check.findings} onReview={(action, request, reason) => setCurrent(review(action, request, { reason }))} />}
+						<div className="cloud-actions">
+							<button type="button" className="secondary" onClick={() => void askCheck()}>Check again</button>
+						</div>
+					</fieldset>
+
+					<fieldset>
 						<legend>Recommendations</legend>
 						{!advice && <div className="field-hint">Asking the advisor…</div>}
 						{advice && <p className="field-hint">{advice.summary}</p>}
@@ -404,6 +442,30 @@ export function ShardsSection({ projectRef }: { projectRef: string }): JSX.Eleme
 				</>
 			)}
 		</div>
+	);
+}
+
+/** Design check findings: severity, table, what it is, the fix, the SQL, and Review when a request does it. */
+function Findings(props: { findings: CheckFinding[]; onReview?(action: ShardsRunAction, request: Record<string, unknown>, reason: string): void }): JSX.Element {
+	return (
+		<>
+			{props.findings.map((f, i) => {
+				const proposal = props.onReview && f.operation ? proposalFromRequest(f.operation, f.message) : null;
+				return (
+					<div key={`${f.code}-${f.table}-${i}`} className="shards-advice">
+						<div className="cloud-actions">
+							<strong>{f.table}</strong>
+							<span className={`env ${f.severity === 'info' ? '' : f.severity}`}>{severityWord(f.severity)}</span>
+							<span className="spacer" />
+							{proposal && <button type="button" className="table-action" onClick={() => props.onReview?.(proposal.action, proposal.request, f.message)}>Review</button>}
+						</div>
+						<p className="field-hint">{f.message}</p>
+						<p className="field-hint">{f.fix}</p>
+						{f.sql && <pre className="shards-sql">{f.sql}</pre>}
+					</div>
+				);
+			})}
+		</>
 	);
 }
 
@@ -776,6 +838,13 @@ function ReviewSheet(props: { projectRef: string; review: Review; status: Shards
 					</div>
 					<p className="field-hint">{planSentence(plan)}</p>
 					{plan.warnings.map((w, i) => <div key={i} className="form-status warn">{w}</div>)}
+					{plan.check?.error && <p className="field-hint">The design check could not read the tables: {plan.check.error}</p>}
+					{plan.check && !plan.check.error && plan.check.findings.length > 0 && (
+						<>
+							<p className="field-hint"><strong>Design check.</strong> {checkSentence(plan.check)}</p>
+							<Findings findings={plan.check.findings} />
+						</>
+					)}
 					{plan.assumptions && <p className="field-hint">{plan.assumptions}</p>}
 				</>
 			)}

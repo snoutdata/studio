@@ -39,6 +39,8 @@ const PLATFORM_SCHEMAS = new Set([
 	// `cron` stays: a customer schedules their own jobs in it.
 	'snouttime',
 	'snouttime_internal',
+	// A cluster's catalog: Lepis's nodes, ranges and job log, read by the router alone.
+	'lepis',
 ]);
 
 /** Login roles the platform uses (`snout_gate` is `authenticator` in our own layout). The app,

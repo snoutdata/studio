@@ -15,7 +15,7 @@ import type { CloudActionOutcome, CloudCreateForm, CloudCreateOutcome, CloudProj
 import type { CloudContainers, ContainerBuildForm, ContainerBuildProgress } from '../shared/cloudContainers';
 import type { ProjectActionOutcome, ProjectApiRequest, ProjectApiResponse, ProjectSqlResult, ProjectTarget } from '../shared/projects';
 import type { LocalActionOutcome, LocalActivity, LocalConnectionFacts, LocalCopyTarget, LocalExport, LocalFunctionRow, LocalInstallOutcome, LocalMailKind, LocalMailTemplate, LocalProgress, LocalProjectsView, LocalRequirements, LocalSettings, LocalSettingsChange, LocalSetupForm } from '../shared/localStack';
-import type { AiApprovalRequest, AiAuditEntry, AiAuditKind, AiBudgetStatus, AiChatResult, AiCompletionOutcomeParams, AiCompletionParams, AiCompletionResult, AiEditParams, AiEditResult, AiProviderId, AiProviderStatus, AiSettings, AiSettingsFormValues, AiToolEvent, AmbientContext, ByokProviderId, ChatMessage, ExtractDocumentResult, LibyChatRequest } from '../shared/ai';
+import type { AiApprovalRequest, AiAuditEntry, AiAuditKind, AiBudgetStatus, AiChatResult, AiCompletionOutcomeParams, AiCompletionParams, AiCompletionResult, AiEditParams, AiEditResult, AiModelInfo, AiProviderId, AiProviderStatus, AiSettings, AiSettingsFormValues, AiToolEvent, AmbientContext, ByokProviderId, ChatMessage, ExtractDocumentResult, LibyChatRequest } from '../shared/ai';
 import type { AiCapabilityRequest, CapabilityResult, CapabilitySpec } from '../shared/capabilities';
 import type { AgentActionRequest, AgentApproval, AgentConsoleAttach, AgentConsoleChunk, AgentConsoleConfig, AgentConsoleExit, AgentConsoleSize, AgentConsoleStatus, AgentImagePaste, AgentKind } from '../shared/agentConsole';
 import type { AuthProviderId, AuthState } from '../shared/auth';
@@ -489,6 +489,7 @@ const sqlApi = {
 	saveAiSettings: (values: AiSettingsFormValues): Promise<AiSettings> => ipcRenderer.invoke('ai:saveSettings', values),
 	aiTest: (): Promise<{ ok: boolean; message: string }> => ipcRenderer.invoke('ai:test'),
 	aiProviderStatus: (): Promise<AiProviderStatus[]> => ipcRenderer.invoke('ai:providerStatus'),
+	aiProjectModels: (force?: boolean): Promise<AiModelInfo[]> => ipcRenderer.invoke('ai:projectModels', force === true),
 	/** The signed-in user's live gateway plan usage (spend vs. budget); null when signed out
 	 *  or the gateway is unreachable. */
 	aiBudgetStatus: (): Promise<AiBudgetStatus | null> => ipcRenderer.invoke('ai:budgetStatus'),
@@ -499,7 +500,7 @@ const sqlApi = {
 	aiSetModelEnabled: (key: string, enabled: boolean): Promise<AiSettings> => ipcRenderer.invoke('ai:setModelEnabled', key, enabled),
 	aiOllamaModels: (endpoint: string): Promise<string[]> => ipcRenderer.invoke('ai:ollamaModels', endpoint),
 	aiByokModels: (provider: ByokProviderId): Promise<string[]> => ipcRenderer.invoke('ai:byokModels', provider),
-	aiSetActive: (provider: AiProviderId, model: string): Promise<AiSettings> => ipcRenderer.invoke('ai:setActive', provider, model),
+	aiSetActive: (provider: AiProviderId, model: string, project?: { ref: string; name?: string; ownedBy?: string; vendor?: string }): Promise<AiSettings> => ipcRenderer.invoke('ai:setActive', provider, model, project),
 
 	aiSetDataAccess: (level: NonNullable<AiSettings['dataAccess']>): Promise<AiSettings> => ipcRenderer.invoke('ai:setDataAccess', level),
 	aiChat: (requestId: string, messages: ChatMessage[], activeConnectionId: string | undefined, capabilities: CapabilitySpec[] = [], ambient: AmbientContext = {}): Promise<AiChatResult> =>

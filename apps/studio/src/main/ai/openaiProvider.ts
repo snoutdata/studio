@@ -3,7 +3,7 @@
  *  Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import type { AiBudgetStatus, AiModelCost, ChatMessage, ToolCall, TokenUsage } from '../../shared/ai';
+import type { AiModelCost, ChatMessage, ToolCall, TokenUsage } from '../../shared/ai';
 import type { ChatOptions, ChatTurnResult, FimRequest, ModelProvider } from './modelProvider';
 import { netFetch } from '../netFetch';
 import { asFunctionTools, parseToolArgs } from './toolUtil';
@@ -12,21 +12,24 @@ import { sseData } from './sse';
 export interface OpenAiAuth {
 	/** API base including any version segment, e.g. https://api.openai.com/v1. */
 	baseUrl: string;
-	apiKey: string;
+	/** The bearer: a fixed key (BYOK), or, for SnoutData Cloud, a getter for the signed-in user's
+	 *  current access token, asked on every request so an expired one is refreshed, never sent. */
+	apiKey: string | (() => Promise<string>);
 	model: string;
-	/** Optional OpenAI `user` field — the signed-in account's user id (opaque, never the email),
-	 *  so the gateway can attribute each request to an account (LiteLLM's "End User" column). */
+	/** Optional OpenAI `user` field: an opaque account id, never the email. */
 	endUser?: string;
 	/** Place Anthropic-style `cache_control` breakpoints on the prompt prefix so repeated
 	 *  prefixes (the stable system+schema block, and the growing tool-loop history) are served
-	 *  from the provider's prompt cache. Enabled only on our gateway (LiteLLM forwards it to the
-	 *  Bedrock/Anthropic models and silently drops it for local models). Left OFF for BYOK, where
-	 *  the request hits the user's raw OpenAI/OpenRouter endpoint, which would reject the field. */
+	 *  from the provider's prompt cache. Enabled only on our gateway (Psyche passes a breakpoint
+	 *  only to a model that takes one). Left OFF for BYOK, where the request hits the user's raw
+	 *  OpenAI/OpenRouter endpoint, which would reject the field. */
 	cacheControl?: boolean;
+	/** Extra headers on every request (the accounts backend's app key, for a project's relay). */
+	headers?: Record<string, string>;
 }
 
 /** A text content part, optionally carrying a cache breakpoint. The array form of `content` is
- *  how the OpenAI wire shape (and LiteLLM) expresses Anthropic `cache_control`. */
+ *  how the OpenAI wire shape (and an OpenAI-compatible gateway) expresses Anthropic `cache_control`. */
 interface OpenAiTextPart {
 	type: 'text';
 	text: string;
@@ -108,15 +111,9 @@ export class OpenAiProvider implements ModelProvider {
 		return this.auth.baseUrl.replace(/\/+$/, '');
 	}
 
-	/** The gateway's management root (no `/v1` version segment). LiteLLM serves the OpenAI
-	 *  surface under `/v1` but its management endpoints (e.g. `/key/info`) at the root, so we
-	 *  strip a trailing version segment from {@link base}. */
-	private managementBase(): string {
-		return this.base().replace(/\/v\d+$/, '');
-	}
-
-	private headers(): Record<string, string> {
-		return { 'content-type': 'application/json', authorization: `Bearer ${this.auth.apiKey}` };
+	private async headers(): Promise<Record<string, string>> {
+		const key = typeof this.auth.apiKey === 'string' ? this.auth.apiKey : await this.auth.apiKey();
+		return { ...this.auth.headers, 'content-type': 'application/json', authorization: `Bearer ${key}` };
 	}
 
 	async chat(messages: ChatMessage[], opts: ChatOptions): Promise<ChatTurnResult> {
@@ -145,7 +142,7 @@ export class OpenAiProvider implements ModelProvider {
 		}
 		const response = await netFetch(`${this.base()}/chat/completions`, {
 			method: 'POST',
-			headers: this.headers(),
+			headers: await this.headers(),
 			body: JSON.stringify(body),
 			signal: opts.signal,
 		});
@@ -181,7 +178,7 @@ export class OpenAiProvider implements ModelProvider {
 				opts.onDelta(delta.content);
 			}
 			for (const fragment of delta?.tool_calls ?? []) {
-				// OpenAI streams a per-call `index` on every fragment; some gateways (LiteLLM routing
+				// OpenAI streams a per-call `index` on every fragment; some gateways (routing
 				// Bedrock/Anthropic) omit it on continuation fragments. Falling back to a separate
 				// `undefined` bucket would split a call's name from its arguments — and since we only
 				// keep buckets that carry a name, the args-bearing bucket gets dropped (empty args).
@@ -247,7 +244,7 @@ export class OpenAiProvider implements ModelProvider {
 		}
 		const response = await netFetch(`${this.base()}/completions`, {
 			method: 'POST',
-			headers: this.headers(),
+			headers: await this.headers(),
 			body: JSON.stringify(body),
 			signal: req.signal,
 		});
@@ -272,7 +269,7 @@ export class OpenAiProvider implements ModelProvider {
 		}
 		const response = await netFetch(`${this.base()}/embeddings`, {
 			method: 'POST',
-			headers: this.headers(),
+			headers: await this.headers(),
 			body: JSON.stringify(body),
 			signal: req.signal,
 		});
@@ -300,7 +297,7 @@ export class OpenAiProvider implements ModelProvider {
 		}
 		const response = await netFetch(`${this.base()}/embeddings`, {
 			method: 'POST',
-			headers: this.headers(),
+			headers: await this.headers(),
 			body: JSON.stringify(body),
 			signal: req.signal,
 		});
@@ -324,7 +321,7 @@ export class OpenAiProvider implements ModelProvider {
 	}
 
 	async listModels(): Promise<string[]> {
-		const response = await netFetch(`${this.base()}/models`, { headers: this.headers(), signal: AbortSignal.timeout(15000) });
+		const response = await netFetch(`${this.base()}/models`, { headers: await this.headers(), signal: AbortSignal.timeout(15000) });
 		if (!response.ok) {
 			const detail = await response.text().catch(() => response.statusText);
 			throw new Error(`OpenAI ${response.status}: ${detail}`);
@@ -334,62 +331,32 @@ export class OpenAiProvider implements ModelProvider {
 	}
 
 	/**
-	 * This key's live spend vs. budget, via LiteLLM's `GET /key/info`. A non-admin virtual
-	 * key may query its own info with no params (the auth header identifies it), so this needs
-	 * only the stored key. An unmetered key (no `max_budget`, i.e. free / local-only) comes
-	 * back as `metered: false`. Throws on a non-OK response so the caller can degrade quietly.
-	 */
-	async keyInfo(): Promise<AiBudgetStatus> {
-		const response = await netFetch(`${this.managementBase()}/key/info`, { headers: this.headers(), signal: AbortSignal.timeout(15000) });
-		if (!response.ok) {
-			const detail = await response.text().catch(() => response.statusText);
-			throw new Error(`OpenAI ${response.status}: ${detail}`);
-		}
-		const data = (await response.json()) as {
-			info?: { spend?: number; max_budget?: number | null; soft_budget?: number | null; budget_reset_at?: string | null };
-		};
-		const info = data.info ?? {};
-		const spend = typeof info.spend === 'number' ? info.spend : 0;
-		const maxBudget = typeof info.max_budget === 'number' ? info.max_budget : undefined;
-		const softBudget = typeof info.soft_budget === 'number' ? info.soft_budget : undefined;
-		const metered = maxBudget !== undefined && maxBudget > 0;
-		return {
-			metered,
-			spend,
-			maxBudget,
-			softBudget,
-			percentUsed: metered ? Math.min(100, Math.round((spend / maxBudget!) * 1000) / 10) : undefined,
-			resetAt: info.budget_reset_at ?? undefined,
-		};
-	}
-
-	/**
-	 * The per-model cost classification for the models this key can reach, via LiteLLM's
-	 * `GET /model/info`. The proxy filters the list to the key's allowed models, and each row
-	 * carries the configured per-token price; a model priced at $0 does not debit the wallet,
-	 * anything priced (the self-hosted local models included, since 2026-06-06) is metered. Throws on a non-OK
-	 * response so the caller can degrade quietly (the Account screen just omits the breakdown).
+	 * The per-model cost classification for the models this caller can reach, from the gateway's
+	 * own `GET /models`: Psyche lists each model with the price it is charged at (`pricing`, dollars
+	 * per million tokens), already filtered to the models the caller may use. A model with no price
+	 * reads as unmetered. Throws on a non-OK response so the caller can degrade quietly (the Account
+	 * screen just omits the breakdown).
 	 */
 	async modelCosts(): Promise<AiModelCost[]> {
-		const response = await netFetch(`${this.managementBase()}/model/info`, { headers: this.headers(), signal: AbortSignal.timeout(15000) });
+		const response = await netFetch(`${this.base()}/models`, { headers: await this.headers(), signal: AbortSignal.timeout(15000) });
 		if (!response.ok) {
 			const detail = await response.text().catch(() => response.statusText);
 			throw new Error(`OpenAI ${response.status}: ${detail}`);
 		}
 		const data = (await response.json()) as {
-			data?: { model_name?: string; model_info?: { input_cost_per_token?: number | null; output_cost_per_token?: number | null } }[];
+			data?: { id?: string; pricing?: { input?: number | null; output?: number | null } | null }[];
 		};
 		const seen = new Set<string>();
 		const costs: AiModelCost[] = [];
 		for (const row of data.data ?? []) {
-			const model = row.model_name;
+			const model = row.id;
 			if (typeof model !== 'string' || !model || seen.has(model)) {
 				continue;
 			}
 			seen.add(model);
-			const input = typeof row.model_info?.input_cost_per_token === 'number' ? row.model_info.input_cost_per_token : 0;
-			const output = typeof row.model_info?.output_cost_per_token === 'number' ? row.model_info.output_cost_per_token : 0;
-			costs.push({ model, metered: input > 0 || output > 0, outputPerMTok: output * 1_000_000, inputPerMTok: input * 1_000_000 });
+			const input = typeof row.pricing?.input === 'number' ? row.pricing.input : 0;
+			const output = typeof row.pricing?.output === 'number' ? row.pricing.output : 0;
+			costs.push({ model, metered: input > 0 || output > 0, outputPerMTok: output, inputPerMTok: input });
 		}
 		return costs;
 	}

@@ -53,6 +53,7 @@ function api(over: Partial<CloudApi> = {}): CloudApi {
 		pause: async () => ({ project: project(), changed: true }),
 		resume: async () => ({ project: project(), changed: true }),
 		mintToken: async () => { throw new Error('not used'); },
+		databaseToken: async () => { throw new Error('not used'); },
 		create: async () => { throw new Error('not used'); },
 		requestExport: async () => { throw new Error('not used'); },
 		exportStatus: async () => { throw new Error('not used'); },
@@ -200,4 +201,24 @@ test('the address comes from the connection call, which is the authority on wher
 	);
 	assert.equal(values[0].host, 'moved.db.snoutdata.com');
 	assert.equal(values[0].port, 5433);
+});
+
+test('a project you sign in to as yourself is imported with no password, signing in with a database token', async () => {
+	const values = await resolveSnoutdataCloudImport(
+		api({ connection: async () => details({ user: 'snout_token', password: null, signIn: 'token' }) }),
+		[{ file: 'snoutdata-cloud', connId: REF }],
+		[],
+	);
+	assert.equal(values[0].username, 'snout_token');
+	assert.equal(values[0].password, undefined);
+	assert.equal(values[0].cloudTokenSignIn, true);
+	assert.equal(values[0].cloudProjectRef, REF);
+});
+
+test('a re-import after the owner handed over the password signs in with it again', async () => {
+	const existing = [saved({ cloudProjectRef: REF, cloudTokenSignIn: true, username: 'snout_token' })];
+	const values = await resolveSnoutdataCloudImport(api(), [{ file: 'snoutdata-cloud', connId: REF }], existing);
+	assert.equal(values[0].password, 'the-real-password');
+	assert.equal(values[0].cloudTokenSignIn, undefined);
+	assert.equal(values[0].username, `${REF}_owner`);
 });

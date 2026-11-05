@@ -117,7 +117,7 @@ export function ContainersSection({ projectRef }: { projectRef: string }): JSX.E
 				)}
 				{loading && !listing && <div className="field-hint">Loading…</div>}
 				{noPlan && (
-					<p className="field-hint">Containers run on the Plus and Pro plans, because a container runs all the time. Change this project&apos;s plan on the dashboard to deploy one.</p>
+					<p className="field-hint">Containers run on every paid plan (Plus, Pro and Business), because a container runs all the time. Change this project&apos;s plan on the dashboard to deploy one.</p>
 				)}
 				{!noPlan && listing && containers.length === 0 && <p className="field-hint">This project runs no container yet. Deploy one below.</p>}
 				{containers.length > 0 && (

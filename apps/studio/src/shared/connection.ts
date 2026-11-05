@@ -209,6 +209,13 @@ export interface ConnectionConfig {
 	 */
 	cloudProjectRef?: string;
 	/**
+	 * A Cloud connection that signs in as the PERSON, not with the project's password.
+	 * Its user is `snout_token`, and each new pooled connection's
+	 * password is a database token that main fetches with the signed-in session
+	 * (`main/cloudDbToken.ts`). Nothing for it is kept in the keychain. Needs `cloudProjectRef`.
+	 */
+	cloudTokenSignIn?: boolean;
+	/**
 	 * Set on the database of a LOCAL project (the SnoutData stack in the user's own Docker): the
 	 * project's id in `userData/localProjects.json`. A tag, like `cloudProjectRef`: the panel finds
 	 * the connection by it, and the explorer draws the butterfly and hides the platform's schemas

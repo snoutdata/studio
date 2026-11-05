@@ -9,6 +9,7 @@ import { dirname, join } from 'node:path';
 
 import { COMPLETION_MODEL_RENAMES, DEFAULT_AI_SETTINGS, isByokProvider, isCompletionOnlyModel, type AiModelChoice, type AiProviderId, type AiSettings, type AiSettingsFormValues, type ByokProviderId, type CloudProviderId } from '../shared/ai';
 import type { SecretStore } from './secretStore';
+import { normalizeProjectSelection, resolveStoredProvider } from '../shared/aiSources';
 import { DATA_ACCESS_LEVELS, type DataAccessLevel } from '../shared/engine';
 
 // Non-secret AI settings live in userData/ai.json; the secret (the gateway API key) is
@@ -18,8 +19,8 @@ const CLOUD_SECRET_ID: Record<CloudProviderId, string> = {
 	'positron-cloud': '__ai_positroncloud__',
 };
 
-// The second, persistent "top-up" gateway key behind pay-as-you-go credits.
-// Stored alongside the subscription key but never resets; absent until the user buys credits.
+// The second, persistent "top-up" gateway key an earlier version kept for pay-as-you-go credits;
+// only read to be deleted (forgetGatewayKeys). Credits are Psyche's now.
 const CLOUD_TOPUP_SECRET_ID = '__ai_positroncloud_topup__';
 
 // Bring-Your-Own-Key provider keys: the user's own OpenAI/OpenRouter/Anthropic key, in its own
@@ -33,12 +34,6 @@ const BYOK_SECRET_ID: Record<ByokProviderId, string> = {
 
 export class AiSettingsStore {
 	constructor(private readonly secrets: SecretStore) {}
-
-	// The signed-in account's user id, set alongside the minted gateway key (cleared on sign-out).
-	// Sent as the OpenAI `user` field so the gateway attributes requests to an account: an opaque
-	// id the control plane already holds, never the email, which would put a person's address on
-	// every request. In-memory only — re-set each launch when the key is confirmed; not a secret.
-	private gatewayUser: string | null = null;
 
 	private filePath(): string {
 		return join(app.getPath('userData'), 'ai.json');
@@ -54,6 +49,9 @@ export class AiSettingsStore {
 			// A file saved by an older build may name a since-removed provider (bedrock,
 			// openai, …); fall back to the default so we never select an unhandled provider.
 			const known = (p: AiProviderId | undefined): p is AiProviderId => p === 'ollama' || p === 'positron-cloud' || (p !== undefined && isByokProvider(p));
+			// A project's model is kept only while it names a project and a model; otherwise the
+			// selection falls back to SnoutData AI (resolveStoredProvider).
+			const project = normalizeProjectSelection(raw.project);
 			// A base/FIM model is completion-only; if an older file selected it as the *chat*
 			// model it would chat as a raw text-completer (gibberish), so repoint chat to the
 			// current default. Completion still uses it via the `completion` override.
@@ -70,7 +68,8 @@ export class AiSettingsStore {
 			}
 			// Merge over defaults so a partial/old file never yields missing fields.
 			return {
-				provider: known(raw.provider) ? raw.provider : DEFAULT_AI_SETTINGS.provider,
+				provider: resolveStoredProvider(raw.provider, project, DEFAULT_AI_SETTINGS.provider),
+				project,
 				ollama: { ...DEFAULT_AI_SETTINGS.ollama, ...raw.ollama },
 				'positron-cloud': cloud,
 				byok: {
@@ -109,11 +108,20 @@ export class AiSettingsStore {
 		return settings;
 	}
 
-	/** Switch the active provider and its model in one step (the chat-panel combo). */
-	setActive(provider: AiProviderId, model: string): AiSettings {
+	/** Switch the active provider and its model in one step (the chat-panel combo). A project's
+	 *  model also names the project (`project.ref`, plus its name and `owned_by` for display). */
+	setActive(provider: AiProviderId, model: string, project?: { ref: string; name?: string; ownedBy?: string; vendor?: string }): AiSettings {
 		const current = this.get();
 		let updated: AiSettings;
 		switch (provider) {
+			case 'snout-project': {
+				const selection = normalizeProjectSelection({ ...project, model });
+				if (!selection) {
+					return current;
+				}
+				updated = { ...current, provider, project: selection };
+				break;
+			}
 			case 'ollama': updated = { ...current, provider, ollama: { ...current.ollama, model } }; break;
 			case 'positron-cloud': updated = { ...current, provider, 'positron-cloud': { ...current['positron-cloud'], model } }; break;
 			case 'byok-openai':
@@ -181,39 +189,11 @@ export class AiSettingsStore {
 		return this.secrets.get(BYOK_SECRET_ID[provider], 'password');
 	}
 
-	/** Store (or clear, when null) the gateway virtual key minted for the signed-in user.
-	 *  Reuses the same positron-cloud keychain slot that {@link apiKey} reads, so the chat
-	 *  path needs no special-casing — a signed-in user's minted key simply becomes the
-	 *  gateway bearer; sign-out clears it. */
-	setGatewayKey(key: string | null, endUser?: string | null): void {
-		if (key) {
-			this.secrets.store(CLOUD_SECRET_ID['positron-cloud'], 'password', key);
-			this.gatewayUser = endUser?.trim() || null;
-		} else {
-			this.secrets.delete(CLOUD_SECRET_ID['positron-cloud'], 'password');
-			this.gatewayUser = null;
-		}
+	/** Removes the gateway keys an earlier version minted and kept here (the subscription key and
+	 *  the top-up key): SnoutData Cloud's models now take the session's own token. */
+	forgetGatewayKeys(): void {
+		this.secrets.delete(CLOUD_SECRET_ID['positron-cloud'], 'password');
+		this.secrets.delete(CLOUD_TOPUP_SECRET_ID, 'password');
 	}
 
-	/** Store (or clear, when null) the user's persistent top-up (credits) gateway key — the
-	 *  second key behind pay-as-you-go credits. Minted/returned by `mint-litellm-key` alongside the
-	 *  subscription key; absent until the user buys credits, and cleared on sign-out. */
-	setGatewayTopupKey(key: string | null): void {
-		if (key) {
-			this.secrets.store(CLOUD_TOPUP_SECRET_ID, 'password', key);
-		} else {
-			this.secrets.delete(CLOUD_TOPUP_SECRET_ID, 'password');
-		}
-	}
-
-	/** The stored top-up (credits) key, or undefined when the user has bought no credits. */
-	topupKey(): string | undefined {
-		return this.secrets.get(CLOUD_TOPUP_SECRET_ID, 'password');
-	}
-
-	/** The signed-in account's user id for request attribution (OpenAI `user` field), or undefined
-	 *  when signed out / using a manually-pasted key. */
-	endUser(): string | undefined {
-		return this.gatewayUser ?? undefined;
-	}
 }

@@ -339,11 +339,14 @@ class EditSession {
 		} catch {
 			return;
 		}
-		const currentModel = settings.provider === 'ollama' ? settings.ollama.model : settings['positron-cloud'].model;
-		const current = `${settings.provider}:${currentModel}`;
-		this.chosenProvider = settings.provider;
+		// A SnoutData Cloud project's model serves the assistant's chat only, so while one is the chat
+		// model, Ctrl+K stays on SnoutData AI's (where main sends it too).
+		const editProvider = settings.provider === 'snout-project' ? 'positron-cloud' : settings.provider;
+		const currentModel = editProvider === 'ollama' ? settings.ollama.model : settings['positron-cloud'].model;
+		const current = `${editProvider}:${currentModel}`;
+		this.chosenProvider = editProvider;
 		this.chosenModel = currentModel;
-		const values = statuses.flatMap((s) => s.models.filter((m) => m.enabled).map((m) => `${m.provider}:${m.model}`));
+		const values = statuses.flatMap((s) => s.models.filter((m) => m.enabled && m.provider !== 'snout-project').map((m) => `${m.provider}:${m.model}`));
 		// The active model always shows, even if it's been toggled off in Settings.
 		if (!values.includes(current)) {
 			values.unshift(current);

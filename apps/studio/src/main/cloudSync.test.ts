@@ -25,7 +25,7 @@ function api(projects: CloudProjectSummary[], account: string | null = 'alex@exa
 	return {
 		account: async () => account, list: async () => projects,
 		connection: unused, pause: unused, resume: unused, mintToken: unused, create: unused,
-		requestExport: unused, exportStatus: unused, remove: unused, request: unused,
+		requestExport: unused, exportStatus: unused, remove: unused, request: unused, databaseToken: unused,
 	};
 }
 

@@ -6,7 +6,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { isCompletionModel, preferredCompletionModel } from './completionRole';
+import { isCompletionModel, isEmbeddingModel, preferredCompletionModel } from './completionRole';
 import type { ModelMeta } from './modelCatalog';
 
 function catalog(entries: Record<string, ModelMeta>): Map<string, ModelMeta> {
@@ -25,6 +25,16 @@ test('isCompletionModel falls back to the hard-coded set when the model is untag
 	const empty = catalog({});
 	assert.ok(isCompletionModel('snout-fim-1.0', empty));
 	assert.ok(!isCompletionModel('coder-chat-30b', empty));
+});
+
+test('isEmbeddingModel: the role decides, and untagged only the gateway embedding model is one', () => {
+	const c = catalog({ 'mxbai-embed-large': { role: 'embedding' }, 'snout-fim-1.0': { role: 'completion' } });
+	assert.ok(isEmbeddingModel('mxbai-embed-large', c));
+	assert.ok(!isEmbeddingModel('snout-fim-1.0', c));
+	assert.ok(!isCompletionModel('mxbai-embed-large', c));
+	const empty = catalog({});
+	assert.ok(isEmbeddingModel('mxbai-embed-large', empty));
+	assert.ok(!isEmbeddingModel('gpt-5.6-luna', empty));
 });
 
 test('preferredCompletionModel picks recommended, then sort_order, then lexical', () => {

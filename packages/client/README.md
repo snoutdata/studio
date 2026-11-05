@@ -3,7 +3,7 @@
 Part of [snoutdata/snoutdata](https://github.com/snoutdata/snoutdata), where the docs and examples live.
 
 The JavaScript client for SnoutData Cloud. One project's data API, auth, storage, realtime,
-Snout Functions and push notifications, from its URL and one key. No dependencies; runs in every browser and
+Snout Functions, push notifications and AI gateway, from its URL and one key. No dependencies; runs in every browser and
 in Node 22+.
 
 ```js
@@ -17,6 +17,7 @@ await db.files.space('documents').put('invoices/7.pdf', file)
 db.live.topic('room:42').listen('signal', { event: 'cursor' }, (m) => draw(m.payload)).join()
 await db.fn.call('hello', { body: { name: 'Ada' } })
 await db.push.register({ transport: 'apns', token: deviceToken })
+await db.ai.chat({ model: 'fast', messages: [{ role: 'user', content: 'Hello' }] })
 ```
 
 Every call resolves to `{ data, error }` rather than throwing, so a refusal from the database is a
@@ -44,13 +45,20 @@ to an exact version:
 
 ```html
 <script type="module">
-  import { snout } from 'https://cdn.jsdelivr.net/npm/@snoutdata/client@0.4.1/dist/index.js'
+  import { snout } from 'https://cdn.jsdelivr.net/npm/@snoutdata/client@0.5.0/dist/index.js'
 </script>
 ```
 
 `db.push` is ours, with nothing to match: notifications to iPhone, Android and the web
 (`register`, `subscribeWeb`, `send`, topics, receipts). See
 [Push notifications](https://docs.snoutdata.com/stack/push).
+
+`db.ai` is the project's AI gateway at `/ai/v1`, on OpenAI's wire with the project's own model
+names: `models`, `chat`, `stream` (read with `for await`; the last chunk carries the usage) and
+`embed`. In a browser it calls as the signed-in person, which the gateway takes only once the
+project has a hard budget for itself and for every user; the app key alone is refused. A refusal
+is an `AiError` with the gateway's sentence, its `code` (`budget_exceeded`, `model_not_found`)
+and the status. See [Psyche](https://docs.snoutdata.com/stack/psyche).
 
 ## Developing
 

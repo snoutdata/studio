@@ -6,7 +6,7 @@
 import type { CapabilityResult } from '../../../shared/capabilities';
 import {
 	SHARDS_RUN_ACTIONS, isShardsRunAction, planSentence, proposalFromRequest, replicaStanding, shardsOffered, spareSlots, splitAlerts,
-	type ShardAdvice, type ShardJob, type ShardPlan, type ShardsProposal, type ShardsStatus,
+	type DesignCheck, type ShardAdvice, type ShardJob, type ShardPlan, type ShardsProposal, type ShardsStatus,
 } from '../../../shared/cloudShards';
 import { proposeShardsOperation } from '../shardsProposal';
 import { find, projectConnections } from './cloud';
@@ -102,9 +102,10 @@ export const shardsCapabilities: CapabilityHandler[] = [
 					data: { sharded: false, projectsUsed: s.projectsUsed, maxProjects: s.maxProjects, tier: s.tier, routerError: s.routerError, rule: 'Each cluster node counts as one project against the plan.', next: shardsOffered(s) ? `The account has ${spareSlots(s)} spare project slot(s), one per cluster node: propose action enable.` : 'The account has no spare project slot for a cluster node.' },
 				};
 			}
-			const [jobs, advice] = await Promise.all([
+			const [jobs, advice, check] = await Promise.all([
 				shards<{ jobs: ShardJob[] }>(ctx, ref, { action: 'jobs' }),
 				shards<ShardAdvice>(ctx, ref, { action: 'advice', sampleMs: 0 }),
+				shards<DesignCheck>(ctx, ref, { action: 'check' }),
 			]);
 			const sizes = advice.ok ? advice.data.facts.nodes : [];
 			return {
@@ -127,6 +128,9 @@ export const shardsCapabilities: CapabilityHandler[] = [
 					advice: advice.ok
 						? advice.data.advice.map((one) => ({ op: one.op, reason: one.reason, operation: one.request, needs: one.needs, plan: one.plan ? planSentence(one.plan) : null }))
 						: { error: advice.error.error },
+					designCheck: check.ok
+						? { summary: check.data.summary, findings: check.data.findings.map((f) => ({ severity: f.severity, code: f.code, table: f.table, message: f.message, fix: f.fix, sql: f.sql, operation: f.operation })) }
+						: { error: check.error.error },
 					...(s.routerError ? { routerError: s.routerError } : {}),
 				},
 			};

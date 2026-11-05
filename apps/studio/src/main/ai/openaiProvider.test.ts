@@ -39,7 +39,7 @@ before(async () => {
 					return;
 				}
 				if (parsed.model === 'splittool') {
-					// A gateway (LiteLLM -> Bedrock) that streams the tool name with an index but DROPS
+					// A gateway (routing to Bedrock) that streams the tool name with an index but DROPS
 					// the index on the arguments continuation fragment. The accumulator must still
 					// attribute the args to the same call, not a stray bucket.
 					sse(res, [

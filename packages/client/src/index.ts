@@ -4,14 +4,14 @@
  *--------------------------------------------------------------------------------------------*/
 
 /**
- * `@snoutdata/client`: one project's data, identity, files, live topics and functions, from its
- * URL and a key.
+ * `@snoutdata/client`: one project's data, identity, files, live topics, functions and AI, from
+ * its URL and a key.
  *
  *     import { snout } from '@snoutdata/client'
  *     const db = snout('https://<ref>.api.snoutdata.com', '<app key>')
  *
  * Every product lives under that one URL at a fixed prefix (`/v1/data`, `/v1/identity`,
- * `/v1/files`, `/v1/live`, `/v1/fn`, `/push/v1`). Every request carries the key as `Snout-Key`,
+ * `/v1/files`, `/v1/live`, `/v1/fn`, `/push/v1`, `/ai/v1`). Every request carries the key as `Snout-Key`,
  * and as `Authorization` the signed-in person's access token, or the key itself when nobody is
  * signed in. Row-level security reads that token, which is why the app key is safe in a browser:
  * it grants what your policies grant the app role, and nothing else.
@@ -20,6 +20,7 @@
  * layout 0.3.x spoke (`/rest/v1`, `apikey`, ...) with the same calls.
  */
 
+import { AiClient } from './ai.js';
 import { AuthClient, type AuthOptions } from './auth.js';
 import { FunctionsClient } from './functions.js';
 import { checkSegment, guardRedirects, joinUrl, keyHeader, type Fetch, type Transport, type Vocabulary } from './http.js';
@@ -31,6 +32,7 @@ import { VERSION } from './version.js';
 
 export { keyHeader, type Vocabulary } from './http.js';
 
+export * from './ai.js';
 export * from './auth.js';
 export * from './cookies.js';
 export * from './functions.js';
@@ -101,6 +103,7 @@ export class SnoutClient<DB = Database, S extends string = 'public'> {
 	/** The `wss://` base of `live`. */
 	readonly liveUrl: string;
 	readonly pushUrl: string;
+	readonly aiUrl: string;
 	/** People, sessions and the token every other product sends. */
 	readonly identity: AuthClient;
 	/** Files in spaces. */
@@ -111,6 +114,8 @@ export class SnoutClient<DB = Database, S extends string = 'public'> {
 	readonly live: RealtimeClient;
 	/** Snout Push: devices, topics, sends and receipts. */
 	readonly push: PushClient;
+	/** The project's AI gateway: its models, chat and embeddings. */
+	readonly ai: AiClient;
 	/** The data API's base, for code that checks where it points. */
 	readonly rest: { url: string };
 	/** @deprecated Since 0.4.0: `dataUrl`. Removed in 0.5.0. */
@@ -160,6 +165,7 @@ export class SnoutClient<DB = Database, S extends string = 'public'> {
 		this.fnUrl = joinUrl(base, at('fn'));
 		this.liveUrl = joinUrl(base.replace(/^http/, 'ws'), at('live'));
 		this.pushUrl = joinUrl(base, 'push/v1');
+		this.aiUrl = joinUrl(base, 'ai/v1');
 		this.restUrl = this.dataUrl;
 		this.authUrl = this.identityUrl;
 		this.storageUrl = this.filesUrl;
@@ -187,6 +193,7 @@ export class SnoutClient<DB = Database, S extends string = 'public'> {
 		this.files = new StorageClient(this.filesUrl, this.transport, vocabulary);
 		this.fn = new FunctionsClient(this.fnUrl, this.transport);
 		this.push = new PushClient(this.pushUrl, this.transport);
+		this.ai = new AiClient(this.aiUrl, this.transport);
 		this.live = new RealtimeClient(this.liveUrl, key, this.transport, () => this.identity.getAccessToken(), options.realtime, vocabulary);
 		this.auth = this.identity;
 		this.storage = this.files;

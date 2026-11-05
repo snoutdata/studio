@@ -61,7 +61,18 @@ export const SnoutProtocol = {
 	/** server -> client: an SSH tunnel trusted a host key seen for the first time; main remembers
 	 *  it so later connects to that host and port are held to it. */
 	SshHostKeyLearned: 'snout/sshHostKeyLearned',
+	/** server -> client REQUEST: the password for a new pooled connection of a connection whose
+	 *  password is fetched each time (a Cloud connection signing in as the person). */
+	ConnectionPassword: 'snout/connectionPassword',
 } as const;
+
+export interface ConnectionPasswordParams {
+	connectionId: string;
+}
+
+export interface ConnectionPasswordResult {
+	password: string;
+}
 
 export interface SshHostKeyLearnedParams {
 	host: string;

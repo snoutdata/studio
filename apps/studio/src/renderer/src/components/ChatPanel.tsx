@@ -16,7 +16,8 @@ import { RenderSurface, type ChatRunOutcome, type ChatRunState, type RenderItem 
 import { blocksFromMarkdown, proseOnly, sqlBlocks } from '../renderBlocks';
 import { resolveSurface, type SessionKind, type SurfaceConfig } from '../chatSurface';
 import { isByokProvider } from '../../../shared/ai';
-import type { AiApprovalRequest, AiModelInfo, AiProviderId, AiProviderStatus, AiToolEvent, AmbientContext, ChatMessage, DocumentAttachment, TokenUsage } from '../../../shared/ai';
+import type { AiApprovalRequest, AiModelInfo, AiProviderId, AiProviderStatus, AiToolEvent, AmbientContext, ChatMessage, DocumentAttachment, ProjectAiSelection, TokenUsage } from '../../../shared/ai';
+import { chatSelection, modelKey, parseModelKey } from '../../../shared/aiSources';
 import type { ChatSession, ChatTurn } from '../../../shared/chat';
 import type { KnowledgeNote } from '../../../shared/knowledge';
 import { KnowledgePopover } from './KnowledgePopover';
@@ -247,6 +248,10 @@ export function ChatPanel({ variant = 'docked', contextLabel, composerHeight, co
 	const [provider, setProvider] = useState<AiProviderId>('ollama');
 	const [model, setModel] = useState('');
 	const [statuses, setStatuses] = useState<AiProviderStatus[]>([]);
+	// A SnoutData Cloud project's model, when one is chosen (its ref, name and who bills it), and
+	// the projects' models, read only when the picker opens (never on mount: it asks the network).
+	const [projectSel, setProjectSel] = useState<ProjectAiSelection | undefined>(undefined);
+	const [projectModels, setProjectModels] = useState<AiModelInfo[]>([]);
 	const [tokens, setTokens] = useState<TokenUsage>(ZERO_TOKENS);
 	const [sessionId, setSessionId] = useState<string>(() => crypto.randomUUID());
 	const [historyOpen, setHistoryOpen] = useState(false);
@@ -297,13 +302,20 @@ export function ChatPanel({ variant = 'docked', contextLabel, composerHeight, co
 			setAutoInsert(s.behavior.autoInsertSql);
 			setDataAccess(s.dataAccess ?? null);
 			setProvider(s.provider);
-			setModel(isByokProvider(s.provider) ? s.byok[s.provider].model : s[s.provider].model);
+			setModel(chatSelection(s).model);
+			setProjectSel(s.provider === 'snout-project' ? s.project : undefined);
 		});
 		void refreshStatuses();
 	}, [settingsRev]);
 
 	function refreshStatuses(): Promise<void> {
 		return window.sqlApi.aiProviderStatus().then(setStatuses);
+	}
+
+	/** The projects' models, for the picker's project groups. Best-effort: a failure keeps the
+	 *  last list, so the picker never loses a group because one read failed. */
+	function refreshProjectModels(): void {
+		void window.sqlApi.aiProjectModels().then(setProjectModels).catch(() => undefined);
 	}
 
 	// Self-heal a stale selection: if the saved model is gone from its provider's live list
@@ -330,14 +342,24 @@ export function ChatPanel({ variant = 'docked', contextLabel, composerHeight, co
 		void changeActive(`${fallback.provider}:${fallback.model}`);
 	}, [statuses, provider, model]);
 
-	// A combo value is "provider:model"; provider has no colon, so split on the first.
+	// A combo value is "provider:model", or "snout-project:<ref>:<model>" for a project's model
+	// (shared/aiSources.ts), so the same model id from two sources never collides.
 	async function changeActive(value: string): Promise<void> {
-		const idx = value.indexOf(':');
-		if (idx < 0) {
+		const parsed = parseModelKey(value);
+		if (!parsed) {
 			return;
 		}
-		const p = value.slice(0, idx) as AiProviderId;
-		const m = value.slice(idx + 1);
+		const { provider: p, model: m, projectRef } = parsed;
+		if (p === 'snout-project') {
+			const info = projectModels.find((x) => modelKey(x) === value);
+			const sel: ProjectAiSelection = { ref: projectRef ?? '', model: m, name: info?.projectName, ownedBy: info?.ownedBy, vendor: info?.vendor };
+			setProjectSel(sel);
+			setProvider(p);
+			setModel(m);
+			await window.sqlApi.aiSetActive(p, m, { ref: sel.ref, name: sel.name, ownedBy: sel.ownedBy, vendor: sel.vendor });
+			return;
+		}
+		setProjectSel(undefined);
 		setProvider(p);
 		setModel(m);
 		await window.sqlApi.aiSetActive(p, m);
@@ -464,15 +486,22 @@ export function ChatPanel({ variant = 'docked', contextLabel, composerHeight, co
 	// Combined "provider:model" options for the runtime model picker: only enabled models
 	// from configured/reachable providers (the gateway stays hidden until it has an API key).
 	// The current selection is always included so it shows even if it's been toggled off.
-	const current = model ? `${provider}:${model}` : '';
-	// Models to offer the picker: enabled ones across providers, plus the current selection even if
-	// it's been toggled off (so it still shows). Order/metadata come from aiProviderStatus.
-	const enabledModels = statuses.flatMap((s) => s.models.filter((m) => m.enabled));
-	const currentModel = statuses.flatMap((s) => s.models).find((m) => `${m.provider}:${m.model}` === current);
-	const pickerModels: AiModelInfo[] = current && currentModel && !enabledModels.some((m) => `${m.provider}:${m.model}` === current)
+	const current = model ? modelKey({ provider, model, projectRef: projectSel?.ref }) : '';
+	// Models to offer the picker: enabled ones across providers and projects, plus the current
+	// selection even if it's been toggled off (so it still shows). Order/metadata come from
+	// aiProviderStatus and aiProjectModels; the picker groups them by source.
+	const allModels = [...statuses.flatMap((s) => s.models), ...projectModels];
+	const enabledModels = allModels.filter((m) => m.enabled);
+	// A project's model shows from the saved choice until the projects are read (the picker opens).
+	const currentModel = allModels.find((m) => modelKey(m) === current) ?? (provider === 'snout-project' && projectSel
+		? { provider, model: projectSel.model, projectRef: projectSel.ref, projectName: projectSel.name ?? projectSel.ref, ownedBy: projectSel.ownedBy, vendor: projectSel.vendor, enabled: true, reasoning: false }
+		: undefined);
+	const pickerModels: AiModelInfo[] = current && currentModel && !enabledModels.some((m) => modelKey(m) === current)
 		? [currentModel, ...enabledModels]
 		: enabledModels;
-	const selectedStatus = statuses.find((s) => s.provider === provider);
+	const selectedStatus: AiProviderStatus | undefined = provider === 'snout-project'
+		? (projectSel ? { provider, configured: true, reachable: true, detail: `${projectSel.name ?? projectSel.ref}: the project's own AI`, models: [], completionModels: [] } : undefined)
+		: statuses.find((s) => s.provider === provider);
 
 	function placeholder(): string {
 		if (activeConn && activeConnected) {
@@ -752,8 +781,8 @@ export function ChatPanel({ variant = 'docked', contextLabel, composerHeight, co
 			const result = await window.sqlApi.aiChat(requestId, history, groundConnId, caps, sentAmbient);
 			if (!result.ok && !result.aborted) {
 				setError(result.error ?? 'The assistant request failed.');
-				// A BYOK turn failed: offer a one-click retry on managed credits (the gateway).
-				if (isByokProvider(provider)) {
+				// A BYOK or project turn failed: offer a one-click retry on managed credits (the gateway).
+				if (isByokProvider(provider) || provider === 'snout-project') {
 					setByokRetry({ text, priorTurns, groundConnId, baseTokens, persistId, attachments: turnAttachments });
 				}
 				return;
@@ -788,7 +817,7 @@ export function ChatPanel({ variant = 'docked', contextLabel, composerHeight, co
 			}
 		} catch (err) {
 			setError(errorMessage(err));
-			if (isByokProvider(provider)) {
+			if (isByokProvider(provider) || provider === 'snout-project') {
 				setByokRetry({ text, priorTurns, groundConnId, baseTokens, persistId, attachments: turnAttachments });
 			}
 		} finally {
@@ -1323,7 +1352,7 @@ export function ChatPanel({ variant = 'docked', contextLabel, composerHeight, co
 						models={pickerModels}
 						current={current}
 						onChange={(v) => void changeActive(v)}
-						onOpen={() => void refreshStatuses()}
+						onOpen={() => { void refreshStatuses(); refreshProjectModels(); }}
 					/>
 					<span className="spacer" />
 					<button

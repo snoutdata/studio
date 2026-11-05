@@ -229,3 +229,18 @@ describe('an imported connection that goes through an SSH tunnel', () => {
 		assert.equal(saved[0].sshTunnelUnconfirmed, undefined);
 	});
 });
+
+describe('the password the SQL server asks for, for a connection that signs in as the person', () => {
+	test('is a database token for its project', async () => {
+		const { manager } = managerFor([connection({ username: 'snout_token', cloudProjectRef: 'b7kq2m9xt4rvz', cloudTokenSignIn: true })]);
+		manager.setDatabaseToken(async (ref) => `token-for-${ref}`);
+		assert.equal(await manager.connectionPassword('c1'), 'token-for-b7kq2m9xt4rvz');
+	});
+
+	test('is refused for any other connection, so the server cannot read a stored password this way', async () => {
+		const { manager } = managerFor([connection({ cloudProjectRef: 'b7kq2m9xt4rvz' }), connection({ id: 'c2' })]);
+		manager.setDatabaseToken(async () => 'token');
+		await assert.rejects(manager.connectionPassword('c1'), /does not sign in with your SnoutData account/);
+		await assert.rejects(manager.connectionPassword('c2'), /does not sign in with your SnoutData account/);
+	});
+});

@@ -8,13 +8,14 @@ import { createPortal } from 'react-dom';
 import { Icon } from './Icon';
 import { isByokProvider } from '../../../shared/ai';
 import type { AiModelInfo } from '../../../shared/ai';
+import { groupPickerModels, modelKey, modelSourceLine } from '../../../shared/aiSources';
 
 interface ModelPickerProps {
 	/** Models to offer, in display order (already filtered to enabled + the current selection). */
 	models: AiModelInfo[];
-	/** The active "provider:model" value. */
+	/** The active value ({@link modelKey}: "provider:model", or "snout-project:<ref>:<model>"). */
 	current: string;
-	/** Persist a new "provider:model" selection. */
+	/** Persist a new selection (a {@link modelKey} value). */
 	onChange(value: string): void;
 	/** Called when the menu opens, so the caller can refresh the live model list. */
 	onOpen?(): void;
@@ -28,9 +29,10 @@ interface MenuAnchor {
 	bottom: number;
 }
 
-/** "provider:model" value for a model. */
+/** The picker value for a model: the source and the model, so the same id from two sources
+ *  (SnoutData AI and a project, say) is two rows. */
 function valueOf(m: AiModelInfo): string {
-	return `${m.provider}:${m.model}`;
+	return modelKey(m);
 }
 
 /** The label shown on a row / the button: the friendly display name when set, else the raw id. */
@@ -68,7 +70,9 @@ function costHint(m: AiModelInfo): string {
 	}
 }
 
-/** The runtime chat-model picker: a custom dropdown (the native <select> can't show per-row
+/** The runtime chat-model picker, grouped by where a call is billed: SnoutData AI (the user's
+ *  balance), each SnoutData Cloud project with AI (the project's own keys), then the user's own
+ *  keys kept in Studio. A custom dropdown (the native <select> can't show per-row
  *  sub-labels or a hover detail flyout). Each row shows the model name, a speed/power label, a
  *  Recommended tag, and a wallet hint; hovering a row opens a flyout with the description
  *  and context window. The menu is rendered in a portal so it escapes the composer's
@@ -121,6 +125,7 @@ export function ModelPicker({ models, current, onChange, onOpen, disabled }: Mod
 
 	const active = models.find((m) => valueOf(m) === current);
 	const detail = models.find((m) => valueOf(m) === hovered) ?? active;
+	const groups = groupPickerModels(models);
 
 	function toggle(): void {
 		if (disabled) {
@@ -161,34 +166,54 @@ export function ModelPicker({ models, current, onChange, onOpen, disabled }: Mod
 					style={{ right: anchor.right, bottom: anchor.bottom }}
 				>
 					{models.length === 0 && <div className="model-picker-empty muted small">No models. Set one in AI settings.</div>}
-					{models.map((m) => {
-						const v = valueOf(m);
-						return (
-							<button
-								type="button"
-								role="option"
-								aria-selected={v === current}
-								key={v}
-								className={`model-picker-row${v === current ? ' selected' : ''}`}
-								onMouseEnter={() => setHovered(v)}
-								onFocus={() => setHovered(v)}
-								onClick={() => pick(m)}
-							>
-								<span className="model-picker-row-name">{nameOf(m)}</span>
-								{m.label && <span className="model-picker-row-label">{m.label}</span>}
-								{m.recommended && <span className="model-picker-tag">Recommended</span>}
-								<span className="spacer" />
-								{v === current && <Icon name="check" />}
-							</button>
-						);
-					})}
-					{detail && (
+					<div className="model-picker-list">
+						{groups.map((g) => (
+							<div className="model-picker-group" role="group" aria-label={g.title} key={g.id}>
+								<div className="model-picker-group-head">
+									<span className="model-picker-group-title">{g.title}</span>
+									<span className="model-picker-group-sub">{g.subtitle}</span>
+								</div>
+								{g.models.map((m) => {
+									const v = valueOf(m);
+									return (
+										<button
+											type="button"
+											role="option"
+											aria-selected={v === current}
+											key={v}
+											className={`model-picker-row${v === current ? ' selected' : ''}`}
+											onMouseEnter={() => setHovered(v)}
+											onFocus={() => setHovered(v)}
+											onClick={() => pick(m)}
+										>
+											<span className="model-picker-row-name">{nameOf(m)}</span>
+											{m.label && <span className="model-picker-row-label">{m.label}</span>}
+											{m.recommended && <span className="model-picker-tag">Recommended</span>}
+											<span className="spacer" />
+											{v === current && <Icon name="check" />}
+										</button>
+									);
+								})}
+							</div>
+						))}
+					</div>
+					{detail && detail.provider === 'positron-cloud' && (
 						<div className="model-picker-flyout">
 							<div className="model-picker-flyout-name">{nameOf(detail)}</div>
 							{detail.description && <div className="model-picker-flyout-desc">{detail.description}</div>}
 							<div className="model-picker-flyout-meta">
 								{contextLabel(detail.contextWindow) && <span>{contextLabel(detail.contextWindow)}</span>}
 								<span className={detail.metered ? 'metered' : 'free'}>{costHint(detail)}</span>
+								{detail.reasoning && <span>Reasoning model</span>}
+							</div>
+						</div>
+					)}
+					{detail && detail.provider !== 'positron-cloud' && (
+						<div className="model-picker-flyout">
+							<div className="model-picker-flyout-name">{nameOf(detail)}</div>
+							<div className="model-picker-flyout-meta">
+								<span>{modelSourceLine(detail)}</span>
+								<span className="model-picker-flyout-id">{detail.model}</span>
 								{detail.reasoning && <span>Reasoning model</span>}
 							</div>
 						</div>

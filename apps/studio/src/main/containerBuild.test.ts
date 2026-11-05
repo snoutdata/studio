@@ -26,6 +26,8 @@ interface FakeOptions {
 	buildLine?: string;
 	size?: number;
 	upload?: { status: number; body: string };
+	/** The door names a place in storage (CT30); otherwise it is a door from before, which takes the archive itself. */
+	presigned?: boolean;
 	ticketExpiresInMs?: number;
 	deployError?: Error;
 }
@@ -34,6 +36,7 @@ function fake(options: FakeOptions = {}) {
 	const calls: { args: string[]; input?: string }[] = [];
 	const asked: Record<string, unknown>[] = [];
 	const uploads: { url: string; file: string }[] = [];
+	const steps: string[] = [];
 	const removed: string[] = [];
 	const clock = 1_000_000;
 	const host: ContainerBuildHost = {
@@ -60,6 +63,26 @@ function fake(options: FakeOptions = {}) {
 			}
 			return options.upload ?? { status: 200, body: JSON.stringify({ name: 'web', digest: DIGEST }) };
 		},
+		async putSigned(url, file, _headers, sent) {
+			uploads.push({ url, file });
+			sent?.(options.size ?? 64 * 1024 * 1024);
+			return { status: 200, body: '' };
+		},
+		async call(method, url) {
+			steps.push(`${method} ${url}`);
+			if (!options.presigned) {
+				return { status: 405, body: JSON.stringify({ message: 'An image is uploaded with PUT.' }) };
+			}
+			if (method === 'POST' && url === TICKET_URL) {
+				return { status: 200, body: JSON.stringify({ url: PLACE, headers: { 'content-length': '1' }, expiresAt: '2026-10-20T00:15:00Z' }) };
+			}
+			if (method === 'POST') {
+				return { status: 202, body: JSON.stringify({ state: 'storing' }) };
+			}
+			return { status: 200, body: JSON.stringify({ state: 'stored', name: 'web', digest: DIGEST }) };
+		},
+		hash: async () => 'c'.repeat(64),
+		sleep: async () => undefined,
 		async removeDir(dir) {
 			removed.push(dir);
 		},
@@ -68,7 +91,7 @@ function fake(options: FakeOptions = {}) {
 	const unused = async (): Promise<never> => { throw new Error('not used'); };
 	const api: CloudApi = {
 		account: unused, list: unused, connection: unused, pause: unused, resume: unused, mintToken: unused, create: unused,
-		requestExport: unused, exportStatus: unused, remove: unused,
+		requestExport: unused, exportStatus: unused, remove: unused, databaseToken: unused,
 		async request<T>(_fn: string, body: Record<string, unknown>): Promise<T> {
 			asked.push(body);
 			if (body.action === 'upload-ticket') {
@@ -80,8 +103,10 @@ function fake(options: FakeOptions = {}) {
 			return { containers: [{ name: 'web', image: 'built from a Dockerfile', built: true, digest: DIGEST, port: 3000, status: 'pending' }] } as T;
 		},
 	};
-	return { host, api, calls, asked, uploads, removed };
+	return { host, api, calls, asked, uploads, steps, removed };
 }
+
+const PLACE = 'https://cohort.s3.us-west-2.amazonaws.com/r1abcdefghijk/uploads/x.tar?X-Amz-Signature=1';
 
 test('a folder is built for arm64 into an archive, uploaded to the project link, and deployed by its digest', async () => {
 	const { host, api, calls, asked, uploads, removed } = fake();
@@ -196,4 +221,16 @@ test('the pure helpers', () => {
 	assert.deepEqual(parsePort(''), {});
 	assert.deepEqual(parsePort('3000'), { port: 3000 });
 	assert.ok(parsePort('70000').problem);
+});
+
+test('through storage (CT30): the archive goes to the place the door names, and the deploy names the digest from the poll', async () => {
+	const { host, api, asked, uploads, steps } = fake({ presigned: true });
+	const said: string[] = [];
+	const outcome = await buildAndDeploy(api, host, 'r1abcdefghijk', { name: 'web', folder: '/app' }, (line) => said.push(line));
+	assert.equal(outcome.ok, true);
+	assert.deepEqual(uploads.map((upload) => upload.url), [PLACE]);
+	assert.deepEqual(steps, [`POST ${TICKET_URL}`, `POST ${TICKET_URL}/done`, `GET ${TICKET_URL}`]);
+	assert.equal(asked.at(-1)?.pushed, DIGEST);
+	assert.ok(said.some((line) => /Storing the image/.test(line)));
+	assert.ok(said.every((line) => !LEAKY.test(line)));
 });

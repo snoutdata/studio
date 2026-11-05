@@ -7,12 +7,14 @@ import { CloudRequestError, detailFrom, type CloudApi } from './cloudApi';
 import { containerListing } from './cloudProjectOps';
 import { containerNameProblem, withoutCloudInternals, type CloudContainers, type ContainerBuildForm } from '../shared/cloudContainers';
 import type { CloudProjectOutcome } from '../shared/cloudProjects';
+import { UploadFailed, uploadArchive } from '../shared/snoutpod/control/containerUpload';
 
 // "Deploy from a folder": a Snout Container built from a Dockerfile with the user's OWN Docker,
 // the same steps as `snoutdata containers deploy <name> --dockerfile <dir>`. Nothing is built on
 // our side: docker builds the folder for linux/arm64 into an image archive on this computer, the
-// archive is uploaded to the project's own API address with a single-use link the control plane
-// hands out (`upload-ticket`), and the deploy names the digest the upload was stored at
+// archive is uploaded with a single-use link the control plane hands out (`upload-ticket`): the
+// project's host names a place in storage for it and stores it from there, the same steps the CLI
+// takes (`../shared/snoutpod/control/containerUpload.ts`), and the deploy names the digest it was stored at
 // (`pushed`). There is no registry login and no registry address anywhere in it: the link is the
 // whole credential, and where the image is kept is SnoutData's business.
 //
@@ -34,8 +36,15 @@ export interface ContainerBuildHost {
 	scratch(): Promise<{ dir: string; file(name: string): string }>;
 	/** How large a file is, in bytes. */
 	fileSize(path: string): Promise<number>;
-	/** PUT the file to the URL, streamed; `sent` is called as it goes. The answer's status and body. */
+	/** PUT the file to the upload link itself (a door from before CT30), streamed; `sent` is called as it goes. */
 	upload(url: string, file: string, sent?: (bytes: number) => void): Promise<{ status: number; body: string }>;
+	/** PUT the file to a presigned place in storage, with exactly the headers it was signed for. */
+	putSigned(url: string, file: string, headers: Readonly<Record<string, string>>, sent?: (bytes: number) => void): Promise<{ status: number; body: string }>;
+	/** A bodiless request to the upload link: the steps of an upload through storage (CT30). */
+	call(method: 'POST' | 'GET', url: string, headers: Readonly<Record<string, string>>): Promise<{ status: number; body: string }>;
+	/** The file's SHA-256, hex. */
+	hash(path: string): Promise<string>;
+	sleep(ms: number): Promise<void>;
 	removeDir(dir: string): Promise<void>;
 	now(): number;
 }
@@ -177,26 +186,41 @@ export async function buildAndDeploy(
 		if (!(Date.parse(ticket.expiresAt) - host.now() > TICKET_MARGIN_MS)) {
 			ticket = await uploadTicket(api, ref, name);
 		}
+		const sha256 = await host.hash(archive);
 		say(`Uploading the image (${megabytes(size)})…`);
 		let reported = 0;
-		const answer = await host.upload(ticket.url, archive, (bytes) => {
+		const progress = (bytes: number): void => {
 			const quarter = Math.floor((bytes / size) * 4);
 			if (quarter > reported && quarter < 4) {
 				reported = quarter;
 				say(`Uploaded ${megabytes(bytes)} of ${megabytes(size)}`);
 			}
-		});
-		if (answer.status !== 200) {
-			return { ok: false, refused: answer.status === 401 || answer.status === 413 || answer.status === 422, message: uploadFailure(answer.status, answer.body) };
-		}
-		let digest = '';
+		};
+		let digest: string;
 		try {
-			digest = String((JSON.parse(answer.body) as { digest?: unknown }).digest ?? '');
-		} catch {
-			// Checked below.
-		}
-		if (!/^sha256:[0-9a-f]{64}$/.test(digest)) {
-			return { ok: false, refused: false, message: "The upload finished without saying what it stored, so there is nothing to deploy. Build again." };
+			digest = await uploadArchive({
+				ticketUrl: ticket.url,
+				file: archive,
+				bytes: size,
+				sha256,
+				transport: {
+					call: (method, url, headers) => host.call(method, url, headers),
+					put: (url, file, headers) =>
+						Object.keys(headers).length > 0 ? host.putSigned(url, file, headers, progress) : host.upload(url, file, progress),
+					sleep: (ms) => host.sleep(ms),
+					now: () => host.now(),
+				},
+				step: (step) => {
+					if (step === 'storing') {
+						say('Storing the image in the project…');
+					}
+				},
+			});
+		} catch (error) {
+			if (error instanceof UploadFailed) {
+				return { ok: false, refused: error.status === 401 || error.status === 413 || error.status === 422, message: uploadFailure(error.status, error.body) };
+			}
+			throw error;
 		}
 		say(`Uploaded ${digest.slice(0, 19)}…. Deploying…`);
 		const deployed = await api.request('cloud-project-containers', {

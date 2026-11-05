@@ -101,11 +101,13 @@ import type { ConnectionFormValues, DiscoveryOptions, ImportItemRef, ImportScanR
 import { resolveDbeaverImport, scanDbeaver, scanDbeaverFiles, scanDbeaverScripts } from './dbeaverImport';
 import { resolveSnoutdataCloudImport, scanSnoutdataCloud } from './cloudImport';
 import { liveCloudApi } from './cloudApiLive';
+import { DatabaseTokens } from './cloudDbToken';
 import { askCloudProject, cloudProjectsView, createCloudProject, deleteCloudProject } from './cloudProjects';
 import type { CloudCreateForm, CloudProjectOp, CloudProjectOps, CloudProjectRow, CloudProjectsView } from '../shared/cloudProjects';
 import { runCloudProjectOp, type CloudProjectHost } from './cloudProjectOps';
 import { buildAndDeploy } from './containerBuild';
-import { uploadFile } from './netUpload';
+import { callDoor, putToStorage, uploadFile } from './netUpload';
+import { sha256File } from './componentDownload';
 import type { ContainerBuildForm, ContainerBuildProgress } from '../shared/cloudContainers';
 import { ensureCloudConnection, syncCloudConnections } from './cloudSync';
 import { rememberCloudRefs, seenCloudRefs } from './cloudSyncStore';
@@ -359,7 +361,13 @@ const aiService = new AiService(aiSettingsStore, connections, queryStore, auditS
 // here because AiService depends on the connection manager (so it can't be a ctor arg).
 connections.setAiTranscriber((sql, connectionId) => aiService.transcribeToNative(sql, connectionId));
 // A cloud connection whose stored password was reset elsewhere reads the current one (connectionManager.ts).
-connections.setCloudPassword(async (ref) => (await liveCloudApi.connection(ref)).password ?? null);
+connections.setCloudPassword(async (ref) => {
+	const details = await liveCloudApi.connection(ref);
+	return details.password ? { user: details.user, password: details.password } : null;
+});
+// A cloud connection that signs in as the person: a database token per project, held until near its end.
+const databaseTokens = new DatabaseTokens((ref) => liveCloudApi.databaseToken(ref));
+connections.setDatabaseToken((ref) => databaseTokens.get(ref));
 // Wire text→vector embedding, the other half of the vector story: a
 // `similar_to('…')` predicate in SQL against a Pinecone index becomes a real similarity search.
 connections.setEmbedder((text) => aiService.embed(text));
@@ -899,30 +907,18 @@ const authStore = new AuthStore(
 		pro.entitlementsChanged();
 		// Same for the tray, which says "schedule paused" for exactly this case.
 		tray?.refresh();
-		// Refresh the wallet→credits switch from the user's ai_preferences row so the routing
-		// fallback honours it (off the boot path — this fires on auth changes, not first paint).
-		// Signed out → false (AI pauses at the monthly limit rather than touching credits).
 		// A sign-in (or a switch of account) brings that account's cloud databases in. Before the
 		// startup slot has fired this is the session being restored, and that slot covers it.
 		if (auth.user && auth.user.id !== cloudSyncUser && cloudSyncArmed) {
 			void runCloudSync();
 		}
 		cloudSyncUser = auth.user?.id ?? null;
-		if (auth.user) {
-			void authStore.getCreditsEnabled().then((enabled) => aiService.setCreditsEnabled(enabled)).catch(() => undefined);
-		} else {
-			aiService.setCreditsEnabled(false);
-		}
-	},
-	// On sign-in, store the user's minted gateway virtual key as the positron-cloud bearer and
-	// the optional persistent top-up (credits) key; clear both on sign-out so chat falls back to
-	// logged-out (no gateway access).
-	(key, endUser, topupKey) => {
-		aiSettingsStore.setGatewayKey(key, endUser);
-		aiSettingsStore.setGatewayTopupKey(topupKey);
 	},
 	(message) => broadcast('auth:error', message),
 );
+// The keys an earlier version minted for the old gateway are no longer used: SnoutData Cloud's
+// models take the session's own token. Removed from the keychain once, quietly.
+aiSettingsStore.forgetGatewayKeys();
 
 // Data Flows, Studio's private half:
 // its stores, runner, scheduler, model runtime and handlers are built by `registerMain` from the
@@ -2376,10 +2372,18 @@ function registerIpc(): void {
 	// goes to the clipboard here and never back over IPC.
 	const cloudProjectHost: CloudProjectHost = {
 		copy: (text) => clipboard.writeText(text),
-		async updatePassword(ref, password) {
+		async updatePassword(ref, password, user) {
 			const mine = readConnections().filter((c) => c.cloudProjectRef === ref);
 			for (const connection of mine) {
 				secretStore.store(connection.id, 'password', password);
+				// A reset moves the project to its other owner login (361): the user name goes with it.
+				// Not on a connection that signs in as the person (user `snout_token`).
+				if (user && !connection.cloudTokenSignIn && connection.username !== user) {
+					writeConnection({ ...connection, username: user });
+				}
+			}
+			if (user && mine.length > 0) {
+				connectionsChanged();
 			}
 			return mine.length;
 		},
@@ -2458,6 +2462,10 @@ function registerIpc(): void {
 			},
 			fileSize: async (path) => (await stat(path)).size,
 			upload: (url, file, sent) => uploadFile(url, file, sent),
+			putSigned: (url, file, headers, sent) => putToStorage(url, file, headers, sent),
+			call: (method, url, headers) => callDoor(method, url, headers),
+			hash: (path) => sha256File(path),
+			sleep: (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
 			removeDir: (dir) => rm(dir, { recursive: true, force: true }),
 			now: () => Date.now(),
 		}, String(ref), { name: String(form.name ?? ''), folder: form.folder, ...(typeof form.port === 'number' ? { port: form.port } : {}) }, say);
@@ -3151,19 +3159,19 @@ function registerIpc(): void {
 	ipcMain.handle('ai:saveSettings', (_event, values: AiSettingsFormValues) => aiSettingsStore.save(values));
 	ipcMain.handle('ai:test', () => aiService.test());
 	ipcMain.handle('ai:providerStatus', () => aiService.providerStatus());
+	// The picker's project groups: asked when the picker opens, never on boot.
+	ipcMain.handle('ai:projectModels', (_event, force?: boolean) => aiService.projectModels(force === true));
 	ipcMain.handle('ai:budgetStatus', () => aiService.budgetStatus());
-	// The wallet→credits switch, backed by the shared ai_preferences row.
-	// Get reads the user's row; set writes it through and updates the in-memory routing flag so the
-	// next request honours it without waiting for an auth refresh.
+	// The wallet→credits switch, backed by the shared ai_preferences row, which Psyche follows at
+	// once (the server syncs it in the same write).
 	ipcMain.handle('ai:creditsEnabled', () => authStore.getCreditsEnabled());
 	ipcMain.handle('ai:setCreditsEnabled', async (_event, enabled: boolean) => {
 		await authStore.setCreditsEnabled(enabled);
-		aiService.setCreditsEnabled(enabled);
 	});
 	ipcMain.handle('ai:setModelEnabled', (_event, key: string, enabled: boolean) => aiSettingsStore.setModelEnabled(key, enabled));
 	ipcMain.handle('ai:ollamaModels', (_event, endpoint: string) => aiService.ollamaModels(endpoint));
 	ipcMain.handle('ai:byokModels', (_event, provider: ByokProviderId) => aiService.byokModelList(provider));
-	ipcMain.handle('ai:setActive', (_event, provider: AiProviderId, model: string) => aiSettingsStore.setActive(provider, model));
+	ipcMain.handle('ai:setActive', (_event, provider: AiProviderId, model: string, project?: { ref: string; name?: string; ownedBy?: string; vendor?: string }) => aiSettingsStore.setActive(provider, model, project));
 
 	// The renderer publishes its capability manifest whenever the registry changes. The chat path
 	// passes its own per request; this standing copy is what the MCP broker turns into tools for an
@@ -3423,7 +3431,10 @@ function registerIpc(): void {
 			}
 		}
 	});
-	ipcMain.handle('auth:signOut', () => authStore.signOut());
+	ipcMain.handle('auth:signOut', () => {
+		databaseTokens.clear();
+		return authStore.signOut();
+	});
 	// Manual re-sync (the "Refresh plan" button): re-read the tier (e.g. just upgraded on the
 	// website) AND re-mint the gateway key so newly released models become reachable now. Returns
 	// the freshly-resolved state so the renderer can update even if the tier is unchanged; the
@@ -3829,6 +3840,7 @@ if (!app.requestSingleInstanceLock()) {
 		// explorer refreshes its cached schema (completion refreshes server-side). Safe to wire
 		// before the handshake finishes — it subscribes once the connection is ready.
 		sqlServer.onSchemaUpdated((params) => broadcast('schema:changed', params.connectionId));
+		sqlServer.onConnectionPassword((connectionId) => connections.connectionPassword(connectionId));
 		// The child dying is the event worth seeing: it used to surface only as a flood of
 		// downstream "Connection is closed" errors from whatever the user touched next, which
 		// said nothing about the cause. Report it once, from the process that knows why.

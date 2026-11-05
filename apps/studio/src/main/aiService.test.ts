@@ -24,22 +24,20 @@ import { DEFAULT_AI_SETTINGS } from '../shared/ai';
  * exactly as before.
  */
 
-function settingsStore(key?: string): AiSettingsStore {
+function settingsStore(): AiSettingsStore {
 	return {
 		get: () => DEFAULT_AI_SETTINGS,
-		apiKey: () => key,
 		byokKey: () => undefined,
-		topupKey: () => undefined,
 	} as unknown as AiSettingsStore;
 }
 
-function service(catalogReads: string[], key?: string): AiService {
+function service(catalogReads: string[]): AiService {
 	const catalog = async (): Promise<Map<string, ModelMeta>> => {
 		catalogReads.push('read');
 		return new Map();
 	};
 	return new AiService(
-		settingsStore(key),
+		settingsStore(),
 		{} as ConnectionManager,
 		{} as QueryStore,
 		{} as AuditStore,
@@ -65,21 +63,19 @@ describe('AiService.providerStatus', () => {
 		globalThis.fetch = realFetch;
 	});
 
-	test('signed out, it reads no catalog and makes no request, even holding a key', async () => {
-		for (const key of [undefined, 'sk-stale']) {
-			const reads: string[] = [];
-			const ai = service(reads, key);
-			ai.setSignedIn(false);
-			const statuses = await ai.providerStatus();
-			assert.deepEqual(reads, [], 'the model catalog was read while signed out');
-			assert.deepEqual(fetched, [], 'a request went out while signed out');
-			const gateway = statuses.find((s) => s.provider === 'positron-cloud');
-			assert.ok(gateway);
-			assert.equal(gateway.reachable, false);
-			assert.deepEqual(gateway.models, []);
-			assert.deepEqual(gateway.completionModels, []);
-			assert.equal(gateway.configured, Boolean(key));
-		}
+	test('signed out, it reads no catalog and makes no request', async () => {
+		const reads: string[] = [];
+		const ai = service(reads);
+		ai.setSignedIn(false);
+		const statuses = await ai.providerStatus();
+		assert.deepEqual(reads, [], 'the model catalog was read while signed out');
+		assert.deepEqual(fetched, [], 'a request went out while signed out');
+		const gateway = statuses.find((s) => s.provider === 'positron-cloud');
+		assert.ok(gateway);
+		assert.equal(gateway.reachable, false);
+		assert.deepEqual(gateway.models, []);
+		assert.deepEqual(gateway.completionModels, []);
+		assert.equal(gateway.configured, false);
 	});
 
 	test('signed in, the catalog is read as before', async () => {
@@ -88,7 +84,11 @@ describe('AiService.providerStatus', () => {
 		ai.setSignedIn(true);
 		const statuses = await ai.providerStatus();
 		assert.deepEqual(reads, ['read']);
+		// No key to add: the gateway is the account's, so signed in it counts as configured, and
+		// here (no network) it is simply unreachable.
 		const gateway = statuses.find((s) => s.provider === 'positron-cloud');
-		assert.equal(gateway?.detail, 'No API key: add it below');
+		assert.equal(gateway?.configured, true);
+		assert.equal(gateway?.reachable, false);
+		assert.match(gateway?.detail ?? '', /^Offline: can't reach the gateway/);
 	});
 });

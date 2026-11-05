@@ -23,6 +23,8 @@ import {
 	type BulkLoadOutcome,
 	type BulkLoadParams,
 	type ConnectParams,
+	type ConnectionPasswordParams,
+	type ConnectionPasswordResult,
 	type ConnectResult,
 	type ExecuteQueryParams,
 	type ExecuteQueryResult,
@@ -42,6 +44,7 @@ import { registerBuiltInDrivers, createDriver } from './drivers/driverRegistry';
 import { testConnection } from './testConnection';
 import { telemetryPlugin } from './drivers/telemetry/telemetrySource';
 import { onHostKeyLearned } from './drivers/sshHostKey';
+import { setPasswordSource } from './drivers/passwordSource';
 import { QueryCancelledError, type DatabaseDriver } from './drivers/databaseDriver';
 import { SchemaCache } from './schema/schemaCache';
 import type { DatabaseSchema } from '../../shared/schema';
@@ -86,6 +89,13 @@ const catalogCache = new Map<string, DialectCatalog>();
 
 registerBuiltInDrivers();
 
+// A connection that signs in as the person asks main for each new connection's password.
+setPasswordSource(async (connectionId) => {
+	const params: ConnectionPasswordParams = { connectionId };
+	const result: ConnectionPasswordResult = await connection.sendRequest(SnoutProtocol.ConnectionPassword, params);
+	return result.password;
+});
+
 // A tunnel that trusted a new SSH host key tells main, which remembers it (sshKnownHosts.ts).
 onHostKeyLearned((host, port, fingerprint) => {
 	const params: SshHostKeyLearnedParams = { host, port, fingerprint };
@@ -113,9 +123,19 @@ async function introspectInto(connectionId: string, driver: DatabaseDriver): Pro
 // Poll a cheap structural digest per connection; when it changes (DDL — added/dropped/
 // renamed/retyped column or table), re-introspect so the cache, schema explorer and
 // completion stay current without a manual refresh.
+//
+// Every 15s at first, then backing off while nothing changes, doubling to once every two minutes
+// (2026-11-04). The poll runs IN the user's database, and a connection left open all day polled it
+// 5,760 times; on a hosted database it showed up as the customer's most expensive statement. A
+// change, a statement this app runs that could change the schema, or a bulk load puts it back to
+// 15s, since that is when the schema is most likely to move.
 const POLL_INTERVAL_MS = 15000;
+const POLL_MAX_INTERVAL_MS = 120000;
+/** A statement that may move the schema: a word test, not a parse. A false positive costs a few
+ *  polls at the short interval; a miss costs at most the long one. */
+const SCHEMA_STATEMENT = /\b(create|alter|drop|rename|comment|grant|revoke|import|attach|detach)\b/i;
 const schemaDigests = new Map<string, string>();
-const pollTimers = new Map<string, NodeJS.Timeout>();
+const pollTimers = new Map<string, { timer: NodeJS.Timeout; delay: number; driver: DatabaseDriver }>();
 
 /** Read the engine's catalog in the background. Never awaited by connect: a slow or refused read
  *  must not delay a connection, and its only effect is that completion knows more once it lands. */
@@ -139,30 +159,55 @@ async function captureDigest(connectionId: string, driver: DatabaseDriver): Prom
 	schemaDigests.set(connectionId, await driver.structuralDigest().catch(() => ''));
 }
 
-async function pollSchema(connectionId: string, driver: DatabaseDriver): Promise<void> {
+/** Poll once; true when the digest moved. */
+async function pollSchema(connectionId: string, driver: DatabaseDriver): Promise<boolean> {
 	try {
 		const digest = await driver.structuralDigest();
 		if (digest !== schemaDigests.get(connectionId)) {
 			schemaDigests.set(connectionId, digest);
 			const tableCount = await introspectInto(connectionId, driver);
 			connection.console.log(`[snout] schema change on '${connectionId}'; recached ${tableCount} tables`);
+			return true;
 		}
 	} catch (err) {
 		connection.console.log(`[snout] schema poll failed for '${connectionId}': ${err instanceof Error ? err.message : String(err)}`);
 	}
+	return false;
+}
+
+function scheduleSchemaPoll(connectionId: string, driver: DatabaseDriver, delay: number): void {
+	const timer = setTimeout(() => {
+		void pollSchema(connectionId, driver).then((changed) => {
+			// Stopped, or replaced by a newer connect, while the poll was in flight.
+			if (pollTimers.get(connectionId)?.timer !== timer) {
+				return;
+			}
+			scheduleSchemaPoll(connectionId, driver, changed ? POLL_INTERVAL_MS : Math.min(delay * 2, POLL_MAX_INTERVAL_MS));
+		});
+	}, delay);
+	timer.unref();
+	pollTimers.set(connectionId, { timer, delay, driver });
 }
 
 function startSchemaPolling(connectionId: string, driver: DatabaseDriver): void {
 	stopSchemaPolling(connectionId);
-	const timer = setInterval(() => { void pollSchema(connectionId, driver); }, POLL_INTERVAL_MS);
-	timer.unref();
-	pollTimers.set(connectionId, timer);
+	scheduleSchemaPoll(connectionId, driver, POLL_INTERVAL_MS);
+}
+
+/** The app just used this connection: poll at the short interval again, if it had backed off. */
+function quickenSchemaPolling(connectionId: string): void {
+	const poll = pollTimers.get(connectionId);
+	if (!poll || poll.delay <= POLL_INTERVAL_MS) {
+		return;
+	}
+	clearTimeout(poll.timer);
+	scheduleSchemaPoll(connectionId, poll.driver, POLL_INTERVAL_MS);
 }
 
 function stopSchemaPolling(connectionId: string): void {
-	const timer = pollTimers.get(connectionId);
-	if (timer) {
-		clearInterval(timer);
+	const poll = pollTimers.get(connectionId);
+	if (poll) {
+		clearTimeout(poll.timer);
 		pollTimers.delete(connectionId);
 	}
 }
@@ -272,6 +317,9 @@ connection.onRequest(SnoutProtocol.ExecuteQuery, async (params: ExecuteQueryPara
 	if (!driver) {
 		return { ok: false, error: `'${params.connectionId}' is not connected` };
 	}
+	if (params.query.lang === 'sql' && SCHEMA_STATEMENT.test(params.query.sql)) {
+		quickenSchemaPolling(params.connectionId);
+	}
 	try {
 		const result = await driver.execute(params.query);
 		return { ok: true, result };
@@ -293,6 +341,8 @@ connection.onRequest(SnoutProtocol.BulkLoad, async (params: BulkLoadParams): Pro
 	if (!driver.bulkLoad) {
 		return { ok: false, error: `${driver.displayName} cannot be handed a file; its rows go in as INSERT statements.` };
 	}
+	// A load may create its table.
+	quickenSchemaPolling(params.connectionId);
 	try {
 		return { ok: true, result: await driver.bulkLoad(params.request) };
 	} catch (err) {

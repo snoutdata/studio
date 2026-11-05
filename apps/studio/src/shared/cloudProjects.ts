@@ -46,6 +46,8 @@ export interface CloudProjectRow {
 	readOnly: boolean;
 	/** False when the data is in the bucket: the next connection is a restore, not a start. */
 	wakesInstantly: boolean;
+	/** Its server has stopped reporting: shown BESIDE the state, which keeps what it last said. */
+	serverSilent: boolean;
 	sizeBytes: number | null;
 	host: string;
 	database: string;
@@ -201,6 +203,23 @@ export interface CloudDomain {
 	certificate: { state: string | null; expiresAt: string | null; error: string | null } | null;
 }
 
+/**
+ * When a running project may be moved to another server (`cloud-project-maintenance-window`): local
+ * hours in a timezone, and where each came from. The default is 2 to 6 AM in the owner's timezone
+ * (`owner-signin`: reported at sign-in; `owner-owner`: set by hand), else the region's (`region`).
+ */
+export interface CloudMaintenanceWindow {
+	window: {
+		startHour: number;
+		endHour: number;
+		timezone: string | null;
+		hoursFrom: 'default' | 'project';
+		timezoneFrom: 'project' | 'owner-signin' | 'owner-owner' | 'region' | null;
+	} | null;
+	/** The window it is in now, or its next one; null when the window has no timezone. */
+	next: { startsAt: string; endsAt: string; timezone: string } | null;
+}
+
 /** What may go on the clipboard. Each is fetched in main and written there, never sent here. */
 export type CloudCopyTarget = 'uri' | 'password' | 'appKey' | 'serverKey';
 
@@ -209,7 +228,8 @@ export interface CloudProjectOps {
 	usage: { args: { ref: string }; result: CloudUsage };
 	connection: { args: { ref: string }; result: CloudConnectionFacts };
 	copy: { args: { ref: string; what: CloudCopyTarget }; result: { copied: CloudCopyTarget } };
-	resetPassword: { args: { ref: string }; result: { appliesIn: string; updatedConnections: number } };
+	/** `graceMinutes`: how long the old password keeps working, 0 to 1440 (361); left out, an hour. */
+	resetPassword: { args: { ref: string; graceMinutes?: number }; result: { appliesIn: string; updatedConnections: number; oldPassword?: string } };
 	rotateKeys: { args: { ref: string }; result: { breaks: string } };
 	backups: { args: { ref: string }; result: CloudBackups };
 	requestExport: { args: { ref: string }; result: CloudExport };
@@ -221,6 +241,9 @@ export interface CloudProjectOps {
 	setSecret: { args: { ref: string; name: string; value: string }; result: CloudSecretRow[] };
 	unsetSecret: { args: { ref: string; name: string }; result: CloudSecretRow[] };
 	domains: { args: { ref: string }; result: CloudDomain[] };
+	maintenanceWindow: { args: { ref: string }; result: CloudMaintenanceWindow };
+	/** The project's own hours (and timezone, else the owner's), or `reset` for the default. Owners only. */
+	setMaintenanceWindow: { args: { ref: string; startHour?: number; endHour?: number; timezone?: string | null; reset?: boolean }; result: CloudMaintenanceWindow };
 	domain: { args: { ref: string; action: 'add' | 'verify' | 'remove'; hostname: string }; result: { domain: CloudDomain | null; next: string | null } };
 	/**
 	 * A sharded project's management (`cloud-project-shards`): status, plan, advice, jobs, and

@@ -15,6 +15,7 @@ import { expectSql, QueryCancelledError } from '../databaseDriver';
 import { readOnlyEnforcementFor, type NativeQuery } from '../../../../shared/engine';
 import { isPreflightDeadConnectionError } from '../deadConnection';
 import { withReadOnlySession } from '../readOnlySession';
+import { fetchPassword } from '../passwordSource';
 import { openSshTunnel, type SshTunnel } from '../sshTunnel';
 import { introspectPostgres, postgresStructuralDigest } from './introspection';
 
@@ -36,6 +37,8 @@ function toSslOption(ssl: ConnectionConfig['ssl']): PoolConfig['ssl'] {
  * is the one in the keychain or none, never one this machine's environment or a pgpass file holds
  * for some other purpose. The password is handed over as a function, which pg takes as the answer
  * (an empty string included) without looking further; a plain empty string would read as "absent".
+ * A connection that signs in as the person asks main for a fresh database token instead, per
+ * connection, because a token lasts an hour and a pool outlives it.
  */
 export function postgresPoolConfig(config: ConnectionConfig, host: string, port: number): PoolConfig {
 	const ssl = toSslOption(config.ssl);
@@ -53,7 +56,7 @@ export function postgresPoolConfig(config: ConnectionConfig, host: string, port:
 		host,
 		port,
 		user: config.username,
-		password: () => password,
+		password: config.cloudTokenSignIn ? () => fetchPassword(config.id) : () => password,
 		database: config.database,
 		ssl: ssl ?? false,
 		max: clampPoolMax(config.poolMax),

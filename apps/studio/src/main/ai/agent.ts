@@ -127,7 +127,7 @@ export async function runAgentLoop(
 	// Step cap reached: one final turn that forbids further tool use, so the model must answer
 	// now. We still DECLARE the tools (with `tool_choice: 'none'`) rather than dropping them: by
 	// this point `convo` carries assistant tool_calls + tool results, and a Bedrock-routed model
-	// (via the LiteLLM gateway) rejects that history unless a `tools=` param is present. Declaring
+	// (through a gateway) rejects that history unless a `tools=` param is present. Declaring
 	// them while banning new calls satisfies that and still forces a prose conclusion.
 	// Still filter the stream, in case it leaks a textual tool call instead of concluding.
 	const stream = new ToolMarkupStream(hooks.onDelta);

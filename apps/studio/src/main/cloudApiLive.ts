@@ -5,7 +5,9 @@
 
 import { app } from 'electron';
 import { CloudRequestError, cloudTimeoutFor, detailFrom, type CloudActionResult, type CloudApi, type CloudProjectFunction, type CloudConnectionDetails, type CloudExportStatus, type CloudMintedToken, type CloudProjectSummary } from './cloudApi';
-import { getCloudClient } from './cloudClient';
+import { accountsAppKeyHeader, ACCOUNTS_IDENTITY_URL, getCloudClient } from './cloudClient';
+import type { DatabaseToken } from './cloudDbToken';
+import { netFetch } from './netFetch';
 
 // The real SnoutData Cloud API, and the only part of the import that reaches Electron.
 //
@@ -106,7 +108,42 @@ function e2eCloudApi(base: string): CloudApi {
 		exportStatus: async (ref) => (await call<{ export: CloudExportStatus }>('cloud-project-export-status', { ref })).export,
 		remove: (ref) => call<CloudActionResult>('cloud-project-delete', { ref }),
 		request: <T>(fn: CloudProjectFunction, body: Record<string, unknown>) => call<T>(fn, body),
+		databaseToken: async (ref) => {
+			const { access_token, expires_in } = await call<{ access_token: string; expires_in: number }>('db-session-token', { project_ref: ref });
+			return { accessToken: access_token, expiresIn: expires_in };
+		},
 	};
+}
+
+/**
+ * A database token for the signed-in session (`POST <identity>/db/session-token`): snout-auth's
+ * own endpoint, not a Snout Function, because the issuer is the only thing holding the database
+ * key. A session it refuses once is renewed and asked again, as `invoke` does.
+ */
+async function sessionDatabaseToken(ref: string): Promise<DatabaseToken> {
+	const ask = async (): Promise<Response> => {
+		const { data } = await getCloudClient().identity.currentSession();
+		if (!data.session) {
+			throw new CloudRequestError("Sign in to SnoutData to open this database.", 401);
+		}
+		return netFetch(`${ACCOUNTS_IDENTITY_URL}/db/session-token`, {
+			method: 'POST',
+			headers: { ...accountsAppKeyHeader(), 'content-type': 'application/json', authorization: `Bearer ${data.session.access_token}` },
+			body: JSON.stringify({ project_ref: ref }),
+		});
+	};
+	let response = await withTimeout(ask(), 15_000);
+	if (response.status === 401) {
+		const renewed = await getCloudClient().identity.renew().catch(() => null);
+		if (renewed?.data.session) {
+			response = await withTimeout(ask(), 15_000);
+		}
+	}
+	const body = (await response.json().catch(() => ({}))) as { access_token?: string; expires_in?: number; message?: string; msg?: string };
+	if (!response.ok || !body.access_token || !body.expires_in) {
+		throw new CloudRequestError(body.message ?? body.msg ?? `SnoutData did not issue a database token (${response.status})`, response.status);
+	}
+	return { accessToken: body.access_token, expiresIn: body.expires_in };
 }
 
 const realCloudApi: CloudApi = {
@@ -170,6 +207,7 @@ const realCloudApi: CloudApi = {
 		}
 		return invoke<T>(fn, body);
 	},
+	databaseToken: sessionDatabaseToken,
 };
 
 /**

@@ -36,8 +36,10 @@ function deps(root: string, fetcher: typeof fetch): LocalStackDeps {
 const form = (folder: string): LocalSetupForm => ({
 	name: "Tampered",
 	folder,
-	apiPort: 61871,
-	dbPort: 61872,
+	// Below the range the OS hands outgoing connections (49152 and up on macOS and Windows), so a
+	// browser or chat app holding one of them cannot make this read as a busy port.
+	apiPort: 41871,
+	dbPort: 41872,
 	exposeApi: false,
 	siteUrl: 'http://localhost:3000',
 	autoconfirm: true,

@@ -149,8 +149,9 @@ export function ConnectionForm({ existing, initialDraft, onClose, onSaved, onImp
 	const telemetry = telemetryServiceFor(driver);
 	// Drivers with no DB host/credentials hide the AWS Secrets Manager + SSH Tunnel tabs.
 	const isSimple = isFileBased || isVector || isAccountBased || !!telemetry;
-	// Set once any field changes, so closing the form can guard against losing edits.
-	const [dirty, setDirty] = useState(false);
+	// Set once any field changes, so closing the form can guard against losing edits. A prefilled
+	// draft (an agent's, the assistant's) starts dirty: nobody typed it here, but it is unsaved work.
+	const [dirty, setDirty] = useState(d !== undefined);
 	const [confirm, confirmDialog] = useConfirm();
 
 	// Once a field settles, the form's facts are passed to the companion (`formAdvice`), which picks
@@ -322,14 +323,33 @@ export function ConnectionForm({ existing, initialDraft, onClose, onSaved, onImp
 		}
 	}, [isSimple, tab]);
 
-	// Close, but confirm first if there are unsaved edits — a stray backdrop click (or
-	// Cancel) shouldn't silently discard a half-filled connection.
+	// Close, but confirm first if there are unsaved edits, so Cancel or Esc never silently discards
+	// a half-filled connection. A click outside does NOT close it: the user often goes to another
+	// pane (an agent's console, a browser) to copy a value into it, and that click must not lose it.
 	async function attemptClose(): Promise<void> {
 		if (dirty && !(await confirm({ title: "Discard unsaved changes?", body: "Unsaved changes to this connection will be lost.", confirmLabel: "Discard", danger: true }))) {
 			return;
 		}
 		onClose();
 	}
+	const attemptCloseRef = useRef(attemptClose);
+	attemptCloseRef.current = attemptClose;
+	// Esc while nothing is open over the form: the discard dialog and the tunnel manager answer
+	// their own Esc, and an open select list cancels the key before it reaches here.
+	const overlaid = confirmDialog !== null || manageTunnels;
+	useEffect(() => {
+		if (overlaid || busy) {
+			return;
+		}
+		function onKey(e: KeyboardEvent): void {
+			if (e.key === 'Escape' && !e.defaultPrevented) {
+				e.preventDefault();
+				void attemptCloseRef.current();
+			}
+		}
+		window.addEventListener('keydown', onKey);
+		return () => window.removeEventListener('keydown', onKey);
+	}, [overlaid, busy]);
 
 /** Scopes typed one per line (commas tolerated), trimmed and de-duplicated. Undefined when none
  *  were typed, which is what "every scope in the container" is stored as. */
@@ -598,7 +618,7 @@ function splitScopes(text: string): string[] | undefined {
 
 	return (
 		<>
-		<div className="modal-backdrop" onMouseDown={(e) => { if (e.target === e.currentTarget) { void attemptClose(); } }}>
+		<div className="modal-backdrop">
 			<form className="modal" data-liby="connection-form" onChange={() => setDirty(true)} onSubmit={save}>
 				<h2>{isEdit ? `Edit Connection: ${existing.label}` : "New Connection"}</h2>
 				<div className="tabs">

@@ -9,13 +9,13 @@ import { useConfirm } from './ConfirmDialog';
 import { CLOUD_VOCABULARY, prefix } from '../../../shared/ownLayout';
 import {
 	type CloudActionOutcome, type CloudBackups, type CloudConnectionFacts, type CloudCopyTarget, type CloudDomain,
-	type CloudFunctions, type CloudProjectOp, type CloudProjectOps, type CloudProjectRow,
+	type CloudFunctions, type CloudMaintenanceWindow, type CloudProjectOp, type CloudProjectOps, type CloudProjectRow,
 	type CloudServices, type CloudUsage,
 } from '../../../shared/cloudProjects';
 
 // What only a CLOUD project has: the control plane's side of it, each one the Snout Function the
 // dashboard and the CLI call, made in main. Running, usage, the keys and the password, backups, the
-// product switches, functions with their sizing and secrets, and custom domains. Everything a cloud
+// maintenance window, the product switches, functions with their sizing and secrets, and custom domains. Everything a cloud
 // project shares with a local one is in ProjectSections.tsx.
 //
 // A password or an API key never arrives here. Copy puts it on the clipboard from main, and this
@@ -109,6 +109,7 @@ export function CloudStatus(props: { row: CloudProjectRow | null; projectRef: st
 				<span className="muted">Created</span><span>{when(row.createdAt)}</span>
 				<span className="muted">Production</span><span>{row.production ? "Yes, never paused" : "No"}</span>
 			</div>
+			{row.serverSilent && <p className="field-hint">Its server is not answering.</p>}
 			{!row.wakesInstantly && <p className="field-hint">Its data is in the bucket rather than on a host, so the next start is a restore and takes longer.</p>}
 			<div className="cloud-actions">
 				<button type="button" disabled={!row.canResume || busy} onClick={() => void ask('resume')}><Icon name="play" /> Start</button>
@@ -168,9 +169,19 @@ export function CloudDelete(props: { row: CloudProjectRow | null; onDeleted(): v
 	);
 }
 
+/** How long the old password keeps working after a reset (361), in minutes; an hour by default. */
+const GRACE_CHOICES: { minutes: number; label: string }[] = [
+	{ minutes: 60, label: "An hour" },
+	{ minutes: 15, label: "15 minutes" },
+	{ minutes: 240, label: "4 hours" },
+	{ minutes: 1440, label: "24 hours" },
+	{ minutes: 0, label: "Stops now (a leaked password)" },
+];
+
 function Connection({ projectRef, part, onOpenDatabase }: { projectRef: string; part: 'database' | 'keys'; onOpenDatabase?(): void }): JSX.Element {
 	const [said, setSaid] = useState<Said>(null);
 	const [busy, setBusy] = useState(false);
+	const [grace, setGrace] = useState(60);
 	const [confirm, confirmDialog] = useConfirm();
 	// The connection facts are only read where they are shown: reading them is not free on the audit log.
 	const { data } = useLoad<CloudConnectionFacts>(() => (part === 'database' ? run('connection', { ref: projectRef }, setSaid) : Promise.resolve(null)));
@@ -189,7 +200,9 @@ function Connection({ projectRef, part, onOpenDatabase }: { projectRef: string; 
 	async function reset(): Promise<void> {
 		const ok = await confirm({
 			title: "Reset the password?",
-			body: "Anything connected with the current password is disconnected when it reconnects. Your connections in this app are updated to the new one.",
+			body: grace === 0
+				? "The old password stops working at once and connections that signed in with it are ended. Your connections in this app are updated to the new user name and password."
+				: `The new password comes with a new user name. The old password keeps working for ${GRACE_CHOICES.find((c) => c.minutes === grace)?.label.toLowerCase() ?? `${grace} minutes`}, so other apps can pick up the new one. Your connections in this app are updated now.`,
 			confirmLabel: "Reset password",
 			danger: true,
 		});
@@ -198,9 +211,9 @@ function Connection({ projectRef, part, onOpenDatabase }: { projectRef: string; 
 		}
 		setBusy(true);
 		try {
-			const result = await run('resetPassword', { ref: projectRef }, setSaid);
+			const result = await run('resetPassword', { ref: projectRef, graceMinutes: grace }, setSaid);
 			if (result) {
-				setSaid({ ok: true, message: `New password set. It applies ${result.appliesIn}. ${result.updatedConnections === 1 ? "Your connection was updated." : `${result.updatedConnections} connections were updated.`}` });
+				setSaid({ ok: true, message: `New password set. It applies ${result.appliesIn}. ${result.updatedConnections === 1 ? "Your connection was updated." : `${result.updatedConnections} connections were updated.`}${result.oldPassword ? ` ${result.oldPassword}` : ''}` });
 			}
 		} finally {
 			setBusy(false);
@@ -246,6 +259,12 @@ function Connection({ projectRef, part, onOpenDatabase }: { projectRef: string; 
 				<label>Database<input readOnly value={data?.database ?? ''} /></label>
 				<label>User<input readOnly value={data?.user ?? ''} /></label>
 				<p className="field-hint">TLS is required. The password is stored for you and goes straight to the clipboard.</p>
+				<label>After a reset, the old password works
+					<select value={grace} disabled={busy} onChange={(e) => setGrace(Number(e.target.value))}>
+						{GRACE_CHOICES.map((choice) => <option key={choice.minutes} value={choice.minutes}>{choice.label}</option>)}
+					</select>
+				</label>
+				<p className="field-hint">A reset puts the new password on the project&apos;s other owner login, so the user name changes too. Until the old password stops, apps still holding it keep connecting.</p>
 				<div className="cloud-actions">
 					<button type="button" className="secondary" disabled={busy} onClick={() => void copy('uri', "Connection string")}><Icon name="copy" /> Copy connection string</button>
 					<button type="button" className="secondary" disabled={busy} onClick={() => void copy('password', "Password")}><Icon name="copy" /> Copy password</button>
@@ -761,6 +780,156 @@ export function CloudDomainsSection({ projectRef }: { projectRef: string }): JSX
 }
 
 /** The Database section of a cloud project: the connection in this app, and how to connect from anywhere else. */
+const HOURS = Array.from({ length: 24 }, (_, h) => h);
+
+function hourLabel(hour: number): string {
+	return `${String(hour).padStart(2, '0')}:00`;
+}
+
+/** Every IANA timezone this window knows, for the picker. */
+function timezoneNames(): string[] {
+	try {
+		const intl = Intl as unknown as { supportedValuesOf?: (key: string) => string[] };
+		return intl.supportedValuesOf?.('timeZone') ?? [];
+	} catch {
+		return [];
+	}
+}
+
+/** Where the window's timezone came from, in the dashboard's words. */
+function timezoneSource(from: NonNullable<CloudMaintenanceWindow['window']>['timezoneFrom'], region: string | undefined): string {
+	switch (from) {
+		case 'project':
+			return "This project's own";
+		case 'owner-owner':
+			return "The owner's, set on their account";
+		case 'owner-signin':
+			return "The owner's, from their last sign-in";
+		case 'region':
+			return region ? `The local time of ${region}` : "The project region's local time";
+		default:
+			return "None";
+	}
+}
+
+/** The next window, or the one it is in, in this computer's local time. */
+function nextWindow(next: NonNullable<CloudMaintenanceWindow['next']>): string {
+	const starts = new Date(next.startsAt);
+	const ends = new Date(next.endsAt);
+	const time: Intl.DateTimeFormatOptions = { hour: '2-digit', minute: '2-digit' };
+	const until = ends.toLocaleTimeString(undefined, { ...time, timeZoneName: 'short' });
+	if (starts.getTime() <= Date.now()) {
+		return `Now, until ${until}`;
+	}
+	return `${starts.toLocaleString(undefined, { weekday: 'short', day: 'numeric', month: 'short', ...time })} to ${until}`;
+}
+
+/**
+ * The maintenance window: the hours when this running database may be moved to another server.
+ * In Settings, as on the dashboard; the same Snout Function, which decides who may change it.
+ */
+export function CloudMaintenanceWindow({ projectRef, region }: { projectRef: string; region?: string }): JSX.Element {
+	const [said, setSaid] = useState<Said>(null);
+	const [busy, setBusy] = useState(false);
+	const [start, setStart] = useState(2);
+	const [end, setEnd] = useState(6);
+	const [timezone, setTimezone] = useState('');
+	const [zones] = useState(timezoneNames);
+	const [answer, setAnswer] = useState<CloudMaintenanceWindow | null>(null);
+	const [loading, setLoading] = useState(true);
+
+	function take(loaded: CloudMaintenanceWindow): void {
+		setAnswer(loaded);
+		if (loaded.window) {
+			setStart(loaded.window.startHour);
+			setEnd(loaded.window.endHour);
+			setTimezone(loaded.window.timezoneFrom === 'project' ? loaded.window.timezone ?? '' : '');
+		}
+	}
+
+	useEffect(() => {
+		let live = true;
+		void run('maintenanceWindow', { ref: projectRef }, setSaid).then((loaded) => {
+			if (live) {
+				if (loaded) {
+					take(loaded);
+				}
+				setLoading(false);
+			}
+		});
+		return () => {
+			live = false;
+		};
+	}, [projectRef]);
+
+	async function save(reset: boolean): Promise<void> {
+		setBusy(true);
+		setSaid(null);
+		try {
+			const args = reset ? { ref: projectRef, reset: true } : { ref: projectRef, startHour: start, endHour: end, timezone: timezone || null };
+			const saved = await run('setMaintenanceWindow', args, setSaid);
+			if (saved) {
+				take(saved);
+				setSaid({ ok: true, message: reset ? "Back to the default window." : "Maintenance window saved." });
+			}
+		} finally {
+			setBusy(false);
+		}
+	}
+
+	const w = answer?.window ?? null;
+	const own = w?.hoursFrom === 'project';
+	const unchanged = w !== null && own && start === w.startHour && end === w.endHour && timezone === (w.timezoneFrom === 'project' ? w.timezone ?? '' : '');
+	const choices = timezone && !zones.includes(timezone) ? [timezone, ...zones] : zones;
+
+	return (
+		<fieldset>
+			<legend>Maintenance window</legend>
+			<p className="field-hint">The hours when this database may be moved to another server while it runs. By default, 2 to 6 AM in the owner's timezone.</p>
+			{loading && <div className="field-hint">Loading…</div>}
+			{w && (
+				<div className="cloud-facts">
+					<span className="muted">Window</span><span>{hourLabel(w.startHour)} to {hourLabel(w.endHour)}{w.timezone ? `, ${w.timezone}` : ''}</span>
+					<span className="muted">Hours</span><span>{own ? "This project's own" : "The default"}</span>
+					<span className="muted">Timezone</span><span>{timezoneSource(w.timezoneFrom, region)}</span>
+					{answer?.next && <><span className="muted">Next window</span><span>{nextWindow(answer.next)}</span></>}
+				</div>
+			)}
+			<label>
+				Starts at
+				<select value={start} disabled={!answer || busy} onChange={(e) => setStart(Number(e.target.value))}>
+					{HOURS.map((h) => <option key={h} value={h}>{hourLabel(h)}</option>)}
+				</select>
+			</label>
+			<label>
+				Ends at
+				<select value={end} disabled={!answer || busy} onChange={(e) => setEnd(Number(e.target.value))}>
+					{HOURS.map((h) => <option key={h} value={h}>{hourLabel(h)}</option>)}
+				</select>
+			</label>
+			<p className="field-hint">
+				{start === end
+					? "Pick an end hour different from the start."
+					: end < start
+						? `Runs across midnight, ${hourLabel(start)} to ${hourLabel(end)} the next day.`
+						: `${end - start} hours a day.`}
+			</p>
+			<label>
+				Timezone
+				<select value={timezone} disabled={!answer || busy} onChange={(e) => setTimezone(e.target.value)}>
+					<option value="">The owner's timezone</option>
+					{choices.map((zone) => <option key={zone} value={zone}>{zone}</option>)}
+				</select>
+			</label>
+			<div className="cloud-actions">
+				<button type="button" disabled={!answer || busy || start === end || unchanged} onClick={() => void save(false)}><Icon name="check" /> Save</button>
+				{own && <button type="button" className="secondary" disabled={busy} onClick={() => void save(true)}><Icon name="history" /> Use the default</button>}
+			</div>
+			<Status said={said} />
+		</fieldset>
+	);
+}
+
 export function CloudDatabase({ projectRef, onOpenDatabase }: { projectRef: string; onOpenDatabase(): void }): JSX.Element {
 	return <Connection projectRef={projectRef} part="database" onOpenDatabase={onOpenDatabase} />;
 }

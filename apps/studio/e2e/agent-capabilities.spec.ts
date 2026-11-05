@@ -536,4 +536,54 @@ test.describe('an agent acting on the app', () => {
 		const title = (await toast.locator('.notif-toast-title').innerText()).trim();
 		expect(title.length).toBeLessThanOrEqual(120);
 	});
+
+	test('a form the agent opened survives a click elsewhere, and Esc asks before it throws the draft away', async () => {
+		// The test before leaves an error notice up, sitting over where the approval card lands.
+		const notice = handle.page.locator('.notif-toast');
+		if (await notice.count() > 0) {
+			await notice.locator('.update-toast-close').click();
+			await expect(notice).toHaveCount(0);
+		}
+		await setAllowMutating(handle, true);
+		const pending = callTool(ep, 'open_connection_form', { label: 'kept draft', driver: 'postgres', host: 'db.internal', port: 5432 });
+		await expect(handle.page.locator('.agent-action-toast')).toBeVisible({ timeout: 10_000 });
+		await handle.page.click('.agent-action-actions button.primary');
+		expect((await pending).isError).toBe(false);
+		const form = handle.page.locator('form[data-liby="connection-form"]');
+		await expect(form).toBeVisible();
+		// The user goes off to copy something from another pane: the click lands outside the form.
+		await handle.page.locator('.modal-backdrop').first().click({ position: { x: 5, y: 5 } });
+		await expect(form).toBeVisible();
+		await expect(form.locator('[data-liby="connection-host"]')).toHaveValue('db.internal');
+		// Esc is a way out, but the draft is unsaved work, so it asks first; Esc there keeps it.
+		await handle.page.keyboard.press('Escape');
+		const discard = handle.page.locator('.modal.confirm');
+		await expect(discard).toContainText('Discard unsaved changes?');
+		await handle.page.keyboard.press('Escape');
+		await expect(discard).toHaveCount(0);
+		await expect(form).toBeVisible();
+		await handle.page.keyboard.press('Escape');
+		await discard.locator('button', { hasText: 'Discard' }).click();
+		await expect(form).toHaveCount(0);
+	});
+
+	test('Settings lists the app actions grouped, each tick beside its own title', async () => {
+		await setAllowMutating(handle, true);
+		await handle.page.keyboard.press('ControlOrMeta+Shift+P');
+		await handle.page.keyboard.type('Settings');
+		await handle.page.keyboard.press('Enter');
+		await expect(handle.page.locator('.settings-page')).toBeVisible();
+		await handle.page.locator('.settings-nav-item', { hasText: 'Agent access' }).click();
+		await handle.page.locator('.agent-section-tabs .tab', { hasText: 'App actions' }).click();
+		await expect(handle.page.locator('.agent-grant-group-title', { hasText: 'Connections' })).toBeVisible();
+		const row = handle.page.locator('.agent-grant', { hasText: 'Open connection form' });
+		const tick = await row.locator('input[type="checkbox"]').boundingBox();
+		const title = await row.locator('.agent-grant-title').boundingBox();
+		expect(tick && title).toBeTruthy();
+		// Beside, not above: the tick sits on the title's line, to its left.
+		expect(tick!.x + tick!.width).toBeLessThanOrEqual(title!.x);
+		expect(Math.abs((tick!.y + tick!.height / 2) - (title!.y + title!.height / 2))).toBeLessThan(title!.height);
+		await handle.page.screenshot({ path: 'e2e/.results/agent-app-actions.png' });
+		await handle.page.locator('.settings-titlebar .icon-btn').click();
+	});
 });

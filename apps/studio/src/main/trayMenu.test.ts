@@ -384,6 +384,19 @@ describe('trayModel projects', () => {
 		]);
 	});
 
+	test('a cloud project whose server is silent says so beside its state, which is not changed', () => {
+		const model = trayModel(input({ projects: {
+			local: [],
+			cloud: [cloud('aaaaaaaaaaaaa', "A", { serverSilent: true }), cloud('bbbbbbbbbbbbb', "B", { production: true, serverSilent: true }), cloud('ccccccccccccc', "C")],
+			busy: new Set(),
+		} }));
+		assert.deepEqual(model.cloudProjects.map((p) => [p.name, p.detail, p.dot]), [
+			["A", "running, server not answering", 'ok'],
+			["B", "PROD, running, server not answering", 'ok'],
+			["C", "running", 'ok'],
+		]);
+	});
+
 	test('a cloud project on its way somewhere says where, not the state it is leaving', () => {
 		const [item] = trayModel(input({ projects: {
 			local: [],

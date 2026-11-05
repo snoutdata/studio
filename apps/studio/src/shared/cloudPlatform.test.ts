@@ -30,6 +30,8 @@ describe('cloudPlatform', () => {
 		for (const name of ['snout_identity', 'snout_files', 'snout_live', 'snout_graph', 'snout_ext']) {
 			assert.equal(isPlatformSchema(name), true, name);
 		}
+		// A cluster's catalog (Lepis), reserved on a sharded project's home node.
+		assert.equal(isPlatformSchema('lepis'), true);
 		assert.equal(isPlatformSchema('vault'), false);
 		assert.equal(isPlatformSchema('pgbouncer'), false);
 		assert.equal(isPlatformSchema('cron'), false);

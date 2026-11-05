@@ -113,6 +113,15 @@ test.beforeAll(async () => {
 						facts: { sampled_ms: 0, nodes: [{ id: 1, name: 'home', active: true, db_bytes: 4_000_000, connections: 3, max_connections: 100, writes_per_s: 0, error: null }], ranges: [] },
 						assumptions: 'Thresholds are chosen, not measured.',
 					});
+				} else if (action === 'check') {
+					send(res, 200, {
+						findings: [{
+							severity: 'warn', code: 'fk_without_key', table: 'app.ledger', related: ['app.accounts'],
+							message: 'app.ledger references app.accounts without acct.',
+							fix: 'Add acct to the foreign key.', sql: null, operation: null,
+						}],
+						summary: { errors: 0, warnings: 1, info: 0, tables: 2, foreign_keys: 1 },
+					});
 				} else if (body.plan === true) {
 					send(res, 200, PLAN);
 				} else {
@@ -153,6 +162,17 @@ test('a cluster project lists Cluster, and the section draws its cluster nodes, 
 	await expect(view()).toContainText('2 of 5 project slots used on the pro plan');
 	await expect(view()).toContainText('range.move');
 	await expect(view()).toContainText('bbbbbbbbbbbbb holds most of acct');
+	// The design check (L24): its sentence and its one finding.
+	const design = view().locator('fieldset', { has: page.locator('legend', { hasText: 'Design check' }) });
+	await expect(design).toContainText('2 tables checked: 1 to look at.');
+	await expect(design).toContainText('app.ledger references app.accounts without acct.');
+	// The map: the router, the home and the node by role, the router's lines to both, the job in words.
+	const map = view().locator('.cluster-map');
+	await expect(map.locator('.cluster-map-label')).toHaveText(['Router', 'Home', 'Node 2']);
+	await expect(map.locator('.cluster-map-line.queries')).toHaveCount(2);
+	await expect(map).toContainText('Job 6 (range.move) is running: 1 of 4 steps');
+	await expect(map.locator('.cluster-map-size')).toHaveText(['3.8 MB of data']);
+	await map.screenshot({ path: 'test-results/cloud-shards-map.png' });
 	await page.screenshot({ path: 'test-results/cloud-shards-section.png' });
 });
 

@@ -73,7 +73,7 @@ export interface TrayProjectItem {
 export type TrayLocalProjectInput = Pick<LocalProjectRow, 'id' | 'name' | 'state' | 'production'>;
 
 /** A cloud project as the tray reads it: the control plane's last answer, never a fresh one. */
-export type TrayCloudProjectInput = Pick<CloudProjectRow, 'ref' | 'name' | 'state' | 'desiredState' | 'busy' | 'production' | 'canPause' | 'canResume'>;
+export type TrayCloudProjectInput = Pick<CloudProjectRow, 'ref' | 'name' | 'state' | 'desiredState' | 'busy' | 'production' | 'canPause' | 'canResume'> & Partial<Pick<CloudProjectRow, 'serverSilent'>>;
 
 /** The one line at the top: what the app is doing right now. */
 export interface TrayStatus {
@@ -401,7 +401,9 @@ function cloudProjectItems(input: TrayInput): TrayProjectItem[] {
 				kind: 'cloud',
 				id: project.ref,
 				name: project.name,
-				detail: projectDetail(project.production, state),
+				// Its server not answering is said BESIDE the state, never instead of it: the state is
+				// what the server last reported, and the silence does not change it (2026-10-31).
+				detail: [projectDetail(project.production, state), project.serverSilent ? "server not answering" : ''].filter(Boolean).join(', '),
 				dot,
 				actions: [paused
 					? { verb: 'resume', label: "Resume", enabled: !working && project.canResume }

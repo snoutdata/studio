@@ -207,11 +207,18 @@ export async function resolveSnoutdataCloudImport(
 		// The credential the control plane just handed us, and the address IT gave rather
 		// than the one the list did: the connection call is the authority on where a
 		// project answers, and they can differ while a project is moving.
-		values.password = details.password;
 		values.host = details.host;
 		values.port = details.port;
 		values.database = details.database;
 		values.username = details.user;
+		if (details.signIn === 'token') {
+			// Signed in as the person: no password to keep, a database token per connection.
+			values.password = undefined;
+			values.cloudTokenSignIn = true;
+		} else {
+			values.password = details.password ?? undefined;
+			values.cloudTokenSignIn = undefined;
+		}
 		if (already) {
 			// Write to the connection that already exists rather than beside it, and keep
 			// the name the user gave it: they renamed it for a reason, and an import is

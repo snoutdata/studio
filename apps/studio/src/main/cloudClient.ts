@@ -20,7 +20,7 @@ import { netFetch } from './netFetch';
 // the data), so it lives in source. The secret key must NEVER appear here; it bypasses RLS.
 // `cloudClient.test.ts` pins all of this: nothing else did, and a typo here ships an app
 // that cannot sign in.
-const ACCOUNTS_URL = 'https://accounts.snoutdata.com';
+export const ACCOUNTS_URL = 'https://accounts.snoutdata.com';
 /** Just the host (no scheme), for naming the domain in network-error diagnostics. */
 export const ACCOUNTS_HOST = 'accounts.snoutdata.com';
 const ACCOUNTS_APP_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzbm91dGRhdGEiLCJyb2xlIjoic25vdXRfYXBwIiwiaWF0IjoxNzkyMDc2NTQyLCJleHAiOjIxMDQ4NzU1MjR9.hWSbcDfbGuyDHHSFLoZzD8KVSg9bWVZzzQ_eftW6TPM';
@@ -28,6 +28,16 @@ const ACCOUNTS_APP_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzbm91d
 /** The identity service's health, in the names the accounts backend speaks (shared/ownLayout.ts).
  *  The proxy test in index.ts probes the same URL. */
 export const ACCOUNTS_HEALTH_URL = `${ACCOUNTS_URL}${prefix('identity', ACCOUNTS_VOCABULARY)}/health`;
+/** The identity service itself: where a database token is asked for (`cloudDbToken.ts`). */
+export const ACCOUNTS_IDENTITY_URL = `${ACCOUNTS_URL}${prefix('identity', ACCOUNTS_VOCABULARY)}`;
+/** The accounts backend's Snout Functions door, for a call made without the client (an
+ *  OpenAI-compatible stream through `cloud-project-ai`). */
+export const ACCOUNTS_FUNCTIONS_URL = `${ACCOUNTS_URL}${prefix('fn', ACCOUNTS_VOCABULARY)}`;
+
+/** The app-key header every accounts-backend call carries beside the user's bearer. */
+export function accountsAppKeyHeader(): Record<string, string> {
+	return { [keyHeader(ACCOUNTS_VOCABULARY)]: ACCOUNTS_APP_KEY };
+}
 
 function authFilePath(): string {
 	return join(app.getPath('userData'), 'auth.json');

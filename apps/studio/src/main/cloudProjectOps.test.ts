@@ -35,7 +35,7 @@ function setup(request: CloudApi['request']): { api: CloudApi; host: CloudProjec
 	const api: CloudApi = {
 		account: async () => 'alex@example.com', list: async () => [project()],
 		connection: async () => DETAILS, pause: unused, resume: unused, mintToken: unused, create: unused,
-		requestExport: unused, exportStatus: async () => ({ pending: false, url: null, error: null }), remove: unused,
+		requestExport: unused, exportStatus: async () => ({ pending: false, url: null, error: null }), remove: unused, databaseToken: unused,
 		request,
 	};
 	const host: CloudProjectHost = {
@@ -274,4 +274,34 @@ test('a call the server deliberately holds open gets more than the server waits,
 	}
 	assert.equal(cloudTimeoutFor('cloud-project-usage'), CLOUD_TIMEOUT_MS);
 	assert.equal(cloudTimeoutFor('cloud-project-export?ref=abc'), CLOUD_TIMEOUT_MS);
+});
+
+test('the maintenance window is read and set through its own function, and a reset sends nothing else', async () => {
+	const asked: unknown[] = [];
+	const answer = {
+		window: { startHour: 1, endHour: 5, timezone: 'Europe/London', hoursFrom: 'project', timezoneFrom: 'project' },
+		next: { startsAt: '2026-11-01T01:00:00Z', endsAt: '2026-11-01T05:00:00Z', timezone: 'Europe/London' },
+		changed: true,
+	};
+	const { api, host } = setup(async (fn, body) => { asked.push([fn, body]); return answer as never; });
+	const read = await runCloudProjectOp(api, host, 'maintenanceWindow', { ref: 'r1' });
+	assert.ok(read.ok);
+	assert.deepEqual(read.data, { window: answer.window, next: answer.next });
+	await runCloudProjectOp(api, host, 'setMaintenanceWindow', { ref: 'r1', startHour: 1, endHour: 5, timezone: 'Europe/London' });
+	await runCloudProjectOp(api, host, 'setMaintenanceWindow', { ref: 'r1', startHour: 22, endHour: 3 });
+	await runCloudProjectOp(api, host, 'setMaintenanceWindow', { ref: 'r1', reset: true, startHour: 4 });
+	assert.deepEqual(asked, [
+		['cloud-project-maintenance-window', { ref: 'r1' }],
+		['cloud-project-maintenance-window', { ref: 'r1', startHour: 1, endHour: 5, timezone: 'Europe/London' }],
+		['cloud-project-maintenance-window', { ref: 'r1', startHour: 22, endHour: 3, timezone: null }],
+		['cloud-project-maintenance-window', { ref: 'r1', reset: true }],
+	]);
+});
+
+test('a teammate setting the maintenance window gets the control plane\'s refusal, coloured as one', async () => {
+	const { api, host } = setup(async () => { throw new CloudRequestError('Only the owner can change this project', 403); });
+	const outcome = await runCloudProjectOp(api, host, 'setMaintenanceWindow', { ref: 'r1', startHour: 1, endHour: 5 });
+	assert.equal(outcome.ok, false);
+	assert.ok(!outcome.ok && outcome.refused);
+	assert.ok(!outcome.ok && /owner/.test(outcome.message));
 });

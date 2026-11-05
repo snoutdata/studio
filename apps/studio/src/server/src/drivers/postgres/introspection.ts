@@ -115,13 +115,13 @@ function tableKey(schema: string, table: string): string {
 }
 
 /**
- * Cheap structural fingerprint, scoped exactly like introspectPostgres: a column
+ * Cheap structural fingerprint, scoped like introspectPostgres: a column
  * count plus an order-independent sum of hashtext over each column's identity. Any
  * added/dropped/renamed/retyped/reordered column changes it, so the live schema index
  * can detect DDL with one aggregate query.
  */
-/** Pools whose engine has no `hashtext` (CockroachDB), so the digest goes straight to the
- *  portable form instead of failing first on every 15s poll. */
+/** Pools whose engine has no `hashtext` (CockroachDB), or lacks a catalog column the catalog digest
+ *  reads, so the digest goes straight to the portable form instead of failing first on every poll. */
 const withoutHashtext = new WeakSet<Pool>();
 
 /**
@@ -148,7 +148,9 @@ export async function postgresStructuralDigest(pool: Pool): Promise<string> {
 	try {
 		return await hashtextStructuralDigest(pool);
 	} catch (err) {
-		if (!/hashtext/i.test(err instanceof Error ? err.message : String(err))) {
+		// A missing function or catalog column, not a dropped connection: only that switches a pool to
+		// the portable form for good.
+		if (!/hashtext|does not exist|unknown function|unimplemented|not supported/i.test(err instanceof Error ? err.message : String(err))) {
 			throw err;
 		}
 		withoutHashtext.add(pool);
@@ -157,23 +159,44 @@ export async function postgresStructuralDigest(pool: Pool): Promise<string> {
 }
 
 async function hashtextStructuralDigest(pool: Pool): Promise<string> {
-	// A second aggregate covers COMMENT ON, which lives in pg_description rather than in
-	// information_schema.columns. It is folded in as its own component instead of joined per
-	// column: pg_description is small, and a comment-only change must still move the digest or
-	// the app serves a cached schema with no descriptions until a manual Refresh.
+	// Read off pg_catalog, not information_schema (2026-11-04). `information_schema.columns` is a
+	// view of a dozen joins with a privilege test and a type rendering per column, and on a hosted
+	// database this poll was the most expensive statement in the customer's pg_stat_statements
+	// (~6.5 ms a call, every 15s, for a database with a few hundred columns). The catalog answers the
+	// same question with three joins and no function but the hash: the type is its oid and typmod
+	// (a retype moves either), and nothing is rendered.
+	//
+	// The scope is information_schema.columns' (ordinary, partitioned and foreign tables and views,
+	// outside the system schemas) without its privilege test, so a column the role cannot see still
+	// moves the digest: that costs one re-introspection that finds what it found before. A GRANT is
+	// caught by the `g` component, each relation's ACL, so a table that becomes visible still shows.
+	//
+	// `d` covers COMMENT ON, folded in as its own component instead of joined per column, and only
+	// for user objects (oid >= 16384, FirstNormalObjectId): every built-in function has a comment,
+	// and hashing those thousands of rows on every poll was most of that subquery's cost while they
+	// can only change with a Postgres upgrade.
+	//
+	// `p`: each partition's access method. Sealing a SnoutTime partition rewrites it into the column
+	// store without touching a column, so without this the explorer would call a sealed partition
+	// live until a manual Refresh.
+	//
+	// The digest's text changed with this query, so a failure-memory note recorded under the old one
+	// is not matched again; that is what any DDL does to it too.
 	const result = await pool.query(
 		`SELECT COUNT(*)::text AS n,
-		        COALESCE(SUM(hashtext(table_schema || ':' || table_name || ':' || column_name || ':' || data_type || ':' || ordinal_position::text))::bigint, 0)::text AS h,
-		        (SELECT COALESCE(SUM(hashtext(objoid::text || ':' || objsubid::text || ':' || description))::bigint, 0)::text FROM pg_description) AS d,
-		        (SELECT COALESCE(SUM(hashtext(oid::text || ':' || relam::text))::bigint, 0)::text FROM pg_class WHERE relispartition) AS p
-		 FROM information_schema.columns
-		 WHERE table_schema NOT IN ('pg_catalog', 'information_schema')`,
+		        COALESCE(SUM(hashtext(n.nspname || ':' || c.relname || ':' || a.attname || ':' || a.atttypid::text || ':' || a.atttypmod::text || ':' || a.attnum::text))::bigint, 0)::text AS h,
+		        (SELECT COALESCE(SUM(hashtext(objoid::text || ':' || objsubid::text || ':' || description))::bigint, 0)::text FROM pg_description WHERE objoid >= 16384) AS d,
+		        (SELECT COALESCE(SUM(hashtext(oid::text || ':' || relam::text))::bigint, 0)::text FROM pg_class WHERE relispartition) AS p,
+		        (SELECT COALESCE(SUM(hashtext(oid::text || ':' || COALESCE(relacl::text, '')))::bigint, 0)::text FROM pg_class WHERE oid >= 16384 AND relkind IN ('r', 'v', 'f', 'p', 'm')) AS g
+		 FROM pg_attribute a
+		 JOIN pg_class c ON c.oid = a.attrelid
+		 JOIN pg_namespace n ON n.oid = c.relnamespace
+		 WHERE a.attnum > 0 AND NOT a.attisdropped
+		   AND c.relkind IN ('r', 'v', 'f', 'p')
+		   AND n.nspname NOT IN ('pg_catalog', 'information_schema')`,
 	);
-	// `p`: each partition's access method. Sealing a SnoutTime partition rewrites it into the
-	// column store without touching a column, so without this the explorer would call a sealed
-	// partition live until a manual Refresh.
-	const row = result.rows[0] as { n: string; h: string; d: string; p: string } | undefined;
-	return row ? `${row.n}:${row.h}:${row.d}:${row.p}` : '0:0:0:0';
+	const row = result.rows[0] as { n: string; h: string; d: string; p: string; g: string } | undefined;
+	return row ? `${row.n}:${row.h}:${row.d}:${row.p}:${row.g}` : '0:0:0:0:0';
 }
 
 /**

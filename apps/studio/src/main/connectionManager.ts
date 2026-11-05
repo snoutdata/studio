@@ -138,7 +138,8 @@ export class ConnectionManager {
 	// consent, the same way the "Get pipeline translation" click is.
 	private embedder?: (text: string) => Promise<number[]>;
 	/** The CURRENT password of a SnoutData Cloud project, from the control plane. Late-bound by main. */
-	private cloudPassword?: (ref: string) => Promise<string | null>;
+	private cloudPassword?: (ref: string) => Promise<{ user: string; password: string } | null>;
+	private databaseToken?: (ref: string) => Promise<string>;
 	// A saved cloud account + its keychain secret, by id — late-bound by main from CloudService.
 	// Late-bound rather than a ctor arg for the same reason the two above are: it keeps the wiring
 	// order in main free, and a build with no telemetry connection never calls it. This is the ONE
@@ -352,13 +353,18 @@ export class ConnectionManager {
 			const result = await this.connectOnce(id).catch(async (error: unknown) => {
 				const config = this.require(id);
 				const refused = /password authentication failed/i.test(error instanceof Error ? error.message : String(error));
-				const fresh = refused && config.cloudProjectRef && this.cloudPassword
+				const fresh = refused && config.cloudProjectRef && !config.cloudTokenSignIn && this.cloudPassword
 					? await this.cloudPassword(config.cloudProjectRef).catch(() => null)
 					: null;
-				if (!fresh || fresh === this.secrets.get(id, 'password')) {
+				if (!fresh || (fresh.password === this.secrets.get(id, 'password') && fresh.user === config.username)) {
 					throw error;
 				}
-				this.secrets.store(id, 'password', fresh);
+				this.secrets.store(id, 'password', fresh.password);
+				// A reset moves a project to its other owner login (361), so the user name may have
+				// changed with the password.
+				if (fresh.user && fresh.user !== config.username) {
+					this.writeConnection({ ...config, username: fresh.user });
+				}
 				return this.connectOnce(id);
 			});
 			this.connected.add(id);
@@ -446,10 +452,33 @@ export class ConnectionManager {
 	 * A reset made anywhere but this app (the dashboard, the CLI, an agent's `reset_password`)
 	 * left the keychain copy stale, and the connection failed with "password authentication
 	 * failed" until the person re-imported it. The control plane holds the current one for the
-	 * signed-in owner, so a refusal reads it, stores it, and connects again once.
+	 * signed-in owner, so a refusal reads it, stores it, and connects again once. With the user name:
+	 * a reset moves the project to its other owner login (361), and the old login's password stops
+	 * at the end of its grace.
 	 */
-	setCloudPassword(fn: ((ref: string) => Promise<string | null>) | undefined): void {
+	setCloudPassword(fn: ((ref: string) => Promise<{ user: string; password: string } | null>) | undefined): void {
 		this.cloudPassword = fn;
+	}
+
+	/** Where a connection that signs in as the person gets a database token (`cloudDbToken.ts`). */
+	setDatabaseToken(fn: ((ref: string) => Promise<string>) | undefined): void {
+		this.databaseToken = fn;
+	}
+
+	/**
+	 * The password for a new pooled connection of a connection that signs in as the person, asked
+	 * by the SQL server each time its pool opens one. Only such a connection gets an answer: the
+	 * server cannot use this to read any other connection's secret.
+	 */
+	async connectionPassword(id: string): Promise<string> {
+		const config = this.require(id);
+		if (!config.cloudTokenSignIn || !config.cloudProjectRef) {
+			throw new Error("This connection does not sign in with your SnoutData account.");
+		}
+		if (!this.databaseToken) {
+			throw new Error("This connection signs in with your SnoutData account, which is not available yet.");
+		}
+		return this.databaseToken(config.cloudProjectRef);
 	}
 
 	setAiTranscriber(fn: ((sql: string, connectionId: string) => Promise<NativeQuery>) | undefined): void {
@@ -1295,7 +1324,10 @@ export class ConnectionManager {
 	copyForDatabase(id: string, database: string): ConnectionConfig {
 		const source = this.require(id);
 		const copy: ConnectionConfig = { ...source, id: randomUUID(), label: database, database };
-		delete copy.cloudProjectRef;
+		// A connection signing in as the person keeps its project: its password is a token for it.
+		if (!copy.cloudTokenSignIn) {
+			delete copy.cloudProjectRef;
+		}
 		delete copy.localProjectId;
 		this.writeConnection(copy);
 		for (const key of ['password', 'sshPassword', 'sshPassphrase', 'awsSecretAccessKey'] as const) {
@@ -1493,6 +1525,9 @@ export class ConnectionManager {
 		// so a second import updates this connection instead of adding one beside it.
 		if (form.cloudProjectRef) {
 			config.cloudProjectRef = form.cloudProjectRef;
+			if (form.cloudTokenSignIn) {
+				config.cloudTokenSignIn = true;
+			}
 		}
 		if (form.localProjectId) {
 			config.localProjectId = form.localProjectId;

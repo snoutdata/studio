@@ -120,6 +120,50 @@ export interface ShardPlan {
 	max_write_pause_ms: number;
 	assumptions?: string;
 	warnings: string[];
+	/** A table operation's design check of the tables it changes, read before anything moves. */
+	check?: DesignCheck;
+}
+
+/** One finding of the design check (`GET /v1/check`): what the keys say. */
+export interface CheckFinding {
+	severity: 'error' | 'warn' | 'info';
+	code: string;
+	table: string;
+	related: string[];
+	message: string;
+	fix: string;
+	/** SQL the owner runs themselves (an index, a column), through the router. */
+	sql: string | null;
+	/** The request that does the fix (`{"op": "table.distribute", ...}`). */
+	operation: Record<string, unknown> | null;
+}
+
+/** The design check: every finding, most severe first, and the counts. */
+export interface DesignCheck {
+	findings: CheckFinding[];
+	summary: { errors: number; warnings: number; info: number; tables: number; foreign_keys: number };
+	/** A plan's check that could not read the home node says so instead. */
+	error?: string;
+}
+
+/** The check in a sentence: nothing found, or how much of each. */
+export function checkSentence(check: DesignCheck): string {
+	const { errors, warnings, info, tables } = check.summary;
+	const checked = `${tables} ${tables === 1 ? 'table' : 'tables'} checked`;
+	if (errors + warnings + info === 0) {
+		return `${checked}: every key, foreign key and index is where the cluster needs it.`;
+	}
+	const parts = [
+		errors > 0 ? `${errors} to fix` : null,
+		warnings > 0 ? `${warnings} to look at` : null,
+		info > 0 ? `${info} ${info === 1 ? 'suggestion' : 'suggestions'}` : null,
+	].filter((p): p is string => p !== null);
+	return `${checked}: ${parts.join(', ')}.`;
+}
+
+/** A finding's severity in the section's words. */
+export function severityWord(severity: CheckFinding['severity']): string {
+	return severity === 'error' ? "Fix" : severity === 'warn' ? "Look at" : "Suggestion";
 }
 
 export interface ShardJob {
@@ -279,7 +323,7 @@ export function joinWords(phase: ShardPod['joining']): string {
 /** What a run answered, in a sentence: a job started, a pod made or deleted, clustering on or off. */
 export function ranSentence(answer: Record<string, unknown>): string {
 	if (answer.sharded === false) {
-		return answer.changed === false ? "This project is not a cluster." : "This project is not a cluster any more. The database restarts once while the router leaves.";
+		return answer.changed === false ? "This project is not a cluster." : "This project is not a cluster any more. The database restarts once while its services move back into its pod.";
 	}
 	if (typeof answer.joining === 'boolean' && typeof answer.node === 'string') {
 		return answer.joining ? `${answer.node} is joining the cluster again.` : `${answer.node} is left as it is.`;
@@ -306,7 +350,7 @@ export function ranSentence(answer: Record<string, unknown>): string {
 		return `The project already has ${String(answer.nodes)} cluster nodes.`;
 	}
 	if (answer.sharded === true) {
-		return answer.changed === false ? "This project is already a cluster." : "This project is a cluster now. The database restarts once while the router joins it.";
+		return answer.changed === false ? "This project is already a cluster." : "This project is a cluster now. The router and the services start in pods of their own, and the database keeps running.";
 	}
 	if (typeof answer.replica === 'string' && typeof answer.node === 'string') {
 		return `A replica of cluster node ${answer.node} is being made from its backup. It protects the node once it is following it.`;

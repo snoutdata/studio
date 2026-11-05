@@ -14,6 +14,7 @@ import { authOnResume, authOnSuspend, type AuthWakeHost } from './authWake';
 import { sessionProvider, ssoFailureMessage } from './authIdentity';
 import { entitlementsForTier, normalizeTier } from './entitlements';
 import { sendInstallHeartbeat } from './installHeartbeat';
+import { reportSignInTimezone } from './signInTimezone';
 import { isNetworkError, networkBlockedMessage, networkErrorDetail } from './netFetch';
 import { openExternalIfAllowed } from './navigationGuard';
 import { listenForLoopbackReturn, loggableReason, newSignInState, readSignInCallback, SIGN_IN_REFUSED, SignInAttempt } from './signInCallback';
@@ -40,15 +41,10 @@ const SIGN_IN_RETURN_URL = 'https://snoutdata.com/signed-in';
 // How long a development build's loopback listener waits for the browser (`loopbackReturn`).
 const LOOPBACK_WAIT_MS = 10 * 60_000;
 
-// Hard cap on the initial account resolve (tier read + gateway-key mint). The cap only bites on a
-// genuinely hung link — the happy path resolves as fast as the network actually allows — so it must
-// be GENEROUS, not tight: the mint makes several sequential round-trips (an RPC + reads, then
-// LiteLLM /user/new + /key/generate), and a real user can be on a high-latency link (Japan, Brazil,
-// Australia), a corporate proxy doing TLS inspection, or hitting us under load. A 3s cap used to time
-// out a slow-BUT-SUCCESSFUL mint, so a brand-new user's key (created server-side) was never stored
-// locally and the model list came up empty. On timeout each call still falls back to its safe default
-// (free tier / keep existing key) and the background entitlement resync (~8s after launch, then every
-// 30 min) corrects it.
+// Hard cap on the initial account resolve (the tier read). The cap only bites on a genuinely hung
+// link, so it is GENEROUS, not tight: a real user can be on a high-latency link, a corporate proxy
+// doing TLS inspection, or hitting us under load. On timeout the call falls back to its safe default
+// (free tier) and the background entitlement resync (~8s after launch, then every 30 min) corrects it.
 const ACCOUNT_RESOLVE_TIMEOUT_MS = 15000;
 
 // Hard cap on the interactive sign-in network calls (the OAuth token exchange against the backend).
@@ -106,7 +102,7 @@ export class AuthStore {
 	 *  See {@link AuthState.restoring} — it keeps the UI on a skeleton instead of telling a
 	 *  returning user to sign in while we restore. */
 	private restoring = false;
-	/** A person being adopted for the first time: their plan read and AI key minted, and the rest
+	/** A person being adopted for the first time: their plan read, and the rest
 	 *  of the app (the AI service among it) not yet told. `state()` does not report them until
 	 *  then, or a window that asked in between showed a composer the AI service refused. */
 	private adopting = false;
@@ -119,16 +115,12 @@ export class AuthStore {
 
 	/**
 	 * @param onChange      fired whenever the signed-in user or tier changes (main re-broadcasts + re-gates).
-	 * @param onGatewayKey  hands the store the user's minted gateway virtual key + account user id
-	 *                      + the optional persistent top-up (credits) key on sign-in, and
-	 *                      `(null, null, null)` on sign-out, so positron-cloud uses the
-	 *                      subscription key as the bearer, the user id (opaque, never the email)
-	 *                      as the request's end-user, and the top-up key for the pay-as-you-go
-	 *                      credits fallback.
+	 *
+	 * SnoutData Cloud's models need no key of their own: the assistant sends this session's access
+	 * token to Psyche, the AI gateway, which holds it to the account's wallet (aiService.cloudToken).
 	 */
 	constructor(
 		private readonly onChange: () => void,
-		private readonly onGatewayKey: (key: string | null, endUser: string | null, topupKey: string | null) => void = () => undefined,
 		/** A sign-in that failed after the browser handed it back, for the loopback path; the
 		 *  protocol path reports through `handleAuthDeepLink` in main. */
 		private readonly onSignInError: (message: string) => void = () => undefined,
@@ -204,7 +196,6 @@ export class AuthStore {
 				this.user = null;
 				this.tier = 'free';
 				this.settleRestore();
-				this.onGatewayKey(null, null, null);
 				this.onChange();
 				return;
 			}
@@ -218,11 +209,11 @@ export class AuthStore {
 				return;
 			}
 			// SIGNED_IN is a fresh authentication (the user just logged in), so always re-adopt: it
-			// re-reads the tier from `profiles` and re-mints the gateway key. Without this, signing
+			// re-reads the tier from `profiles`. Without this, signing
 			// back into the SAME account after its plan changed (e.g. free -> plus) kept the stale
 			// tier until a restart, because the id guard below skipped adopt(). For INITIAL_SESSION
 			// (launch) and TOKEN_REFRESHED (background refresh, fires often) we still adopt only on a
-			// user change, so routine refreshes don't re-hit profiles / re-mint on every tick.
+			// user change, so routine refreshes don't re-hit profiles on every tick.
 			if (event === 'SIGNED_IN' || user.id !== this.user?.id) {
 				void this.adopt(user)
 					.then(() => undefined, () => undefined)
@@ -280,7 +271,7 @@ export class AuthStore {
 	}
 
 	/** E2E ONLY (main installs the caller under the scratch profile alone): present `user` as signed
-	 *  in at `tier`, or sign out with null. Nothing is fetched and no gateway key is minted, so the
+	 *  in at `tier`, or sign out with null. Nothing is fetched, so the
 	 *  account-gated UI renders for a screenshot or a test with no real account behind it. */
 	e2eSignIn(user: AuthUser | null, tier: Tier): void {
 		this.e2eAccount = user !== null;
@@ -412,6 +403,9 @@ export class AuthStore {
 		this.attempt.end();
 		if (data.session?.person) {
 			await this.adopt(data.session.person);
+			// An interactive sign-in (never a launch restore) tells the account this computer's
+			// timezone, which a Cloud project's default maintenance window follows. Not awaited.
+			void reportSignInTimezone((timezone) => getCloudClient().procedure('set_my_timezone', { want_timezone: timezone, want_source: 'signin' }));
 		}
 		this.onChange();
 	}
@@ -433,18 +427,16 @@ export class AuthStore {
 		}
 	}
 
-	/** Re-read the tier AND re-sync the gateway key's model access, so both a plan change *and*
-	 *  a newly released model (added to `released_models` on the server) show up without a
-	 *  restart. The key's allowed-model list is recomputed only when `mint-litellm-key` runs, so
-	 *  we re-run it here. Always notifies at the end so the renderer reloads its live model list
-	 *  even when the tier itself is unchanged. Drives the manual "Refresh plan" button and the
-	 *  background poll in main. A no-op when signed out, and best-effort (never throws). */
+	/** Re-read the tier, then notify, so both a plan change *and* a newly released model (which
+	 *  Psyche serves the moment `released_models` changes) show up without a restart: the renderer
+	 *  reloads its live model list even when the tier itself is unchanged. Drives the manual
+	 *  "Refresh plan" button and the background poll in main. A no-op when signed out, and
+	 *  best-effort (never throws). */
 	async resyncEntitlements(): Promise<void> {
 		if (!this.user) {
 			return;
 		}
 		await this.refreshTier();
-		await this.mintGatewayKey();
 		this.onChange();
 	}
 
@@ -459,7 +451,6 @@ export class AuthStore {
 		} finally {
 			this.user = null;
 			this.tier = 'free';
-			this.onGatewayKey(null, null, null);
 			this.onChange();
 		}
 	}
@@ -508,26 +499,6 @@ export class AuthStore {
 			return; // fetchTier found the session dead and signed us out; there is nobody to adopt.
 		}
 		this.tier = tier ?? (sameUser ? this.tier : 'free');
-		await this.mintGatewayKey();
-	}
-
-	/** Mint (or fetch) this user's gateway virtual key via the `mint-litellm-key` Snout
-	 *  Function and hand it to the store. The client attaches the user's JWT automatically.
-	 *  Best-effort: if the function isn't deployed or is unreachable, leave any existing key
-	 *  in place so a manually-set key (dev) still works. */
-	private async mintGatewayKey(): Promise<void> {
-		try {
-			const { data, error } = await withTimeout(getCloudClient().fn.call('mint-litellm-key'), ACCOUNT_RESOLVE_TIMEOUT_MS);
-			const payload = data as { key?: string; topupKey?: string } | null;
-			const key = payload?.key;
-			if (!error && typeof key === 'string' && key.length > 0) {
-				// The top-up key is optional: only present once the user has bought credits.
-				const topupKey = typeof payload?.topupKey === 'string' && payload.topupKey.length > 0 ? payload.topupKey : null;
-				this.onGatewayKey(key, this.user?.id ?? null, topupKey);
-			}
-		} catch {
-			// Snout Function not deployed / offline — keep whatever key is already stored.
-		}
 	}
 
 	/** Read the user's wallet→credits switch from `ai_preferences` (RLS scopes the row to them).
@@ -549,8 +520,8 @@ export class AuthStore {
 	}
 
 	/** Set the wallet→credits switch through the `set-credits-enabled` Snout Function, which saves the
-	 *  shared `ai_preferences` row (the same toggle the dashboard shows) and blocks or unblocks the
-	 *  top-up key on the gateway at once, so the switch is enforced server-side and not only here.
+	 *  shared `ai_preferences` row (the same toggle the dashboard shows); the control plane passes it to
+	 *  the gateway in the same write, so the switch is enforced server-side and not only here.
 	 *  Throws only so the caller can surface a failure; a no-op when signed out. */
 	async setCreditsEnabled(enabled: boolean): Promise<void> {
 		if (!this.user) {

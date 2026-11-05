@@ -24,7 +24,10 @@ export const HOSTED_POSTGRES_PLATFORM: PlatformProfile = {
 	// before it has the earlier ones until it is renamed, so both sets are listed.
 	schemas: [
 		'auth', 'extensions', 'graphql', 'graphql_public', 'realtime', 'storage',
-		'snout_ext', 'snout_files', 'snout_graph', 'snout_identity', 'snout_live'
+		'snout_ext', 'snout_files', 'snout_graph', 'snout_identity', 'snout_live',
+		// A cluster's catalog, on a sharded project's home node only: the router's, and unreadable to
+		// the owner a dump runs as.
+		'lepis'
 	],
 	// Installed before the customer has done anything. `vector` is too, and is deliberately NOT
 	// listed: it is there for the customer to use, and a table of theirs may depend on it.

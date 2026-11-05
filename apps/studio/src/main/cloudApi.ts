@@ -3,6 +3,8 @@
  *  Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import type { DatabaseToken } from './cloudDbToken';
+
 // What the desktop asks SnoutData Cloud, as a seam.
 //
 // Split out of `cloudImport.ts` when the pods view became a second caller: the interface
@@ -36,6 +38,12 @@ export interface CloudProjectSummary {
 	user: string;
 	/** False when the data is in the bucket rather than on a host: the next wake is a restore. */
 	wakesInstantly: boolean;
+	/**
+	 * Its server has stopped reporting (2026-10-31): `state` keeps what the server last said, and
+	 * this is shown beside it. Only ever true for a project meant to be running; absent from an
+	 * older control plane, which means false.
+	 */
+	serverSilent?: boolean;
 	/** Over its plan's storage limit, so the database itself is refusing writes. */
 	readOnly: boolean;
 	sizeBytes?: number | null;
@@ -51,8 +59,12 @@ export interface CloudConnectionDetails {
 	port: number;
 	database: string;
 	user: string;
-	password: string;
+	/** Null when the caller signs in as themselves rather than with the project's password. */
+	password: string | null;
 	state: string;
+	/** `token`: sign in as the person, `user` being `snout_token` and the password a database
+	 *  token (`databaseToken`). Absent from a control plane that predates it: a password. */
+	signIn?: 'password' | 'token';
 }
 
 /**
@@ -97,7 +109,8 @@ export type CloudProjectFunction =
 	| 'cloud-project-domain'
 	| 'cloud-project-sql'
 	| 'cloud-project-shards'
-	| 'cloud-project-containers';
+	| 'cloud-project-containers'
+	| 'cloud-project-maintenance-window';
 
 /** How long the control plane gets before we tell the user we could not reach it. */
 export const CLOUD_TIMEOUT_MS = 15_000;
@@ -171,6 +184,12 @@ export interface CloudApi {
 	 * performs one.
 	 */
 	request<T>(fn: CloudProjectFunction, body: Record<string, unknown>, method?: 'POST' | 'GET'): Promise<T>;
+	/**
+	 * A database token for the signed-in person and one project:
+	 * the password of a connection that signs in as the person. Refused (403) when the account has
+	 * no database access to the project.
+	 */
+	databaseToken(ref: string): Promise<DatabaseToken>;
 }
 
 /**

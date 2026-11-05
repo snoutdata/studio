@@ -15,8 +15,8 @@ import {
 	LocalSettingsSection,
 } from './LocalProjectSections';
 import {
-	CloudBackupsSection, CloudDatabase, CloudDelete, CloudDomainsSection, CloudFunctionsSection, CloudKeys, CloudService,
-	CloudStatus, CloudUsageSection,
+	CloudBackupsSection, CloudDatabase, CloudDelete, CloudDomainsSection, CloudFunctionsSection, CloudKeys, CloudMaintenanceWindow,
+	CloudService, CloudStatus, CloudUsageSection,
 } from './CloudProjectSections';
 import { PROJECT_SECTION_GROUPS, PROJECT_SECTIONS, projectKey, type ProjectSection, type ProjectTarget } from '../../../shared/projects';
 import { shardsOffered, type ShardsStatus } from '../../../shared/cloudShards';
@@ -257,7 +257,7 @@ function Section(props: SectionProps): JSX.Element | null {
 		case 'settings':
 			return local
 				? <><CopyProject local onCopy={props.onCopy} /><LocalSettingsSection row={local} onChanged={props.onChanged} onRemoved={props.onClosed} /></>
-				: <><CopyProject local={false} onCopy={props.onCopy} /><CloudBackupsSection projectRef={cloud!.ref} /><CloudDelete row={cloud} onDeleted={props.onClosed} /></>;
+				: <><CopyProject local={false} onCopy={props.onCopy} /><CloudBackupsSection projectRef={cloud!.ref} /><CloudMaintenanceWindow projectRef={cloud!.ref} region={cloud!.region} /><CloudDelete row={cloud} onDeleted={props.onClosed} /></>;
 		default:
 			return null;
 	}

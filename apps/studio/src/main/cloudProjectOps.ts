@@ -5,7 +5,7 @@
 
 import { CloudRequestError, detailFrom, type CloudApi, type CloudConnectionDetails } from './cloudApi';
 import type {
-	CloudBackups, CloudConnectionFacts, CloudCopyTarget, CloudDomain, CloudExport, CloudFunctions,
+	CloudBackups, CloudConnectionFacts, CloudCopyTarget, CloudDomain, CloudExport, CloudFunctions, CloudMaintenanceWindow,
 	CloudProjectOp, CloudProjectOps, CloudProjectOutcome, CloudRestoreWindow, CloudSecretRow, CloudServices, CloudUsage,
 } from '../shared/cloudProjects';
 import type { CloudContainerAllowance, CloudContainerLogLine, CloudContainers } from '../shared/cloudContainers';
@@ -24,8 +24,12 @@ import type { CloudContainerAllowance, CloudContainerLogLine, CloudContainers } 
 export interface CloudProjectHost {
 	/** Put text on the system clipboard. */
 	copy(text: string): void;
-	/** Store a new password on every connection made from this project; answers how many. */
-	updatePassword(ref: string, password: string): Promise<number>;
+	/**
+	 * Store a new password on every connection made from this project; answers how many. `user`, when
+	 * given, is the login it belongs to: a reset moves the project to its other owner login (361), so
+	 * the connection's user name changes with the password.
+	 */
+	updatePassword(ref: string, password: string, user?: string): Promise<number>;
 	/** A new project exists (a restore): bring it in as a connection. */
 	sync(): Promise<void>;
 }
@@ -80,10 +84,15 @@ function handlers(api: CloudApi, host: CloudProjectHost): Handlers {
 			return { copied: what };
 		},
 
-		async resetPassword({ ref }) {
-			const answer = await api.request<{ password: string; appliesIn: string }>('cloud-project-reset-password', { ref });
-			const updatedConnections = await host.updatePassword(ref, answer.password);
-			return { appliesIn: answer.appliesIn, updatedConnections };
+		async resetPassword({ ref, graceMinutes }) {
+			// `graceMinutes`: how long the old password keeps working (361); left out, the control
+			// plane's hour. The answer's `user` is the other owner login, which the connections take too.
+			const answer = await api.request<{ password: string; appliesIn: string; user?: string; oldPassword?: string }>(
+				'cloud-project-reset-password',
+				{ ref, ...(graceMinutes !== undefined ? { graceMinutes } : {}) },
+			);
+			const updatedConnections = await host.updatePassword(ref, answer.password, answer.user);
+			return { appliesIn: answer.appliesIn, updatedConnections, ...(answer.oldPassword ? { oldPassword: answer.oldPassword } : {}) };
 		},
 
 		async rotateKeys({ ref }) {
@@ -183,6 +192,17 @@ function handlers(api: CloudApi, host: CloudProjectHost): Handlers {
 			return answer.domains ?? [];
 		},
 
+		// The maintenance window: the control plane computes it, and refuses a setting from anybody
+		// but an owner in its own words.
+		async maintenanceWindow({ ref }) {
+			return maintenanceWindowFrom(await api.request('cloud-project-maintenance-window', { ref }));
+		},
+
+		async setMaintenanceWindow({ ref, startHour, endHour, timezone, reset }) {
+			const body = reset ? { ref, reset: true } : { ref, startHour, endHour, timezone: timezone ?? null };
+			return maintenanceWindowFrom(await api.request('cloud-project-maintenance-window', body));
+		},
+
 		// The cluster's every operation is the router's; this only carries it.
 		async shards({ ref, ...rest }) {
 			return api.request<Record<string, unknown>>('cloud-project-shards', { ref, ...rest });
@@ -218,6 +238,12 @@ function handlers(api: CloudApi, host: CloudProjectHost): Handlers {
 			return { domain: answer.domain ?? null, next: answer.next ?? null };
 		},
 	};
+}
+
+/** What `cloud-project-maintenance-window` answers, read defensively: what it did not send is null. */
+export function maintenanceWindowFrom(answer: unknown): CloudMaintenanceWindow {
+	const raw = (answer ?? {}) as Partial<CloudMaintenanceWindow>;
+	return { window: raw.window ?? null, next: raw.next ?? null };
 }
 
 /** What `cloud-project-containers` answers, read defensively: a field it did not send is a default, not a crash. */
@@ -286,10 +312,17 @@ export interface ProjectKeyFields {
 export function copyText(details: CloudConnectionDetails & ProjectKeyFields & { uri?: string }, what: CloudCopyTarget): string {
 	switch (what) {
 		case 'password':
+			if (details.password === null) {
+				throw new CloudRequestError("You sign in to this project as yourself, so it has no password to copy.", 403);
+			}
 			return details.password;
 		case 'uri':
+			// Signed in as the person, the URI carries no password: it is a database token, asked
+			// for when connecting.
 			return details.uri
-				?? `postgres://${details.user}:${encodeURIComponent(details.password)}@${details.host}:${details.port}/${details.database}?sslmode=require`;
+				?? (details.password === null
+					? `postgres://${details.user}@${details.host}:${details.port}/${details.database}?sslmode=require`
+					: `postgres://${details.user}:${encodeURIComponent(details.password)}@${details.host}:${details.port}/${details.database}?sslmode=require`);
 		case 'appKey':
 		case 'serverKey': {
 			const key = what === 'appKey' ? details.appKey ?? details.anonKey : details.serverKey ?? details.serviceRoleKey;

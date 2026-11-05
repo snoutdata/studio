@@ -17,6 +17,8 @@ import {
 	SnoutProtocol,
 	type ConnectParams,
 	type ConnectResult,
+	type ConnectionPasswordParams,
+	type ConnectionPasswordResult,
 	type BulkExportOutcome,
 	type BulkExportParams,
 	type BulkLoadOutcome,
@@ -91,6 +93,7 @@ export class SqlServer {
 	private diedHandler: ((info: SqlServerDied) => void) | undefined;
 	private schemaUpdatedHandler: ((params: SchemaUpdatedParams) => void) | undefined;
 	private sshHostKeyHandler: ((params: SshHostKeyLearnedParams) => void) | undefined;
+	private passwordHandler: ((connectionId: string) => Promise<string>) | undefined;
 
 	/** Begin booting the bundled server (spawn + LSP initialize). Returns a promise that
 	 *  resolves when the handshake is done, but callers need NOT await it before using the
@@ -237,6 +240,12 @@ export class SqlServer {
 		connection.onNotification(SnoutProtocol.SshHostKeyLearned, (params: SshHostKeyLearnedParams) => {
 			this.sshHostKeyHandler?.(params);
 		});
+		connection.onRequest(SnoutProtocol.ConnectionPassword, async (params: ConnectionPasswordParams): Promise<ConnectionPasswordResult> => {
+			if (!this.passwordHandler) {
+				throw new Error("This connection signs in with your SnoutData account, which is not available yet.");
+			}
+			return { password: await this.passwordHandler(params.connectionId) };
+		});
 		connection.listen();
 		await connection.sendRequest('initialize', { processId: process.pid, rootUri: null, capabilities: {} });
 		connection.sendNotification('initialized', {});
@@ -260,6 +269,12 @@ export class SqlServer {
 	 *  dispatch-through-a-field shape as {@link onSchemaUpdated}, for the same reason. */
 	onSshHostKeyLearned(handler: (params: SshHostKeyLearnedParams) => void): void {
 		this.sshHostKeyHandler = handler;
+	}
+
+	/** Answer the server's request for a new pooled connection's password, for a connection that
+	 *  signs in as the person (a database token, `cloudDbToken.ts`). Same field dispatch. */
+	onConnectionPassword(handler: (connectionId: string) => Promise<string>): void {
+		this.passwordHandler = handler;
 	}
 
 	/** The live connection, booting one if the last child died. Awaiting this is how requests

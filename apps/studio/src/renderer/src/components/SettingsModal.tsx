@@ -719,7 +719,6 @@ function AiSection({ onAiSaved, byokAllowed }: { onAiSaved?: () => void; byokAll
 	const [autoApprove, setAutoApprove] = useState<string[]>([]);
 	const [connList, setConnList] = useState<ConnectionConfig[]>([]);
 	const [gatewayModel, setGatewayModel] = useState('');
-	const [gatewayKey, setGatewayKey] = useState('');
 	// BYOK (Bring-Your-Own-Key): per-provider model + optional base-URL override, plus the key
 	// input (blank = keep the stored one). Keyed by provider id.
 	const emptyByok: Record<ByokProviderId, string> = { 'byok-openai': '', 'byok-openrouter': '', 'byok-anthropic': '' };
@@ -851,6 +850,8 @@ function AiSection({ onAiSaved, byokAllowed }: { onAiSaved?: () => void; byokAll
 	function collect(): AiSettingsFormValues {
 		return {
 			provider,
+			// The project model chosen in the assistant's picker; not edited here, so kept as loaded.
+			project: loaded?.project,
 			ollama: { endpoint: ollamaEndpoint.trim(), model: ollamaModel.trim() },
 			'positron-cloud': { model: gatewayModel.trim() },
 			// BYOK: the curated model list (what shows in the picker), a valid active model, and an
@@ -866,7 +867,6 @@ function AiSection({ onAiSaved, byokAllowed }: { onAiSaved?: () => void; byokAll
 			dataAccess,
 			// Each key goes to its own keychain slot; blank leaves the stored one intact.
 			apiKeys: {
-				'positron-cloud': gatewayKey || undefined,
 				'byok-openai': byokKey['byok-openai'] || undefined,
 				'byok-openrouter': byokKey['byok-openrouter'] || undefined,
 				'byok-anthropic': byokKey['byok-anthropic'] || undefined,
@@ -897,12 +897,11 @@ function AiSection({ onAiSaved, byokAllowed }: { onAiSaved?: () => void; byokAll
 		return null;
 	}
 
-	/** Model-id + API-key fields for a gateway-style provider. The model is a select fed by
-	 *  the provider's live model list (like the chat picker); a stale saved value is kept as an
-	 *  option so it stays visible. The key placeholder reflects whether one is already stored. */
-	function cloudFields(p: AiProviderId, model: string, setModel: (v: string) => void, key: string, setKey: (v: string) => void): JSX.Element {
+	/** The model field for SnoutData Cloud. The model is a select fed by the provider's live model
+	 *  list (like the chat picker); a stale saved value is kept as an option so it stays visible.
+	 *  There is no key: the account's own sign-in is what the gateway takes. */
+	function cloudFields(p: AiProviderId, model: string, setModel: (v: string) => void): JSX.Element {
 		const status = statuses.find((s) => s.provider === p);
-		const stored = status?.configured ?? false;
 		const models = (status?.models ?? []).map((m) => m.model);
 		const options = model && !models.includes(model) ? [model, ...models] : models;
 		return (
@@ -910,14 +909,13 @@ function AiSection({ onAiSaved, byokAllowed }: { onAiSaved?: () => void; byokAll
 				<label>Model
 					<span style={{ display: 'flex', gap: 6 }}>
 						<select style={{ flex: 1, minWidth: 0 }} value={model} onChange={(e) => setModel(e.target.value)}>
-							{!model && <option value="">{models.length ? 'Select a model…' : 'No models available. Add an API key, then Refresh'}</option>}
+							{!model && <option value="">{models.length ? 'Select a model…' : 'No models available. Sign in, then Refresh'}</option>}
 							{options.map((m) => <option key={m} value={m}>{m}</option>)}
 						</select>
 						<button type="button" className="secondary" title="Refresh model list from the gateway" onClick={() => void loadStatuses()}><Icon name="refresh" /> Refresh</button>
 					</span>
 				</label>
-				<label>API key<input type="password" value={key} placeholder={stored ? 'leave blank to keep current' : 'paste your API key'} onChange={(e) => setKey(e.target.value)} /></label>
-				<div className="muted">The key is kept {keyPlace}, never written to the config files. Use “Test” to verify it.</div>
+				<div className="muted">Uses your SnoutData account: there is no key to enter. Use “Test” to check it.</div>
 			</>
 		);
 	}
@@ -1081,6 +1079,8 @@ function AiSection({ onAiSaved, byokAllowed }: { onAiSaved?: () => void; byokAll
 							<select value={provider} onChange={(e) => setProvider(e.target.value as AiProviderId)}>
 								{/* BYOK providers are Plus, Pro and Business; only offer them when the tier allows it. */}
 								{(Object.keys(PROVIDER_LABELS) as AiProviderId[]).filter((p) => byokAllowed || !BYOK_IDS.includes(p as ByokProviderId)).map((p) => <option key={p} value={p}>{PROVIDER_LABELS[p]}</option>)}
+								{/* A project's model is chosen in the assistant's model picker; shown here so the choice reads true. */}
+								{loaded?.project && <option value="snout-project">{`${loaded.project.name ?? loaded.project.ref} (project's AI)`}</option>}
 							</select>
 						</label>
 						{/* Local Ollama is not offered here. Add 'ollama' back to PROVIDER_LABELS to surface it. */}
@@ -1090,7 +1090,7 @@ function AiSection({ onAiSaved, byokAllowed }: { onAiSaved?: () => void; byokAll
 								<label>Model{ollamaModelField(ollamaModel, setOllamaModel)}</label>
 							</>
 						)}
-						{provider === 'positron-cloud' && cloudFields('positron-cloud', gatewayModel, setGatewayModel, gatewayKey, setGatewayKey)}
+						{provider === 'positron-cloud' && cloudFields('positron-cloud', gatewayModel, setGatewayModel)}
 						{byokAllowed && BYOK_IDS.includes(provider as ByokProviderId) && byokFields(provider as ByokProviderId)}
 					</fieldset>
 					{/* Discovery for Free users: BYOK exists but is a paid feature; show it disabled. */}
@@ -1553,6 +1553,49 @@ function McpProblemPanel({ problem, busy, onMove, onReplaceToken }: { problem: M
 	);
 }
 
+type GrantableCapability = { name: string; title: string; description: string; domain: string };
+
+/** What each capability domain is called as a heading in the App actions list. A domain missing
+ *  here still gets a heading, its own name capitalised. */
+const GRANT_DOMAIN_LABELS: Record<string, string> = {
+	app: "App",
+	canvas: "Canvas",
+	cloud: "Cloud projects",
+	connections: "Connections",
+	editor: "Editor",
+	flows: "Data Flows",
+	knowledge: "Knowledge",
+	logs: "Logs",
+	monitors: "Monitors",
+	notifications: "Notifications",
+	orbit: "Orbit",
+	results: "Results",
+	schema: "Schema",
+	security: "Users and privileges",
+	settings: "Settings",
+	tunnels: "SSH tunnels",
+	workspace: "Workspace",
+};
+
+/** The grantable actions grouped by domain, in the order the app published them, so a list of
+ *  thirty-odd reads as a handful of headed groups rather than one long column. */
+function grantGroups(caps: GrantableCapability[]): Array<{ domain: string; label: string; caps: GrantableCapability[] }> {
+	const groups = new Map<string, GrantableCapability[]>();
+	for (const cap of caps) {
+		const list = groups.get(cap.domain);
+		if (list) {
+			list.push(cap);
+		} else {
+			groups.set(cap.domain, [cap]);
+		}
+	}
+	return [...groups].map(([domain, list]) => ({
+		domain,
+		label: GRANT_DOMAIN_LABELS[domain] ?? domain.charAt(0).toUpperCase() + domain.slice(1),
+		caps: list,
+	}));
+}
+
 function AgentAccessSection({ reveal }: { reveal?: { label: string; nonce: number } }): JSX.Element {
 	const [status, setStatus] = useState<McpStatus | null>(null);
 	// The agent console's own settings, which is where "may an agent change the app" lives.
@@ -1564,7 +1607,7 @@ function AgentAccessSection({ reveal }: { reveal?: { label: string; nonce: numbe
 	const [busy, setBusy] = useState(false);
 	// Every app-changing action an agent could ask for, so a grant can be given here rather than only
 	// in the moment the agent asks. Read from main, which holds what the renderer published.
-	const [mutating, setMutating] = useState<Array<{ name: string; title: string; description: string; domain: string }>>([]);
+	const [mutating, setMutating] = useState<GrantableCapability[]>([]);
 	const [copiedKey, setCopiedKey] = useState<string | null>(null);
 	const [client, setClient] = useState<string>(MCP_CLIENT_PRESETS[0].id);
 	const [agentTab, setAgentTab] = useState<AgentTab>('databases');
@@ -1840,19 +1883,24 @@ function AgentAccessSection({ reveal }: { reveal?: { label: string; nonce: numbe
 											</button>
 										</div>
 										<div className="agent-grant-list">
-											{mutating.map((cap) => (
-												<label className="agent-grant" key={cap.name}>
-													<input
-														type="checkbox"
-														checked={granted.includes(cap.name)}
-														disabled={busy}
-														onChange={(e) => { void window.sqlApi.agentConsole.setAutoApprove(cap.name, e.target.checked).then(setAgentConfig); }}
-													/>
-													<span className="agent-grant-text">
-														<span className="agent-grant-title">{cap.title}</span>
-														<span className="muted small">{cap.description}</span>
-													</span>
-												</label>
+											{grantGroups(mutating).map((group) => (
+												<section className="agent-grant-group" key={group.domain}>
+													<h4 className="agent-grant-group-title">{group.label}</h4>
+													{group.caps.map((cap) => (
+														<label className="agent-grant" key={cap.name}>
+															<input
+																type="checkbox"
+																checked={granted.includes(cap.name)}
+																disabled={busy}
+																onChange={(e) => { void window.sqlApi.agentConsole.setAutoApprove(cap.name, e.target.checked).then(setAgentConfig); }}
+															/>
+															<span className="agent-grant-text">
+																<span className="agent-grant-title">{cap.title}</span>
+																<span className="agent-grant-desc">{cap.description}</span>
+															</span>
+														</label>
+													))}
+												</section>
 											))}
 										</div>
 										</>
@@ -2064,7 +2112,7 @@ function AuditSection(props: { connections: ConnectionConfig[]; chatEnabled: boo
 							<button type="button" className="audit-head" onClick={() => setExpanded(open ? null : e.id)}>
 								<Icon name={open ? 'chevron-down' : 'chevron-right'} />
 								<span className={`audit-kind ${e.kind}`}>{e.kind}</span>
-								<span className="tree-label">{e.provider} · {e.model}</span>
+								<span className="tree-label">{e.provider}{e.projectRef ? ` ${e.projectRef}` : ''} · {e.model}</span>
 								{!e.ok && <span className="audit-badge error" title={e.error}>failed</span>}
 								<span className="spacer" />
 								<span className="muted small">{new Date(e.timestamp).toLocaleString()}</span>

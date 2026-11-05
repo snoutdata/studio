@@ -8,7 +8,7 @@ import assert from 'node:assert/strict';
 
 import {
 	failoverStep, nextRange, nodePods, nodeShade, planIsSentence, planSentence, proposalFromRequest, rangeShares, ranSentence, replicaBlocked, replicaPods, replicaStanding,
-	replicaWords, shardsOffered, shortBound, slotsSentence, spareSlots, splitAlerts, type ShardPod,
+	replicaWords, shardsOffered, shortBound, slotsSentence, spareSlots, splitAlerts, type ShardPod, checkSentence, severityWord,
 } from './cloudShards';
 
 // The Shards section's arithmetic and words. A range drawn the wrong width is a cluster misread,
@@ -113,4 +113,13 @@ test('alerts split into open and resolved, and a replica plan is its sentence', 
 	assert.match(ranSentence({ node: 'x', changed: true }), /being removed/);
 	assert.match(ranSentence({ node: 'x', changed: false }), /has no replica/);
 	assert.match(ranSentence({ alert: 'a', acknowledged: true }), /Marked as seen/);
+});
+
+test('the design check is said in a sentence, and a fix it carries is a proposal', () => {
+	const check = (errors: number, warnings: number, info: number, tables: number) => ({ findings: [], summary: { errors, warnings, info, tables, foreign_keys: 0 } });
+	assert.equal(checkSentence(check(0, 0, 0, 3)), "3 tables checked: every key, foreign key and index is where the cluster needs it.");
+	assert.equal(checkSentence(check(2, 0, 1, 1)), "1 table checked: 2 to fix, 1 suggestion.");
+	assert.equal(severityWord('warn'), "Look at");
+	const p = proposalFromRequest({ op: 'table.distribute', table: 'public.payment', column: 'customer_id', keyspace: 'k' }, 'it can follow');
+	assert.deepEqual(p, { action: 'distribute', request: { table: 'public.payment', column: 'customer_id', keyspace: 'k' }, reason: 'it can follow' });
 });

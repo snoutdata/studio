@@ -20,7 +20,7 @@ const REF = 'qwertyzxcv123';
 function row(): CloudProjectRow {
 	return {
 		ref: REF, name: 'Orders', region: 'us-west-2', production: false, state: 'ready', busy: false,
-		readOnly: false, wakesInstantly: true, sizeBytes: 100, host: `${REF}.db.snoutdata.com`, database: REF,
+		readOnly: false, wakesInstantly: true, serverSilent: false, sizeBytes: 100, host: `${REF}.db.snoutdata.com`, database: REF,
 		user: `${REF}_owner`, createdAt: null, lastConnectionAt: null, canPause: true, canResume: false, canDelete: true,
 	};
 }

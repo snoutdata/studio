@@ -13,7 +13,7 @@ import type { CloudActionOutcome, CloudCreateForm, CloudCreateOutcome, CloudProj
 import type { CloudContainers, ContainerBuildForm, ContainerBuildProgress } from '../../shared/cloudContainers';
 import type { ProjectActionOutcome, ProjectApiRequest, ProjectApiResponse, ProjectSqlResult, ProjectTarget } from '../../shared/projects';
 import type { LocalActionOutcome, LocalActivity, LocalConnectionFacts, LocalCopyTarget, LocalExport, LocalFunctionRow, LocalInstallOutcome, LocalMailKind, LocalMailTemplate, LocalProgress, LocalProjectsView, LocalRequirements, LocalSettings, LocalSettingsChange, LocalSetupForm } from '../../shared/localStack';
-import type { AiApprovalRequest, AiAuditEntry, AiAuditKind, AiBudgetStatus, AiChatResult, AiCompletionOutcomeParams, AiCompletionParams, AiCompletionResult, AiEditParams, AiEditResult, AiProviderId, AiProviderStatus, AiSettings, AiSettingsFormValues, AiToolEvent, AmbientContext, ByokProviderId, ChatMessage, ExtractDocumentResult, LibyChatRequest } from '../../shared/ai';
+import type { AiApprovalRequest, AiAuditEntry, AiAuditKind, AiBudgetStatus, AiChatResult, AiCompletionOutcomeParams, AiCompletionParams, AiCompletionResult, AiEditParams, AiEditResult, AiModelInfo, AiProviderId, AiProviderStatus, AiSettings, AiSettingsFormValues, AiToolEvent, AmbientContext, ByokProviderId, ChatMessage, ExtractDocumentResult, LibyChatRequest } from '../../shared/ai';
 import type { AiCapabilityRequest, CapabilityResult, CapabilitySpec } from '../../shared/capabilities';
 import type { AuthProviderId, AuthState } from '../../shared/auth';
 import type { QueryHistoryEntry, SavedQuery } from '../../shared/queries';
@@ -309,13 +309,15 @@ export interface SqlApi {
 	saveAiSettings(values: AiSettingsFormValues): Promise<AiSettings>;
 	aiTest(): Promise<{ ok: boolean; message: string }>;
 	aiProviderStatus(): Promise<AiProviderStatus[]>;
+	/** Chat models of the SnoutData Cloud projects whose AI this user may use (cached a minute). */
+	aiProjectModels(force?: boolean): Promise<AiModelInfo[]>;
 	aiBudgetStatus(): Promise<AiBudgetStatus | null>;
 	aiCreditsEnabled(): Promise<boolean>;
 	aiSetCreditsEnabled(enabled: boolean): Promise<void>;
 	aiSetModelEnabled(key: string, enabled: boolean): Promise<AiSettings>;
 	aiOllamaModels(endpoint: string): Promise<string[]>;
 	aiByokModels(provider: ByokProviderId): Promise<string[]>;
-	aiSetActive(provider: AiProviderId, model: string): Promise<AiSettings>;
+	aiSetActive(provider: AiProviderId, model: string, project?: { ref: string; name?: string; ownedBy?: string; vendor?: string }): Promise<AiSettings>;
 
 	aiSetDataAccess(level: NonNullable<AiSettings['dataAccess']>): Promise<AiSettings>;
 	aiChat(requestId: string, messages: ChatMessage[], activeConnectionId: string | undefined, capabilities?: CapabilitySpec[], ambient?: AmbientContext): Promise<AiChatResult>;

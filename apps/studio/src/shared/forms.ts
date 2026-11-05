@@ -112,6 +112,8 @@ export interface ConnectionFormValues {
 	/** Set on a connection imported from SnoutData Cloud, so a re-import updates it rather
 	 *  than adding a second one. Non-secret; see ConnectionConfig.cloudProjectRef. */
 	cloudProjectRef?: string;
+	/** Signs in as the person with a database token; see ConnectionConfig.cloudTokenSignIn. */
+	cloudTokenSignIn?: boolean;
 	/** Set on a local project's database; see ConnectionConfig.localProjectId. */
 	localProjectId?: string;
 	/** Snowflake: the virtual warehouse to run queries on (non-secret). */

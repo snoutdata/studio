@@ -7,7 +7,7 @@ import { getCloudClient } from './cloudClient';
 
 // The completion-role helpers live in an Electron-free module (so they're unit-testable) but are
 // re-exported here, where the rest of main already imports the catalog.
-export { isCompletionModel, preferredCompletionModel } from './completionRole';
+export { isCompletionModel, isEmbeddingModel, preferredCompletionModel } from './completionRole';
 
 /** Editorial metadata for one model, sourced from the control plane's `released_models`. Keyed by the
  *  raw model id (the join key shared with the gateway's `/v1/models`). All fields are optional

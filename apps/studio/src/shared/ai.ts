@@ -11,7 +11,23 @@
 import type { QueryField } from './query';
 import type { DataAccessLevel } from './engine';
 
-export type AiProviderId = 'ollama' | 'positron-cloud' | ByokProviderId;
+/** `snout-project` is a SnoutData Cloud project's own AI gateway (its owner's provider keys),
+ *  reached through the control plane's `cloud-project-ai` relay; which project is
+ *  {@link AiSettings.project}. See `shared/aiSources.ts`. */
+export type AiProviderId = 'ollama' | 'positron-cloud' | 'snout-project' | ByokProviderId;
+
+/** The chat model chosen from a SnoutData Cloud project's own AI gateway. */
+export interface ProjectAiSelection {
+	/** The project's ref (no colon). */
+	ref: string;
+	model: string;
+	/** The project's name when it was chosen, so the picker can show it before the list loads. */
+	name?: string;
+	/** Psyche's `owned_by` for the model (which provider serves it), when it said. */
+	ownedBy?: string;
+	/** Who bills it, as the relay names it ("OpenAI", "AWS Bedrock", or the provider's host). */
+	vendor?: string;
+}
 
 /** Bring-Your-Own-Key providers: the user supplies their own API key and the assistant talks to
  *  the provider directly, bypassing the hosted gateway so keys/prompts never touch our servers.
@@ -285,6 +301,8 @@ export interface AiSettings {
 	/** Models the user has hidden from the chat picker, keyed "provider:model".
 	 *  Default-on: any available model not listed here shows in the picker. */
 	disabledModels?: string[];
+	/** The project model chosen in the picker; read only while `provider` is `snout-project`. */
+	project?: ProjectAiSelection;
 	/** What the AI may see of a database (engine/context/dataAccess.ts). Absent means the user has
 	 *  never chosen: it then behaves as `DEFAULT_DATA_ACCESS`, and the assistant asks. Applies to
 	 *  the assistant and to agents over MCP alike. */
@@ -494,6 +512,8 @@ export interface AiAuditEntry {
 	provider: AiAuditSource;
 	/** The model that served it. For an `mcp` action, the agent's client name (e.g. "claude-code"). */
 	model: string;
+	/** For a `snout-project` call: the project whose AI gateway served it. */
+	projectRef?: string;
 	/** The connection the call was grounded in, when any. */
 	connectionId?: string;
 	/** The conversation sent to the model (system prompt omitted), oldest-first. */
@@ -572,6 +592,12 @@ export interface AiModelInfo {
 	/** True for the model flagged as the recommended default (tagged in the picker, and the
 	 *  preferred fallback when the saved model is gone). */
 	recommended?: boolean;
+	/** For a `snout-project` model: which project, its name, and Psyche's `owned_by`. */
+	projectRef?: string;
+	projectName?: string;
+	ownedBy?: string;
+	/** For a `snout-project` model: who bills it, as the relay names it. */
+	vendor?: string;
 }
 
 /**

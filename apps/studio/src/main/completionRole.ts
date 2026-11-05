@@ -3,7 +3,7 @@
  *  Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { isCompletionOnlyModel } from '../shared/ai';
+import { GATEWAY_EMBED_MODEL, isCompletionOnlyModel } from '../shared/ai';
 import type { ModelMeta } from './modelCatalog';
 
 // Pure completion/FIM-role logic, split out from modelCatalog so it carries no Electron
@@ -21,6 +21,16 @@ export function isCompletionModel(model: string, catalog: Map<string, ModelMeta>
 		return role === 'completion';
 	}
 	return isCompletionOnlyModel(model);
+}
+
+/** Whether `model` is an embedding model (vector flows only, never chat or completion). The catalog's
+ *  `role: 'embedding'` decides; untagged, only the gateway's own embedding model is one. */
+export function isEmbeddingModel(model: string, catalog: Map<string, ModelMeta>): boolean {
+	const role = catalog.get(model)?.role;
+	if (role) {
+		return role === 'embedding';
+	}
+	return model === GATEWAY_EMBED_MODEL;
 }
 
 /** The catalog's preferred completion model id: among the models tagged `role: 'completion'`,

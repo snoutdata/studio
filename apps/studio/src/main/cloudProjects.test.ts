@@ -45,6 +45,7 @@ function api(over: Partial<CloudApi> = {}): CloudApi {
 		exportStatus: async () => { throw new Error('not used'); },
 		remove: async () => { throw new Error('not used'); },
 		request: async () => { throw new Error('not used'); },
+		databaseToken: async () => { throw new Error('not used'); },
 		...over,
 	};
 }
@@ -109,6 +110,14 @@ test('a state that disagrees with the desired state is busy, whatever the two ar
 
 test('a cold project says so, because its next start is a restore rather than a start', () => {
 	assert.equal(toRow(project({ state: 'paused', desiredState: 'paused', wakesInstantly: false })).wakesInstantly, false);
+});
+
+test('a silent server is read beside the state, which keeps what the server last said', () => {
+	const row = toRow(project({ serverSilent: true }));
+	assert.equal(row.serverSilent, true);
+	assert.equal(row.state, 'ready', 'the state is not changed by the silence');
+	assert.equal(row.busy, false);
+	assert.equal(toRow(project()).serverSilent, false, 'an older control plane sends nothing, which is false');
 });
 
 test('a signed-out user is told to sign in, not shown an empty list', async () => {

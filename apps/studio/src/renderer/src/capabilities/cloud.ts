@@ -34,6 +34,7 @@ function describe(row: CloudProjectRow): Record<string, unknown> {
 		production: row.production,
 		sizeBytes: row.sizeBytes,
 		readOnly: row.readOnly,
+		...(row.serverSilent ? { serverNotAnswering: true } : {}),
 		lastConnectionAt: row.lastConnectionAt,
 		host: row.host,
 		database: row.database,
@@ -156,7 +157,7 @@ export const cloudCapabilities: CapabilityHandler[] = [
 				properties: {
 					name: { type: 'string', description: 'The project name, 1 to 60 characters.' },
 					region: { type: 'string', description: `Region (default ${CLOUD_REGIONS[0].id}).` },
-					production: { type: 'boolean', description: 'Never pause it (Plus and Pro only). Default false.' },
+					production: { type: 'boolean', description: 'Never pause it (paid plans only: Plus, Pro and Business). Default false.' },
 				},
 				required: ['name'],
 			},
@@ -389,9 +390,16 @@ export const cloudCapabilities: CapabilityHandler[] = [
 	{
 		spec: {
 			name: 'reset_cloud_password',
-			consentLabel: 'Reset a SnoutData Cloud project\'s database password (other clients using the old one are disconnected).',
-			description: 'Issue a new database password for a SnoutData Cloud project. The app\'s own connections are updated; anything else using the old password is disconnected when it reconnects. The new password is not returned.',
-			parameters: { type: 'object', properties: { project: PROJECT_PARAM }, required: ['project'] },
+			consentLabel: 'Reset a SnoutData Cloud project\'s database password (other clients need the new user name and password once the old one stops working).',
+			description: 'Issue a new database password for a SnoutData Cloud project. The new password comes with a new user name (the project has two owner logins that take turns). The app\'s own connections are updated; anything else keeps working with the old password for graceMinutes (default 60, 0 to 1440), then must use the new one. graceMinutes 0 stops the old password at once and ends its connections: use it only when the password has leaked. The new password is not returned.',
+			parameters: {
+				type: 'object',
+				properties: {
+					project: PROJECT_PARAM,
+					graceMinutes: { type: 'number', description: 'Minutes the old password keeps working, 0 to 1440. Default 60.' },
+				},
+				required: ['project'],
+			},
 			domain: 'cloud',
 			mutates: true,
 			implicitConnection: 'target',
@@ -404,9 +412,10 @@ export const cloudCapabilities: CapabilityHandler[] = [
 			if ('error' in found) {
 				return found.error;
 			}
-			const outcome = await ctx.api.cloudProject('resetPassword', { ref: found.row.ref });
+			const grace = typeof args.graceMinutes === 'number' ? args.graceMinutes : undefined;
+			const outcome = await ctx.api.cloudProject('resetPassword', { ref: found.row.ref, ...(grace !== undefined ? { graceMinutes: grace } : {}) });
 			return outcome.ok
-				? { ok: true, summary: `New password for ${found.row.name}, applies ${outcome.data.appliesIn}. ${outcome.data.updatedConnections} app connection(s) updated.` }
+				? { ok: true, summary: `New password for ${found.row.name}, applies ${outcome.data.appliesIn}. ${outcome.data.updatedConnections} app connection(s) updated.${outcome.data.oldPassword ? ` ${outcome.data.oldPassword}` : ''}` }
 				: refused(outcome.message, outcome.refused);
 		},
 	},

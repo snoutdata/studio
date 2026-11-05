@@ -13,8 +13,8 @@ export interface ChatOptions {
 	 *  calls the model makes in the returned {@link ChatTurnResult}. */
 	tools?: ToolSpec[];
 	/** How the model may use {@link tools} this turn. `'none'` forbids new calls (forcing a
-	 *  text answer) while still declaring the tools — Bedrock-backed models (served via the
-	 *  LiteLLM gateway) reject a request whose history carries tool calls unless `tools=` is
+	 *  text answer) while still declaring the tools — Bedrock-backed models (served through
+	 *  a gateway) reject a request whose history carries tool calls unless `tools=` is
 	 *  present, so the concluding turn keeps the declaration and just bans further calls. */
 	toolChoice?: 'auto' | 'none';
 }

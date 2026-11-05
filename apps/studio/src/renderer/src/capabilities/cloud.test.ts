@@ -19,7 +19,7 @@ const tool = (name: string) => cloudCapabilities.find((h) => h.spec.name === nam
 function row(over: Partial<CloudProjectRow> = {}): CloudProjectRow {
 	return {
 		ref: 'qwertyzxcv123', name: 'Orders', region: 'us-west-2', production: false, state: 'ready', busy: false,
-		readOnly: false, wakesInstantly: true, sizeBytes: 100, host: 'qwertyzxcv123.db.snoutdata.com', database: 'qwertyzxcv123',
+		readOnly: false, wakesInstantly: true, serverSilent: false, sizeBytes: 100, host: 'qwertyzxcv123.db.snoutdata.com', database: 'qwertyzxcv123',
 		user: 'qwertyzxcv123_owner', createdAt: null, lastConnectionAt: null, canPause: true, canResume: false, canDelete: true,
 		...over,
 	};

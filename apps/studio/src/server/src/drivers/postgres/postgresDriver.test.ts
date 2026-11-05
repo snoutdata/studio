@@ -13,6 +13,7 @@ import { Client } from 'pg';
 
 import type { ConnectionConfig } from '../../../../shared/connection';
 import { postgresPoolConfig } from './postgresDriver';
+import { setPasswordSource } from '../passwordSource';
 
 const saved: ConnectionConfig = { id: 'c1', label: 'Shop', driver: 'postgres', host: 'db.internal', port: 5432, username: 'app', database: 'shop' };
 
@@ -65,5 +66,35 @@ describe('a Postgres connection takes its password and TLS from the connection, 
 		process.env.PGSSLMODE = 'require';
 		assert.equal(postgresPoolConfig(saved, saved.host, saved.port).ssl, false);
 		assert.deepEqual(postgresPoolConfig({ ...saved, ssl: true }, saved.host, saved.port).ssl, { rejectUnauthorized: true });
+	});
+});
+
+describe('a Cloud connection that signs in as the person', () => {
+	afterEach(() => setPasswordSource(undefined));
+
+	test('asks for its password on every new connection, for itself, and never uses a stored one', async () => {
+		const asked: string[] = [];
+		let n = 0;
+		setPasswordSource(async (connectionId) => {
+			asked.push(connectionId);
+			n += 1;
+			return `token-${n}`;
+		});
+		const person: ConnectionConfig = { ...saved, username: 'snout_token', password: 'stale', cloudProjectRef: 'b7kq2m9xt4rvz', cloudTokenSignIn: true };
+		assert.equal(await passwordPgWouldSend(person), 'token-1');
+		assert.equal(await passwordPgWouldSend(person), 'token-2');
+		assert.deepEqual(asked, ['c1', 'c1']);
+	});
+
+	test('with nobody to ask, the connection fails with a sentence rather than an empty password', async () => {
+		const person: ConnectionConfig = { ...saved, username: 'snout_token', cloudProjectRef: 'b7kq2m9xt4rvz', cloudTokenSignIn: true };
+		// pg emits the rejection as the connection's error, which is what the person then reads.
+		const password = postgresPoolConfig(person, person.host, person.port).password as () => Promise<string>;
+		await assert.rejects(password(), /signs in with your SnoutData account/);
+	});
+
+	test('an ordinary connection never asks', async () => {
+		setPasswordSource(async () => { throw new Error('asked'); });
+		assert.equal(await passwordPgWouldSend({ ...saved, password: 'kept' }), 'kept');
 	});
 });

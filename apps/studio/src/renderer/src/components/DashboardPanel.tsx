@@ -447,6 +447,7 @@ export function DashboardPanel(props: DashboardPanelProps): JSX.Element {
 										<span className="tree-label" title={row.ref}>{row.name}</span>
 										{row.production && <span className="env prod">prod</span>}
 										{row.readOnly && <span className="env" title="Over its plan's storage limit, so the database is refusing writes">read-only</span>}
+										{row.serverSilent && <span className="env" title="Its server is not answering">server not answering</span>}
 									</div>
 
 									{isOpen && (
@@ -471,6 +472,7 @@ export function DashboardPanel(props: DashboardPanelProps): JSX.Element {
 															{row.state}{row.desiredState ? ` → ${row.desiredState}` : ''}
 															{row.busy ? ' · working' : ''}
 														</div>
+														{row.serverSilent && <div>its server is not answering</div>}
 														<div>{bytes(row.sizeBytes)} · {row.region}</div>
 														<div>last connected {ago(row.lastConnectionAt)}</div>
 														{!row.wakesInstantly && (
@@ -625,7 +627,7 @@ function NewCloudProject(props: { onClose(): void; onCreated(outcome: CloudCreat
 				<label className="check">
 					<input type="checkbox" checked={production} onChange={(e) => setProduction(e.target.checked)} /> Treat this as production
 				</label>
-				<p className="field-hint">A production project is never paused, whether you ask or the idle policy does. Plus and Pro only.</p>
+				<p className="field-hint">A production project is never paused, whether you ask or the idle policy does. Plus, Pro and Business only.</p>
 				<p className="field-hint">It is added to your connections as soon as it is created.</p>
 				{error && <div className={error.refused ? 'form-status warn' : 'form-status error'}>{error.message}</div>}
 				<div className="modal-actions">

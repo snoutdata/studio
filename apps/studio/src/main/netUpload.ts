@@ -5,6 +5,7 @@
 
 import { net } from 'electron';
 import { createReadStream } from 'node:fs';
+import { request as httpsRequest } from 'node:https';
 
 // A file PUT to a URL, streamed from disk and never held in memory, through Chromium's network
 // stack for the reason `netFetch.ts` gives: it trusts the OS certificate store and honours the
@@ -60,5 +61,56 @@ export function uploadFile(url: string, file: string, sent?: (bytes: number) => 
 			}, ANSWER_TIMEOUT_MS);
 		});
 		stream.pipe(request as unknown as NodeJS.WritableStream);
+	});
+}
+
+/** A bodiless request to the project's door (CT30's begin, done and status steps), through `net`. */
+export function callDoor(method: 'POST' | 'GET', url: string, headers: Readonly<Record<string, string>>): Promise<{ status: number; body: string }> {
+	return new Promise((resolve, reject) => {
+		const request = net.request({ method, url, redirect: 'error' });
+		for (const [name, value] of Object.entries(headers)) {
+			request.setHeader(name, value);
+		}
+		request.on('response', (response) => {
+			const chunks: Buffer[] = [];
+			response.on('data', (chunk: Buffer) => chunks.push(chunk));
+			response.on('end', () => resolve({ status: response.statusCode, body: Buffer.concat(chunks).toString('utf8') }));
+			response.on('error', reject);
+		});
+		request.on('error', reject);
+		request.end();
+	});
+}
+
+/**
+ * The archive PUT to the presigned place in storage (CT30), with exactly the headers it was signed
+ * for. Node's `https` rather than `net`, and on purpose: the place is signed for an exact
+ * `content-length`, S3 refuses a chunked body on a presigned PUT, and `net` holds a body that is not
+ * chunked in memory until it ends, which for a 2 GB archive is not an option. So this one request
+ * does not take the system proxy; the steps through the door still do.
+ */
+export function putToStorage(
+	url: string,
+	file: string,
+	headers: Readonly<Record<string, string>>,
+	sent?: (bytes: number) => void,
+): Promise<{ status: number; body: string }> {
+	return new Promise((resolve, reject) => {
+		const request = httpsRequest(new URL(url), { method: 'PUT', headers });
+		request.on('response', (response) => {
+			const chunks: Buffer[] = [];
+			response.on('data', (chunk: Buffer) => chunks.push(chunk));
+			response.on('end', () => resolve({ status: response.statusCode ?? 0, body: Buffer.concat(chunks).toString('utf8') }));
+			response.on('error', reject);
+		});
+		request.on('error', reject);
+		const stream = createReadStream(file, { highWaterMark: 1024 * 1024 });
+		let total = 0;
+		stream.on('data', (chunk) => {
+			total += chunk.length;
+			sent?.(total);
+		});
+		stream.on('error', (error) => request.destroy(error));
+		stream.pipe(request);
 	});
 }
