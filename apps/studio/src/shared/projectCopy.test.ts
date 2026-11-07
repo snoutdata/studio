@@ -13,6 +13,7 @@ import { bucketCreateBody, functionBundle, isAlreadyThere, partUnavailable, secr
  * touching either project.
  */
 
+// nosemgrep: generic.secrets.security.detected-bcrypt-hash.detected-bcrypt-hash
 const BCRYPT = '$2a$10$abcdefghijklmnopqrstuuJ6mFQ6M3cbO0Q9yJbXPcH3f0QH6S2xK';
 
 describe('which parts a pair of projects can copy', () => {
