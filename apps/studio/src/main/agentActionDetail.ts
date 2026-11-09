@@ -3,9 +3,10 @@
  *  Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { t } from '../shared/i18n/core';
 import { asksEveryTime, type CapabilitySpec } from '../shared/capabilities';
 import type { ConnectionConfig, SshTunnelProfile } from '../shared/connection';
-import { describeConnectionEdit, describeTestDestination, describeTunnelEdit, DESTINATION_CHANGE_NOTE, formatChange, SAFETY_CHANGE_NOTE, testDestinationNote, TUNNEL_MOVE_NOTE } from '../shared/connectionDestination';
+import { describeConnectionEdit, describeTestDestination, describeTunnelEdit, destinationChangeNote, formatChange, safetyChangeNote, testDestinationNote, tunnelMoveNote } from '../shared/connectionDestination';
 import { MONITOR_QUERY_CAPABILITIES } from './monitorAgentGate';
 
 /*---------------------------------------------------------------------------------------------
@@ -105,9 +106,9 @@ export function agentActionDetail(
 				changes: [
 					`tunnel: ${existing.name}`,
 					...changes.map(formatChange),
-					...(moves && using.length > 0 ? [`connections using it: ${using.join(', ')}`] : []),
+					...(moves && using.length > 0 ? [t('mainErrors.connsUsing', { list: using.join(', ') })] : []),
 				],
-				note: moves ? TUNNEL_MOVE_NOTE : undefined,
+				note: moves ? tunnelMoveNote() : undefined,
 				askEveryTime: moves || always,
 			};
 		}
@@ -124,7 +125,7 @@ export function agentActionDetail(
 			const changes = describeConnectionEdit(existing, args);
 			const moves = changes.some((change) => change.destination);
 			const safety = changes.some((change) => change.safety);
-			const notes = [moves ? DESTINATION_CHANGE_NOTE : '', safety ? SAFETY_CHANGE_NOTE : ''].filter((note) => note !== '');
+			const notes = [moves ? destinationChangeNote() : '', safety ? safetyChangeNote() : ''].filter((note) => note !== '');
 			return {
 				changes: [`connection: ${existing.label}`, ...changes.map(formatChange)],
 				note: notes.length > 0 ? notes.join(' ') : undefined,
@@ -157,7 +158,7 @@ export function agentActionDetail(
 	}
 	if (spec.name === 'set_setting') {
 		return {
-			changes: [`setting: ${formatValue(args.key ?? '')}`, `new value: ${formatValue(args.value)}`],
+			changes: [t('mainErrors.settingKV', { value: formatValue(args.key ?? '') }), t('mainErrors.newValue', { value: formatValue(args.value) })],
 			askEveryTime: true,
 		};
 	}

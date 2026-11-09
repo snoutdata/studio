@@ -1,0 +1,14 @@
+{
+	"portInUse": {
+		"title": "Accès des agents désactivé : le port {port} est utilisé",
+		"detail": "Un autre programme de cet ordinateur écoute sur 127.0.0.1:{port}, le port que vos agents sont configurés pour joindre : l'application n'y a donc pas lancé son serveur d'agents et n'a pas changé de port d'elle-même. Si vous n'avez pas lancé ce programme, ne laissez pas un agent lui envoyer votre jeton. Dans Paramètres, Accès des agents, vous pouvez passer au port {suggested} : cela remplace aussi le jeton, et les agents de code lancés par cette application reçoivent la nouvelle adresse. Une configuration collée ailleurs doit être mise à jour.",
+		"detailNoSuggestion": "Un autre programme de cet ordinateur écoute sur 127.0.0.1:{port}, le port que vos agents sont configurés pour joindre : l'application n'y a donc pas lancé son serveur d'agents et n'a pas changé de port d'elle-même. Si vous n'avez pas lancé ce programme, ne laissez pas un agent lui envoyer votre jeton. Dans Paramètres, Accès des agents, vous pouvez passer à un autre port : cela remplace aussi le jeton, et les agents de code lancés par cette application reçoivent la nouvelle adresse. Une configuration collée ailleurs doit être mise à jour."
+	},
+	"lockout": {
+		"title": "L'accès des agents a refusé un programme qui envoyait sans cesse un mauvais jeton",
+		"detail": {
+			"one": "{attempts} requêtes avec un mauvais jeton sont arrivées de {remote} : le serveur d'agents refuse donc tout autre mauvais jeton de cette adresse pendant environ {count} minute. Vos propres agents et tout ce qui détient le bon jeton passent toujours. Le jeton n'a pas été changé. Si vous pensez qu'il a fuité, remplacez-le dans Paramètres, Accès des agents.",
+			"other": "{attempts} requêtes avec un mauvais jeton sont arrivées de {remote} : le serveur d'agents refuse donc tout autre mauvais jeton de cette adresse pendant environ {count} minutes. Vos propres agents et tout ce qui détient le bon jeton passent toujours. Le jeton n'a pas été changé. Si vous pensez qu'il a fuité, remplacez-le dans Paramètres, Accès des agents."
+		}
+	}
+}

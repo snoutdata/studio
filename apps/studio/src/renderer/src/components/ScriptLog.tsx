@@ -4,6 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { Icon } from './Icon';
+import { formatLocale, useT } from '../i18n';
 
 export type ScriptStepStatus = 'pending' | 'running' | 'ok' | 'error' | 'skipped';
 
@@ -46,12 +47,13 @@ const ICON: Record<ScriptStepStatus, string> = {
  *  running now, and a per-statement row count / duration or error. Continue-on-error, so a failed
  *  statement doesn't stop the rest. */
 export function ScriptLog({ run }: ScriptLogProps): JSX.Element {
-	const ok = run.steps.filter((s) => s.status === 'ok').length;
+	const t = useT();
+const ok = run.steps.filter((s) => s.status === 'ok').length;
 	const failed = run.steps.filter((s) => s.status === 'error').length;
 	const done = run.current < 0;
 	const summary = done
-		? `Done: ${ok} succeeded, ${failed} failed of ${run.steps.length}`
-		: `Running ${run.current + 1} of ${run.steps.length}…`;
+		? t('logs.script.done', { ok, failed, total: run.steps.length })
+		: t('logs.script.running', { n: run.current + 1, total: run.steps.length });
 	return (
 		<div className="script-log">
 			<div className={`script-log-summary${failed > 0 ? ' has-errors' : ''}`}>{summary}</div>
@@ -66,11 +68,11 @@ export function ScriptLog({ run }: ScriptLogProps): JSX.Element {
 								<span className="script-step-error" title={s.error}>{s.error}</span>
 							) : s.status === 'ok' ? (
 								<>
-									{`${s.rowCount ?? 0} ${s.rowCount === 1 ? 'row' : 'rows'}`}
-									{s.durationMs !== undefined ? ` · ${(s.durationMs / 1000).toFixed(2)}s` : ''}
+									{t('logs.script.rows', { count: s.rowCount ?? 0 })}
+									{s.durationMs !== undefined ? ` · ${t('logs.script.seconds', { value: (s.durationMs / 1000).toLocaleString(formatLocale(), { minimumFractionDigits: 2, maximumFractionDigits: 2 }) })}` : ''}
 								</>
 							) : s.status === 'skipped' ? (
-								'skipped'
+								t('logs.script.skipped')
 							) : null}
 						</span>
 					</li>

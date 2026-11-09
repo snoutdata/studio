@@ -3,6 +3,7 @@
  *  Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { t } from '../../shared/i18n/core';
 import { realpathSync } from 'node:fs';
 import { request } from 'node:http';
 
@@ -128,7 +129,7 @@ export async function scanDocker(existing: ConnectionConfig[], sockets = contain
 		return {
 			...result,
 			notFound: false,
-			unavailable: `Docker is running, but this account may not read its socket (${denied[0]}). Add yourself to the docker group ("sudo usermod -aG docker $USER"), sign out and back in, then run this again.`,
+			unavailable: t('mainDiscovery.socketDenied', { socket: denied[0] }),
 		};
 	}
 	return result;

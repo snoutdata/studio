@@ -9,6 +9,7 @@ import { Icon } from './Icon';
 import { ConnectionMarks, ConnectionTags } from './ConnectionMarks';
 import type { ConnectionConfig } from '../../../shared/connection';
 import { engineDisplayName } from '../../../shared/engine';
+import { useT } from '../i18n';
 
 // The connection picker: the editor toolbar's, the assistant composer's and Orbit's. It used to be
 // a native <select>, which can draw text and nothing else, so a PROD connection looked like any
@@ -74,6 +75,7 @@ function matches(config: ConnectionConfig, needle: string): boolean {
 
 export function ConnectionPicker(props: ConnectionPickerProps): JSX.Element {
 	const { connections, isConnected, value, onChange, noneLabel, placeholder, title, onAdd, className, disabled } = props;
+	const t = useT();
 	const [open, setOpen] = useState(false);
 	const [filter, setFilter] = useState('');
 	const [cursor, setCursor] = useState(0);
@@ -152,8 +154,8 @@ export function ConnectionPicker(props: ConnectionPickerProps): JSX.Element {
 			return;
 		}
 		function onDown(e: MouseEvent): void {
-			const t = e.target as Node;
-			if (!triggerRef.current?.contains(t) && !menuRef.current?.contains(t)) {
+			const target = e.target as Node;
+			if (!triggerRef.current?.contains(target) && !menuRef.current?.contains(target)) {
 				close(false);
 			}
 		}
@@ -263,7 +265,7 @@ export function ConnectionPicker(props: ConnectionPickerProps): JSX.Element {
 	}
 
 	const isProd = current?.environment === 'prod';
-	const triggerLabel = current ? current.label : (noneLabel ?? placeholder ?? "Choose a connection");
+	const triggerLabel = current ? current.label : (noneLabel ?? placeholder ?? t('editor.conn.choose'));
 
 	return (
 		<span className={`conn-picker${className ? ` ${className}` : ''}`}>
@@ -300,8 +302,8 @@ export function ConnectionPicker(props: ConnectionPickerProps): JSX.Element {
 							<input
 								ref={filterRef}
 								value={filter}
-								placeholder="Filter connections"
-								aria-label="Filter connections"
+								placeholder={t('editor.conn.filter')}
+								aria-label={t('editor.conn.filter')}
 								onChange={(e) => { setFilter(e.target.value); setCursor(0); }}
 							/>
 						</div>
@@ -314,7 +316,7 @@ export function ConnectionPicker(props: ConnectionPickerProps): JSX.Element {
 						aria-label={title}
 						aria-activedescendant={rows[cursor] ? `conn-picker-opt-${cursor}` : undefined}
 					>
-						{rows.length === 0 && <div className="conn-picker-empty">{connections.length === 0 ? "No connections yet" : "Nothing matches"}</div>}
+						{rows.length === 0 && <div className="conn-picker-empty">{connections.length === 0 ? t('editor.conn.noneYet') : t('editor.conn.noMatch')}</div>}
 						{rows.map((row, index) => {
 							const selected = row.id === value;
 							const connected = row.id !== undefined && isConnected(row.id);
@@ -327,7 +329,7 @@ export function ConnectionPicker(props: ConnectionPickerProps): JSX.Element {
 									role="option"
 									aria-selected={selected}
 									className={`conn-picker-row${selected ? ' selected' : ''}${index === cursor ? ' cursor' : ''}`}
-									title={row.config ? `${row.config.label}${connected ? '' : ' (not connected)'}` : undefined}
+									title={row.config ? (connected ? row.config.label : t('editor.common.notConnected', { label: row.config.label })) : undefined}
 									onClick={() => pick(row)}
 								>
 									{row.config
@@ -345,7 +347,7 @@ export function ConnectionPicker(props: ConnectionPickerProps): JSX.Element {
 					</div>
 					{onAdd && (
 						<button type="button" className="conn-picker-add" onClick={() => { close(false); onAdd(); }}>
-							<Icon name="add" /> New Connection…
+							<Icon name="add" /> {t('editor.conn.new')}
 						</button>
 					)}
 				</div>,

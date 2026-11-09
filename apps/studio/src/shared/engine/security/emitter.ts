@@ -13,6 +13,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import type { GrantScope, PolicyKind, PrincipalKind, SecurityChange } from './types';
+import { t } from '../../i18n/core';
 
 export interface SecurityEmitter {
 	readonly driverId: string;
@@ -87,10 +88,10 @@ const UNSAFE_IN_NAME = /[\u0000-\u001F\u007F;]/;
 export function assertSafeName(name: string, what: string): string {
 	const trimmed = name.trim();
 	if (trimmed === '') {
-		throw new Error(`The ${what} cannot be empty.`);
+		throw new Error(t('engineSecurity.emitter.empty', { what: whatLabel(what) }));
 	}
 	if (UNSAFE_IN_NAME.test(trimmed)) {
-		throw new Error(`The ${what} "${name}" contains a character that is not allowed in a name.`);
+		throw new Error(t('engineSecurity.emitter.badName', { what: whatLabel(what), name }));
 	}
 	return trimmed;
 }
@@ -104,12 +105,19 @@ export function assertSafeName(name: string, what: string): string {
  */
 export function assertSafePassword(password: string): string {
 	if (password === '') {
-		throw new Error('The password cannot be empty.');
+		throw new Error(t('engineSecurity.emitter.passwordEmpty'));
 	}
 	if (UNSAFE_IN_NAME.test(password)) {
-		throw new Error('The password contains a character that is not allowed.');
+		throw new Error(t('engineSecurity.emitter.passwordBad'));
 	}
 	return password;
+}
+
+/** The name of a field as a person reads it. `what` is an id the emitters pass, never shown as is. */
+function whatLabel(what: string): string {
+	const key = `engineSecurity.what.${what.replace(/ (.)/g, (_, c: string) => c.toUpperCase())}`;
+	const label = t(key);
+	return label === key ? what : label;
 }
 
 /**
@@ -123,7 +131,7 @@ export function assertSafePassword(password: string): string {
 export function assertSafePrivilege(privilege: string): string {
 	const trimmed = privilege.trim().toUpperCase();
 	if (!/^[A-Z][A-Z_ ]*$/.test(trimmed)) {
-		throw new Error(`"${privilege}" is not a valid privilege name.`);
+		throw new Error(t('engineSecurity.emitter.badPrivilege', { privilege }));
 	}
 	return trimmed;
 }
@@ -131,7 +139,7 @@ export function assertSafePrivilege(privilege: string): string {
 /** Validate and join a privilege list for a GRANT/REVOKE. */
 export function privilegeList(privileges: readonly string[]): string {
 	if (privileges.length === 0) {
-		throw new Error('Select at least one privilege.');
+		throw new Error(t('engineSecurity.emitter.noPrivilege'));
 	}
 	return privileges.map(assertSafePrivilege).join(', ');
 }
@@ -139,9 +147,9 @@ export function privilegeList(privileges: readonly string[]): string {
 /** How a policy kind is named in a sentence addressed to a person. */
 export function policyKindLabel(kind: PolicyKind): string {
 	switch (kind) {
-		case 'row-policy': return 'row policy';
-		case 'quota': return 'quota';
-		case 'settings-profile': return 'settings profile';
+		case 'row-policy': return t('engineSecurity.emitter.kindRowPolicy');
+		case 'quota': return t('engineSecurity.emitter.kindQuota');
+		case 'settings-profile': return t('engineSecurity.emitter.kindSettingsProfile');
 	}
 }
 
@@ -153,7 +161,7 @@ export function policyKindLabel(kind: PolicyKind): string {
  * read or written here yet", not silence and not a statement written by guesswork.
  */
 export function refusePolicy(engine: string, kind: PolicyKind): never {
-	throw new Error(`${engine} ${policyKindLabel(kind)} objects are not supported by SnoutData yet.`);
+	throw new Error(t('engineSecurity.emitter.policyUnsupported', { engine, kind: policyKindLabel(kind) }));
 }
 
 /** Characters that end a statement or start a comment. */
@@ -171,10 +179,10 @@ const STATEMENT_BREAK = /[;\u0000-\u0008\u000B\u000C\u000E-\u001F]|--|\/\*/;
 export function assertSafeExpression(expression: string, what: string): string {
 	const trimmed = expression.trim();
 	if (trimmed === '') {
-		throw new Error(`The ${what} cannot be empty.`);
+		throw new Error(t('engineSecurity.emitter.empty', { what: whatLabel(what) }));
 	}
 	if (STATEMENT_BREAK.test(trimmed)) {
-		throw new Error(`The ${what} cannot contain a semicolon or a comment.`);
+		throw new Error(t('engineSecurity.emitter.badExpression', { what: whatLabel(what) }));
 	}
 	return trimmed;
 }
@@ -184,7 +192,7 @@ export function assertSafeExpression(expression: string, what: string): string {
 export function assertSafeSettingName(name: string): string {
 	const trimmed = name.trim();
 	if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(trimmed)) {
-		throw new Error(`"${name}" is not a valid setting name.`);
+		throw new Error(t('engineSecurity.emitter.badSetting', { name }));
 	}
 	return trimmed;
 }
@@ -194,7 +202,7 @@ export function assertSafeSettingName(name: string): string {
 export function settingValue(value: string): string {
 	const trimmed = value.trim();
 	if (trimmed === '') {
-		throw new Error('A setting needs a value.');
+		throw new Error(t('engineSecurity.emitter.settingNoValue'));
 	}
 	return /^-?\d+(\.\d+)?$/.test(trimmed) ? trimmed : quoteBackslashLiteral(trimmed);
 }

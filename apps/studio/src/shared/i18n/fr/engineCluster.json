@@ -1,0 +1,31 @@
+{
+	"replicaTaking": "Sa réplica prend sa place",
+	"replicaFailed": "Sa réplica n'a pas pu prendre sa place",
+	"routerDown": "Ne répond pas",
+	"routerStarting": "Démarrage",
+	"routerPaused": "En pause, se réveille à la prochaine connexion",
+	"routerOk": "Envoie chaque requête",
+	"router": "Routeur",
+	"serves": "Sert sa part",
+	"serverStarting": "Son serveur démarre",
+	"joinStopped": "Son arrivée s'est arrêtée",
+	"draining": "Déplace ses données",
+	"holdsHome": "Garde les tables non réparties",
+	"home": "Principal",
+	"node": "Nœud {id}",
+	"queries": "requêtes",
+	"newNode": "Nouveau nœud",
+	"replica": "Réplica",
+	"follows": "Le suit, prend sa place s'il est perdu",
+	"fromBackup": "En cours de création depuis sa sauvegarde",
+	"replicaLine": "réplica",
+	"jobWaiting": "La tâche {id} ({op}) attend de démarrer : {done} étapes sur {steps}. Les écritures sur une plage marquent une courte pause quand elle est déplacée.",
+	"jobState": "La tâche {id} ({op}) est à l'état {state} : {done} étapes sur {steps}. Les écritures sur une plage marquent une courte pause quand elle est déplacée.",
+	"sentenceRouterDown": "Le routeur ne répond pas : les requêtes n'atteignent pas les nœuds du cluster.",
+	"sentenceJoining": "Un nœud arrive. Il démarre comme copie du nœud principal et prend sa part des données une fois intégré.",
+	"sentenceHomeOnly": "Toutes les lignes sont sur le nœud principal. Répartissez une table pour placer ses lignes sur les nœuds du cluster.",
+	"sentenceServing": {
+		"one": "Le routeur envoie chaque requête au nœud principal ou au nœud qui détient ses lignes.",
+		"other": "Le routeur envoie chaque requête au nœud principal ou aux {count} nœuds qui détiennent ses lignes."
+	}
+}

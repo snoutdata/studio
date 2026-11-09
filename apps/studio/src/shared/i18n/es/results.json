@@ -1,0 +1,254 @@
+{
+	"cell": {
+		"copyPath": "Copiar la ruta que lee este valor",
+		"editValue": "Editar valor: {column}",
+		"expand": "Expandir",
+		"formatJson": "Formatear JSON",
+		"items": {
+			"one": "{count} elemento",
+			"other": "{count} elementos"
+		},
+		"keys": {
+			"one": "{count} clave",
+			"other": "{count} claves"
+		},
+		"prettyJson": "Intentar dar formato JSON al valor",
+		"reformat": "Reformatear el valor",
+		"text": "Texto",
+		"tree": "Árbol",
+		"viewValue": "Ver valor: {column}"
+	},
+	"doc": {
+		"clickToEdit": "Clic para editar",
+		"emptyArray": "array vacío",
+		"emptyObject": "objeto vacío",
+		"fieldsEdited": {
+			"one": "{count} campo editado",
+			"other": "{count} campos editados"
+		},
+		"noFields": "Este documento no tiene campos.",
+		"saveEllipsis": "Guardar…"
+	},
+	"edit": {
+		"addNewRow": "Añadir una fila nueva",
+		"addRow": "Añadir fila",
+		"hint": "Doble clic en una celda para editarla · clic en # para marcar una fila para eliminar",
+		"logEvents": "Los eventos de log no se pueden editar: un servicio de logs en la nube es de solo lectura.",
+		"mongoNote": "Estos cambios se aplican uno a uno, no en una sola transacción. Si uno falla, los anteriores ya estarán guardados.",
+		"nothingToSave": "Nada que guardar. Primero rellena una fila nueva o cambia una celda.",
+		"saveFailed": "No se pudieron guardar los cambios.",
+		"unsaved": "Cambios sin guardar"
+	},
+	"explain": {
+		"againTitle": "Explicar de nuevo",
+		"condition": "Condición",
+		"copy": "Copiar",
+		"copyTitle": "Copiar esta respuesta",
+		"explaining": "Explicando…",
+		"fromProjection": "Respondido desde la proyección {target}",
+		"granules": "Gránulos",
+		"index": "Índice",
+		"keys": "Claves",
+		"marks": "Marcas",
+		"narrowed": "{selected} de {initial} ({pct}%)",
+		"noTable": "Esta sentencia no lee ninguna tabla, así que no hay nada que estimar.",
+		"notAPlan": "El servidor respondió, pero no con un plan que se pueda leer aquí.",
+		"notExplained": "Este servidor no quiso explicar esa sentencia.",
+		"ofTable": "De la tabla",
+		"parts": "Parts",
+		"partsTail": ", {parts} parts",
+		"readFull": "{what}: los {count} gránulos, ninguno omitido.",
+		"readPartial": "{what}: {granules} gránulos{parts}.",
+		"reads": "Lee {target}",
+		"rowCountUnknown": "El número de filas de esta tabla no está cargado.",
+		"rows": "Filas",
+		"rowsInTable": "{rows} filas en la tabla",
+		"table": "Tabla",
+		"wouldRead": {
+			"one": "Leería unas {rows} filas de 1 tabla, antes de ejecutarla.",
+			"other": "Leería unas {rows} filas de {count} tablas, antes de ejecutarla."
+		}
+	},
+	"export": {
+		"anySize": "- cualquier tamaño",
+		"clipboard": "Copiar al portapapeles",
+		"export": "Exportar",
+		"fromServer": "Directo desde el servidor",
+		"fullData": "Datos completos",
+		"gridData": "Datos de la cuadrícula",
+		"noLimit": "- sin límite",
+		"title": "Exportar resultados"
+	},
+	"filter": {
+		"clear": "Borrar filtro",
+		"contains": "contiene {value}"
+	},
+	"fk": {
+		"notFound": "No se encontró la fila referenciada.",
+		"open": "Abrir en una pestaña nueva"
+	},
+	"footer": {
+		"bytesRead": "{bytes} leídos",
+		"bytesTitle": "Bytes que la base de datos leyó para responder. En un motor columnar es lo que cuesta una consulta, sea cual sea el número de filas devueltas.",
+		"counting": "Contando…",
+		"countTotal": "Contar total",
+		"cutShort": "recortado",
+		"cutShortTitle": "Un límite detuvo la lectura antes del final del rango, así que esto es solo el principio de la respuesta. Reduce el rango o añade un filtro.",
+		"editingProd": "Editando prod",
+		"editingProdTitle": "La edición está permitida en esta conexión de producción hasta que se reinicie la aplicación. Haz clic para volver a bloquearla.",
+		"eventsRead": "Se leyeron {scanned} eventos para responder.",
+		"eventsReadMatched": "Se leyeron {scanned} eventos para responder, de los que {matched} coincidieron.",
+		"limitMore": "Se añadió Auto-LIMIT {limit}. Siguiente tras la última fila trae otras {limit}. Cambia el tamaño en Configuración → Editor y consultas.",
+		"limitNote": "Se añadió Auto-LIMIT {limit}. Cámbialo en Configuración → Editor y consultas.",
+		"ofTotal": "de {count} en total",
+		"readOnly": "Solo lectura",
+		"rows": {
+			"one": "{count} fila",
+			"other": "{count} filas"
+		},
+		"rowsRead": "Se leyeron {scanned} filas para responder.",
+		"rowsReadMatched": "Se leyeron {scanned} filas para responder, de las que {matched} coincidieron.",
+		"scanned": "{scanned} examinadas",
+		"trueTotalTitle": "Total real, sin el límite de lectura"
+	},
+	"grid": {
+		"columnDefault": "Valor predeterminado de la columna: déjalo en blanco para usar \"{value}\"",
+		"deleteHint": "Haz clic para marcar esta fila para eliminar",
+		"inside": "{count} dentro",
+		"lockedTitle": "Es una conexión de producción, así que la edición está bloqueada. Elige \"Permitir edición\" para desbloquearla en esta sesión.",
+		"openAsTree": "Abrir este valor como árbol",
+		"peek": "Vista previa de la fila referenciada",
+		"resize": "Arrastra para cambiar el ancho",
+		"sort": "Clic para ordenar",
+		"viewDocument": "Ver documento"
+	},
+	"lines": {
+		"closeAll": "Todas las líneas están abiertas. Haz clic para cerrarlas todas.",
+		"openAll": "Abrir todas las líneas (payloads con formato)"
+	},
+	"log": {
+		"changeReruns": "Cambiar esto vuelve a ejecutar la sentencia.",
+		"changeWrites": "Cambiar esto escribe el rango en la sentencia y la ejecuta.",
+		"days": "{n} d",
+		"fromSql": "desde SQL",
+		"fromSqlTitle": "Este rango viene de la sentencia, así que el control de arriba no se aplica. Quita el límite de tiempo del WHERE para usarlo.",
+		"last15m": "Últimos 15 minutos",
+		"last1h": "Última hora",
+		"last24h": "Últimas 24 horas",
+		"last30d": "Últimos 30 días",
+		"last6h": "Últimas 6 horas",
+		"last7d": "Últimos 7 días",
+		"noEvents": "Sin eventos: {window}.",
+		"noRangeAdd": "La sentencia no indicaba un rango de tiempo, así que eso fue lo que se ejecutó. Mira más atrás, o añade tu propio límite con `WHERE ts >= ago('24h')`.",
+		"noRangeEdits": "La sentencia no indicaba un rango de tiempo, así que eso fue lo que se ejecutó. Mirar más atrás escribe el rango en tu SQL, como `WHERE ts >= ago('24h')`.",
+		"searched": "Búsqueda de {start} a {end}.",
+		"windowRange": "{start} a {end}",
+		"windowSpan": "{span} hasta {end}"
+	},
+	"menu": {
+		"allowEditing": "Permitir edición (esta sesión)",
+		"copy": "Copiar",
+		"copyAbove": "Copiar de la fila de arriba",
+		"copyBelow": "Copiar de la fila de abajo",
+		"copyRow": "Copiar fila",
+		"deleteRow": "Eliminar fila",
+		"duplicateRow": "Duplicar fila",
+		"editCell": "Editar celda",
+		"editValue": "Editar valor…",
+		"exclude": "Excluir este valor",
+		"filterSort": "Filtrar y ordenar",
+		"filterTo": "Filtrar por este valor",
+		"foreignKey": "Clave foránea",
+		"generateSql": "Generar SQL",
+		"openReferenced": "Abrir la fila referenciada",
+		"orderAsc": "Orden ascendente",
+		"orderDesc": "Orden descendente",
+		"paste": "Pegar",
+		"removeRow": "Quitar fila",
+		"setNull": "Establecer en NULL",
+		"undoDelete": "Deshacer eliminación",
+		"viewValue": "Ver valor…"
+	},
+	"mode": {
+		"grid": "Vista de cuadrícula",
+		"json": "Vista JSON (fila activa)",
+		"log": "Lector de logs (una línea por evento, expandible)",
+		"record": "Vista de registro (una fila a la vez)",
+		"tree": "Árbol de documento (fila activa, expandible)"
+	},
+	"paging": {
+		"all": "Todas",
+		"fetchMore": "Traer más filas",
+		"fetchNext": "Traer las siguientes {count} filas",
+		"first": "Primera página",
+		"lastLoaded": "Última página cargada",
+		"next": "Página siguiente",
+		"perPage": "Por página",
+		"previous": "Página anterior",
+		"range": "{range} de {total}"
+	},
+	"record": {
+		"next": "Registro siguiente",
+		"position": "fila {row} de {total}",
+		"previous": "Registro anterior"
+	},
+	"search": {
+		"clear": "Borrar búsqueda",
+		"columnsLabel": "Buscar en todas las columnas",
+		"columnsTitle": "Buscar en todas las columnas de las filas cargadas en la cuadrícula",
+		"linesLabel": "Buscar en las líneas cargadas",
+		"linesTitle": "Busca en las líneas cargadas en el lector. Coincide en cualquier parte de un evento, incluso dentro de un payload contraído.",
+		"placeholder": "Buscar"
+	},
+	"surface": {
+		"blocked": "Bloqueado, no se ejecutó nada.",
+		"cancelled": "Cancelado, no se ejecutó nada.",
+		"copy": "Copiar",
+		"describe": "Describir",
+		"failed": "La consulta falló.",
+		"insert": "Insertar en el editor",
+		"insertNew": "Insertar en un editor nuevo",
+		"insertPipeline": "Insertar en la pestaña de pipeline",
+		"listTables": "Listar tablas",
+		"pipelineOf": "Pipeline de {connection}",
+		"ranChanged": {
+			"one": "Ejecutado. {count} fila modificada.",
+			"other": "Ejecutado. {count} filas modificadas."
+		},
+		"ranChangedMs": {
+			"one": "Ejecutado. {count} fila modificada en {ms} ms.",
+			"other": "Ejecutado. {count} filas modificadas en {ms} ms."
+		},
+		"ranReturned": {
+			"one": "Ejecutado. {count} fila devuelta.",
+			"other": "Ejecutado. {count} filas devueltas."
+		},
+		"ranReturnedMs": {
+			"one": "Ejecutado. {count} fila devuelta en {ms} ms.",
+			"other": "Ejecutado. {count} filas devueltas en {ms} ms."
+		},
+		"running": "Ejecutando…",
+		"runQuery": "Ejecutar consulta",
+		"searchColumns": "Buscar columnas"
+	},
+	"view": {
+		"connecting": "Conectando a la base de datos…",
+		"noWritePath": "Este backend no tiene ruta de escritura: un evento de log ingerido no se puede cambiar.",
+		"prodLocked": "Es una conexión de producción, así que la edición está bloqueada. Haz clic para permitirla en esta sesión.",
+		"reconnect": "Reconectar y reintentar",
+		"rowsAffected": {
+			"one": "{count} fila afectada",
+			"other": "{count} filas afectadas"
+		},
+		"runKeys": "ejecuta la sentencia bajo el cursor, o la selección.",
+		"runPrompt": "Ejecuta una consulta para ver aquí sus resultados.",
+		"writeFailed": "La escritura falló."
+	},
+	"wrap": {
+		"full": "Filas expandidas hasta su valor completo. Haz clic para filas de una línea.",
+		"lines": "Ajustado en {lines} líneas. Haz clic para expandir cada fila hasta su valor completo.",
+		"off": "Ajustar el texto largo en {lines} líneas (haz clic otra vez para expandir cada fila)",
+		"tooMany": "Demasiadas filas en esta página para expandir cada una, así que se quedan en {lines} líneas. Haz clic para filas de una línea."
+	},
+	"zeroOfZero": "0 de 0"
+}

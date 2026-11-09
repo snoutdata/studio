@@ -33,8 +33,8 @@ extraMetadata:
 directories:
   output: release
   buildResources: build
-# afterPack hook, two jobs. (1) Trims Electron's locales/ to en-US.pak on Linux only (the app is
-# English-only), shaving ~46 MB of unused locale data so the .deb fits under GitHub's 100 MB host
+# afterPack hook, two jobs. (1) Trims Electron's locales/ to en-US.pak on Linux only (Chromium's own strings: the
+# app's text is in its own catalogs), shaving ~46 MB of unused locale data so the .deb fits under GitHub's 100 MB host
 # limit. (2) Sets the Electron FUSES, before anything is signed: NODE_OPTIONS and --inspect are
 # refused and the app loads only from app.asar. RunAsNode stays on (the SQL server child and the
 # staged update need it) and asar integrity is not on yet. This is electron-builder 26's

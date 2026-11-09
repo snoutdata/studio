@@ -4,6 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { Icon } from './Icon';
+import { useT, type Translate } from '../i18n';
 import type { DocumentAttachment } from '../../../shared/ai';
 
 /*
@@ -18,21 +19,22 @@ function chars(n: number): string {
 
 /** The size/coverage sub-label under an attachment chip — shows how much of the file was sent so
  *  truncation is never silent (cost-legible, like the schema/token readouts). */
-export function attachLabel(a: DocumentAttachment): string {
+export function attachLabel(a: DocumentAttachment, t: Translate): string {
 	return a.truncated
-		? `excerpt · ${chars(a.text.length)} of ${chars(a.originalChars)} chars`
-		: `${chars(a.originalChars)} chars`;
+		? t('chat.attach.excerpt', { sent: chars(a.text.length), total: chars(a.originalChars) })
+		: t('chat.attach.chars', { total: chars(a.originalChars) });
 }
 
 /** One attachment chip (pending in the composer, or shown under a sent user turn). With no
  *  `onRemove` it's a static display chip; with it, it carries a remove button. */
 export function AttachmentChip({ att, onRemove }: { att: DocumentAttachment; onRemove?: () => void }): JSX.Element {
+	const t = useT();
 	return (
-		<span className="chat-attach-chip" title={att.truncated ? `${att.name} (only an excerpt, ${att.coverage}, was sent to the assistant)` : att.name}>
+		<span className="chat-attach-chip" title={att.truncated ? t('chat.attach.excerptTitle', { name: att.name, coverage: att.coverage ?? '' }) : att.name}>
 			<Icon name="file-text" />
 			<span className="chat-attach-name">{att.name}</span>
-			<span className="chat-attach-size muted">{attachLabel(att)}</span>
-			{onRemove && <button type="button" className="icon-btn" aria-label="Remove" onClick={onRemove}><Icon name="close" /></button>}
+			<span className="chat-attach-size muted">{attachLabel(att, t)}</span>
+			{onRemove && <button type="button" className="icon-btn" aria-label={t('chat.attach.remove')} onClick={onRemove}><Icon name="close" /></button>}
 		</span>
 	);
 }

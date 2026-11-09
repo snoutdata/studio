@@ -3,6 +3,7 @@
  *  Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { t } from '../../shared/i18n/core';
 import type { ConnectionFormValues } from '../../shared/forms';
 import type { Found } from './common';
 
@@ -117,8 +118,8 @@ export function credentialsFromEnv(driver: string, image: string, env: Map<strin
 			username,
 			password,
 			database: get('POSTGRES_DB') ?? username,
-			note: get('POSTGRES_PASSWORD_FILE') && !password ? "The password is in a file inside the container; set it after import."
-				: trust ? "The container trusts every connection, so no password is needed." : undefined,
+			note: get('POSTGRES_PASSWORD_FILE') && !password ? t('mainDiscovery.pwInFile')
+				: trust ? t('mainDiscovery.trustsAll') : undefined,
 		};
 	}
 	if (driver === 'mysql-aurora' || driver === 'mariadb') {
@@ -134,13 +135,13 @@ export function credentialsFromEnv(driver: string, image: string, env: Map<strin
 		}
 		const allowEmpty = driver === 'mariadb' ? truthy(get('MARIADB_ALLOW_EMPTY_ROOT_PASSWORD', 'MYSQL_ALLOW_EMPTY_PASSWORD')) : truthy(get('MYSQL_ALLOW_EMPTY_PASSWORD'));
 		if (allowEmpty) {
-			return { username: 'root', database, note: "The root password is empty." };
+			return { username: 'root', database, note: t('mainDiscovery.rootEmpty') };
 		}
 		const random = driver === 'mariadb' ? truthy(get('MARIADB_RANDOM_ROOT_PASSWORD', 'MYSQL_RANDOM_ROOT_PASSWORD')) : truthy(get('MYSQL_RANDOM_ROOT_PASSWORD'));
 		return {
 			username: 'root',
 			database,
-			note: random ? "The root password was generated when the container first started and printed to its log; set it after import." : undefined,
+			note: random ? t('mainDiscovery.rootRandom') : undefined,
 		};
 	}
 	if (driver === 'sqlserver') {
@@ -162,7 +163,7 @@ export function credentialsFromEnv(driver: string, image: string, env: Map<strin
 		const username = get('MONGO_INITDB_ROOT_USERNAME', 'MONGODB_ROOT_USER');
 		return username
 			? { username, password: get('MONGO_INITDB_ROOT_PASSWORD', 'MONGODB_ROOT_PASSWORD') }
-			: { username: '', note: "No root user is set, so the server takes connections without signing in." };
+			: { username: '', note: t('mainDiscovery.noRootUser') };
 	}
 	if (driver === 'db2') {
 		return { username: get('DB2INSTANCE') ?? 'db2inst1', password: get('DB2INST1_PASSWORD'), database: get('DBNAME') };
@@ -228,7 +229,8 @@ export function containerFound(socket: string, engineName: string, c: ContainerI
 		readOnly: false,
 	};
 
-	const what = isStack ? `The local SnoutData stack (${name}) in ${engineName}.` : `${imageRepository(image).split('/').pop() || "A"} container in ${engineName}.`;
+	const repo = imageRepository(image).split('/').pop();
+	const what = isStack ? t('mainDiscovery.localStackIn', { name, engineName }) : repo ? t('mainDiscovery.containerIn', { repo, engineName }) : t('mainDiscovery.aContainerIn', { engineName });
 	if (!binding) {
 		return {
 			ref: { file: socket, connId: c.Id },
@@ -236,22 +238,22 @@ export function containerFound(socket: string, engineName: string, c: ContainerI
 			sourceName: label,
 			supported: false,
 			importsPassword: false,
-			note: `${what} Its port ${engine.port} is not published to this computer, so it cannot be reached. Recreate it with "-p ${engine.port}:${engine.port}" (or a "ports:" entry in compose) to connect.`,
+			note: t('mainDiscovery.portNotPublished', { what, port: String(engine.port) }),
 		};
 	}
 	const notes = [what];
 	if (hostNetwork) {
-		notes.push(`It shares this computer's network, so it listens on port ${engine.port} directly.`);
+		notes.push(t('mainDiscovery.hostNetwork', { port: String(engine.port) }));
 	}
 	if (guessed) {
-		notes.push(`The image does not say what it is; port ${engine.port} suggests it.`);
+		notes.push(t('mainDiscovery.portSuggests', { port: String(engine.port) }));
 	}
 	if (cred.note) {
 		notes.push(cred.note);
 	} else if (cred.password) {
-		notes.push("The password comes from the container's environment.");
+		notes.push(t('mainDiscovery.pwFromEnv'));
 	} else if (engine.driver !== 'mongodb') {
-		notes.push("No password in its environment; set it after import.");
+		notes.push(t('mainDiscovery.noPwEnv'));
 	}
 	return {
 		ref: { file: socket, connId: c.Id },

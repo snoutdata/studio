@@ -39,6 +39,7 @@ import {
 	type PulseSample,
 	type PulseSupport,
 } from '../../../shared/orbitPulse';
+import { formatLocale, t, useT } from '../i18n';
 
 /*
  * Snout Orbit — the database as a 3D world.
@@ -103,14 +104,14 @@ interface OrbitViewProps {
 }
 
 const LIGHT_CONTROLS: Array<{ key: keyof OrbitLight; label: string; min: number; max: number; step: number }> = [
-	{ key: 'bloomStrength', label: "Bloom strength", min: 0, max: 3, step: 0.05 },
-	{ key: 'bloomThreshold', label: "Bloom threshold", min: 0, max: 1, step: 0.01 },
-	{ key: 'exposure', label: "Exposure", min: 0.3, max: 2, step: 0.05 },
+	{ key: 'bloomStrength', get label() { return t('orbit.light.bloomStrength'); }, min: 0, max: 3, step: 0.05 },
+	{ key: 'bloomThreshold', get label() { return t('orbit.light.bloomThreshold'); }, min: 0, max: 1, step: 0.01 },
+	{ key: 'exposure', get label() { return t('orbit.light.exposure'); }, min: 0.3, max: 2, step: 0.05 },
 ];
 
 const MATTER_CONTROLS: Array<{ key: keyof OrbitMatter; label: string; min: number; max: number; step: number }> = [
-	{ key: 'nodeScale', label: "Node scale", min: 0.3, max: 2.5, step: 0.05 },
-	{ key: 'linkOpacity', label: "Link opacity", min: 0, max: 1, step: 0.01 },
+	{ key: 'nodeScale', get label() { return t('orbit.matter.nodeScale'); }, min: 0.3, max: 2.5, step: 0.05 },
+	{ key: 'linkOpacity', get label() { return t('orbit.matter.linkOpacity'); }, min: 0, max: 1, step: 0.01 },
 ];
 
 const PALETTE_IDS: PaletteId[] = ['theme', 'gold', 'tron', 'ember'];
@@ -158,6 +159,7 @@ function feedText(sql: string): string {
 }
 
 export function OrbitView(props: OrbitViewProps): JSX.Element {
+	const t = useT();
 	const {
 		active, schema, connectionId, connectionLabel, connections, statement, focusRequest, railHost,
 		connecting, connectedFlash, onSelectConnection, onConnect, onCancelConnect, onOpenTable,
@@ -246,7 +248,7 @@ export function OrbitView(props: OrbitViewProps): JSX.Element {
 			scene = new OrbitScene(canvas, reducedMotion);
 		} catch (err) {
 			console.warn(`[orbit] no WebGL context: ${err instanceof Error ? err.message : String(err)}`);
-			setSceneError("This window could not start 3D graphics (WebGL), which Orbit draws with. It needs a working graphics driver, with hardware acceleration on (Settings, Appearance).");
+			setSceneError(t('orbit.noWebgl'));
 			return;
 		}
 		setSceneError(null);
@@ -540,7 +542,7 @@ export function OrbitView(props: OrbitViewProps): JSX.Element {
 		let stopped = false;
 		void window.sqlApi.orbitPulseStart(connectionId, pulseInterval).then((started) => {
 			if (!stopped && !started.started) {
-				setPulseError(started.reason ?? "The database would not report its activity.");
+				setPulseError(started.reason ?? t('orbit.pulseRefused'));
 				setPulseLive(false);
 			}
 		}).catch(() => undefined);
@@ -599,14 +601,14 @@ export function OrbitView(props: OrbitViewProps): JSX.Element {
 			return {
 				kind: node.kind.toUpperCase(),
 				name: node.name,
-				path: node.schema + (node.parent !== undefined ? ` / on ${graph.nodes[node.parent].name}` : ''),
+				path: node.schema + (node.parent !== undefined ? ` / ${t('orbit.inspector.onName', { name: graph.nodes[node.parent].name })}` : ''),
 				rows: [
-					['columns', String(node.columns)],
-					[node.kind === 'index' ? 'covers rows' : 'rows', node.rows === undefined ? '-' : node.rows.toLocaleString()],
-					['foreign keys', String(node.fkDegree)],
-					['relations', String(node.degree)],
+					[t('orbit.inspector.columns'), String(node.columns)],
+					[node.kind === 'index' ? t('orbit.inspector.coversRows') : t('orbit.inspector.rows'), node.rows === undefined ? '-' : node.rows.toLocaleString(formatLocale())],
+					[t('orbit.inspector.foreignKeys'), String(node.fkDegree)],
+					[t('orbit.inspector.relations'), String(node.degree)],
 				] as Array<[string, string]>,
-				hint: focus === target.id ? "Isolated. Press esc to clear." : "Click to isolate its neighbourhood.",
+				hint: focus === target.id ? t('orbit.isolated') : t('orbit.clickIsolate'),
 				table: node.kind === 'index' || node.kind === 'routine' ? undefined : { name: node.name, schema: node.schema },
 			};
 		}
@@ -615,26 +617,26 @@ export function OrbitView(props: OrbitViewProps): JSX.Element {
 			const a = graph.nodes[link.a];
 			const b = graph.nodes[link.b];
 			return {
-				kind: link.kind === 'fk' ? 'FOREIGN KEY' : link.kind === 'index' ? 'INDEX' : 'DEPENDENCY',
+				kind: link.kind === 'fk' ? 'FOREIGN KEY' : link.kind === 'index' ? 'INDEX' : t('orbit.inspector.dependency'),
 				name: link.name,
-				path: link.kind === 'fk' && link.columns ? `${a.schema}.${a.name}.${link.columns.join(', ')}` : `on ${a.schema}.${a.name}`,
+				path: link.kind === 'fk' && link.columns ? `${a.schema}.${a.name}.${link.columns.join(', ')}` : t('orbit.inspector.onName', { name: `${a.schema}.${a.name}` }),
 				rows: link.kind === 'fk'
 					? [
-						['references', `${b.schema}.${b.name}`],
-						['columns', (link.referencedColumns ?? []).join(', ') || '-'],
-						['scope', link.crossSchema ? "cross schema" : "in schema"],
+						[t('orbit.inspector.references'), `${b.schema}.${b.name}`],
+						[t('orbit.inspector.columns'), (link.referencedColumns ?? []).join(', ') || '-'],
+						[t('orbit.inspector.scope'), link.crossSchema ? t('orbit.inspector.crossSchema') : t('orbit.inspector.inSchema')],
 					] as Array<[string, string]>
 					: [
-						['object', b.name],
-						['kind', b.kind],
-						['on', `${a.schema}.${a.name}`],
+						[t('orbit.inspector.object'), b.name],
+						[t('orbit.inspector.kind'), b.kind],
+						[t('orbit.inspector.on'), `${a.schema}.${a.name}`],
 					] as Array<[string, string]>,
-				hint: "Click to follow it.",
+				hint: t('orbit.clickFollow'),
 				table: undefined,
 			};
 		}
 		return null;
-	}, [graph, hover, focus]);
+	}, [graph, hover, focus, t]);
 
 	/* ------------------------------------------------------------------ HUD */
 
@@ -654,7 +656,7 @@ export function OrbitView(props: OrbitViewProps): JSX.Element {
 			  * one thing the canvas cannot say for itself: which database this is.
 			  */}
 			<header className="orbit-lockup">
-				<p>{connectionLabel ? connectionLabel : "Connect a database to see it here."}</p>
+				<p>{connectionLabel ? connectionLabel : t('orbit.connectToSee')}</p>
 			</header>
 
 			{renderRail(
@@ -682,19 +684,19 @@ export function OrbitView(props: OrbitViewProps): JSX.Element {
 						value={connectionId}
 						onChange={(id) => onSelectConnection?.(id)}
 						noneLabel="No connection"
-						title="Connection Orbit is drawing"
+						title={t('orbit.pickerTitle')}
 					/>
 					{connectionId !== undefined && connecting && (
 						<span className="connect-inflight">
-							<span className="icon-btn connecting" aria-label="Connecting…"><Icon name="loading" className="codicon-modifier-spin" /></span>
-							<button type="button" className="icon-btn cancel-connect" aria-label="Cancel connecting" onClick={() => onCancelConnect?.(connectionId)}><Icon name="stop-circle" /></button>
+							<span className="icon-btn connecting" aria-label={t('orbit.connecting')}><Icon name="loading" className="codicon-modifier-spin" /></span>
+							<button type="button" className="icon-btn cancel-connect" aria-label={t('orbit.cancelConnecting')} onClick={() => onCancelConnect?.(connectionId)}><Icon name="stop-circle" /></button>
 						</span>
 					)}
 					{connectionId !== undefined && !connecting && connectedFlash && (
-						<span className="icon-btn connected-flash" aria-label="Connected"><Icon name="check" /></span>
+						<span className="icon-btn connected-flash" aria-label={t('orbit.connected')}><Icon name="check" /></span>
 					)}
 					{connectionId !== undefined && !connecting && !connectedFlash && !activeConnection?.connected && (
-						<button type="button" className="icon-btn" aria-label="Connect" onClick={() => onConnect?.(connectionId)}><Icon name="plug" /></button>
+						<button type="button" className="icon-btn" aria-label={t('orbit.connect')} onClick={() => onConnect?.(connectionId)}><Icon name="plug" /></button>
 					)}
 				</section>
 
@@ -716,7 +718,7 @@ export function OrbitView(props: OrbitViewProps): JSX.Element {
 				  */}
 				{graph && (
 					<section className="orbit-group orbit-find">
-						<span className="orbit-eyebrow">Find</span>
+						<span className="orbit-eyebrow">{t('orbit.find')}</span>
 						{/* The popup hangs off THIS, not off the card, so it lines up with the field
 						    rather than with the card's padding. */}
 						<div className="orbit-find-anchor">
@@ -725,8 +727,8 @@ export function OrbitView(props: OrbitViewProps): JSX.Element {
 							<input
 								type="text"
 								value={query}
-								placeholder="Name contains..."
-								aria-label="Find a table by name"
+								placeholder={t('orbit.namePlaceholder')}
+								aria-label={t('orbit.findAria')}
 								role="combobox"
 								aria-expanded={hitsOpen}
 								aria-controls="orbit-find-matches"
@@ -740,7 +742,7 @@ export function OrbitView(props: OrbitViewProps): JSX.Element {
 							    closes the list rather than resetting the world. */}
 							{hitsOpen && <span className="orbit-find-esc">Esc</span>}
 							{query !== '' && !hitsOpen && (
-								<button type="button" className="icon-btn" aria-label="Clear" onClick={() => setQuery('')}>
+								<button type="button" className="icon-btn" aria-label={t('orbit.clear')} onClick={() => setQuery('')}>
 									<Icon name="close" />
 								</button>
 							)}
@@ -750,9 +752,9 @@ export function OrbitView(props: OrbitViewProps): JSX.Element {
 							   or the list closes on blur before the click ever lands. */
 							<div className="orbit-find-pop" onMouseDown={(event) => event.preventDefault()}>
 								{matches.length === 0 && (
-									<p className="orbit-find-empty">No table or view has that in its name.</p>
+									<p className="orbit-find-empty">{t('orbit.noFound')}</p>
 								)}
-								<ul id="orbit-find-matches" role="listbox" aria-label="Matching tables">
+								<ul id="orbit-find-matches" role="listbox" aria-label={t('orbit.matchingTables')}>
 									{matches.map((id, index) => (
 										<li key={id}>
 											<button
@@ -778,7 +780,7 @@ export function OrbitView(props: OrbitViewProps): JSX.Element {
 									))}
 								</ul>
 								{matches.length === SEARCH_MATCHES && (
-									<p className="orbit-find-empty">The first {SEARCH_MATCHES}. Type more of the name to narrow it.</p>
+									<p className="orbit-find-empty">{t('orbit.firstMatches', { n: SEARCH_MATCHES })}</p>
 								)}
 							</div>
 						)}
@@ -787,7 +789,7 @@ export function OrbitView(props: OrbitViewProps): JSX.Element {
 				)}
 
 				<section className="orbit-group">
-					<span className="orbit-eyebrow">Light</span>
+					<span className="orbit-eyebrow">{t('orbit.lightHead')}</span>
 					{LIGHT_CONTROLS.map((control) => (
 						<label className="orbit-ctl" key={control.key}>
 							<span className="orbit-ctl-row">
@@ -807,7 +809,7 @@ export function OrbitView(props: OrbitViewProps): JSX.Element {
 				</section>
 
 				<section className="orbit-group">
-					<span className="orbit-eyebrow">Matter</span>
+					<span className="orbit-eyebrow">{t('orbit.matterHead')}</span>
 					{MATTER_CONTROLS.map((control) => (
 						<label className="orbit-ctl" key={control.key}>
 							<span className="orbit-ctl-row">
@@ -826,7 +828,7 @@ export function OrbitView(props: OrbitViewProps): JSX.Element {
 					))}
 					{manySchemas && <label className="orbit-ctl">
 						<span className="orbit-ctl-row">
-							<span>Schema gravity</span>
+							<span>{t('orbit.schemaGravity')}</span>
 							<span className="orbit-val">{world.gravity.toFixed(2)}</span>
 						</span>
 						<input
@@ -837,7 +839,7 @@ export function OrbitView(props: OrbitViewProps): JSX.Element {
 					</label>}
 					{manySchemas && <label className="orbit-ctl">
 						<span className="orbit-ctl-row">
-							<span>Cluster spread</span>
+							<span>{t('orbit.clusterSpread')}</span>
 							<span className="orbit-val">{world.spread.toFixed(0)}</span>
 						</span>
 						<input
@@ -849,7 +851,7 @@ export function OrbitView(props: OrbitViewProps): JSX.Element {
 				</section>
 
 				<section className="orbit-group">
-					<span className="orbit-eyebrow">Pulse</span>
+					<span className="orbit-eyebrow">{t('orbit.pulseHead')}</span>
 					<button
 						type="button"
 						className="orbit-toggle"
@@ -857,12 +859,12 @@ export function OrbitView(props: OrbitViewProps): JSX.Element {
 						disabled={!pulseSupport?.supported}
 						onClick={() => { setPulseError(null); setPulseLive((on) => !on); }}
 					>
-						<i className="orbit-dot" />Live database activity
+						<i className="orbit-dot" />{t('orbit.liveActivity')}
 					</button>
 					{pulseLive && (
 						<label className="orbit-ctl" style={{ marginTop: 10 }}>
 							<span className="orbit-ctl-row">
-								<span>Sample every</span>
+								<span>{t('orbit.sampleEvery')}</span>
 								<span className="orbit-val">{(pulseInterval / 1000).toFixed(1)}s</span>
 							</span>
 							<input
@@ -881,20 +883,20 @@ export function OrbitView(props: OrbitViewProps): JSX.Element {
 							: pulseSupport && !pulseSupport.supported
 								? pulseSupport.reason
 								: pulseLive && pulseSupport?.source
-									? `Reading ${pulseSupport.source} on this database.`
-									: "Off: Orbit is showing what this app ran. Turn this on to read what the database itself is doing."}
+									? t('orbit.pulseReading', { source: pulseSupport.source })
+									: t('orbit.pulseOff')}
 					</p>
 
-					<span className="orbit-eyebrow orbit-sub">World</span>
+					<span className="orbit-eyebrow orbit-sub">{t('orbit.worldHead')}</span>
 					<div className="orbit-toggles">
 						<button type="button" className="orbit-toggle" aria-pressed={drift} disabled={reducedMotion} onClick={() => setDrift((on) => !on)}>
-							<i className="orbit-dot" />Drift
+							<i className="orbit-dot" />{t('orbit.drift')}
 						</button>
 						<button type="button" className="orbit-toggle" aria-pressed={labels} onClick={() => setLabels((on) => !on)}>
-							<i className="orbit-dot" />Labels
+							<i className="orbit-dot" />{t('orbit.labels')}
 						</button>
 					</div>
-					<span className="orbit-eyebrow orbit-sub">Palette</span>
+					<span className="orbit-eyebrow orbit-sub">{t('orbit.paletteHead')}</span>
 					<div className="orbit-presets">
 						{PALETTE_IDS.map((id) => (
 							<button type="button" key={id} className="orbit-preset" aria-pressed={paletteId === id} onClick={() => setPaletteId(id)}>
@@ -906,15 +908,15 @@ export function OrbitView(props: OrbitViewProps): JSX.Element {
 
 				{counts && (
 					<section className="orbit-group orbit-counts">
-						<span className="orbit-eyebrow">This database</span>
+						<span className="orbit-eyebrow">{t('orbit.thisDatabase')}</span>
 						<dl>
-							<dt>objects</dt><dd>{counts.objects.toLocaleString()}</dd>
-							<dt>relations</dt><dd>{counts.relations.toLocaleString()}</dd>
-							<dt>foreign keys</dt><dd>{counts.foreignKeys.toLocaleString()}</dd>
-							<dt>schemas</dt><dd>{counts.schemas.toLocaleString()}</dd>
+							<dt>{t('orbit.stats.objects')}</dt><dd>{counts.objects.toLocaleString(formatLocale())}</dd>
+							<dt>{t('orbit.stats.relations')}</dt><dd>{counts.relations.toLocaleString(formatLocale())}</dd>
+							<dt>{t('orbit.stats.foreignKeys')}</dt><dd>{counts.foreignKeys.toLocaleString(formatLocale())}</dd>
+							<dt>{t('orbit.stats.schemas')}</dt><dd>{counts.schemas.toLocaleString(formatLocale())}</dd>
 							{stats && stats.drawnNodes < stats.nodes && (
 								<>
-									<dt>drawn</dt><dd>{stats.drawnNodes.toLocaleString()}</dd>
+									<dt>{t('orbit.stats.drawn')}</dt><dd>{stats.drawnNodes.toLocaleString(formatLocale())}</dd>
 								</>
 							)}
 						</dl>
@@ -928,11 +930,11 @@ export function OrbitView(props: OrbitViewProps): JSX.Element {
 				{stats && stats.nodes > 0 && (
 				<div className="orbit-hud">
 					<dl>
-						<dt>objects</dt><dd>{stats.drawnNodes.toLocaleString()}</dd>
-						<dt>relations</dt><dd>{stats.drawnLinks.toLocaleString()}</dd>
-						<dt>in flight</dt><dd className={stats.inFlight > 0 ? 'hot' : undefined}>{stats.inFlight}</dd>
-						<dt>draw calls</dt><dd>{stats.drawCalls}</dd>
-						<dt>frame</dt><dd>{stats.fps} fps</dd>
+						<dt>{t('orbit.stats.objects')}</dt><dd>{stats.drawnNodes.toLocaleString(formatLocale())}</dd>
+						<dt>{t('orbit.stats.relations')}</dt><dd>{stats.drawnLinks.toLocaleString(formatLocale())}</dd>
+						<dt>{t('orbit.stats.inFlight')}</dt><dd className={stats.inFlight > 0 ? 'hot' : undefined}>{stats.inFlight}</dd>
+						<dt>{t('orbit.stats.drawCalls')}</dt><dd>{stats.drawCalls}</dd>
+						<dt>{t('orbit.stats.frame')}</dt><dd>{stats.fps} fps</dd>
 					</dl>
 				</div>
 				)}
@@ -951,7 +953,7 @@ export function OrbitView(props: OrbitViewProps): JSX.Element {
 					<p className="orbit-hint">{inspector.hint}</p>
 					{inspector.table && onOpenTable && (
 						<button type="button" className="orbit-open" onClick={() => onOpenTable(inspector.table!)}>
-							<Icon name="table" /> Open this table
+							<Icon name="table" /> {t('orbit.openTable')}
 						</button>
 					)}
 				</div>
@@ -959,7 +961,7 @@ export function OrbitView(props: OrbitViewProps): JSX.Element {
 
 			{feed.length > 0 && (
 				<div className="orbit-feed">
-					<span className="orbit-eyebrow">{pulseLive ? "Pulse / this database" : "Pulse / this session"}</span>
+					<span className="orbit-eyebrow">{pulseLive ? t('orbit.feedThisDb') : t('orbit.feedThisSession')}</span>
 					<ol>
 						{feed.slice(0, FEED_ROWS).map((entry) => (
 							<li
@@ -978,7 +980,7 @@ export function OrbitView(props: OrbitViewProps): JSX.Element {
 				<div className="orbit-empty orbit-no-webgl" role="alert">
 					<Icon name="warning" />
 					<div>
-						<b>Orbit cannot draw here.</b>
+						<b>{t('orbit.cannotDraw')}</b>
 						<p>{sceneError}</p>
 					</div>
 				</div>
@@ -988,15 +990,15 @@ export function OrbitView(props: OrbitViewProps): JSX.Element {
 				<div className="orbit-empty">
 					<Icon name="globe" />
 					<div>
-						<b>Nothing to map yet.</b>
-						<p>Connect to a database and Orbit draws its tables, views, indexes and foreign keys here.</p>
+						<b>{t('orbit.nothingYet')}</b>
+						<p>{t('orbit.connectEmpty')}</p>
 					</div>
 				</div>
 			)}
 
 			{graph && (
 				<div className="orbit-legend">
-					drag orbit / scroll zoom / click a star to isolate / esc clear and recentre
+					{t('orbit.legend')}
 				</div>
 			)}
 

@@ -5,6 +5,7 @@
 
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react';
 import { Icon } from './Icon';
+import { useT } from '../i18n';
 import { cellText, wrappedLines } from './DataGrid';
 import {
 	highlightParts,
@@ -202,7 +203,8 @@ interface LogViewProps {
 }
 
 export function LogView({ shape, fields, count, getRow, rowOffset = 0, resetKey, search = '', expandAll = false, onActiveRow, context }: LogViewProps): JSX.Element {
-	const scrollRef = useRef<HTMLDivElement>(null);
+	const t = useT();
+const scrollRef = useRef<HTMLDivElement>(null);
 	// Force a re-render on scroll/resize so the visible window recomputes.
 	const [, bump] = useReducer((n: number) => n + 1, 0);
 	const [open, setOpen] = useState<ReadonlySet<number>>(() => new Set());
@@ -487,14 +489,14 @@ export function LogView({ shape, fields, count, getRow, rowOffset = 0, resetKey,
 			<div className="log-context">
 				<div className="log-context-head">
 					<Icon name="list-flat" />
-					<span>{where ? <>Around this event in <span className="log-context-where">{where}</span></> : "Around this event"}</span>
+					<span>{where ? <>{t('logs.aroundIn')} <span className="log-context-where">{where}</span></> : t('logs.around')}</span>
 				</div>
-				{ctx.status === 'loading' && <div className="log-context-note"><Icon name="loading" className="spin" />Reading the events around it…</div>}
+				{ctx.status === 'loading' && <div className="log-context-note"><Icon name="loading" className="spin" />{t('logs.readingAround')}</div>}
 				{ctx.status === 'error' && <div className="log-context-note error">{ctx.error}</div>}
 				{ctx.status !== 'loading' && (
 					<button type="button" className="log-context-more" disabled={ctx.startReached || ctx.busy !== null} onClick={() => extendContext(i, 'before')}>
 						<Icon name={ctx.busy === 'before' ? 'loading' : 'arrow-up'} className={ctx.busy === 'before' ? 'spin' : undefined} />
-						{ctx.startReached ? "No earlier events in the day before" : "Load earlier"}
+						{ctx.startReached ? t('logs.noEarlier') : t('logs.loadEarlier')}
 					</button>
 				)}
 				{ctx.events.map((event) => {
@@ -505,7 +507,7 @@ export function LogView({ shape, fields, count, getRow, rowOffset = 0, resetKey,
 							key={event.key}
 							className={`log-context-line${event.line.level ? ` log-${event.line.level}` : ''}${anchor ? ' anchor' : ''}${full ? ' full' : ''}`}
 							onClick={() => toggleContextLine(event.key)}
-							title={full ? "Collapse" : "Show the whole line"}
+							title={full ? t('logs.collapse') : t('logs.showLine')}
 						>
 							{shape.ts !== null && <time className="log-time">{logTimeText(event.at, dated)}</time>}
 							<span className="log-level">{event.line.level ?? ''}</span>
@@ -516,7 +518,7 @@ export function LogView({ shape, fields, count, getRow, rowOffset = 0, resetKey,
 				{ctx.status !== 'loading' && (
 					<button type="button" className="log-context-more" disabled={ctx.endReached || ctx.busy !== null} onClick={() => extendContext(i, 'after')}>
 						<Icon name={ctx.busy === 'after' ? 'loading' : 'arrow-down'} className={ctx.busy === 'after' ? 'spin' : undefined} />
-						{ctx.endReached ? "No later events yet" : "Load later"}
+						{ctx.endReached ? t('logs.noLater') : t('logs.loadLater')}
 					</button>
 				)}
 			</div>
@@ -564,7 +566,7 @@ export function LogView({ shape, fields, count, getRow, rowOffset = 0, resetKey,
 							className={`log-row${line.level ? ` log-${line.level}` : ''}${expanded ? ' expanded' : ''}${cursor === i ? ' cursor' : ''}`}
 							style={{ minHeight: offsets[i + 1] - offsets[i] }}
 						>
-							<div className="log-line" onClick={() => toggle(i)} title={expanded ? "Collapse" : "Expand"}>
+							<div className="log-line" onClick={() => toggle(i)} title={expanded ? t('logs.collapse') : t('logs.expand')}>
 								<span className={`log-caret${line.expandable ? '' : ' plain'}`}><Icon name={expanded ? 'chevron-down' : 'chevron-right'} /></span>
 								<span className="log-num">{rowOffset + i + 1}</span>
 								{/* No column at all when the projection dropped the clock (`SELECT message FROM …`):
@@ -580,29 +582,29 @@ export function LogView({ shape, fields, count, getRow, rowOffset = 0, resetKey,
 							{expanded && (
 								<div className="log-detail">
 									<div className="log-meta">
-										{shape.stream !== null && chip('stream', row[shape.stream])}
-										{line.correlation && chip('request', line.correlation)}
-										{stampDiffers && chip('logged at', line.stamp)}
-										{shape.ingestedAt !== null && chip('ingested', logTimeText(logTimeOf(row[shape.ingestedAt]), true))}
-										{shape.id !== null && chip('event', row[shape.id])}
+										{shape.stream !== null && chip(t('logs.chip.stream'), row[shape.stream])}
+										{line.correlation && chip(t('logs.chip.request'), line.correlation)}
+										{stampDiffers && chip(t('logs.chip.loggedAt'), line.stamp)}
+										{shape.ingestedAt !== null && chip(t('logs.chip.ingested'), logTimeText(logTimeOf(row[shape.ingestedAt]), true))}
+										{shape.id !== null && chip(t('logs.chip.event'), row[shape.id])}
 										{shape.extras.map((col) => chip(fields[col]?.name ?? String(col), row[col]))}
 										{context && at !== null && (
-											<button type="button" className={`log-copy${contexts.has(i) ? ' on' : ''}`} onClick={() => toggleContext(i)} title="Show the events logged just before and after this one, in the same stream">
-												<Icon name="list-flat" />{contexts.has(i) ? "Hide surrounding" : "Surrounding events"}
+											<button type="button" className={`log-copy${contexts.has(i) ? ' on' : ''}`} onClick={() => toggleContext(i)} title={t('logs.surroundingTitle')}>
+												<Icon name="list-flat" />{contexts.has(i) ? t('logs.hideSurrounding') : t('logs.surrounding')}
 											</button>
 										)}
-										<button type="button" className="log-copy" onClick={() => copyLine(i)} title="Copy the message exactly as the service stored it">
-											<Icon name={copied === i ? 'check' : 'copy'} />{copied === i ? "Copied" : "Copy"}
+										<button type="button" className="log-copy" onClick={() => copyLine(i)} title={t('logs.copyTitle')}>
+											<Icon name={copied === i ? 'check' : 'copy'} />{copied === i ? t('logs.copied') : t('logs.copy')}
 										</button>
 									</div>
 									<div className="log-detail-body">
 										{line.segments.length === 0
-											? <span className="log-detail-empty">This event has no message.</span>
+											? <span className="log-detail-empty">{t('logs.noMessage')}</span>
 											: line.segments.map((segment, s) => (segment.kind === 'json'
-												? <pre className="log-json" key={s}>{jsonTokens(prettyJson(segment.value)).map((token, t) => (
+												? <pre className="log-json" key={s}>{jsonTokens(prettyJson(segment.value)).map((token, tokenIndex) => (
 													token.kind === 'plain'
-														? <span key={t}>{marked(token.text, search)}</span>
-														: <span className={`json-${token.kind}`} key={t}>{marked(token.text, search)}</span>
+														? <span key={tokenIndex}>{marked(token.text, search)}</span>
+														: <span className={`json-${token.kind}`} key={tokenIndex}>{marked(token.text, search)}</span>
 												))}</pre>
 												: <span className="log-text" key={s}>{marked(segment.text, search)}</span>
 											))}

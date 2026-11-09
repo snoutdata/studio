@@ -7,6 +7,7 @@ import { ASSISTANT_NAME } from '../../../shared/assistant';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { monaco } from '../monaco';
 import { Icon } from './Icon';
+import { useI18n } from '../i18n';
 import { Splitter } from './Splitter';
 import { useConfirm } from './ConfirmDialog';
 import type { ConnectionConfig } from '../../../shared/connection';
@@ -32,7 +33,7 @@ interface FailureState {
 	rolledBack: boolean;
 }
 
-const CLASS_LABEL: Record<ChangeClass, string> = { add: 'Add', alter: 'Modify', drop: 'Delete' };
+const CLASS_LABEL: Record<ChangeClass, string> = { add: 'schemaSync.class.add', alter: 'schemaSync.class.alter', drop: 'schemaSync.class.drop' };
 const CLASS_ORDER: ChangeClass[] = ['add', 'alter', 'drop'];
 // Object types whose creation depends on the target's existing data, not just its schema: a unique
 // index or primary key fails on duplicate rows, a foreign key on orphaned rows. Cleaning that data
@@ -99,7 +100,8 @@ function MonacoSql(props: { value: string; readOnly: boolean; onChange?(value: s
  * is offered only when a statement fails to apply, to propose a fix the user can accept and resume.
  */
 export function SchemaSyncView(props: SchemaSyncViewProps): JSX.Element {
-	const connected = useMemo(
+	const { t, tr } = useI18n();
+const connected = useMemo(
 		() => props.connections.filter((c) => props.connectedIds.includes(c.id)),
 		[props.connections, props.connectedIds],
 	);
@@ -370,14 +372,14 @@ export function SchemaSyncView(props: SchemaSyncViewProps): JSX.Element {
 	async function confirmAndApply(): Promise<void> {
 		const danger = destructiveCount > 0 || targetConfig?.environment === 'prod';
 		const ok = await confirm({
-			title: `Apply ${selected.length} statement${selected.length === 1 ? '' : 's'} to ${targetConfig?.label ?? 'target'}?`,
+			title: t('schemaSync.confirm.title', { count: selected.length, target: targetConfig?.label ?? t('schemaSync.confirm.target') }),
 			danger,
-			confirmLabel: 'Apply',
+			confirmLabel: t('schemaSync.confirm.apply'),
 			body: (
 				<>
-					This changes <strong>{targetConfig?.label}{targetConfig?.database ? ` / ${targetConfig.database}` : ''}</strong>
-					{destructiveCount > 0 && <>, including <span className="schema-sync-destructive">{destructiveCount} destructive change{destructiveCount === 1 ? '' : 's'}</span> that can lose data</>}.
-					{plan?.transactional ? ' It runs in a single transaction (all-or-nothing).' : ' Statements apply one by one; a failure can be fixed and resumed.'}
+					{t('schemaSync.confirm.changes')} <strong>{targetConfig?.label}{targetConfig?.database ? ` / ${targetConfig.database}` : ''}</strong>
+					{destructiveCount > 0 && <>{t('schemaSync.confirm.including')} <span className="schema-sync-destructive">{t('schemaSync.confirm.destructive', { count: destructiveCount })}</span> {t('schemaSync.confirm.canLose')}</>}.
+					{` ${plan?.transactional ? t('schemaSync.confirm.transactional') : t('schemaSync.confirm.oneByOne')}`}
 				</>
 			),
 		});
@@ -443,7 +445,7 @@ export function SchemaSyncView(props: SchemaSyncViewProps): JSX.Element {
 	return (
 		<div className="schema-sync-view">
 			<header className="schema-sync-head">
-				<span className="schema-sync-title"><Icon name="git-compare" /> Schema Sync</span>
+				<span className="schema-sync-title"><Icon name="git-compare" /> {t('schemaSync.title')}</span>
 				{(phase === 'preview' || phase === 'failed') && targetConfig && (
 					<span className="schema-sync-route">
 						<span className="schema-sync-conn">{sourceConfig?.label}</span>
@@ -459,19 +461,16 @@ export function SchemaSyncView(props: SchemaSyncViewProps): JSX.Element {
 			{phase === 'pick' && (
 				<div className="schema-sync-pick">
 					<div className="schema-sync-pick-card">
-						<h2>Sync a database schema</h2>
-						<p className="confirm-detail">
-							The <strong>source</strong> defines the desired schema; the <strong>target</strong> is changed to match it.
-							Both must be connected and use the same database type.
-						</p>
+						<h2>{t('schemaSync.pick.heading')}</h2>
+						<p className="confirm-detail">{tr('schemaSync.pick.intro')}</p>
 						{connected.length < 2 ? (
-							<p className="status danger">Connect at least two databases of the same type to sync.</p>
+							<p className="status danger">{t('schemaSync.pick.needTwo')}</p>
 						) : (
 							<div className="schema-sync-pick-row">
 								<label>
-									Source (desired state)
+									{t('schemaSync.pick.source')}
 									<select value={sourceId} onChange={(e) => { setSourceId(e.target.value); setTargetId(''); }}>
-										<option value="">Select a connection…</option>
+										<option value="">{t('schemaSync.pick.selectConnection')}</option>
 										{connected.map((c) => (
 											<option key={c.id} value={c.id}>{c.label}{c.database ? ` / ${c.database}` : ''}</option>
 										))}
@@ -479,14 +478,14 @@ export function SchemaSyncView(props: SchemaSyncViewProps): JSX.Element {
 								</label>
 								<Icon name="arrow-right" className="schema-sync-pick-arrow" />
 								<label>
-									Target (gets changed)
+									{t('schemaSync.pick.target')}
 									<select value={targetId} onChange={(e) => setTargetId(e.target.value)} disabled={!sourceId}>
-										<option value="">Select a connection…</option>
+										<option value="">{t('schemaSync.pick.selectConnection')}</option>
 										{targetOptions.map((c) => (
 											// A read-only connection may be the source but never the target, so it is listed and
 											// cannot be picked (main refuses to apply to one as well).
 											<option key={c.id} value={c.id} disabled={c.readOnly}>
-												{c.label}{c.database ? ` / ${c.database}` : ''}{c.environment === 'prod' ? ' (PROD)' : ''}{c.readOnly ? ' (read-only, cannot be changed)' : ''}
+												{c.label}{c.database ? ` / ${c.database}` : ''}{c.environment === 'prod' ? ' (PROD)' : ''}{c.readOnly ? ` ${t('schemaSync.pick.readOnlyTarget')}` : ''}
 											</option>
 										))}
 									</select>
@@ -496,7 +495,7 @@ export function SchemaSyncView(props: SchemaSyncViewProps): JSX.Element {
 						{error && <p className="status danger">{error}</p>}
 						<div className="schema-sync-pick-actions">
 							<button type="button" onClick={() => void computeDiff()} disabled={!sourceId || !targetId || busy}><Icon name="diff" /> 
-								{busy ? 'Comparing…' : 'Compare schemas'}
+								{busy ? t('schemaSync.pick.comparing') : t('schemaSync.pick.compare')}
 							</button>
 						</div>
 					</div>
@@ -507,11 +506,11 @@ export function SchemaSyncView(props: SchemaSyncViewProps): JSX.Element {
 				plan.statements.length === 0 ? (
 					<div className="schema-sync-empty">
 						<Icon name="check-all" className="schema-sync-empty-icon" />
-						<h2>In sync</h2>
-						<p className="confirm-detail">The target already matches the source. No changes needed.</p>
+						<h2>{t('schemaSync.inSync')}</h2>
+						<p className="confirm-detail">{t('schemaSync.inSyncBody')}</p>
 						<div className="schema-sync-pick-actions">
-							<button type="button" className="secondary" onClick={backToPicker}><Icon name="arrow-left" /> Choose different databases</button>
-							<button type="button" onClick={props.onClose}><Icon name="close" /> Close</button>
+							<button type="button" className="secondary" onClick={backToPicker}><Icon name="arrow-left" /> {t('schemaSync.chooseOther')}</button>
+							<button type="button" onClick={props.onClose}><Icon name="close" /> {t('schemaSync.close')}</button>
 						</div>
 					</div>
 				) : (
@@ -530,10 +529,10 @@ export function SchemaSyncView(props: SchemaSyncViewProps): JSX.Element {
 										className={`schema-sync-chip t-${cls}${shown ? ' on' : ''}`}
 										onClick={() => toggleClassHidden(cls)}
 										title={cls === 'drop'
-											? 'Deletes objects that exist only on the target. Hide it to sync additively, never removing anything.'
-											: `Show or hide ${CLASS_LABEL[cls]} changes`}
+											? t('schemaSync.chip.dropTitle')
+											: t(`schemaSync.chip.toggle.${cls}`)}
 									>
-										<Icon name={shown ? 'eye' : 'eye-closed'} /> {CLASS_LABEL[cls]} {items.length}
+										<Icon name={shown ? 'eye' : 'eye-closed'} /> {t(CLASS_LABEL[cls])} {items.length}
 									</button>
 								);
 							})}
@@ -543,15 +542,15 @@ export function SchemaSyncView(props: SchemaSyncViewProps): JSX.Element {
 								onClick={() => setHideKeys((v) => !v)}
 								disabled={keyCount === 0}
 								title={keyCount === 0
-									? 'No key, index or foreign-key changes in this diff.'
-									: 'Keys, indexes and foreign keys can fail to apply when the target has duplicate or orphaned rows (a data issue, not a schema one). Hide them to sync the rest, then add them once the data is clean.'}
+									? t('schemaSync.chip.noKeys')
+									: t('schemaSync.chip.keysTitle')}
 							>
-								<Icon name={!hideKeys ? 'eye' : 'eye-closed'} /> Keys &amp; indexes {keyCount}
+								<Icon name={!hideKeys ? 'eye' : 'eye-closed'} /> {t('schemaSync.chip.keys')} {keyCount}
 							</button>
 							<span className="spacer" />
-							<span className="schema-sync-selcount">{selected.length} selected</span>
+							<span className="schema-sync-selcount">{t('schemaSync.selected', { count: selected.length })}</span>
 							<button type="button" className="schema-sync-selall" onClick={() => setAllShown(!allShownOn)} disabled={shown.length === 0}>
-								{allShownOn ? 'Unselect all' : 'Select all'}
+								{allShownOn ? t('schemaSync.unselectAll') : t('schemaSync.selectAll')}
 							</button>
 						</div>
 						<div className="schema-sync-split">
@@ -561,33 +560,33 @@ export function SchemaSyncView(props: SchemaSyncViewProps): JSX.Element {
 									<input
 										type="text"
 										value={query}
-										placeholder="Filter changes…"
+										placeholder={t('schemaSync.filter')}
 										onChange={(e) => setQuery(e.target.value)}
 									/>
-									{query && <button type="button" className="icon-btn" aria-label="Clear filter" onClick={() => setQuery('')}><Icon name="close" /></button>}
+									{query && <button type="button" className="icon-btn" aria-label={t('schemaSync.clearFilter')} onClick={() => setQuery('')}><Icon name="close" /></button>}
 								</div>
 								{lastApplied > 0 && (
 									<p className="schema-sync-hint applied">
-										<Icon name="check" /> Applied {lastApplied} statement{lastApplied === 1 ? '' : 's'}. {plan.statements.length} change{plan.statements.length === 1 ? '' : 's'} still differ.
+										<Icon name="check" /> {t('schemaSync.applied', { count: lastApplied })} {t('schemaSync.stillDiffer', { count: plan.statements.length })}
 									</p>
 								)}
-								{additiveOnly && <p className="schema-sync-hint"><Icon name="shield" /> Additive sync: nothing will be removed from the target.</p>}
+								{additiveOnly && <p className="schema-sync-hint"><Icon name="shield" /> {t('schemaSync.additive')}</p>}
 								<div className="schema-sync-rows">
-									{shown.length === 0 && <p className="schema-sync-nomatch">No changes match "{query}".</p>}
+									{shown.length === 0 && <p className="schema-sync-nomatch">{t('schemaSync.noMatch', { query })}</p>}
 									{shown.map((s) => {
 										const on = included.has(s.id);
 										return (
 											<div
 												key={s.id}
 												className={`schema-sync-card t-${s.changeClass}${on ? '' : ' off'}${selectedId === s.id ? ' active' : ''}`}
-												title="Click to include or exclude, shift-click to select a range"
+												title={t('schemaSync.cardTitle')}
 												onClick={(e) => { setSelectedId(s.id); clickRow(s.id, e.shiftKey); }}
 											>
 												<input type="checkbox" checked={on} readOnly tabIndex={-1} className="schema-sync-check" />
-												<span className={`schema-sync-tag t-${s.changeClass}`}>{CLASS_LABEL[s.changeClass]}</span>
+												<span className={`schema-sync-tag t-${s.changeClass}`}>{t(CLASS_LABEL[s.changeClass])}</span>
 												<Icon name={OBJECT_ICON[s.objectType] ?? 'symbol-misc'} className="schema-sync-objicon" />
 												<span className="schema-sync-desc">{s.description.replace(/`/g, '')}</span>
-												{s.destructive && <span title="Can lose data"><Icon name="warning" className="schema-sync-warn" /></span>}
+												{s.destructive && <span title={t('schemaSync.canLoseData')}><Icon name="warning" className="schema-sync-warn" /></span>}
 											</div>
 										);
 									})}
@@ -596,29 +595,29 @@ export function SchemaSyncView(props: SchemaSyncViewProps): JSX.Element {
 							<Splitter orientation="vertical" onDrag={(dx) => setListWidth((w) => Math.min(720, Math.max(280, w + dx)))} />
 							<div className="schema-sync-right">
 								<div className="schema-sync-sqlhead">
-									<Icon name="file-code" /> Migration SQL
-									<span className="schema-sync-sqlcount">{selected.length} statement{selected.length === 1 ? '' : 's'}</span>
+									<Icon name="file-code" /> {t('schemaSync.migrationSql')}
+									<span className="schema-sync-sqlcount">{t('schemaSync.statements', { count: selected.length })}</span>
 									<span className="spacer" />
-									<button className="icon-btn" type="button" aria-label="Copy full script" onClick={() => void navigator.clipboard.writeText(script)}><Icon name="copy" /></button>
+									<button className="icon-btn" type="button" aria-label={t('schemaSync.copyScript')} onClick={() => void navigator.clipboard.writeText(script)}><Icon name="copy" /></button>
 								</div>
 								<MonacoSql value={script} readOnly revealLine={selectedId ? lineOf.get(selectedId) : undefined} />
 							</div>
 						</div>
 						<footer className="schema-sync-foot">
-							<button type="button" className="secondary" onClick={backToPicker}><Icon name="arrow-left" /> Back</button>
+							<button type="button" className="secondary" onClick={backToPicker}><Icon name="arrow-left" /> {t('schemaSync.back')}</button>
 							<span className="schema-sync-summary">
-								{selected.length} of {plan.statements.length} selected
-								{destructiveCount > 0 && <> · <span className="schema-sync-destructive">{destructiveCount} destructive</span></>}
+								{t('schemaSync.selectedOf', { n: selected.length, total: plan.statements.length })}
+								{destructiveCount > 0 && <> · <span className="schema-sync-destructive">{t('schemaSync.destructiveCount', { count: destructiveCount })}</span></>}
 							</span>
 							<span className="spacer" />
-							<button type="button" className="secondary" onClick={props.onClose}><Icon name="close" /> Close</button>
+							<button type="button" className="secondary" onClick={props.onClose}><Icon name="close" /> {t('schemaSync.close')}</button>
 							<button
 								type="button"
 								className={destructiveCount > 0 || targetConfig?.environment === 'prod' ? 'danger' : ''}
 								onClick={() => void confirmAndApply()}
 								disabled={selected.length === 0}
 							><Icon name="check" /> 
-								Apply{targetConfig?.environment === 'prod' ? ' to PRODUCTION' : ''}
+								{targetConfig?.environment === 'prod' ? t('schemaSync.applyProd') : t('schemaSync.applyBtn')}
 							</button>
 						</footer>
 					</>
@@ -628,8 +627,8 @@ export function SchemaSyncView(props: SchemaSyncViewProps): JSX.Element {
 			{phase === 'applying' && (
 				<div className="schema-sync-empty">
 					<Icon name="loading" className="codicon-modifier-spin schema-sync-empty-icon" />
-					<h2>Applying migration…</h2>
-					<p className="confirm-detail">Running against {targetConfig?.label}.</p>
+					<h2>{t('schemaSync.applying')}</h2>
+					<p className="confirm-detail">{t('schemaSync.runningAgainst', { name: targetConfig?.label ?? '' })}</p>
 				</div>
 			)}
 
@@ -638,7 +637,7 @@ export function SchemaSyncView(props: SchemaSyncViewProps): JSX.Element {
 					<div className="schema-sync-errorbar">
 						<Icon name="error" />
 						<span className="schema-sync-errortitle">
-							{failure ? `Statement ${failure.index + 1} of ${selected.length} failed` : 'Migration stopped'}{failure?.rolledBack ? ' · transaction rolled back' : ''}
+							{failure ? t('schemaSync.statementFailed', { n: failure.index + 1, total: selected.length }) : t('schemaSync.migrationStopped')}{failure?.rolledBack ? ` · ${t('schemaSync.rolledBack')}` : ''}
 						</span>
 					</div>
 					{(failure?.error || error) && <p className="status danger schema-sync-dberror">{failure?.error ?? error}</p>}
@@ -661,20 +660,20 @@ export function SchemaSyncView(props: SchemaSyncViewProps): JSX.Element {
 							{failure ? (
 								<>
 									<div className="schema-sync-sqlhead">
-										<Icon name="file-code" /> Corrected statement
-										<span className="schema-sync-sqlcount">edit, then Retry</span>
+										<Icon name="file-code" /> {t('schemaSync.correctedStatement')}
+										<span className="schema-sync-sqlcount">{t('schemaSync.editRetry')}</span>
 									</div>
 									<MonacoSql value={editSql} readOnly={false} onChange={setEditSql} />
 									{askedAi && (
 										<p className="schema-sync-hint applied">
-											<Icon name="comment-discussion" /> Sent to {ASSISTANT_NAME}. Read its fix in the chat, paste the corrected statement above, then Retry.
+											<Icon name="comment-discussion" /> {t('schemaSync.sentTo', { assistant: ASSISTANT_NAME })}
 										</p>
 									)}
 								</>
 							) : (
 								<div className="schema-sync-empty">
 									<Icon name="warning" className="schema-sync-empty-icon" />
-									<p className="confirm-detail">The migration stopped before a single statement could be pinpointed. Go back to the changes, or recompute the diff against the live database.</p>
+									<p className="confirm-detail">{t('schemaSync.stoppedBody')}</p>
 								</div>
 							)}
 						</div>
@@ -682,17 +681,17 @@ export function SchemaSyncView(props: SchemaSyncViewProps): JSX.Element {
 					<footer className="schema-sync-foot">
 						{failure && (
 							<button type="button" className="secondary" onClick={askAi}>
-								<Icon name="sparkle" /> Ask {ASSISTANT_NAME} to fix
+								<Icon name="sparkle" /> {t('schemaSync.askFix', { assistant: ASSISTANT_NAME })}
 							</button>
 						)}
 						<span className="spacer" />
-						<button type="button" className="secondary" onClick={() => void recompute()} disabled={busy} title="Re-introspect the target and rebuild the diff (use after fixing the cause, e.g. clearing duplicate rows).">
-							<Icon name={busy ? 'loading' : 'refresh'} className={busy ? 'codicon-modifier-spin' : undefined} /> Resync
+						<button type="button" className="secondary" onClick={() => void recompute()} disabled={busy} title={t('schemaSync.resyncTitle')}>
+							<Icon name={busy ? 'loading' : 'refresh'} className={busy ? 'codicon-modifier-spin' : undefined} /> {t('schemaSync.resync')}
 						</button>
-						<button type="button" className="secondary" onClick={removeApplied}><Icon name="arrow-left" /> Back to changes</button>
-						{failure && !failure.rolledBack && <button type="button" className="secondary" onClick={skip}><Icon name="debug-step-over" /> Skip</button>}
-						<button type="button" className="secondary" onClick={props.onClose}><Icon name="debug-stop" /> Stop</button>
-						{failure && <button type="button" onClick={retry}><Icon name="refresh" /> Retry</button>}
+						<button type="button" className="secondary" onClick={removeApplied}><Icon name="arrow-left" /> {t('schemaSync.backToChanges')}</button>
+						{failure && !failure.rolledBack && <button type="button" className="secondary" onClick={skip}><Icon name="debug-step-over" /> {t('connections.common.skip')}</button>}
+						<button type="button" className="secondary" onClick={props.onClose}><Icon name="debug-stop" /> {t('schemaSync.stop')}</button>
+						{failure && <button type="button" onClick={retry}><Icon name="refresh" /> {t('schemaSync.retry')}</button>}
 					</footer>
 				</>
 			)}
@@ -700,10 +699,10 @@ export function SchemaSyncView(props: SchemaSyncViewProps): JSX.Element {
 			{phase === 'done' && (
 				<div className="schema-sync-empty">
 					<Icon name="check-all" className="schema-sync-empty-icon" />
-					<h2>Migration applied</h2>
-					<p className="confirm-detail">Applied {lastApplied} statement{lastApplied === 1 ? '' : 's'} to {targetConfig?.label}. The databases are in sync.</p>
+					<h2>{t('schemaSync.applied2')}</h2>
+					<p className="confirm-detail">{t('schemaSync.appliedBody', { count: lastApplied, target: targetConfig?.label ?? '' })}</p>
 					<div className="schema-sync-pick-actions">
-						<button type="button" onClick={props.onClose}><Icon name="check" /> Done</button>
+						<button type="button" onClick={props.onClose}><Icon name="check" /> {t('schemaSync.done')}</button>
 					</div>
 				</div>
 			)}

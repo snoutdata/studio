@@ -21,6 +21,7 @@ import {
 	tableFunctionsFor,
 	type TableFunctionSpec,
 } from '../../../shared/engine';
+import { useT } from '../i18n';
 
 // Remote data: the data that is NOT in this database, which on ClickHouse is a function
 // you select FROM.
@@ -52,6 +53,7 @@ interface ClickHouseRemoteViewProps {
 type Outcome = { kind: 'columns'; result: QueryResult } | { kind: 'rows'; result: QueryResult } | null;
 
 export function ClickHouseRemoteView({ connections, connectedIds, connectionId, onOpenInEditor }: ClickHouseRemoteViewProps): JSX.Element {
+	const t = useT();
 	const conn = connections.find((c) => c.id === connectionId);
 	const driver = conn?.driver ?? '';
 	const functions = useMemo(() => tableFunctionsFor(driver), [driver]);
@@ -180,16 +182,16 @@ export function ClickHouseRemoteView({ connections, connectedIds, connectionId, 
 		const orderBy = columns.length > 0 ? [columns[0].name] : [];
 		const statement = importStatement(driver, { database: target, table: name, orderBy }, shownCall);
 		const ok = await confirm({
-			title: "Create this table?",
+			title: t('clickhouse.remote.createThis'),
 			icon: 'table',
-			confirmLabel: "Create table",
+			confirmLabel: t('clickhouse.remote.createTable'),
 			body: (
 				<>
-					<p>{`It reads everything ${spec.label.toLowerCase()} returns and writes it into ${target}.${name}. Nothing is copied back the other way.`}</p>
+					<p>{t('clickhouse.remote.readsAll', { source: spec.label.toLowerCase(), target: `${target}.${name}` })}</p>
 					<SqlCode sql={statement} />
 					{orderBy.length === 0
-						? <p className="muted small">Nothing has been described or previewed yet, so the table is created with no sort order (tuple()). Describe it first and it is sorted by its first column.</p>
-						: <p className="muted small">Sorted by {orderBy[0]}, its first column. The Storage tab is where a MergeTree is then made to behave.</p>}
+						? <p className="muted small">{t('clickhouse.remote.noSort')}</p>
+						: <p className="muted small">{t('clickhouse.remote.sortedBy', { column: orderBy[0] })}</p>}
 				</>
 			),
 		});
@@ -225,10 +227,10 @@ export function ClickHouseRemoteView({ connections, connectedIds, connectionId, 
 	}
 
 	if (!conn) {
-		return <div className="table-view"><div className="results-message">Select a ClickHouse connection in the sidebar.</div></div>;
+		return <div className="table-view"><div className="results-message">{t('clickhouse.ops.selectConn')}</div></div>;
 	}
 	if (functions.length === 0) {
-		return <div className="table-view"><div className="results-message">Remote data reads ClickHouse's table functions. "{conn.label}" is not a ClickHouse connection.</div></div>;
+		return <div className="table-view"><div className="results-message">{t('clickhouse.remote.notClickHouse', { name: conn.label })}</div></div>;
 	}
 
 	const rows = outcome?.kind === 'rows' ? outcome.result.rows : [];
@@ -239,15 +241,15 @@ export function ClickHouseRemoteView({ connections, connectedIds, connectionId, 
 		<div className="table-view ch-remote">
 			<div className="tv-head">
 				<Icon name="globe" className="tv-head-icon" />
-				<span className="tv-title">Remote data</span>
+				<span className="tv-title">{t('clickhouse.remote.title')}</span>
 				<span className="muted">{conn.label}</span>
 			</div>
 			{!connected
-				? <div className="results-message">Connect "{conn.label}" in the sidebar to read from somewhere else.</div>
+				? <div className="results-message">{t('clickhouse.remote.connectToRead', { name: conn.label })}</div>
 				: (
 					<div className="ch-remote-body">
 						{/* The settings page's own nav, classes and all: one list shape for the app. */}
-						<nav className="settings-nav ch-remote-nav" aria-label="Source">
+						<nav className="settings-nav ch-remote-nav" aria-label={t('clickhouse.remote.source')}>
 							{functions.map((fn) => (
 								<button
 									type="button"
@@ -275,7 +277,7 @@ export function ClickHouseRemoteView({ connections, connectedIds, connectionId, 
 														// The visible label carries the field's name; the control names
 														// itself too, so a test and a screen reader agree with the eye.
 														<select aria-label={param.label} value={current[param.name] ?? ''} onChange={(e) => setValue(param.name, e.target.value)}>
-															<option value="">Work it out</option>
+															<option value="">{t('clickhouse.remote.workItOut')}</option>
 															{formats.map((f) => <option key={f.id} value={f.id}>{f.id}</option>)}
 														</select>
 													)
@@ -296,13 +298,13 @@ export function ClickHouseRemoteView({ connections, connectedIds, connectionId, 
 									{spec.keyPair && accounts.length > 0 && (
 										<>
 											<label>
-												Credentials
-												<select aria-label="Credentials" value={accountId} onChange={(e) => setAccountId(e.target.value)}>
-													<option value="">Typed above</option>
+												{t('clickhouse.remote.credentials')}
+												<select aria-label={t('clickhouse.remote.credentials')} value={accountId} onChange={(e) => setAccountId(e.target.value)}>
+													<option value="">{t('clickhouse.remote.typedAbove')}</option>
 													{accounts.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
 												</select>
 											</label>
-											<p className="field-hint">A saved account's key is read from the keychain when the statement runs, and never reaches this screen or query history.</p>
+											<p className="field-hint">{t('clickhouse.remote.keyHint')}</p>
 										</>
 									)}
 								</div>
@@ -311,44 +313,44 @@ export function ClickHouseRemoteView({ connections, connectedIds, connectionId, 
 
 								<div className="ch-remote-actions">
 									<button type="button" disabled={busy !== null || missing.length > 0} onClick={() => void run('describe')}><Icon name="search" /> 
-										{busy === 'describe' ? 'Asking…' : 'Describe'}
+										{busy === 'describe' ? t('clickhouse.remote.asking') : t('clickhouse.remote.describe')}
 									</button>
 									<button type="button" className="secondary" disabled={busy !== null || missing.length > 0} onClick={() => void run('preview')}><Icon name="eye" /> 
-										{busy === 'preview' ? 'Reading…' : `Preview ${PREVIEW_ROWS} rows`}
+										{busy === 'preview' ? t('clickhouse.remote.reading') : t('clickhouse.remote.preview', { n: PREVIEW_ROWS })}
 									</button>
 									<span className="spacer" />
-									<button type="button" className="secondary" disabled={missing.length > 0} onClick={() => onOpenInEditor(shownSql)}><Icon name="go-to-file" /> Open in editor</button>
+									<button type="button" className="secondary" disabled={missing.length > 0} onClick={() => onOpenInEditor(shownSql)}><Icon name="go-to-file" /> {t('clickhouse.remote.openEditor')}</button>
 								</div>
-								{missing.length > 0 && <p className="field-hint">Fill in {missing.join(', ')} to run anything.</p>}
+								{missing.length > 0 && <p className="field-hint">{t('clickhouse.remote.fillIn', { list: missing.join(', ') })}</p>}
 
 								<div className="ch-remote-create ch-remote-form">
-									<div className="ch-remote-create-head">Create a table from this</div>
+									<div className="ch-remote-create-head">{t('clickhouse.remote.createFrom')}</div>
 									<div className="ch-remote-create-row">
 										<label>
-											Database
-											<select aria-label="Database for the new table" value={database} onChange={(e) => setDatabase(e.target.value)}>
+											{t('clickhouse.remote.database')}
+											<select aria-label={t('clickhouse.remote.dbForNew')} value={database} onChange={(e) => setDatabase(e.target.value)}>
 												{databases.length === 0 && <option value="">default</option>}
 												{databases.map((name) => <option key={name} value={name}>{name}</option>)}
 											</select>
 										</label>
 										<label className="grow">
-											Name
+											{t('clickhouse.remote.name')}
 											<input
 												type="text"
 												value={tableName}
-												placeholder="new table name"
-												aria-label="New table name"
+												placeholder={t('clickhouse.remote.newTablePlaceholder')}
+												aria-label={t('clickhouse.remote.newTableName')}
 												onChange={(e) => setTableName(e.target.value)}
 											/>
 										</label>
 										<button type="button" disabled={busy !== null || missing.length > 0 || tableName.trim() === ''} onClick={() => void importTable()}><Icon name="table" /> 
-											{busy === 'import' ? 'Creating…' : 'Create table'}
+											{busy === 'import' ? t('clickhouse.remote.creating') : t('clickhouse.remote.createTable')}
 										</button>
 									</div>
 									<p className="field-hint">
 										{columns.length > 0
-											? `MergeTree, sorted by ${columns[0].name}. Everything the source returns is read once and written here.`
-											: 'Describe it first and the table is sorted by its first column; without that it is created unsorted.'}
+											? t('clickhouse.remote.mergeTreeSorted', { column: columns[0].name })
+											: t('clickhouse.remote.unsortedHint')}
 									</p>
 								</div>
 
@@ -356,7 +358,7 @@ export function ClickHouseRemoteView({ connections, connectedIds, connectionId, 
 
 								{outcome?.kind === 'columns' && (
 									<div className="ch-remote-columns">
-										<div className="ch-remote-columns-head">{columns.length} {columns.length === 1 ? 'column' : 'columns'}, as the server read them</div>
+										<div className="ch-remote-columns-head">{t('clickhouse.remote.columnsRead', { count: columns.length })}</div>
 										{columns.map((col) => (
 											<div className="ch-remote-column" key={col.name}>
 												<span className="ch-remote-column-name">{col.name}</span>
@@ -369,7 +371,7 @@ export function ClickHouseRemoteView({ connections, connectedIds, connectionId, 
 								{outcome?.kind === 'rows' && (
 									<div className="ch-remote-grid">
 										{rows.length === 0
-											? <div className="results-message">It answered with no rows.</div>
+											? <div className="results-message">{t('clickhouse.remote.noRows')}</div>
 											: (
 												<DataGrid
 													fields={fields}

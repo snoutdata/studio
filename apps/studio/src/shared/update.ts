@@ -3,6 +3,8 @@
  *  Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { t } from './i18n/core';
+
 // Auto-update status pushed from main → renderer over the `update:status` channel.
 // The renderer turns these into a small toast; see components/UpdateToast.tsx.
 export type UpdateStatus =
@@ -62,13 +64,13 @@ export interface UpdateFailure {
 }
 
 const FAILURE_MESSAGE: Record<UpdateFailureKind, string> = {
-	'offline': "Updates could not be checked: this computer is offline. It will try again later.",
-	'feed-unavailable': "Updates could not be checked: GitHub is not answering. Nothing is wrong with your installation, and it will try again later.",
-	'rate-limited': "Updates could not be checked: GitHub is rate limiting this network. It will try again later.",
-	'no-release': "Updates could not be checked: no published release was found to update to.",
-	'signature': "An update was downloaded and refused: it did not match the signature it should have. Nothing was installed.",
-	'disk': "The update could not be saved: there is not enough disk space.",
-	'unknown': "Updates could not be checked.",
+	'offline': 'engineShared.update.offline',
+	'feed-unavailable': 'engineShared.update.feedUnavailable',
+	'rate-limited': 'engineShared.update.rateLimited',
+	'no-release': 'engineShared.update.noRelease',
+	'signature': 'engineShared.update.signature',
+	'disk': 'engineShared.update.disk',
+	'unknown': 'engineShared.update.unknown',
 };
 
 /** The first line of an error, capped, with the HTML and the header dump that electron-updater
@@ -98,7 +100,7 @@ export function describeUpdateFailure(raw: string, statusCode?: number): UpdateF
 	const text = String(raw ?? '');
 	const detail = updateErrorDetail(text);
 	const kind = failureKind(text, statusCode);
-	return { kind, message: FAILURE_MESSAGE[kind], detail };
+	return { kind, message: t(FAILURE_MESSAGE[kind]), detail };
 }
 
 function failureKind(text: string, statusCode?: number): UpdateFailureKind {
@@ -153,7 +155,7 @@ export function updateFailureIcon(kind: UpdateFailureKind | undefined): string {
 export const UPDATE_PROGRESS_STEPS_MS = [20_000, 40_000, 60_000];
 
 /** The note for each step. Index 0 is "too early to say anything". */
-const UPDATE_PROGRESS_NOTES = ["", "this can take a minute", "still going, in the background", "you can keep working"];
+const UPDATE_PROGRESS_NOTES = ['', 'engineShared.update.noteMinute', 'engineShared.update.noteBackground', 'engineShared.update.noteKeepWorking'];
 
 /** How long a download has been running, from the stamp main puts on the status. 0 when there is
  *  no stamp (a status from an older main, or a dev preview) or the clock moved backwards. */
@@ -172,7 +174,8 @@ export function updateProgressNote(elapsedMs: number): string {
 			step++;
 		}
 	}
-	return UPDATE_PROGRESS_NOTES[step] ?? '';
+	const note = UPDATE_PROGRESS_NOTES[step];
+	return note ? t(note) : '';
 }
 
 /** Elapsed ms as the clock a person reads: "7s", "1min 44s", "12min 30s". Minutes are as far as

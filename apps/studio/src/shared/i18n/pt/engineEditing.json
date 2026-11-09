@@ -1,0 +1,23 @@
+{
+	"setDefault": "Usar o valor padrão ({value})",
+	"setCurrentTime": "Usar a hora atual",
+	"setNull": "Definir como NULL",
+	"noPrimaryKey": "Esta tabela não tem chave primária no resultado, então edições e exclusões não podem ser salvas com segurança. Só adicione linhas ou use o editor SQL.",
+	"refuseView": "Uma view não tem linhas próprias para alterar. Edite as tabelas por trás dela.",
+	"refuseLog": "Eventos de log não podem ser alterados: o provedor não oferece como gravá-los.",
+	"refuseDictionary": "Um dicionário guarda uma cópia do que sua SOURCE retorna. Altere a origem e recarregue o dicionário.",
+	"refuseReadOnly": "Esta conexão está marcada como somente leitura, então nada pode ser gravado aqui. Altere isso na conexão.",
+	"refuseProduction": "Esta conexão está marcada como produção, então a grade é só para consulta.",
+	"refuseNoKey": "Esta tabela não tem chave primária, então não há como saber com segurança a qual linha uma edição pertence. Adicione uma ou escreva o INSERT você mesmo no editor.",
+	"mongoNoId": "Este documento não tem _id, então edições em campos aninhados não podem ser salvas. Use o editor de pipeline.",
+	"mongoNoChanges": "Nenhuma alteração para salvar.",
+	"mongoNoIdColumn": "Este resultado não tem coluna _id, então edições e exclusões não podem ser salvas com segurança. Só adicione documentos ou use o editor de pipeline.",
+	"pipelineEmpty": "O pipeline está vazio. Adicione pelo menos um estágio, por exemplo [ { \"$match\": {} } ].",
+	"invalidJson": "JSON inválido: {message}",
+	"pipelineNotArray": "Um pipeline deve ser um array JSON de estágios, por exemplo [ { \"$match\": {} } ].",
+	"stageNotObject": "O estágio {stage} deve ser um objeto como { \"$match\": { … } }.",
+	"filterInvalid": "O filtro não é um JSON válido: {message}",
+	"filterNotObject": "O filtro deve ser um objeto JSON, por exemplo { \"status\": \"active\" }.",
+	"stageNoOperator": "O estágio {stage} não tem operador (por exemplo $match).",
+	"stageBodyInvalid": "O corpo do estágio {stage} ({operator}) não é um JSON válido: {message}"
+}

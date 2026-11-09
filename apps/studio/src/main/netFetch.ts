@@ -3,6 +3,7 @@
  *  Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { t } from '../shared/i18n/core';
 import { net } from 'electron';
 
 // Shared outbound-HTTP helper for the main process. Every remote call the app makes (the accounts backend
@@ -95,11 +96,11 @@ export function classifyNetworkFailure(err: unknown): NetworkFailureKind {
 export function networkBlockedMessage(service = 'the service', err?: unknown): string {
 	switch (classifyNetworkFailure(err)) {
 		case 'offline':
-			return `Could not reach ${service}. This computer appears to be offline. Check your internet connection and try again.`;
+			return t('mainErrors.netOffline', { service });
 		case 'local-network':
-			return `Could not reach ${service}. Your network, VPN, or firewall may be blocking it. If you are on a company network, this may be restricted by company policy. Try another network, or contact your IT department.`;
+			return t('mainErrors.netBlocked', { service });
 		case 'unreachable':
-			return `Could not reach ${service}. It may be down or having trouble right now. Try again in a few minutes.`;
+			return t('mainErrors.netDown', { service });
 	}
 }
 

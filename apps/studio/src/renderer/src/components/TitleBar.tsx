@@ -7,6 +7,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { AppMenu, AppMenuItem } from '../../../shared/menu';
 import { Icon } from './Icon';
 import { formatAccelerator } from '../shortcuts';
+import { useI18n } from '../i18n';
 
 /**
  * The app's own title bar.
@@ -22,6 +23,7 @@ import { formatAccelerator } from '../shortcuts';
  */
 export function TitleBar(props: { title?: string; onCommand(id: string): void }): JSX.Element {
 	const isMac = /mac/i.test(navigator.platform || navigator.userAgent);
+	const { locale } = useI18n();
 	const [menus, setMenus] = useState<AppMenu[]>([]);
 	const [open, setOpen] = useState<number | null>(null);
 	const barRef = useRef<HTMLDivElement | null>(null);
@@ -39,7 +41,7 @@ export function TitleBar(props: { title?: string; onCommand(id: string): void })
 			}
 		}).catch(() => { /* no menu is better than a broken boot */ });
 		return () => { alive = false; };
-	}, [isMac]);
+	}, [isMac, locale]);
 
 	// Click-away and Escape close the open menu. Pointerdown rather than click so the menu is
 	// already gone by the time the click lands on whatever is underneath it.

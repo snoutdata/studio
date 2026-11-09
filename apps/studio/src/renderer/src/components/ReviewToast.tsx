@@ -8,6 +8,7 @@ import { useEffect } from 'react';
 
 import type { ReviewToastState } from '../reviewRuns';
 import { Icon } from './Icon';
+import { useT } from '../i18n';
 
 interface ReviewToastProps {
 	state: ReviewToastState;
@@ -32,6 +33,7 @@ interface ReviewToastProps {
  * the one action worth having in a card this size: read it.
  */
 export function ReviewToast({ state, style, onOpen, onDismiss }: ReviewToastProps): JSX.Element {
+	const t = useT();
 	const done = state.phase === 'done';
 	useEffect(() => {
 		if (!done) {
@@ -55,20 +57,20 @@ export function ReviewToast({ state, style, onOpen, onDismiss }: ReviewToastProp
 			<span className="update-toast-text">
 				<b>{state.label}</b>
 				<span className="review-toast-detail">
-					{state.phase === 'running' ? 'Snoutbot is reviewing this change' : state.text}
+					{state.phase === 'running' ? t('reviews.toast.running') : state.text}
 				</span>
 			</span>
 			{done ? (
 				<span className="update-toast-actions">
 					<button className="update-toast-action" type="button" onClick={() => onOpen(state.runId)}><Icon name="eye" /> 
-						{state.awaiting ? 'Read it' : 'Open'}
+						{state.awaiting ? t('reviews.toast.readIt') : t('reviews.toast.open')}
 					</button>
-					<button className="update-toast-close" type="button" onClick={onDismiss} title="Dismiss">
+					<button className="update-toast-close" type="button" onClick={onDismiss} title={t('reviews.toast.dismiss')}>
 						<Icon name="close" />
 					</button>
 				</span>
 			) : (
-				<button className="update-toast-close" type="button" onClick={onDismiss} title="Dismiss">
+				<button className="update-toast-close" type="button" onClick={onDismiss} title={t('reviews.toast.dismiss')}>
 					<Icon name="close" />
 				</button>
 			)}

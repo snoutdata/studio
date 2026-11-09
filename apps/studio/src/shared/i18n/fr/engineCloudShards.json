@@ -1,0 +1,82 @@
+{
+	"check": {
+		"checked": {
+			"one": "{count} table vérifiée",
+			"other": "{count} tables vérifiées"
+		},
+		"clean": "{checked} : chaque clé, clé étrangère et index est là où le cluster en a besoin.",
+		"toFix": "{n} à corriger",
+		"toLookAt": "{n} à examiner",
+		"suggestions": {
+			"one": "{count} suggestion",
+			"other": "{count} suggestions"
+		},
+		"summary": "{checked} : {parts}."
+	},
+	"severity": {
+		"fix": "À corriger",
+		"worthAlook": "À examiner",
+		"suggestion": "Suggestion"
+	},
+	"slots": "{used} emplacements de projet sur {max} utilisés sur l'offre {tier}",
+	"tierCurrent": "actuelle",
+	"plan": {
+		"none": "aucune",
+		"noMove": {
+			"one": "{count} étape ({kinds}) ; rien ne bouge et les écritures ne s'arrêtent pas.",
+			"other": "{count} étapes ({kinds}) ; rien ne bouge et les écritures ne s'arrêtent pas."
+		},
+		"moves": {
+			"one": "{count} basculement, environ {rows} lignes, environ {seconds} s de copie, écritures en pause environ {ms} ms.",
+			"other": "{count} basculements, environ {rows} lignes, environ {seconds} s de copie, écritures en pause environ {ms} ms."
+		}
+	},
+	"join": {
+		"joining": "entrée dans le cluster",
+		"spreading": "reprise de sa part des données",
+		"stopped": "arrêté",
+		"starting": "démarrage comme copie du nœud principal"
+	},
+	"ran": {
+		"notCluster": "Ce projet n'est pas un cluster.",
+		"notClusterAnyMore": "Ce projet n'est plus un cluster. La base redémarre une fois pendant que ses services reviennent dans son pod.",
+		"rejoining": "{node} rejoint à nouveau le cluster.",
+		"leftAsIs": "{node} reste tel quel.",
+		"retrying": "Le cluster réessaie cette étape.",
+		"dropped": "Le reste de cette demande a été abandonné. Rien d'autre n'a changé.",
+		"jobStarted": "Tâche {job} démarrée. Sa progression est sous Tâches.",
+		"createdJoining": {
+			"one": "Un nœud arrive. Il démarre comme copie du nœud principal, rejoint le cluster, puis reprend seul sa part des données.",
+			"other": "{count} nœuds arrivent. Chacun démarre comme copie du nœud principal, rejoint le cluster, puis reprend seul sa part des données."
+		},
+		"createdStarting": {
+			"one": "Un nœud démarre comme copie du nœud principal. Rattachez-le une fois prêt.",
+			"other": "{count} nœuds démarrent comme copie du nœud principal. Rattachez chacun une fois prêt."
+		},
+		"podDeleted": "Le pod de {pod} est en cours de suppression.",
+		"alreadyNodes": "Le projet a déjà {nodes} nœuds.",
+		"alreadyCluster": "Ce projet est déjà un cluster.",
+		"nowCluster": "Ce projet est maintenant un cluster. Le routeur et les services démarrent dans leurs propres pods, et la base reste en marche.",
+		"replicaMaking": "Une réplica du nœud {node} est créée depuis sa sauvegarde. Elle protège le nœud une fois qu'elle le suit.",
+		"replicaRemoving": "La réplica du nœud {node} est en cours de retrait, et son emplacement de projet libéré.",
+		"noReplica": "Le nœud {node} n'a pas de réplica. Rien n'a changé.",
+		"marked": "Marqué comme vu. L'alerte reste ouverte jusqu'à la fin de ce qu'elle signale.",
+		"done": "Terminé."
+	},
+	"replica": {
+		"protected": "Protégé par une réplica",
+		"making": "Une réplica est en création",
+		"none": "Pas de réplica",
+		"failingOver": "Sa réplica prend sa place",
+		"failoverFailed": "Sa réplica n'a pas pu prendre sa place"
+	},
+	"failover": {
+		"stopped": "Le nœud est arrêté",
+		"replicaTakes": "Sa réplica prend sa place",
+		"newReplica": "Une nouvelle réplica est créée"
+	},
+	"blocked": {
+		"firstBackup": "Sa première sauvegarde n'est pas terminée, et une réplica est créée à partir d'elle.",
+		"noSlot": "Une réplica occupe un emplacement de projet, et tous ceux de votre offre sont pris."
+	}
+}

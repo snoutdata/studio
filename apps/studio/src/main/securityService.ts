@@ -3,6 +3,7 @@
  *  Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { t } from '../shared/i18n/core';
 import { principalKey, planFor, propagateSuperuser, redactSqlSecrets, rowsToGrants, rowsToPolicies, rowsToPrincipals, securityCatalogFor, securitySupport, type AccessPolicy, type CatalogQuery, type CatalogRow, type Grant, type Principal, type SecurityChange, type SecurityPlan, type SecurityApplyResult, type SecuritySnapshot, type SecuritySupport } from '../shared/engine';
 import { readConnections } from './configStore';
 import type { ConnectionManager } from './connectionManager';
@@ -38,7 +39,7 @@ export class SecurityService {
 	private driverFor(connectionId: string): string {
 		const config = readConnections().find((entry) => entry.id === connectionId);
 		if (!config) {
-			throw new Error('That connection no longer exists.');
+			throw new Error(t('mainErrors.connGone'));
 		}
 		return config.driver;
 	}
@@ -54,7 +55,7 @@ export class SecurityService {
 		const driverId = this.driverFor(connectionId);
 		const catalog = securityCatalogFor(driverId);
 		if (!catalog) {
-			throw new Error(securitySupport(driverId).reason ?? 'Users and privileges are not supported for this connection.');
+			throw new Error(securitySupport(driverId).reason ?? t('mainErrors.usersNotSupported'));
 		}
 		const warnings: string[] = [];
 		const principals: Principal[] = [];
@@ -102,7 +103,7 @@ export class SecurityService {
 			}
 			lastError = result.error;
 		}
-		warnings.push(`Could not read ${query.label}: ${lastError}`);
+		warnings.push(t('mainErrors.secUnreadable', { label: query.label, lastError }));
 		return null;
 	}
 

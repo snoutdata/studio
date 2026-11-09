@@ -1,0 +1,14 @@
+{
+	"schema": {
+		"label": "Schema only",
+		"detail": "Table and column names, types and relationships. No values from your database. Answers about the data itself will be generic."
+	},
+	"screen": {
+		"label": "Schema and what is on screen",
+		"detail": "Also a few rows of the result you are looking at, and the cell or row you selected. The AI cannot run queries of its own."
+	},
+	"queries": {
+		"label": "Schema, screen and read-only queries",
+		"detail": "Also lets the AI run read-only queries and read their rows, with your approval for each one. The most accurate answers."
+	}
+}

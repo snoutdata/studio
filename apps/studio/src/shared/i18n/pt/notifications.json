@@ -1,0 +1,41 @@
+{
+	"noVault": {
+		"title": "Senhas salvas sem cofre de senhas",
+		"detail": "Este computador não tem um cofre de senhas (keyring), então o Studio salva as senhas dos seus bancos de dados em um arquivo que só a sua conta de usuário consegue ler. Quem usar a sua conta poderia lê-las. Para mantê-las em um cofre, instale um, como o GNOME Keyring, e reinicie o Studio."
+	},
+	"signInFailed": "Falha ao entrar",
+	"connectionFailed": "Falha na conexão",
+	"applyFailed": "Falha ao aplicar as alterações",
+	"exportFailed": "Falha ao exportar",
+	"serverNoReason": "O servidor não informou o motivo.",
+	"queryFailed": "Falha na consulta",
+	"reconnectFailed": "Falha ao reconectar",
+	"countFailed": "Falha na contagem",
+	"fetchMoreFailed": "Falha ao carregar mais linhas",
+	"fetchMoreColumns": "As próximas linhas vieram com outras colunas, por isso não foram adicionadas. Execute a consulta de novo.",
+	"from": "De {name}",
+	"ask": "Perguntar a {assistant}",
+	"askTitle": "Perguntar a {assistant} sobre isto",
+	"viewAll": "Ver todas",
+	"center": {
+		"title": "Notificações",
+		"clearAll": "Limpar todas",
+		"clearAllTooltip": "Limpar todas as notificações",
+		"clearAllTitle": "Limpar todas as notificações?",
+		"clearAllBody": {
+			"one": "A notificação será excluída. Essa ação não pode ser desfeita.",
+			"other": "As {count} notificações serão excluídas. Essa ação não pode ser desfeita."
+		},
+		"deleteTitle": "Excluir esta notificação?",
+		"deleteBody": "Essa ação não pode ser desfeita.",
+		"empty": "Nenhuma notificação. Erros e eventos importantes vão aparecer aqui.",
+		"secondsAgo": "há {count} s",
+		"minutesAgo": "há {count} min",
+		"hoursAgo": "há {count} h",
+		"daysAgo": "há {count} d",
+		"less": "Menos",
+		"details": "Detalhes",
+		"prev": "Anterior",
+		"range": "{start}-{end} de {total}"
+	}
+}

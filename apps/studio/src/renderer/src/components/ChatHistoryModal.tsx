@@ -5,6 +5,7 @@
 
 import { useEffect, useState } from 'react';
 import { Icon } from './Icon';
+import { formatLocale, useT, type Translate } from '../i18n';
 import { useConfirm } from './ConfirmDialog';
 import type { ChatSession } from '../../../shared/chat';
 
@@ -15,20 +16,20 @@ interface ChatHistoryModalProps {
 	onClose(): void;
 }
 
-function relativeTime(ts: number): string {
+function relativeTime(ts: number, t: Translate): string {
 	const seconds = Math.round((Date.now() - ts) / 1000);
 	if (seconds < 60) {
-		return `${seconds}s ago`;
+		return t('chat.ago.seconds', { n: String(seconds) });
 	}
 	const minutes = Math.round(seconds / 60);
 	if (minutes < 60) {
-		return `${minutes}m ago`;
+		return t('chat.ago.minutes', { n: String(minutes) });
 	}
 	const hours = Math.round(minutes / 60);
 	if (hours < 24) {
-		return `${hours}h ago`;
+		return t('chat.ago.hours', { n: String(hours) });
 	}
-	return `${Math.round(hours / 24)}d ago`;
+	return t('chat.ago.days', { n: String(Math.round(hours / 24)) });
 }
 
 /** A modal listing saved chat sessions — click one to reopen it in the panel. */
@@ -37,6 +38,7 @@ export function ChatHistoryModal({ currentId, onLoad, onClose }: ChatHistoryModa
 	const [sessions, setSessions] = useState<ChatSession[]>([]);
 	const [query, setQuery] = useState('');
 	const [page, setPage] = useState(0);
+	const t = useT();
 	const [confirm, confirmDialog] = useConfirm();
 
 	function refresh(): void {
@@ -59,7 +61,7 @@ export function ChatHistoryModal({ currentId, onLoad, onClose }: ChatHistoryModa
 	useEffect(() => { setPage(0); }, [query]);
 
 	async function remove(id: string): Promise<void> {
-		if (!(await confirm({ title: "Delete this chat?", body: "This cannot be undone.", confirmLabel: "Delete", danger: true }))) {
+		if (!(await confirm({ title: t('chat.history.deleteOneTitle'), body: t('chat.history.deleteBody'), confirmLabel: t('chat.history.delete'), danger: true }))) {
 			return;
 		}
 		await window.sqlApi.deleteChatSession(id);
@@ -67,7 +69,7 @@ export function ChatHistoryModal({ currentId, onLoad, onClose }: ChatHistoryModa
 	}
 
 	async function clearAll(): Promise<void> {
-		if (!(await confirm({ title: "Delete all chat history?", body: `All ${sessions.length} saved chat${sessions.length === 1 ? '' : 's'} will be removed. This cannot be undone.`, confirmLabel: "Delete all", danger: true }))) {
+		if (!(await confirm({ title: t('chat.history.deleteAllTitle'), body: t('chat.history.deleteAllBody', { count: sessions.length }), confirmLabel: t('chat.history.deleteAll'), danger: true }))) {
 			return;
 		}
 		await window.sqlApi.clearChatSessions();
@@ -92,40 +94,40 @@ export function ChatHistoryModal({ currentId, onLoad, onClose }: ChatHistoryModa
 		<div className="modal-backdrop" onClick={onClose}>
 			<div className="modal chat-history" onClick={(e) => e.stopPropagation()}>
 				<div className="modal-head">
-					<h2>Chat history</h2>
+					<h2>{t('chat.history.title')}</h2>
 					<span className="spacer" />
 					{sessions.length > 0 && (
-						<button type="button" className="icon-btn" aria-label="Clear all" onClick={() => void clearAll()}><Icon name="clear-all" /></button>
+						<button type="button" className="icon-btn" aria-label={t('chat.history.clearAll')} onClick={() => void clearAll()}><Icon name="clear-all" /></button>
 					)}
-					<button type="button" className="icon-btn" aria-label="Close" onClick={onClose}><Icon name="close" /></button>
+					<button type="button" className="icon-btn" aria-label={t('chat.history.close')} onClick={onClose}><Icon name="close" /></button>
 				</div>
 				{sessions.length > 0 && (
 					<div className="audit-filter">
-						<input className="audit-search" value={query} placeholder="Search title, connection, or message text…" onChange={(e) => setQuery(e.target.value)} />
+						<input className="audit-search" value={query} placeholder={t('chat.history.search')} onChange={(e) => setQuery(e.target.value)} />
 						<span className="spacer" />
-						{q && <span className="muted small">{filtered.length} match{filtered.length === 1 ? '' : 'es'}</span>}
+						{q && <span className="muted small">{t('chat.history.matches', { count: filtered.length })}</span>}
 					</div>
 				)}
 				<div className="chat-history-list">
-					{sessions.length === 0 && <div className="muted pad">No saved chats yet.</div>}
-					{sessions.length > 0 && filtered.length === 0 && <div className="muted pad">No chats match the filter.</div>}
+					{sessions.length === 0 && <div className="muted pad">{t('chat.history.empty')}</div>}
+					{sessions.length > 0 && filtered.length === 0 && <div className="muted pad">{t('chat.history.noMatch')}</div>}
 					{pageSessions.map((session) => (
 						<div
 							className={`chat-history-row${session.id === currentId ? ' current' : ''}`}
 							key={session.id}
 							onClick={() => onLoad(session)}
 						>
-							<div className="chat-history-title">{session.title || "Untitled chat"}</div>
+							<div className="chat-history-title">{session.title || t('chat.history.untitled')}</div>
 							<div className="chat-history-meta">
 								{session.connectionLabel && <span>{session.connectionLabel}</span>}
-								<span className="muted">{relativeTime(session.updatedAt)}</span>
-								<span className="muted">{session.messages.length} msgs</span>
-								{session.tokens.totalTokens > 0 && <span className="muted">{session.tokens.totalTokens.toLocaleString()} tok</span>}
+								<span className="muted">{relativeTime(session.updatedAt, t)}</span>
+								<span className="muted">{t('chat.history.messages', { count: session.messages.length })}</span>
+								{session.tokens.totalTokens > 0 && <span className="muted">{t('chat.history.tokens', { count: session.tokens.totalTokens.toLocaleString(formatLocale()) })}</span>}
 								<span className="spacer" />
 								<button
 									type="button"
 									className="icon-btn"
-									aria-label="Delete"
+									aria-label={t('chat.history.delete')}
 									onClick={(e) => { e.stopPropagation(); void remove(session.id); }}
 								><Icon name="trash" /></button>
 							</div>
@@ -134,9 +136,9 @@ export function ChatHistoryModal({ currentId, onLoad, onClose }: ChatHistoryModa
 				</div>
 				{pageCount > 1 && (
 					<div className="audit-pager">
-						<button type="button" className="secondary small" disabled={clampedPage === 0} onClick={() => setPage(clampedPage - 1)}><Icon name="chevron-left" /> Prev</button>
-						<span className="muted small">{rangeStart}-{rangeEnd} of {filtered.length}</span>
-						<button type="button" className="secondary small" disabled={clampedPage >= pageCount - 1} onClick={() => setPage(clampedPage + 1)}>Next <Icon name="chevron-right" /></button>
+						<button type="button" className="secondary small" disabled={clampedPage === 0} onClick={() => setPage(clampedPage - 1)}><Icon name="chevron-left" /> {t('chat.history.prev')}</button>
+						<span className="muted small">{t('chat.history.range', { start: rangeStart, end: rangeEnd, total: filtered.length })}</span>
+						<button type="button" className="secondary small" disabled={clampedPage >= pageCount - 1} onClick={() => setPage(clampedPage + 1)}>{t('chat.history.next')} <Icon name="chevron-right" /></button>
 					</div>
 				)}
 			</div>

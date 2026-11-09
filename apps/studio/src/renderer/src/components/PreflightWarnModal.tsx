@@ -5,6 +5,7 @@
 
 import { useEffect } from 'react';
 import { Icon } from './Icon';
+import { useI18n } from '../i18n';
 
 interface PreflightWarnModalProps {
 	/** Estimated rows the planner says this query will scan. */
@@ -31,6 +32,7 @@ function formatRows(n: number): string {
  * screen freezes. Cancel is the default (Esc); "Run anyway" (Enter) proceeds.
  */
 export function PreflightWarnModal(props: PreflightWarnModalProps): JSX.Element {
+	const { t, tr } = useI18n();
 	const { onRunAnyway, onCancel } = props;
 	useEffect(() => {
 		function onKey(e: KeyboardEvent): void {
@@ -44,22 +46,20 @@ export function PreflightWarnModal(props: PreflightWarnModalProps): JSX.Element 
 		return () => window.removeEventListener('keydown', onKey);
 	}, [onRunAnyway, onCancel]);
 
-	const where = props.table ? ` of ${props.table}` : '';
 	return (
 		<div className="modal-backdrop" onClick={props.onCancel}>
 			<div className="modal confirm" onClick={(e) => e.stopPropagation()}>
 				<h2 className="warn-title">
 					<Icon name="warning" />
-					Large scan ahead
+					{t('shell.preflight.title')}
 				</h2>
 				<p className="confirm-detail">
-					The query planner estimates this reads about <b>{formatRows(props.rows)} rows</b>{where} with no
-					index to narrow them. On a large table it may take a while and hold up the connection.
+					{tr(props.table ? 'shell.preflight.bodyTable' : 'shell.preflight.body', { rows: formatRows(props.rows), table: props.table ?? '' })}
 				</p>
 				<div className="modal-actions">
 					<span className="spacer" />
-					<button type="button" className="secondary" onClick={props.onCancel} autoFocus><Icon name="close" /> Cancel</button>
-					<button type="button" onClick={props.onRunAnyway}><Icon name="play" /> Run anyway</button>
+					<button type="button" className="secondary" onClick={props.onCancel} autoFocus><Icon name="close" /> {t('shell.common.cancel')}</button>
+					<button type="button" onClick={props.onRunAnyway}><Icon name="play" /> {t('shell.preflight.runAnyway')}</button>
 				</div>
 			</div>
 		</div>

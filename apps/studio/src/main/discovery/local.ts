@@ -3,6 +3,7 @@
  *  Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { t } from '../../shared/i18n/core';
 import type { ConnectionFormValues, ImportItemRef, ImportScanResult } from '../../shared/forms';
 import type { ConnectionConfig } from '../../shared/connection';
 import { toScanResult, type Found } from './common';
@@ -62,14 +63,14 @@ export function foundFromProbe(host: string, spec: ProbePort, outcome: ProbeOutc
 	if (lead) {
 		notes.push(lead);
 	} else if (outcome.kind === 'answered') {
-		notes.push(`${outcome.verdict.product ?? engineName(driver)} answered on port ${spec.port}.`);
+		notes.push(t('mainDiscovery.answeredOnPort', { product: outcome.verdict.product ?? engineName(driver), port: String(spec.port) }));
 		if (outcome.verdict.note) {
 			notes.push(outcome.verdict.note);
 		}
 	} else {
-		notes.push(`Port ${spec.port} is open, the usual port for ${engineName(driver)}, but it did not say what it is.`);
+		notes.push(t('mainDiscovery.portOpen', { port: String(spec.port), engine: engineName(driver) }));
 	}
-	notes.push(values.username ? `No password is known; set it after import (the username is ${engineName(driver)}'s default).` : "No username or password is known; set them after import.");
+	notes.push(values.username ? t('mainDiscovery.defaultUser', { engine: engineName(driver) }) : t('mainDiscovery.noCreds'));
 	return {
 		ref: { file: host, connId: name ? `${driver}:${spec.port}:${name}` : `${driver}:${spec.port}` },
 		values,
@@ -96,7 +97,7 @@ export async function scanLocal(existing: ConnectionConfig[], timeoutMs = 600): 
 	const found = outcomes
 		.map((o, i) => foundFromProbe(LOCALHOST, PROBE_PORTS[i], o))
 		.filter((f): f is Found => f !== null);
-	return toScanResult('local', found.length > 0 ? [`${LOCALHOST} (this computer)`] : [], found, existing);
+	return toScanResult('local', found.length > 0 ? [t('mainDiscovery.thisComputer', { LOCALHOST })] : [], found, existing);
 }
 
 export function resolveProbeImport(refs: ImportItemRef[]): ConnectionFormValues[] {

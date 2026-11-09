@@ -3,6 +3,8 @@
  *  Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { t } from '../shared/i18n/core';
+
 // Who signed in, and how. Kept apart from authStore.ts (like authErrors.ts beside it) so both
 // answers can be tested without Electron or a live backend: one reads a user record, the other
 // reads a failed SSO start, and neither needs a session to exist.
@@ -95,10 +97,10 @@ function errorParts(error: unknown): { status?: number; message: string } {
 export function ssoFailureMessage(error: unknown, domain: string): string {
 	const { status, message } = errorParts(error);
 	if (status === 404 || /no sso provider/i.test(message)) {
-		return `No single sign-on is set up for ${domain}. Check the address, or ask whoever administers your team to connect your identity provider.`;
+		return t('mainErrors.ssoNone', { domain });
 	}
 	if (/saml.*(disabled|not enabled)/i.test(message)) {
-		return `Single sign-on is not available for ${domain} yet. Ask whoever administers your team to connect your identity provider.`;
+		return t('mainErrors.ssoUnavailable', { domain });
 	}
-	return message || `Could not start single sign-on for ${domain}.`;
+	return message || t('mainErrors.ssoFailed', { domain });
 }

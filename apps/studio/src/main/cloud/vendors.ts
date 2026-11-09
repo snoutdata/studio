@@ -3,6 +3,7 @@
  *  Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { t } from '../../shared/i18n/core';
 import { objectStoreDriver } from './objectStore';
 import { logSourceDriver } from './logSource';
 import { discoverAwsProfiles, type AwsCredentialKind } from '../aws/config';
@@ -43,30 +44,30 @@ interface VendorDeclaration {
 const VENDORS: Record<CloudVendor, VendorDeclaration> = {
 	aws: {
 		label: 'Amazon Web Services',
-		what: 'Files in S3, log events in CloudWatch.',
-		importsFrom: 'the AWS CLI',
+		get what() { return t('mainCloud.whatAws'); },
+		get importsFrom() { return t('mainCloud.importsAws'); },
 		importable: importableAwsCredentials,
 	},
 	azure: {
 		label: 'Microsoft Azure',
-		what: 'Files in Blob Storage, log events in Azure Monitor.',
-		importsFrom: 'the Azure CLI',
+		get what() { return t('mainCloud.whatAzure'); },
+		get importsFrom() { return t('mainCloud.importsAzure'); },
 	},
 	gcp: {
 		label: 'Google Cloud',
-		what: 'Files in Cloud Storage, log events in Cloud Logging.',
-		importsFrom: 'the gcloud CLI',
+		get what() { return t('mainCloud.whatGcp'); },
+		get importsFrom() { return t('mainCloud.importsGcp'); },
 	},
 	s3compat: {
-		label: 'S3-compatible storage',
+		get label() { return t('mainCloud.s3CompatLabel'); },
 		// Named rather than described, because this is the arm somebody arrives at by searching for
 		// their vendor and it has to answer "is my thing here" without them knowing what S3 is.
-		what: 'Cloudflare R2, MinIO, Backblaze B2, Wasabi, Ceph, or anything else that speaks the S3 API.',
+		get what() { return t('mainCloud.whatS3Compat'); },
 		// The same file, and it is not a copy-paste: anyone driving MinIO or R2 from the `aws` CLI
 		// keeps that key in a profile there and passes `--endpoint-url` beside it. What a profile
 		// cannot do is tell us WHICH storage it is for, so the wording here says to pick the one
 		// that holds this endpoint's key rather than implying we know.
-		importsFrom: 'your AWS CLI config, where an S3-compatible key is usually kept',
+		get importsFrom() { return t('mainCloud.importsS3Compat'); },
 		importable: importableAwsCredentials,
 	},
 };

@@ -11,30 +11,31 @@ import type { ReviewMethod, ReviewPollResult, ReviewRun, ReviewStatus } from '..
 import { depthLine, findingsSummary, runLabel } from '../reviewRuns';
 import { Icon } from './Icon';
 import { Markdown } from './Markdown';
+import { formatLocale, rich, useT, type Translate } from '../i18n';
 
 /** One line for what Check now found, so a check that finds nothing still says it looked. */
-function pollLine(result: ReviewPollResult): string {
+function pollLine(result: ReviewPollResult, t: Translate): string {
 	if (result.outcome === 'noRepos') {
-		return "No repository is being watched. Add one in Settings.";
+		return t('reviews.poll.noRepos');
 	}
 	if (result.outcome === 'busy') {
-		return "Already checking.";
+		return t('reviews.poll.busy');
 	}
-	const time = new Date(result.at).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+	const time = new Date(result.at).toLocaleTimeString(formatLocale(), { hour: 'numeric', minute: '2-digit' });
 	if (result.errors.length > 0) {
-		return `Could not check ${result.errors.join('; ')}`;
+		return t('reviews.poll.errors', { errors: result.errors.join('; ') });
 	}
-	const where = result.repos === 1 ? "1 repository" : `${result.repos} repositories`;
-	const found = result.reviewed === 0 ? "nothing new to review" : result.reviewed === 1 ? "reviewed 1 pull request" : `reviewed ${result.reviewed} pull requests`;
-	return `Checked ${where} at ${time}: ${found}.`;
+	const where = t('reviews.poll.repos', { count: result.repos });
+	const found = t('reviews.poll.found', { count: result.reviewed });
+	return t('reviews.poll.checked', { where, time, found });
 }
 
 /** What each rung is called, in one place, so the meta line and the buttons cannot disagree. */
 const METHOD_LABELS: Record<ReviewMethod['kind'], string> = {
-	deterministic: 'Rules only',
-	localEngine: 'Explained on this computer',
-	snoutAi: 'Explained by SnoutData AI',
-	byok: 'Explained by your own model',
+	deterministic: 'reviews.methods.deterministic',
+	localEngine: 'reviews.methods.localEngine',
+	snoutAi: 'reviews.methods.snoutAi',
+	byok: 'reviews.methods.byok',
 };
 
 /** Each rung's glyph and its one line on where the review goes, for the re-run choices. The full
@@ -44,10 +45,10 @@ const METHOD_LABELS: Record<ReviewMethod['kind'], string> = {
 const RERUN_KINDS: readonly ReviewMethod['kind'][] = PRO_AVAILABLE ? ['deterministic', 'localEngine', 'snoutAi', 'byok'] : ['deterministic', 'snoutAi', 'byok'];
 
 const METHOD_CHOICES: Record<ReviewMethod['kind'], { icon: string; hint: string }> = {
-	deterministic: { icon: 'checklist', hint: "No model. The rules' own words." },
-	localEngine: { icon: 'device-desktop', hint: "Nothing leaves this computer." },
-	snoutAi: { icon: 'sparkle', hint: "Written up on our servers." },
-	byok: { icon: 'key', hint: "Your own key or Ollama server." },
+	deterministic: { icon: 'checklist', hint: 'reviews.hints.deterministic' },
+	localEngine: { icon: 'device-desktop', hint: 'reviews.hints.localEngine' },
+	snoutAi: { icon: 'sparkle', hint: 'reviews.hints.snoutAi' },
+	byok: { icon: 'key', hint: 'reviews.hints.byok' },
 };
 
 /**
@@ -100,6 +101,7 @@ interface ReviewViewProps {
 }
 
 export function ReviewView({ active, select, onOpenSettings, onClose }: ReviewViewProps): JSX.Element {
+	const t = useT();
 	const [runs, setRuns] = useState<ReviewRun[]>([]);
 	const [status, setStatus] = useState<ReviewStatus | undefined>();
 	const [selectedId, setSelectedId] = useState<string | undefined>();
@@ -150,7 +152,7 @@ export function ReviewView({ active, select, onOpenSettings, onClose }: ReviewVi
 		const result = await window.sqlApi.review.approve(run.id);
 		setBusy(false);
 		if (!result.ok) {
-			setError(result.error ?? "The comment could not be posted.");
+			setError(result.error ?? t('reviews.commentFailed'));
 		}
 		await refresh();
 	};
@@ -169,7 +171,7 @@ export function ReviewView({ active, select, onOpenSettings, onClose }: ReviewVi
 		try {
 			const produced = await window.sqlApi.review.reviewPull(run.repoId, run.prNumber, false, rerunMethod(kind, run.method));
 			if (!produced) {
-				setError("That review could not be run again. Check the connection to the host in Settings.");
+				setError(t('reviews.rerunFailed'));
 			} else {
 				setSelectedId(produced.id);
 			}
@@ -189,16 +191,16 @@ export function ReviewView({ active, select, onOpenSettings, onClose }: ReviewVi
 		<div className="review-view" data-test="review-view">
 			<div className="review-view-bar">
 				<span className="review-view-title">
-					<Icon name="git-pull-request" /> Snoutbot reviews
+					<Icon name="git-pull-request" /> {t('reviews.title')}
 				</span>
 				{status?.activity
 					? <span className="muted small">{status.activity}</span>
-					: checked && <span className={checked.errors.length > 0 ? 'small review-check-error' : 'muted small'} data-test="review-check-result">{pollLine(checked)}</span>}
+					: checked && <span className={checked.errors.length > 0 ? 'small review-check-error' : 'muted small'} data-test="review-check-result">{pollLine(checked, t)}</span>}
 				<span className="spacer" />
 				<button
 					className="secondary"
 					disabled={!status?.enabled || checking}
-					title={status?.enabled ? "Ask GitHub for new pull requests and mentions now" : "Turn Snoutbot on in Settings first"}
+					title={status?.enabled ? t('reviews.check.tooltip') : t('reviews.check.tooltipOff')}
 					onClick={() => {
 						setChecking(true);
 						void window.sqlApi.review.pollNow()
@@ -206,10 +208,10 @@ export function ReviewView({ active, select, onOpenSettings, onClose }: ReviewVi
 							.finally(() => setChecking(false));
 					}}
 				>
-					<Icon name={checking ? 'loading' : 'refresh'} className={checking ? 'codicon-modifier-spin' : undefined} /> {checking ? "Checking…" : "Check now"}
+					<Icon name={checking ? 'loading' : 'refresh'} className={checking ? 'codicon-modifier-spin' : undefined} /> {checking ? t('reviews.check.checking') : t('reviews.check.now')}
 				</button>
-				<button className="secondary" onClick={onOpenSettings}><Icon name="settings-gear" /> Settings…</button>
-				<button className="icon-button" title="Close" onClick={onClose}><Icon name="close" /></button>
+				<button className="secondary" onClick={onOpenSettings}><Icon name="settings-gear" /> {t('reviews.settings')}</button>
+				<button className="icon-button" title={t('reviews.close')} onClick={onClose}><Icon name="close" /></button>
 			</div>
 
 			{runs.length === 0 ? (
@@ -226,12 +228,12 @@ export function ReviewView({ active, select, onOpenSettings, onClose }: ReviewVi
 							>
 								<span className="review-list-head">
 									<span className="review-list-name">{runLabel(run)}</span>
-									{run.awaitingApproval && <span className="review-pill waiting">Waiting</span>}
+									{run.awaitingApproval && <span className="review-pill waiting">{t('reviews.waiting')}</span>}
 									{run.blockers > 0 && <span className="review-pill blocker">{run.blockers}</span>}
 								</span>
 								{run.prTitle && <span className="review-list-sub">{run.prTitle}</span>}
 								<span className="review-list-meta">
-									{findingsSummary(run)} · {new Date(run.at).toLocaleTimeString()}
+									{findingsSummary(run)} · {new Date(run.at).toLocaleTimeString(formatLocale())}
 								</span>
 							</button>
 						))}
@@ -244,7 +246,7 @@ export function ReviewView({ active, select, onOpenSettings, onClose }: ReviewVi
 								<div className="review-detail-meta">
 									<span>{runLabel(selected)}</span>
 									<span>·</span>
-									<span title="The commit this review is OF. A review is always of a sha, never of a pull request.">
+									<span title={t('reviews.detail.shaTitle')}>
 										{selected.headSha.slice(0, 7)}
 									</span>
 									<span>·</span>
@@ -255,12 +257,12 @@ export function ReviewView({ active, select, onOpenSettings, onClose }: ReviewVi
 									    one read differently from the last one" is the first thing anybody asks,
 									    and the only answer on screen used to be a model name at the foot of the
 									    prose, with nothing at all on the rules-only rung. */}
-									<span title={reviewBoundary(selected.method).sentence}>{METHOD_LABELS[selected.method.kind]}</span>
+									<span title={reviewBoundary(selected.method).sentence}>{t(METHOD_LABELS[selected.method.kind])}</span>
 									<span>·</span>
-									<span>{new Date(selected.at).toLocaleString()}</span>
+									<span>{new Date(selected.at).toLocaleString(formatLocale())}</span>
 									{selected.prUrl && (
 										<button type="button" className="link-btn" onClick={() => void window.sqlApi.openExternal(selected.prUrl!)}>
-											Open on GitHub
+											{t('reviews.detail.openOnGithub')}
 										</button>
 									)}
 								</div>
@@ -278,7 +280,7 @@ export function ReviewView({ active, select, onOpenSettings, onClose }: ReviewVi
 							    name the pull request chose is shown and not rendered. */}
 							{active && selected.localErrors && selected.localErrors.length > 0 && (
 								<details className="review-local-errors" data-test="review-local-errors">
-									<summary>What the database said ({selected.localErrors.length}), shown only here</summary>
+									<summary>{t('reviews.detail.localErrors', { count: selected.localErrors.length })}</summary>
 									<ul>
 										{selected.localErrors.map((e, i) => (
 											<li key={i}>
@@ -296,21 +298,23 @@ export function ReviewView({ active, select, onOpenSettings, onClose }: ReviewVi
 								{selected.awaitingApproval ? (
 									<>
 										<span className="muted small review-actions-note">
-											Nothing has been posted yet. It goes on the {words.pullRequest} as
-											{host?.login ? <strong> {host.login}</strong> : " you"}.
+											{host?.login
+												? rich(t('reviews.detail.notPostedAs', { pullRequest: words.pullRequest, login: host.login }))
+												: t('reviews.detail.notPostedYou', { pullRequest: words.pullRequest })}
 										</span>
-										<button onClick={() => void discard(selected)}><Icon name="discard" /> Discard</button>
+										<button onClick={() => void discard(selected)}><Icon name="discard" /> {t('reviews.detail.discard')}</button>
 										<button className="primary" data-test="review-approve" disabled={busy} onClick={() => void approve(selected)}><Icon name="comment" /> 
-											{busy ? "Posting…" : `Post to ${words.name}`}
+											{busy ? t('reviews.detail.posting') : t('reviews.detail.post', { name: words.name })}
 										</button>
 									</>
 								) : (
 									<>
 										<span className="muted small review-actions-note">
-											<Icon name="check" /> Posted to the {words.pullRequest}
-											{host?.login ? ` as ${host.login}` : ''}.
+											<Icon name="check" /> {host?.login
+												? t('reviews.detail.postedAs', { pullRequest: words.pullRequest, login: host.login })
+												: t('reviews.detail.posted', { pullRequest: words.pullRequest })}
 										</span>
-										<button onClick={() => void discard(selected)}><Icon name="trash" /> Remove from this list</button>
+										<button onClick={() => void discard(selected)}><Icon name="trash" /> {t('reviews.detail.remove')}</button>
 									</>
 								)}
 							</div>
@@ -323,7 +327,7 @@ export function ReviewView({ active, select, onOpenSettings, onClose }: ReviewVi
 							    repository does from then on. Both reviews stay in the list, because the
 							    point of asking again is to compare the answers. */}
 							<div className="review-rerun">
-								<div className="review-rerun-head"><Icon name="refresh" /> Review this commit again with</div>
+								<div className="review-rerun-head"><Icon name="refresh" /> {t('reviews.detail.again')}</div>
 								<div className="review-rerun-grid">
 									{RERUN_KINDS.map((kind) => {
 										const current = kind === selected.method.kind;
@@ -334,13 +338,13 @@ export function ReviewView({ active, select, onOpenSettings, onClose }: ReviewVi
 												className={`review-rerun-choice${current ? ' current' : ''}`}
 												data-test={`review-rerun-${kind}`}
 												disabled={busy || current}
-												title={current ? "This is what wrote the review you are reading" : reviewBoundary(rerunMethod(kind, selected.method)).sentence}
+												title={current ? t('reviews.detail.wroteThisTitle') : reviewBoundary(rerunMethod(kind, selected.method)).sentence}
 												onClick={() => void rerun(selected, kind)}
 											>
 												<Icon name={METHOD_CHOICES[kind].icon} />
 												<span className="review-rerun-text">
-													<span className="review-rerun-label">{METHOD_LABELS[kind]}</span>
-													<span className="review-rerun-hint">{current ? "Wrote this review" : METHOD_CHOICES[kind].hint}</span>
+													<span className="review-rerun-label">{t(METHOD_LABELS[kind])}</span>
+													<span className="review-rerun-hint">{current ? t('reviews.detail.wroteThis') : t(METHOD_CHOICES[kind].hint)}</span>
 												</span>
 												{current && <Icon name="check" />}
 											</button>
@@ -378,24 +382,24 @@ function openLinksExternally(e: React.MouseEvent<HTMLDivElement>): void {
 /** Nothing has run yet. Which sentence to show depends on how far the user has actually got, so
  *  the screen answers "why is this empty" rather than restating that it is. */
 function Empty({ status, onOpenSettings }: { status?: ReviewStatus; onOpenSettings(): void }): JSX.Element {
+	const t = useT();
 	const reason = !status
 		? ''
 		: !status.forges.some((f) => f.hasToken)
-			? "Connect a GitHub or GitLab account and Snoutbot can start watching your repositories."
+			? t('reviews.empty.connect')
 			: status.repos.length === 0
-				? "Add a repository to watch, and bind it to one of your connections."
+				? t('reviews.empty.addRepo')
 				: !status.enabled
-					? "Watching is switched off. Turn it on and Snoutbot will check for pull requests that touch SQL."
-					: "Nothing has been reviewed yet. Reviews appear here as they run, and stay for this session.";
+					? t('reviews.empty.off')
+					: t('reviews.empty.nothing');
 	return (
 		<div className="review-empty" data-test="review-empty">
 			<Icon name="git-pull-request" />
-			<h3>No reviews yet</h3>
+			<h3>{t('reviews.empty.title')}</h3>
 			<p>{reason}</p>
-			<button onClick={onOpenSettings}><Icon name="settings-gear" /> Open Snoutbot settings</button>
+			<button onClick={onOpenSettings}><Icon name="settings-gear" /> {t('reviews.empty.openSettings')}</button>
 			<p className="muted small">
-				Reviews are held in memory while the app runs, not saved to disk. A review is about one
-				commit, and a stale one is worse than none.
+				{t('reviews.empty.note')}
 			</p>
 		</div>
 	);

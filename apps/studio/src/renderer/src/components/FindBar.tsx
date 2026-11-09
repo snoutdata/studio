@@ -6,6 +6,7 @@
 import { useState } from 'react';
 import { Icon } from './Icon';
 import { buildFindPipeline, type FindSpec } from '../pipeline';
+import { useT } from '../i18n';
 
 // The lightweight find bar: a compact filter + projection + sort + limit
 // strip for the ~90% of Mongo browsing that's neither full SQL nor a hand-written aggregation
@@ -23,6 +24,7 @@ interface FindBarProps {
 }
 
 export function FindBar({ collections, collection, onCollectionChange, onRun }: FindBarProps): JSX.Element {
+	const t = useT();
 	const [spec, setSpec] = useState<FindSpec>({});
 	const [limitText, setLimitText] = useState('50');
 	const [error, setError] = useState<string | null>(null);
@@ -33,12 +35,12 @@ export function FindBar({ collections, collection, onCollectionChange, onRun }: 
 
 	function run(): void {
 		if (!collection) {
-			setError('Pick a collection to query.');
+			setError(t('editor.find.pickCollection'));
 			return;
 		}
 		const limit = limitText.trim() ? Number(limitText.trim()) : undefined;
 		if (limit !== undefined && (!Number.isFinite(limit) || limit < 0)) {
-			setError('Limit must be a non-negative number.');
+			setError(t('editor.find.limitInvalid'));
 			return;
 		}
 		try {
@@ -61,45 +63,45 @@ export function FindBar({ collections, collection, onCollectionChange, onRun }: 
 	return (
 		<div className="find-bar">
 			<div className="find-bar-row">
-				<span className="find-collection" title="Collection to query">
+				<span className="find-collection" title={t('editor.find.collectionTitle')}>
 					<Icon name="symbol-field" />
 					<select value={collection ?? ''} onChange={(e) => onCollectionChange(e.target.value)}>
-						{collection === undefined || collection === '' ? <option value="">Collection…</option> : null}
+						{collection === undefined || collection === '' ? <option value="">{t('editor.find.collectionPlaceholder')}</option> : null}
 						{collections.map((c) => <option key={c} value={c}>{c}</option>)}
 					</select>
 				</span>
 				<input
 					className="find-input find-filter"
-					placeholder={'Filter, e.g. { "status": "active" }'}
+					placeholder={t('editor.find.filterPlaceholder')}
 					value={spec.filter ?? ''}
 					spellCheck={false}
 					onChange={(e) => set('filter', e.target.value)}
 					onKeyDown={onKeyDown}
-					title="A Mongo query document (JSON). Blank matches every document."
+					title={t('editor.find.filterTitle')}
 				/>
-				<button type="button" className="find-run" onClick={run} title="Run this find (Enter)"><Icon name="play" /> Find</button>
+				<button type="button" className="find-run" onClick={run} title={t('editor.find.runTitle')}><Icon name="play" /> {t('editor.find.find')}</button>
 			</div>
 			<div className="find-bar-row find-bar-row-2">
 				<input
 					className="find-input"
-					placeholder="Fields, e.g. name, email, -_id"
+					placeholder={t('editor.find.fieldsPlaceholder')}
 					value={spec.project ?? ''}
 					spellCheck={false}
 					onChange={(e) => set('project', e.target.value)}
 					onKeyDown={onKeyDown}
-					title="Projection: bare names include, a - prefix excludes (e.g. -password). Blank returns whole documents."
+					title={t('editor.find.fieldsTitle')}
 				/>
 				<input
 					className="find-input"
-					placeholder="Sort, e.g. createdAt:-1, name"
+					placeholder={t('editor.find.sortPlaceholder')}
 					value={spec.sort ?? ''}
 					spellCheck={false}
 					onChange={(e) => set('sort', e.target.value)}
 					onKeyDown={onKeyDown}
-					title="Sort keys: field or field:dir (1/asc or -1/desc)."
+					title={t('editor.find.sortTitle')}
 				/>
-				<label className="find-limit" title="Maximum documents to return">
-					Limit
+				<label className="find-limit" title={t('editor.find.limitTitle')}>
+					{t('editor.find.limit')}
 					<input
 						className="find-input"
 						type="number"

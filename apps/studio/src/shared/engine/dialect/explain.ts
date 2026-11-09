@@ -17,6 +17,7 @@
  */
 
 import { maskClickHouse } from './mask';
+import { t } from '../../i18n/core';
 
 /** How a variant's answer is to be read, which is the only thing the panel needs to know about it. */
 export type ExplainShape =
@@ -60,8 +61,8 @@ export interface ExplainVariant {
 export const CLICKHOUSE_EXPLAIN_VARIANTS: readonly ExplainVariant[] = [
 	{
 		id: 'plan',
-		label: 'Plan',
-		hint: 'The steps, and what each index crossed out before a granule was read.',
+		get label() { return t('engineDialect.explain.plan'); },
+		get hint() { return t('engineDialect.explain.planHint'); },
 		shape: 'plan',
 		statements: (sql) => {
 			const query = explainTarget(sql);
@@ -74,29 +75,29 @@ export const CLICKHOUSE_EXPLAIN_VARIANTS: readonly ExplainVariant[] = [
 	},
 	{
 		id: 'estimate',
-		label: 'Estimate',
-		hint: 'What running this would read: parts, rows and marks per table.',
+		get label() { return t('engineDialect.explain.estimate'); },
+		get hint() { return t('engineDialect.explain.estimateHint'); },
 		shape: 'estimate',
 		statements: (sql) => [`EXPLAIN ESTIMATE ${explainTarget(sql)}`],
 	},
 	{
 		id: 'pipeline',
-		label: 'Pipeline',
-		hint: 'The processors that carry the rows, and how many threads each gets.',
+		get label() { return t('engineDialect.explain.pipeline'); },
+		get hint() { return t('engineDialect.explain.pipelineHint'); },
 		shape: 'text',
 		statements: (sql) => [`EXPLAIN PIPELINE ${explainTarget(sql)}`],
 	},
 	{
 		id: 'syntax',
-		label: 'Syntax',
-		hint: 'The query as the optimizer rewrote it.',
+		get label() { return t('engineDialect.explain.syntax'); },
+		get hint() { return t('engineDialect.explain.syntaxHint'); },
 		shape: 'sql',
 		statements: (sql) => [`EXPLAIN SYNTAX ${explainTarget(sql)}`],
 	},
 	{
 		id: 'queryTree',
-		label: 'Query tree',
-		hint: "The analyzer's own reading of the query, resolved to column ids and types.",
+		get label() { return t('engineDialect.explain.queryTree'); },
+		get hint() { return t('engineDialect.explain.queryTreeHint'); },
 		shape: 'text',
 		statements: (sql) => [`EXPLAIN QUERY TREE ${explainTarget(sql)}`],
 	},

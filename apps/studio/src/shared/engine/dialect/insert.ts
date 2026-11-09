@@ -28,6 +28,7 @@
 
 import { dialectFor } from './index';
 import type { FlowCell, FlowRow } from './rows';
+import { t } from '../../i18n/core';
 
 /** Where a batch is going. */
 export interface InsertTarget {
@@ -100,7 +101,7 @@ export function sqlLiteral(driverId: string, value: FlowCell): string {
 	}
 	if (typeof value === 'number') {
 		if (!Number.isFinite(value)) {
-			throw new Error(`Cannot write ${String(value)} to a database column.`);
+			throw new Error(t('engineDialect.insert.cannotWrite', { value: String(value) }));
 		}
 		return String(value);
 	}
@@ -118,13 +119,13 @@ export function sqlLiteral(driverId: string, value: FlowCell): string {
 	if (typeof value === 'string') {
 		return stringLiteral(driverId, value);
 	}
-	throw new Error(`Unsupported value type ${typeof value} in a row batch.`);
+	throw new Error(t('engineDialect.insert.unsupportedType', { type: typeof value }));
 }
 
 /** `(1, 'x', NULL)` for one row. */
 function tuple(driverId: string, row: FlowRow, width: number): string {
 	if (row.length !== width) {
-		throw new Error(`Row has ${row.length} values but the batch has ${width} columns.`);
+		throw new Error(t('engineDialect.insert.rowWidth', { values: row.length, columns: width }));
 	}
 	return `(${row.map((cell) => sqlLiteral(driverId, cell)).join(', ')})`;
 }
@@ -292,11 +293,11 @@ export function emitUpsertRows(
 	const missing = keyColumns.filter((key) => !target.columns.some((column) => column.toLowerCase() === key.toLowerCase()));
 	if (missing.length > 0) {
 		// The key has to be IN the batch, or the statement matches on a column the rows do not carry.
-		throw new Error(`The key ${missing.join(', ')} is not among the columns being written.`);
+		throw new Error(t('engineDialect.insert.keyMissing', { key: missing.join(', ') }));
 	}
 	const shape = UPSERT_SHAPE[driverId];
 	if (!shape) {
-		throw new Error(`${dialectFor(driverId).displayName} cannot update and insert in one statement, so this flow cannot upsert into it.`);
+		throw new Error(t('engineDialect.insert.noUpsert', { engine: dialectFor(driverId).displayName }));
 	}
 
 	const q = dialectFor(driverId).quoteIdent;
@@ -399,7 +400,7 @@ function selectRow(driverId: string, tupleText: string, columns: string[], q: (n
 	const tail = from ? ` FROM ${from}` : '';
 	const parts = splitTuple(values);
 	if (parts.length !== columns.length) {
-		throw new Error(`Row has ${parts.length} values but the batch has ${columns.length} columns.`);
+		throw new Error(t('engineDialect.insert.rowWidth', { values: parts.length, columns: columns.length }));
 	}
 	const select = parts
 		.map((value, index) => (aliased ? `${value} AS ${q(columns[index])}` : value))

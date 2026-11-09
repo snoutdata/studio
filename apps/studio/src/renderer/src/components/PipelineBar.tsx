@@ -4,6 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { Icon } from './Icon';
+import { useT } from '../i18n';
 
 interface PipelineBarProps {
 	/** Which authoring surface the active tab is on. */
@@ -30,17 +31,18 @@ interface PipelineBarProps {
  * the way SQL names it in FROM). Rendered in the editor toolbar only for document connections.
  */
 export function PipelineBar({ surface, collections, collection, onSurfaceChange, onCollectionChange, findOpen = false, onToggleFind, onOpenBuilder, onExplain }: PipelineBarProps): JSX.Element {
+	const t = useT();
 	return (
-		<span className="pipeline-bar" title="MongoDB query surface">
+		<span className="pipeline-bar" title={t('editor.pipeline.surface')}>
 			{onToggleFind && (
 				<button
 					type="button"
 					className={`surface-find${findOpen ? ' active' : ''}`}
 					aria-pressed={findOpen}
 					onClick={onToggleFind}
-					title="Quick find: filter, project, sort without writing a pipeline"
+					title={t('editor.pipeline.findTitle')}
 				>
-					<Icon name="search" /> Find
+					<Icon name="search" /> {t('editor.find.find')}
 				</button>
 			)}
 			<span className="surface-switch" role="tablist">
@@ -50,7 +52,7 @@ export function PipelineBar({ surface, collections, collection, onSurfaceChange,
 					aria-selected={surface === 'sql'}
 					className={surface === 'sql' ? 'active' : ''}
 					onClick={() => onSurfaceChange('sql')}
-					title="Write SQL (translated to an aggregation pipeline)"
+					title={t('editor.pipeline.sqlTitle')}
 				>
 					SQL
 				</button>
@@ -60,16 +62,16 @@ export function PipelineBar({ surface, collections, collection, onSurfaceChange,
 					aria-selected={surface === 'native'}
 					className={surface === 'native' ? 'active' : ''}
 					onClick={() => onSurfaceChange('native')}
-					title="Write a native aggregation pipeline (JSON)"
+					title={t('editor.pipeline.nativeTitle')}
 				>
-					Pipeline
+					{t('editor.pipeline.pipeline')}
 				</button>
 			</span>
 			{surface === 'native' && (
-				<span className="pipeline-collection" title="Collection this pipeline runs against">
+				<span className="pipeline-collection" title={t('editor.pipeline.collectionTitle')}>
 					<Icon name="symbol-field" />
 					<select value={collection ?? ''} onChange={(e) => onCollectionChange(e.target.value)}>
-						{collection === undefined || collection === '' ? <option value="">Collection…</option> : null}
+						{collection === undefined || collection === '' ? <option value="">{t('editor.find.collectionPlaceholder')}</option> : null}
 						{collections.map((c) => (
 							<option key={c} value={c}>{c}</option>
 						))}
@@ -77,13 +79,13 @@ export function PipelineBar({ surface, collections, collection, onSurfaceChange,
 				</span>
 			)}
 			{surface === 'native' && onOpenBuilder && (
-				<button type="button" className="surface-find" onClick={onOpenBuilder} title="Edit the pipeline as visual stages (add, reorder, disable, preview each step)">
-					<Icon name="list-tree" /> Stages
+				<button type="button" className="surface-find" onClick={onOpenBuilder} title={t('editor.pipeline.stagesTitle')}>
+					<Icon name="list-tree" /> {t('editor.pipeline.stages')}
 				</button>
 			)}
 			{surface === 'native' && onExplain && (
-				<button type="button" className="surface-find" onClick={onExplain} title="Explain this pipeline: show the query plan (which index it uses) without running it">
-					<Icon name="dashboard" /> Explain
+				<button type="button" className="surface-find" onClick={onExplain} title={t('editor.pipeline.explainTitle')}>
+					<Icon name="dashboard" /> {t('editor.run.explain')}
 				</button>
 			)}
 		</span>

@@ -5,6 +5,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { Icon } from './Icon';
+import { useI18n, useT, type Translate } from '../i18n';
 import { errorMessage } from '../errors';
 import { appliesToLabel, policyAppliesTo, policyKey, policyLabel, principalKey, principalLabel, privilegesFor, redactSqlSecrets, scopeRank, type AccessPolicy, type Grant, type GrantScope, type PolicyDraft, type PolicyKind, type PolicySetting, type Principal, type PrincipalDraft, type PrincipalKind, type SecurityChange, type SecurityPlan, type SecuritySnapshot, type SecuritySupport } from '../../../shared/engine';
 import type { ConnectionConfig } from '../../../shared/connection';
@@ -51,19 +52,21 @@ type Editor =
 	| null;
 
 const KIND_ICON: Record<PrincipalKind, string> = { user: 'person', role: 'organization', login: 'key', group: 'organization' };
-const KIND_GROUP: Record<PrincipalKind, string> = { user: 'Users', role: 'Roles', login: 'Server logins', group: 'Groups' };
+const KIND_GROUP: Record<PrincipalKind, string> = { user: 'security.kinds.users', role: 'security.kinds.roles', login: 'security.kinds.logins', group: 'security.kinds.groups' };
+const KIND_ONE: Record<PrincipalKind, string> = { user: 'security.kinds.user', role: 'security.kinds.role', login: 'security.kinds.login', group: 'security.kinds.group' };
 const GROUP_ORDER: PrincipalKind[] = ['user', 'role', 'login', 'group'];
 
 const POLICY_ICON: Record<PolicyKind, string> = { 'row-policy': 'filter', 'quota': 'dashboard', 'settings-profile': 'settings-gear' };
-const POLICY_GROUP: Record<PolicyKind, string> = { 'row-policy': 'Row policies', 'quota': 'Quotas', 'settings-profile': 'Settings profiles' };
+const POLICY_GROUP: Record<PolicyKind, string> = { 'row-policy': 'security.policies.rowPolicies', 'quota': 'security.policies.quotas', 'settings-profile': 'security.policies.settingsProfiles' };
+const POLICY_ONE: Record<PolicyKind, string> = { 'row-policy': 'security.policies.rowPolicy', 'quota': 'security.policies.quota', 'settings-profile': 'security.policies.settingsProfile' };
 const POLICY_ORDER: PolicyKind[] = ['row-policy', 'quota', 'settings-profile'];
 
 /** What each kind is FOR, said once on the screen that creates it. The three are easy to confuse
  *  and only one of them takes data away. */
 const POLICY_BLURB: Record<PolicyKind, string> = {
-	'row-policy': "Which rows of one table an account may see. The first policy on a table hides every row it does not allow, including from accounts it does not name.",
-	'quota': "How much an account may use in a window of time: queries, rows read, errors. Going over it fails the query.",
-	'settings-profile': "Settings an account runs with, such as a memory ceiling or read-only mode.",
+	'row-policy': 'security.policies.blurbRow',
+	'quota': 'security.policies.blurbQuota',
+	'settings-profile': 'security.policies.blurbProfile',
 };
 
 /** The selection key for a policy, kept apart from a principal's so one list can hold both. */
@@ -71,28 +74,29 @@ function policySelectionKey(policy: AccessPolicy): string {
 	return `policy!${policyKey(policy)}`;
 }
 
-function scopeLabel(scope: GrantScope): string {
+function scopeLabel(scope: GrantScope, t: Translate): string {
 	switch (scope) {
-		case 'global': return 'Server';
-		case 'database': return 'Database';
-		case 'schema': return 'Schema';
-		case 'column': return 'Column';
-		default: return 'Table';
+		case 'global': return t('security.scope.server');
+		case 'database': return t('security.scope.database');
+		case 'schema': return t('security.scope.schema');
+		case 'column': return t('security.scope.column');
+		default: return t('security.scope.table');
 	}
 }
 
 /** The object a grant is on, as one path. */
-function grantObject(grant: Grant): string {
+function grantObject(grant: Grant, t: Translate): string {
 	const parts = [grant.database, grant.schema, grant.object].filter((part): part is string => !!part);
 	const path = parts.join('.');
 	if (grant.column) {
 		return `${path} (${grant.column})`;
 	}
-	return path || 'the whole server';
+	return path || t('security.wholeServer');
 }
 
 export function SecurityView({ connections, connectedIds, connectionId, proposal }: SecurityViewProps): JSX.Element {
-	const [snapshot, setSnapshot] = useState<SecuritySnapshot | null>(null);
+	const t = useT();
+const [snapshot, setSnapshot] = useState<SecuritySnapshot | null>(null);
 	const [support, setSupport] = useState<SecuritySupport | null>(null);
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState<string | null>(null);
@@ -238,8 +242,8 @@ export function SecurityView({ connections, connectedIds, connectionId, proposal
 		return snapshot.grants
 			.filter((grant) => grant.grantee === selected.name && (!usesHost || (grant.granteeHost ?? '') === (selected.host ?? '')))
 			.filter((grant) => !hidePlatform || !isPlatformSchema(grant.schema))
-			.sort((a, b) => scopeRank(a.scope) - scopeRank(b.scope) || grantObject(a).localeCompare(grantObject(b)) || a.privilege.localeCompare(b.privilege));
-	}, [selected, snapshot, usesHost, hidePlatform]);
+			.sort((a, b) => scopeRank(a.scope) - scopeRank(b.scope) || grantObject(a, t).localeCompare(grantObject(b, t)) || a.privilege.localeCompare(b.privilege));
+	}, [selected, snapshot, usesHost, hidePlatform, t]);
 
 	/** Every role name on this connection, for the "add to role" pickers. */
 	const roleNames = useMemo(() => principals.filter((p) => p.kind === 'role').map((p) => p.name), [principals]);
@@ -256,14 +260,14 @@ export function SecurityView({ connections, connectedIds, connectionId, proposal
 	}
 
 	if (!connectionId) {
-		return <div className="table-view"><div className="results-message">Select a database in the connections sidebar to see its users and privileges.</div></div>;
+		return <div className="table-view"><div className="results-message">{t('security.selectDatabase')}</div></div>;
 	}
 	if (support && !support.supported) {
 		return (
 			<div className="table-view">
 				<div className="tv-head">
 					<Icon name="shield" className="tv-head-icon" />
-					<span className="tv-title">Users &amp; Privileges</span>
+					<span className="tv-title">{t('security.title')}</span>
 				</div>
 				<div className="results-message">{support.reason}</div>
 			</div>
@@ -275,24 +279,24 @@ export function SecurityView({ connections, connectedIds, connectionId, proposal
 		<div className="table-view security-view">
 			<div className="tv-head">
 				<Icon name="shield" className="tv-head-icon" />
-				<span className="tv-title">Users &amp; Privileges</span>
+				<span className="tv-title">{t('security.title')}</span>
 				<span className="muted">{conn?.label ?? ''}</span>
-				<button type="button" disabled={!connected || loading} title="Re-read the users and privileges" onClick={reload}>
-					<Icon name="refresh" /> {loading ? 'Reading…' : 'Refresh'}
+				<button type="button" disabled={!connected || loading} title={t('security.refreshTitle')} onClick={reload}>
+					<Icon name="refresh" /> {loading ? t('security.reading') : t('security.refresh')}
 				</button>
-				<button type="button" disabled={!connected} title="Create a new user or role" onClick={() => setEditor({ kind: 'new-principal' })}>
-					<Icon name="add" /> New user
+				<button type="button" disabled={!connected} title={t('security.newUserTitle')} onClick={() => setEditor({ kind: 'new-principal' })}>
+					<Icon name="add" /> {t('security.newUser')}
 				</button>
 				{(support?.policyKinds.length ?? 0) > 0 && (
-					<button type="button" disabled={!connected} title="Create a row policy, a quota or a settings profile" onClick={() => setEditor({ kind: 'new-policy' })}>
-						<Icon name="add" /> New policy
+					<button type="button" disabled={!connected} title={t('security.newPolicyTitle')} onClick={() => setEditor({ kind: 'new-policy' })}>
+						<Icon name="add" /> {t('security.newPolicy')}
 					</button>
 				)}
 				<span className="spacer" />
 			</div>
 
 			{!connected
-				? <div className="results-message">Connect "{conn?.label ?? 'this database'}" in the sidebar to see who can reach it.</div>
+				? <div className="results-message">{t('security.connectToSee', { name: conn?.label ?? t('security.thisDatabase') })}</div>
 				: error
 					? <div className="results-error">{error}</div>
 					: (
@@ -301,7 +305,7 @@ export function SecurityView({ connections, connectedIds, connectionId, proposal
 							<div className="sec-warnings">
 								<Icon name="info" />
 								<div>
-									<div>This connection cannot read everything. What is missing:</div>
+									<div>{t('security.cannotReadAll')}</div>
 									<ul>{snapshot?.warnings.map((warning) => <li key={warning}>{warning}</li>)}</ul>
 								</div>
 							</div>
@@ -311,17 +315,17 @@ export function SecurityView({ connections, connectedIds, connectionId, proposal
 								<input
 									className="sec-filter"
 									type="search"
-									placeholder="Find a user, role or policy"
+									placeholder={t('security.filter')}
 									value={filter}
 									onChange={(e) => setFilter(e.target.value)}
 								/>
 								{loading && principals.length === 0
-									? <div className="results-message">Reading users and privileges…</div>
+									? <div className="results-message">{t('security.readingUsers')}</div>
 									: grouped.length === 0
-										? <div className="results-message">{principals.length === 0 ? 'No users or roles were readable on this connection.' : 'Nothing matches that.'}</div>
+										? <div className="results-message">{principals.length === 0 ? t('security.noUsers') : t('security.noMatch')}</div>
 										: grouped.map((group) => (
 											<div className="sec-group" key={group.kind}>
-												<div className="sec-group-title">{KIND_GROUP[group.kind]}</div>
+												<div className="sec-group-title">{t(KIND_GROUP[group.kind])}</div>
 												{group.items.map((principal) => {
 													const key = principalKey(principal.name, principal.host);
 													return (
@@ -333,8 +337,8 @@ export function SecurityView({ connections, connectedIds, connectionId, proposal
 														>
 															<Icon name={KIND_ICON[principal.kind]} />
 															<span className="sec-row-name">{principalLabel(principal)}</span>
-															{principal.isSuperuser && <span className="sec-badge warn" title={principal.superuserVia ? `Unrestricted through the role ${principal.superuserVia}. The membership is what to take away, not a grant this account does not have.` : "Holds this engine's unrestricted role"}>super</span>}
-															{principal.disabled && <span className="sec-badge" title="Cannot sign in">off</span>}
+															{principal.isSuperuser && <span className="sec-badge warn" title={principal.superuserVia ? t('security.superVia', { role: principal.superuserVia }) : t('security.superHolds')}>{t('security.badgeSuper')}</span>}
+															{principal.disabled && <span className="sec-badge" title={t('security.disabledTitle')}>{t('security.badgeOff')}</span>}
 														</button>
 													);
 												})}
@@ -342,7 +346,7 @@ export function SecurityView({ connections, connectedIds, connectionId, proposal
 										))}
 								{policyGroups.map((group) => (
 									<div className="sec-group" key={group.kind}>
-										<div className="sec-group-title">{POLICY_GROUP[group.kind]}</div>
+										<div className="sec-group-title">{t(POLICY_GROUP[group.kind])}</div>
 										{group.items.map((policy) => {
 											const key = policySelectionKey(policy);
 											return (
@@ -354,8 +358,8 @@ export function SecurityView({ connections, connectedIds, connectionId, proposal
 												>
 													<Icon name={POLICY_ICON[policy.kind]} />
 													<span className="sec-row-name">{policy.name}</span>
-													{policy.restrictive && <span className="sec-badge" title="Restrictive: ANDed with the other policies, so it can only take rows away">restrictive</span>}
-													{policy.appliesToAll && <span className="sec-badge warn" title={policy.exceptFor.length > 0 ? `Applies to everyone except ${policy.exceptFor.join(', ')}` : 'Applies to everyone'}>everyone</span>}
+													{policy.restrictive && <span className="sec-badge" title={t('security.restrictiveTitle')}>{t('security.badgeRestrictive')}</span>}
+													{policy.appliesToAll && <span className="sec-badge warn" title={policy.exceptFor.length > 0 ? t('security.everyoneExcept', { names: policy.exceptFor.join(', ') }) : t('security.everyoneTitle')}>{t('security.badgeEveryone')}</span>}
 												</button>
 											);
 										})}
@@ -373,7 +377,7 @@ export function SecurityView({ connections, connectedIds, connectionId, proposal
 										/>
 									)
 									: !selected
-										? <div className="results-message">Select a user, role or policy to see what it does.</div>
+										? <div className="results-message">{t('security.selectToSee')}</div>
 										: (
 											<PrincipalDetail
 												principal={selected}
@@ -441,6 +445,7 @@ function PrincipalDetail({ principal, grants, policies, roleNames, onEdit, onPro
 	onEdit(editor: Editor): void;
 	onPropose(changes: SecurityChange[]): void;
 }): JSX.Element {
+	const t = useT();
 	const ref = { name: principal.name, host: principal.host };
 	const addable = roleNames.filter((role) => !principal.memberOf.includes(role) && role !== principal.name);
 
@@ -450,14 +455,14 @@ function PrincipalDetail({ principal, grants, policies, roleNames, onEdit, onPro
 				<Icon name={KIND_ICON[principal.kind]} className="sec-detail-icon" />
 				<div className="sec-detail-name">
 					<div className="sec-detail-title">{principalLabel(principal)}</div>
-					<div className="muted small">{KIND_GROUP[principal.kind].replace(/s$/, '')}{principal.canLogin ? ', can sign in' : ', cannot sign in'}</div>
+					<div className="muted small">{t(KIND_ONE[principal.kind])}{principal.canLogin ? t('security.canSignIn') : t('security.cannotSignIn')}</div>
 				</div>
 				<span className="spacer" />
 				{principal.kind !== 'role' && (
 					<>
-						<button type="button" onClick={() => onEdit({ kind: 'set-password', principal })}><Icon name="key" /> Set password</button>
+						<button type="button" onClick={() => onEdit({ kind: 'set-password', principal })}><Icon name="key" /> {t('security.setPassword')}</button>
 						<button type="button" onClick={() => onPropose([{ kind: 'set-enabled', principal: ref, enabled: principal.disabled }])}>
-							<Icon name={principal.disabled ? 'unlock' : 'lock'} /> {principal.disabled ? 'Enable' : 'Disable'}
+							<Icon name={principal.disabled ? 'unlock' : 'lock'} /> {principal.disabled ? t('security.enable') : t('security.disable')}
 						</button>
 					</>
 				)}
@@ -466,26 +471,26 @@ function PrincipalDetail({ principal, grants, policies, roleNames, onEdit, onPro
 					className="danger"
 					onClick={() => onPropose([{ kind: 'drop-principal', principal: ref, principalKind: principal.kind }])}
 				>
-					<Icon name="trash" /> Drop
+					<Icon name="trash" /> {t('security.drop')}
 				</button>
 			</div>
 
 			{principal.attributes && (
 				<fieldset className="sec-card">
-					<legend>Details</legend>
+					<legend>{t('security.details')}</legend>
 					<dl className="sec-attrs">
 						{Object.entries(principal.attributes).map(([label, value]) => (
 							<div key={label}><dt>{label}</dt><dd>{value}</dd></div>
 						))}
-						{principal.expiresAt && <div><dt>Expires</dt><dd>{principal.expiresAt}</dd></div>}
+						{principal.expiresAt && <div><dt>{t('security.expires')}</dt><dd>{principal.expiresAt}</dd></div>}
 					</dl>
 				</fieldset>
 			)}
 
 			<fieldset className="sec-card">
-				<legend>Roles</legend>
+				<legend>{t('security.roles')}</legend>
 				{principal.memberOf.length === 0
-					? <div className="muted small">Holds no roles.</div>
+					? <div className="muted small">{t('security.noRoles')}</div>
 					: (
 						<div className="sec-chips">
 							{principal.memberOf.map((role) => (
@@ -494,7 +499,7 @@ function PrincipalDetail({ principal, grants, policies, roleNames, onEdit, onPro
 									<button
 										type="button"
 										className="icon-btn"
-										aria-label={`Remove ${principalLabel(principal)} from ${role}`}
+										aria-label={t('security.removeFromRole', { who: principalLabel(principal), role })}
 										onClick={() => onPropose([{ kind: 'revoke-role', principal: ref, role }])}
 									><Icon name="close" /></button>
 								</span>
@@ -503,7 +508,7 @@ function PrincipalDetail({ principal, grants, policies, roleNames, onEdit, onPro
 					)}
 				{addable.length > 0 && (
 					<label className="sec-add-role">
-						Add to role
+						{t('security.addToRole')}
 						<select
 							value=""
 							onChange={(e) => {
@@ -512,7 +517,7 @@ function PrincipalDetail({ principal, grants, policies, roleNames, onEdit, onPro
 								}
 							}}
 						>
-							<option value="">Choose a role…</option>
+							<option value="">{t('security.chooseRole')}</option>
 							{addable.map((role) => <option key={role} value={role}>{role}</option>)}
 						</select>
 					</label>
@@ -521,10 +526,9 @@ function PrincipalDetail({ principal, grants, policies, roleNames, onEdit, onPro
 
 			{policies.length > 0 && (
 				<fieldset className="sec-card">
-					<legend>What else applies to this account</legend>
+					<legend>{t('security.alsoApplies')}</legend>
 					<div className="muted small sec-note">
-						These are not privileges. A row policy decides which ROWS of a table are visible, a quota
-						decides how much may be used, and a settings profile decides what the session runs with.
+						{t('security.alsoAppliesNote')}
 					</div>
 					<table className="sec-policy-table">
 						<tbody>
@@ -532,7 +536,7 @@ function PrincipalDetail({ principal, grants, policies, roleNames, onEdit, onPro
 								<tr key={policySelectionKey(policy)}>
 									<td><Icon name={POLICY_ICON[policy.kind]} /> {policyLabel(policy)}</td>
 									<td className="sec-policy-detail">{policy.detail}</td>
-									<td>{policy.restrictive && <span className="sec-badge" title="ANDed with the other policies on that table">restrictive</span>}</td>
+									<td>{policy.restrictive && <span className="sec-badge" title={t('security.restrictiveTableTitle')}>{t('security.badgeRestrictive')}</span>}</td>
 								</tr>
 							))}
 						</tbody>
@@ -541,33 +545,33 @@ function PrincipalDetail({ principal, grants, policies, roleNames, onEdit, onPro
 			)}
 
 			<fieldset className="sec-card sec-grants">
-				<legend>Privileges</legend>
+				<legend>{t('security.privileges')}</legend>
 				<div className="sec-card-actions">
-					<button type="button" onClick={() => onEdit({ kind: 'grant', principal })}><Icon name="add" /> Grant…</button>
+					<button type="button" onClick={() => onEdit({ kind: 'grant', principal })}><Icon name="add" /> {t('security.grant')}</button>
 				</div>
 				{grants.length === 0
-					? <div className="muted small">No privileges granted directly.</div>
+					? <div className="muted small">{t('security.noPrivileges')}</div>
 					: (
 						<table className="sec-grant-table">
 							<thead>
-								<tr><th>Scope</th><th>On</th><th>Privilege</th><th></th><th></th></tr>
+								<tr><th>{t('security.scopeHeader')}</th><th>{t('security.objectColumn')}</th><th>{t('security.privilegeHeader')}</th><th></th><th></th></tr>
 							</thead>
 							<tbody>
 								{grants.map((grant, index) => (
-									<tr key={`${grant.scope}-${grantObject(grant)}-${grant.privilege}-${index}`} className={grant.deny ? 'sec-deny' : undefined}>
-										<td>{scopeLabel(grant.scope)}</td>
-										<td>{grantObject(grant)}</td>
+									<tr key={`${grant.scope}-${grantObject(grant, t)}-${grant.privilege}-${index}`} className={grant.deny ? 'sec-deny' : undefined}>
+										<td>{scopeLabel(grant.scope, t)}</td>
+										<td>{grantObject(grant, t)}</td>
 										<td>{grant.privilege}</td>
 										<td>
-											{grant.deny && <span className="sec-badge warn" title="A DENY overrides every grant, including one inherited from a role">DENY</span>}
-											{grant.withGrantOption && <span className="sec-badge" title="Can pass this privilege on to others">grantable</span>}
+											{grant.deny && <span className="sec-badge warn" title={t('security.denyTitle')}>DENY</span>}
+											{grant.withGrantOption && <span className="sec-badge" title={t('security.grantableTitle')}>{t('security.badgeGrantable')}</span>}
 										</td>
 										<td>
 											{!grant.deny && (
 												<button
 													type="button"
 													className="icon-btn"
-													aria-label={`Revoke ${grant.privilege} on ${grantObject(grant)}`}
+													aria-label={t('security.revokeOn', { privilege: grant.privilege, target: grantObject(grant, t) })}
 													onClick={() => onPropose([{
 														kind: 'revoke',
 														principal: ref,
@@ -584,7 +588,7 @@ function PrincipalDetail({ principal, grants, policies, roleNames, onEdit, onPro
 					)}
 				{principal.memberOf.length > 0 && (
 					<div className="muted small sec-note">
-						These are the privileges granted directly. This {principal.kind} also holds {principal.memberOf.length === 1 ? 'a role' : `${principal.memberOf.length} roles`}, which may add more.
+						{t(`security.alsoHolds.${principal.kind}`, { count: principal.memberOf.length })}
 					</div>
 				)}
 			</fieldset>
@@ -605,6 +609,7 @@ function PolicyDetail({ policy, principalNames, onPropose }: {
 	principalNames: readonly string[];
 	onPropose(changes: SecurityChange[]): void;
 }): JSX.Element {
+	const t = useT();
 	const ref = { kind: policy.kind, name: policy.name, database: policy.database, object: policy.object };
 	// With `appliesToAll`, the list on screen is the EXCEPT list, and adding a name to it takes
 	// the policy off that account rather than putting it on. One list, two meanings, so the
@@ -622,29 +627,29 @@ function PolicyDetail({ policy, principalNames, onPropose }: {
 				<Icon name={POLICY_ICON[policy.kind]} className="sec-detail-icon" />
 				<div className="sec-detail-name">
 					<div className="sec-detail-title">{policy.name}</div>
-					<div className="muted small">{POLICY_GROUP[policy.kind].replace(/s$/, '')}{policy.database && policy.object ? ` on ${policy.database}.${policy.object}` : ''}</div>
+					<div className="muted small">{policy.database && policy.object ? t('security.policies.onTable', { kind: t(POLICY_ONE[policy.kind]), table: `${policy.database}.${policy.object}` }) : t(POLICY_ONE[policy.kind])}</div>
 				</div>
 				<span className="spacer" />
 				<button type="button" className="danger" onClick={() => onPropose([{ kind: 'drop-policy', policy: ref }])}>
-					<Icon name="trash" /> Drop
+					<Icon name="trash" /> {t('security.drop')}
 				</button>
 			</div>
 
 			<fieldset className="sec-card">
-				<legend>{policy.kind === 'row-policy' ? 'Rows it allows' : policy.kind === 'quota' ? 'Limits' : 'Settings'}</legend>
-				<div className="sec-policy-detail">{policy.detail || 'Nothing recorded.'}</div>
+				<legend>{policy.kind === 'row-policy' ? t('security.rowsItAllows') : policy.kind === 'quota' ? t('security.limits') : t('security.settings')}</legend>
+				<div className="sec-policy-detail">{policy.detail || t('security.nothingRecorded')}</div>
 				{policy.kind === 'row-policy' && (
 					<div className="muted small sec-note">
 						{policy.restrictive
-							? 'Restrictive: this is ANDed with every other policy on the table, so it can only take rows away.'
-							: 'Permissive: this is ORed with the other permissive policies on the table. The first policy on a table hides every row no policy allows.'}
+							? t('security.restrictiveNote')
+							: t('security.permissiveNote')}
 					</div>
 				)}
 			</fieldset>
 
 			<fieldset className="sec-card">
-				<legend>{policy.appliesToAll ? 'Applies to everyone except' : 'Applies to'}</legend>
-				<div className="muted small sec-note">Applies to {appliesToLabel(policy.appliesToAll ? policy.exceptFor : policy.appliesTo, policy.appliesToAll)}.</div>
+				<legend>{policy.appliesToAll ? t('security.everyoneExceptLegend') : t('security.appliesTo')}</legend>
+				<div className="muted small sec-note">{t('security.appliesToWho', { who: appliesToLabel(policy.appliesToAll ? policy.exceptFor : policy.appliesTo, policy.appliesToAll) })}</div>
 				{list.length > 0 && (
 					<div className="sec-chips">
 						{list.map((name) => (
@@ -653,7 +658,7 @@ function PolicyDetail({ policy, principalNames, onPropose }: {
 								<button
 									type="button"
 									className="icon-btn"
-									aria-label={policy.appliesToAll ? `Stop excepting ${name}` : `Stop applying to ${name}`}
+									aria-label={policy.appliesToAll ? t('security.stopExcepting', { name }) : t('security.stopApplying', { name })}
 									onClick={() => setList(list.filter((other) => other !== name))}
 								><Icon name="close" /></button>
 							</span>
@@ -662,7 +667,7 @@ function PolicyDetail({ policy, principalNames, onPropose }: {
 				)}
 				{addable.length > 0 && (
 					<label className="sec-add-role">
-						{policy.appliesToAll ? 'Except' : 'Apply to'}
+						{policy.appliesToAll ? t('security.except') : t('security.applyTo')}
 						<select
 							value=""
 							onChange={(e) => {
@@ -671,7 +676,7 @@ function PolicyDetail({ policy, principalNames, onPropose }: {
 								}
 							}}
 						>
-							<option value="">Choose a user or role…</option>
+							<option value="">{t('security.chooseUserOrRole')}</option>
 							{addable.map((name) => <option key={name} value={name}>{name}</option>)}
 						</select>
 					</label>
@@ -680,7 +685,7 @@ function PolicyDetail({ policy, principalNames, onPropose }: {
 
 			{policy.attributes && (
 				<fieldset className="sec-card">
-					<legend>Details</legend>
+					<legend>{t('security.details')}</legend>
 					<dl className="sec-attrs">
 						{Object.entries(policy.attributes).map(([label, value]) => (
 							<div key={label}><dt>{label}</dt><dd>{value}</dd></div>
@@ -693,14 +698,15 @@ function PolicyDetail({ policy, principalNames, onPropose }: {
 }
 
 /** One row of a two-field list (a quota's limits, a profile's settings), edited in place. */
-function PairRows({ label, rows, names, unit, onChange }: {
-	label: string;
+function PairRows({ kind, rows, names, unit, onChange }: {
+	kind: 'limit' | 'setting';
 	rows: readonly PolicySetting[];
 	/** A fixed vocabulary offers a picker; undefined means the name is typed. */
 	names?: readonly string[];
 	unit?: string;
 	onChange(rows: PolicySetting[]): void;
 }): JSX.Element {
+	const t = useT();
 	function set(index: number, patch: Partial<PolicySetting>): void {
 		onChange(rows.map((row, i) => (i === index ? { ...row, ...patch } : row)));
 	}
@@ -710,17 +716,17 @@ function PairRows({ label, rows, names, unit, onChange }: {
 				<div className="sec-pair" key={index}>
 					{names
 						? (
-							<select aria-label={`${label} ${index + 1}`} value={row.name} onChange={(e) => set(index, { name: e.target.value })}>
+							<select aria-label={t(`security.pairs.${kind}.row`, { n: index + 1 })} value={row.name} onChange={(e) => set(index, { name: e.target.value })}>
 								{names.map((name) => <option key={name} value={name}>{name}</option>)}
 							</select>
 						)
-						: <input aria-label={`${label} ${index + 1}`} type="text" value={row.name} placeholder="setting" onChange={(e) => set(index, { name: e.target.value })} />}
-					<input aria-label={`${label} ${index + 1} value`} type="text" value={row.value} placeholder={unit ?? 'value'} onChange={(e) => set(index, { value: e.target.value })} />
-					<button type="button" className="icon-btn" aria-label="Remove" onClick={() => onChange(rows.filter((_, i) => i !== index))}><Icon name="close" /></button>
+						: <input aria-label={t(`security.pairs.${kind}.row`, { n: index + 1 })} type="text" value={row.name} placeholder={t('security.pairs.settingPlaceholder')} onChange={(e) => set(index, { name: e.target.value })} />}
+					<input aria-label={t(`security.pairs.${kind}.rowValue`, { n: index + 1 })} type="text" value={row.value} placeholder={unit ?? t('security.pairs.valuePlaceholder')} onChange={(e) => set(index, { value: e.target.value })} />
+					<button type="button" className="icon-btn" aria-label={t('security.pairs.remove')} onClick={() => onChange(rows.filter((_, i) => i !== index))}><Icon name="close" /></button>
 				</div>
 			))}
 			<button type="button" className="secondary" onClick={() => onChange([...rows, { name: names ? names[0] : '', value: '' }])}>
-				<Icon name="add" /> Add {label.toLowerCase()}
+				<Icon name="add" /> {t(`security.pairs.${kind}.add`)}
 			</button>
 		</>
 	);
@@ -743,6 +749,7 @@ function NewPolicyDialog({ support, principalNames, onCancel, onPropose }: {
 	onCancel(): void;
 	onPropose(changes: SecurityChange[]): void;
 }): JSX.Element {
+	const t = useT();
 	const [kind, setKind] = useState<PolicyKind>(support.policyKinds[0] ?? 'row-policy');
 	const [name, setName] = useState('');
 	const [database, setDatabase] = useState('');
@@ -780,73 +787,73 @@ function NewPolicyDialog({ support, principalNames, onCancel, onPropose }: {
 	return (
 		<div className="modal-backdrop" onClick={onCancel}>
 			<div className="modal sec-modal" onClick={(e) => e.stopPropagation()}>
-				<h2><Icon name="shield" /> New policy</h2>
+				<h2><Icon name="shield" /> {t('security.newPolicy')}</h2>
 				<div className="sec-modal-body">
 					{support.policyKinds.length > 1 && (
 						<label>
-							Kind
-							<select aria-label="Kind" value={kind} onChange={(e) => setKind(e.target.value as PolicyKind)}>
-								{support.policyKinds.map((k) => <option key={k} value={k}>{POLICY_GROUP[k].replace(/s$/, '')}</option>)}
+							{t('security.kind')}
+							<select aria-label={t('security.kind')} value={kind} onChange={(e) => setKind(e.target.value as PolicyKind)}>
+								{support.policyKinds.map((k) => <option key={k} value={k}>{t(POLICY_ONE[k])}</option>)}
 							</select>
 						</label>
 					)}
-					<p className="field-hint">{POLICY_BLURB[kind]}</p>
+					<p className="field-hint">{t(POLICY_BLURB[kind])}</p>
 
 					<label>
-						Name
-						<input aria-label="Name" type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="own_rows_only" />
+						{t('security.name')}
+						<input aria-label={t('security.name')} type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="own_rows_only" />
 					</label>
 
 					{kind === 'row-policy' && (
 						<>
 							<label>
-								Database
-								<input aria-label="Database" type="text" value={database} onChange={(e) => setDatabase(e.target.value)} />
+								{t('security.scope.database')}
+								<input aria-label={t('security.scope.database')} type="text" value={database} onChange={(e) => setDatabase(e.target.value)} />
 							</label>
 							<label>
-								Table
-								<input aria-label="Table" type="text" value={object} onChange={(e) => setObject(e.target.value)} />
+								{t('security.scope.table')}
+								<input aria-label={t('security.scope.table')} type="text" value={object} onChange={(e) => setObject(e.target.value)} />
 							</label>
 							<label>
-								Rows it allows
-								<input aria-label="Rows it allows" type="text" value={expression} onChange={(e) => setExpression(e.target.value)} placeholder="tenant_id = currentUser()" />
+								{t('security.rowsItAllows')}
+								<input aria-label={t('security.rowsItAllows')} type="text" value={expression} onChange={(e) => setExpression(e.target.value)} placeholder="tenant_id = currentUser()" />
 							</label>
-							<p className="field-hint">A condition on that table's own columns. A row is visible when it is true.</p>
+							<p className="field-hint">{t('security.conditionHint')}</p>
 							<label className="check">
 								<input type="checkbox" checked={restrictive} onChange={(e) => setRestrictive(e.target.checked)} />
-								<span>Restrictive</span>
+								<span>{t('security.restrictive')}</span>
 							</label>
-							<p className="field-hint">Restrictive policies are ANDed with the others, so they can only take rows away. A permissive one is ORed and can give them back.</p>
+							<p className="field-hint">{t('security.restrictiveHint')}</p>
 						</>
 					)}
 
 					{kind === 'quota' && (
 						<>
 							<label>
-								Window
-								<input aria-label="Window" type="number" min="1" value={duration} onChange={(e) => setDuration(e.target.value)} />
+								{t('security.window')}
+								<input aria-label={t('security.window')} type="number" min="1" value={duration} onChange={(e) => setDuration(e.target.value)} />
 							</label>
 							<label>
-								Unit
-								<select aria-label="Unit" value={unit} onChange={(e) => setUnit(e.target.value)}>
+								{t('security.unit')}
+								<select aria-label={t('security.unit')} value={unit} onChange={(e) => setUnit(e.target.value)}>
 									{QUOTA_UNITS.map((u) => <option key={u} value={u}>{u}</option>)}
 								</select>
 							</label>
-							<PairRows label="Limit" rows={limits} names={QUOTA_METRICS} unit="number" onChange={setLimits} />
-							<p className="field-hint">Counted per account. A window with no limits tracks usage without refusing anything.</p>
+							<PairRows kind="limit" rows={limits} names={QUOTA_METRICS} unit="number" onChange={setLimits} />
+							<p className="field-hint">{t('security.quotaHint')}</p>
 						</>
 					)}
 
 					{kind === 'settings-profile' && (
 						<>
-							<PairRows label="Setting" rows={settings} onChange={setSettings} />
-							<p className="field-hint">A setting name as the server spells it, such as max_memory_usage or readonly.</p>
+							<PairRows kind="setting" rows={settings} onChange={setSettings} />
+							<p className="field-hint">{t('security.settingHint')}</p>
 						</>
 					)}
 
 					{principalNames.length > 0 && (
 						<>
-							<div className="sec-check-list-title">Applies to</div>
+							<div className="sec-check-list-title">{t('security.appliesTo')}</div>
 							<div className="sec-check-list">
 								{principalNames.map((who) => (
 									<label className="sec-check" key={who}>
@@ -859,14 +866,14 @@ function NewPolicyDialog({ support, principalNames, onCancel, onPropose }: {
 									</label>
 								))}
 							</div>
-							<p className="field-hint">{appliesTo.length === 0 ? 'It will exist and apply to nobody until you say who.' : `It will apply to ${appliesToLabel(appliesTo, false)}.`}</p>
+							<p className="field-hint">{appliesTo.length === 0 ? t('security.applyNobody') : t('security.applyTo2', { who: appliesToLabel(appliesTo, false) })}</p>
 						</>
 					)}
 				</div>
 				<div className="modal-actions">
 					<span className="spacer" />
-					<button type="button" className="secondary" onClick={onCancel}><Icon name="close" /> Cancel</button>
-					<button type="button" className="primary" disabled={!ready} onClick={submit}><Icon name="eye" /> Review statement</button>
+					<button type="button" className="secondary" onClick={onCancel}><Icon name="close" /> {t('connections.common.cancel')}</button>
+					<button type="button" className="primary" disabled={!ready} onClick={submit}><Icon name="eye" /> {t('security.reviewStatement')}</button>
 				</div>
 			</div>
 		</div>
@@ -882,6 +889,7 @@ function NewPrincipalDialog({ support, roleNames, seed, onCancel, onPropose }: {
 	onCancel(): void;
 	onPropose(changes: SecurityChange[]): void;
 }): JSX.Element {
+	const { t, tr } = useI18n();
 	const [kind, setKind] = useState<PrincipalKind>(seed?.kind ?? support.principalKinds[0] ?? 'user');
 	const [name, setName] = useState(seed?.name ?? '');
 	const [host, setHost] = useState(seed?.host ?? '%');
@@ -907,45 +915,45 @@ function NewPrincipalDialog({ support, roleNames, seed, onCancel, onPropose }: {
 	return (
 		<div className="modal-backdrop" onClick={onCancel}>
 			<div className="modal sec-modal" onClick={(e) => e.stopPropagation()}>
-				<h2><Icon name="person" /> New user</h2>
+				<h2><Icon name="person" /> {t('security.newUser')}</h2>
 				<div className="sec-modal-body">
 					<fieldset>
-						<legend>Who</legend>
+						<legend>{t('security.who')}</legend>
 						{support.principalKinds.length > 1 && (
-							<label>Kind
+							<label>{t('security.kind')}
 								<select value={kind} onChange={(e) => setKind(e.target.value as PrincipalKind)}>
-									{support.principalKinds.map((k) => <option key={k} value={k}>{KIND_GROUP[k].replace(/s$/, '')}</option>)}
+									{support.principalKinds.map((k) => <option key={k} value={k}>{t(KIND_ONE[k])}</option>)}
 								</select>
 							</label>
 						)}
-						<label>Name
+						<label>{t('security.name')}
 							<input autoFocus value={name} onChange={(e) => setName(e.target.value)} placeholder="app" />
 						</label>
 						{support.usesHost && (
-							<label>Host
+							<label>{t('security.host')}
 								<input value={host} onChange={(e) => setHost(e.target.value)} placeholder="%" />
 							</label>
 						)}
 						{support.usesHost && (
 							<div className="muted small">
-								On MySQL the host is part of the account: <code>app@localhost</code> and <code>app@%</code> are two different accounts with two different sets of privileges.
+								{tr('security.mysqlHost')}
 							</div>
 						)}
 					</fieldset>
 					{needsPassword && (
 						<fieldset>
-							<legend>Password</legend>
-							<label>Password
+							<legend>{t('security.password')}</legend>
+							<label>{t('security.password')}
 								<input type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
 							</label>
 							<div className="muted small">
-								Typed here and used once, in the statement you are about to review. It is never written to your query history, never sent to a model, and never stored by the app.
+								{t('security.passwordNote')}
 							</div>
 						</fieldset>
 					)}
 					{roleNames.length > 0 && (
 						<fieldset>
-							<legend>Roles</legend>
+							<legend>{t('security.roles')}</legend>
 							<div className="tick-grid">
 								{roleNames.map((role) => (
 									<label className="tick" key={role}>
@@ -963,8 +971,8 @@ function NewPrincipalDialog({ support, roleNames, seed, onCancel, onPropose }: {
 				</div>
 				<div className="modal-actions">
 					<span className="spacer" />
-					<button type="button" className="secondary" onClick={onCancel}><Icon name="close" /> Cancel</button>
-					<button type="button" className="primary" disabled={!ready} onClick={submit}><Icon name="eye" /> Review statements</button>
+					<button type="button" className="secondary" onClick={onCancel}><Icon name="close" /> {t('connections.common.cancel')}</button>
+					<button type="button" className="primary" disabled={!ready} onClick={submit}><Icon name="eye" /> {t('security.reviewStatements')}</button>
 				</div>
 			</div>
 		</div>
@@ -976,6 +984,7 @@ function SetPasswordDialog({ principal, onCancel, onPropose }: {
 	onCancel(): void;
 	onPropose(changes: SecurityChange[]): void;
 }): JSX.Element {
+	const t = useT();
 	const [password, setPassword] = useState('');
 	const [confirm, setConfirm] = useState('');
 	const mismatch = confirm !== '' && confirm !== password;
@@ -983,28 +992,28 @@ function SetPasswordDialog({ principal, onCancel, onPropose }: {
 	return (
 		<div className="modal-backdrop" onClick={onCancel}>
 			<div className="modal sec-modal" onClick={(e) => e.stopPropagation()}>
-				<h2><Icon name="key" /> Set password for {principalLabel(principal)}</h2>
+				<h2><Icon name="key" /> {t('security.setPasswordFor', { who: principalLabel(principal) })}</h2>
 				<div className="sec-modal-body">
 					<fieldset>
-						<legend>New password</legend>
-						<label>Password
+						<legend>{t('security.newPassword')}</legend>
+						<label>{t('security.password')}
 							<input autoFocus type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
 						</label>
-						<label>Confirm
+						<label>{t('security.confirm')}
 							<input type="password" value={confirm} onChange={(e) => setConfirm(e.target.value)} />
 						</label>
-						{mismatch && <div className="results-error">The two passwords do not match.</div>}
+						{mismatch && <div className="results-error">{t('security.mismatch')}</div>}
 					</fieldset>
 				</div>
 				<div className="modal-actions">
 					<span className="spacer" />
-					<button type="button" className="secondary" onClick={onCancel}><Icon name="close" /> Cancel</button>
+					<button type="button" className="secondary" onClick={onCancel}><Icon name="close" /> {t('connections.common.cancel')}</button>
 					<button
 						type="button"
 						className="primary"
 						disabled={password === '' || password !== confirm}
 						onClick={() => onPropose([{ kind: 'set-password', principal: { name: principal.name, host: principal.host }, password }])}
-					><Icon name="eye" /> Review statement</button>
+					><Icon name="eye" /> {t('security.reviewStatement')}</button>
 				</div>
 			</div>
 		</div>
@@ -1021,6 +1030,7 @@ function GrantDialog({ principal, support, driverId, onCancel, onPropose }: {
 	onCancel(): void;
 	onPropose(changes: SecurityChange[]): void;
 }): JSX.Element {
+	const t = useT();
 	const widest = support.grantScopes[support.grantScopes.length - 1];
 	const [scope, setScope] = useState<GrantScope>(support.grantScopes.includes('table') ? 'table' : widest);
 	const [database, setDatabase] = useState('');
@@ -1055,28 +1065,28 @@ function GrantDialog({ principal, support, driverId, onCancel, onPropose }: {
 	return (
 		<div className="modal-backdrop" onClick={onCancel}>
 			<div className="modal sec-modal" onClick={(e) => e.stopPropagation()}>
-				<h2><Icon name="shield" /> Grant to {principalLabel(principal)}</h2>
+				<h2><Icon name="shield" /> {t('security.grantTo', { who: principalLabel(principal) })}</h2>
 				<div className="sec-modal-body">
 					<fieldset>
-						<legend>On what</legend>
-						<label>Scope
+						<legend>{t('security.onWhat')}</legend>
+						<label>{t('security.scopeHeader')}
 							<select value={scope} onChange={(e) => { setScope(e.target.value as GrantScope); setPrivileges([]); }}>
-								{[...support.grantScopes].reverse().map((s) => <option key={s} value={s}>{scopeLabel(s)}</option>)}
+								{[...support.grantScopes].reverse().map((s) => <option key={s} value={s}>{scopeLabel(s, t)}</option>)}
 							</select>
 						</label>
 						{(scope === 'database' || support.usesHost) && scope !== 'global' && (
-							<label>Database<input value={database} onChange={(e) => setDatabase(e.target.value)} /></label>
+							<label>{t('security.scope.database')}<input value={database} onChange={(e) => setDatabase(e.target.value)} /></label>
 						)}
 						{(scope === 'schema' || ((scope === 'table' || scope === 'column') && !support.usesHost)) && (
-							<label>Schema<input value={schema} onChange={(e) => setSchema(e.target.value)} /></label>
+							<label>{t('security.scope.schema')}<input value={schema} onChange={(e) => setSchema(e.target.value)} /></label>
 						)}
-						{needsObject && <label>Table<input value={object} onChange={(e) => setObject(e.target.value)} /></label>}
+						{needsObject && <label>{t('security.scope.table')}<input value={object} onChange={(e) => setObject(e.target.value)} /></label>}
 						{scope === 'column' && (
-							<label>Columns<input value={columns} onChange={(e) => setColumns(e.target.value)} placeholder="total, status" /></label>
+							<label>{t('security.columns')}<input value={columns} onChange={(e) => setColumns(e.target.value)} placeholder="total, status" /></label>
 						)}
 					</fieldset>
 					<fieldset>
-						<legend>Privileges</legend>
+						<legend>{t('security.privileges')}</legend>
 						<div className="tick-grid">
 							{offered.map((privilege) => (
 								<label className="tick" key={privilege}>
@@ -1091,14 +1101,14 @@ function GrantDialog({ principal, support, driverId, onCancel, onPropose }: {
 						</div>
 						<label className="check">
 							<input type="checkbox" checked={grantable} onChange={(e) => setGrantable(e.target.checked)} />
-							Let them grant this to others
+							{t('security.letGrant')}
 						</label>
 					</fieldset>
 				</div>
 				<div className="modal-actions">
 					<span className="spacer" />
-					<button type="button" className="secondary" onClick={onCancel}><Icon name="close" /> Cancel</button>
-					<button type="button" className="primary" disabled={!ready} onClick={submit}><Icon name="eye" /> Review statement</button>
+					<button type="button" className="secondary" onClick={onCancel}><Icon name="close" /> {t('connections.common.cancel')}</button>
+					<button type="button" className="primary" disabled={!ready} onClick={submit}><Icon name="eye" /> {t('security.reviewStatement')}</button>
 				</div>
 			</div>
 		</div>
@@ -1116,6 +1126,7 @@ function ReviewSheet({ connectionId, changes, onClose, onApplied }: {
 	onClose(): void;
 	onApplied(): void;
 }): JSX.Element {
+	const t = useT();
 	const [plan, setPlan] = useState<SecurityPlan | null>(null);
 	const [error, setError] = useState<string | null>(null);
 	const [applying, setApplying] = useState(false);
@@ -1142,8 +1153,8 @@ function ReviewSheet({ connectionId, changes, onClose, onApplied }: {
 				}
 				// Three of the four engines auto-commit each statement, so a failure halfway
 				// really has done half of it. Say which half rather than implying a rollback.
-				const done = result.applied > 0 ? ` ${result.applied} earlier statement${result.applied === 1 ? '' : 's'} already took effect.` : '';
-				setError(`${result.description} did not work: ${result.error}${done}`);
+				const done = result.applied > 0 ? ` ${t('security.earlierApplied', { count: result.applied })}` : '';
+				setError(`${t('security.didNotWork', { what: result.description, error: result.error })}${done}`);
 			})
 			.catch((err: unknown) => {
 				setApplying(false);
@@ -1157,15 +1168,15 @@ function ReviewSheet({ connectionId, changes, onClose, onApplied }: {
 	return (
 		<div className="modal-backdrop" onClick={applying ? undefined : onClose}>
 			<div className="modal sec-modal sec-review" onClick={(e) => e.stopPropagation()}>
-				<h2><Icon name="law" /> Review before running</h2>
+				<h2><Icon name="law" /> {t('security.reviewTitle')}</h2>
 				<div className="sec-modal-body">
 					{error && <div className="results-error">{error}</div>}
-					{!plan && !error && <div className="results-message">Building the statements…</div>}
+					{!plan && !error && <div className="results-message">{t('security.building')}</div>}
 					{plan && (
 						<>
 							{destructive && (
 								<div className="sec-warn-banner">
-									<Icon name="warning" /> This takes access away. It is not undone by running it again.
+									<Icon name="warning" /> {t('security.takesAway')}
 								</div>
 							)}
 							<ol className="sec-plan">
@@ -1179,7 +1190,7 @@ function ReviewSheet({ connectionId, changes, onClose, onApplied }: {
 							{hasSecret && (
 								<label className="check">
 									<input type="checkbox" checked={reveal} onChange={(e) => setReveal(e.target.checked)} />
-									Show the password in the statement
+									{t('security.showPassword')}
 								</label>
 							)}
 						</>
@@ -1187,9 +1198,9 @@ function ReviewSheet({ connectionId, changes, onClose, onApplied }: {
 				</div>
 				<div className="modal-actions">
 					<span className="spacer" />
-					<button type="button" className="secondary" disabled={applying} onClick={onClose}><Icon name="close" /> Cancel</button>
+					<button type="button" className="secondary" disabled={applying} onClick={onClose}><Icon name="close" /> {t('connections.common.cancel')}</button>
 					<button type="button" className={destructive ? 'danger' : 'primary'} disabled={!plan || applying} onClick={apply}><Icon name="play" /> 
-						{applying ? 'Running…' : destructive ? 'Run anyway' : 'Run'}
+						{applying ? t('security.running') : destructive ? t('security.runAnyway') : t('security.run')}
 					</button>
 				</div>
 			</div>

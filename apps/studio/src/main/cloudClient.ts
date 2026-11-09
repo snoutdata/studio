@@ -3,6 +3,7 @@
  *  Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { t } from '../shared/i18n/core';
 import { app, safeStorage } from 'electron';
 import { appendFileSync, existsSync, mkdirSync, readFileSync, renameSync, statSync } from 'node:fs';
 import { dirname, join } from 'node:path';
@@ -147,7 +148,7 @@ export async function waitForAuthReachable(maxWaitMs = 60000): Promise<void> {
 			clearTimeout(timer);
 		}
 		if (Date.now() >= deadline) {
-			throw new Error('Auth backend not reachable.');
+			throw new Error(t('mainErrors.authUnreachable'));
 		}
 		// Back off from 1s toward 4s so a long reconnect doesn't hammer the network.
 		const delay = Math.min(1000 * 2 ** attempt++, 4000);

@@ -13,6 +13,7 @@
 
 import type { DatabaseSchema, SeriesPartitionState, TableInfo } from '../../shared/schema';
 import { formatBytes } from './formatBytes';
+import { t } from '../../shared/i18n/core';
 
 /** One row of a Partitions folder. */
 export interface PartitionRow {
@@ -73,16 +74,16 @@ export function partitionRows(table: TableInfo, children: TableInfo[] = []): Par
 			const saved = p.bytesBefore !== undefined && p.bytes !== undefined
 				? `${formatBytes(p.bytesBefore)} → ${size}${ratioText(p.bytesBefore, p.bytes) ? ` (${ratioText(p.bytesBefore, p.bytes)})` : ''}`
 				: size;
-			const range = p.rangeStart || p.rangeEnd ? `${p.rangeStart ?? '…'} to ${p.rangeEnd ?? '…'}` : undefined;
+			const holds = p.rangeStart || p.rangeEnd ? t('shards.series.holds', { start: p.rangeStart ?? '…', end: p.rangeEnd ?? '…' }) : undefined;
 			return {
 				schema: p.schema,
 				name: p.name,
 				state: p.state,
-				detail: [p.state, saved].filter(Boolean).join(' · '),
+				detail: [stateWord(p.state), saved].filter(Boolean).join(' · '),
 				title: [
-					range ? `Holds ${range}` : undefined,
-					p.estimatedRows !== undefined ? `~${p.estimatedRows.toLocaleString()} rows` : undefined,
-					STATE_HINT[p.state],
+					holds,
+					p.estimatedRows !== undefined ? t('shards.series.estimatedRows', { rows: p.estimatedRows }) : undefined,
+					stateHint(p.state),
 				].filter(Boolean).join('\n'),
 			};
 		});
@@ -93,28 +94,53 @@ export function partitionRows(table: TableInfo, children: TableInfo[] = []): Par
 			schema: c.schema,
 			name: c.name,
 			detail: c.stats?.totalBytes !== undefined ? formatBytes(c.stats.totalBytes) : '',
-			title: c.stats?.rowCount !== undefined && c.stats.rowCount >= 0 ? `~${c.stats.rowCount.toLocaleString()} rows` : '',
+			title: c.stats?.rowCount !== undefined && c.stats.rowCount >= 0 ? t('shards.series.estimatedRows', { rows: c.stats.rowCount }) : '',
 		}));
 }
 
-const STATE_HINT: Record<SeriesPartitionState, string> = {
-	live: 'Live: plain rows, taking writes.',
-	sealed: 'Sealed: rewritten into a compressed column store. Late writes still land.',
-	tiered: 'Tiered: its column store lives in S3; reads fetch what they need.',
-	default: 'Default: catches rows outside every range. They are moved out, not kept here.',
-	foreign: 'Not made by SnoutTime, so it is left alone.',
-	spread: 'Split by the space key into hash partitions.',
-};
+function stateHint(state: SeriesPartitionState): string {
+	switch (state) {
+		case 'live':
+			return t('shards.series.hint.live');
+		case 'sealed':
+			return t('shards.series.hint.sealed');
+		case 'tiered':
+			return t('shards.series.hint.tiered');
+		case 'default':
+			return t('shards.series.hint.default');
+		case 'foreign':
+			return t('shards.series.hint.foreign');
+		case 'spread':
+			return t('shards.series.hint.spread');
+		default:
+			return '';
+	}
+}
+
+function stateWord(state: SeriesPartitionState): string {
+	switch (state) {
+		case 'live':
+			return t('shards.series.state.live');
+		case 'sealed':
+			return t('shards.series.state.sealed');
+		case 'tiered':
+			return t('shards.series.state.tiered');
+		case 'default':
+			return t('shards.series.state.default');
+		default:
+			return state;
+	}
+}
 
 /** The muted word beside a table's name: `series`, `partitioned`, or a rollup and its bucket. */
 export function seriesKindLabel(table: TableInfo, hasPartitions: boolean): string | undefined {
 	if (table.series) {
 		const sealed = table.series.partitions.filter((p) => p.state === 'sealed' || p.state === 'tiered').length;
 		const ratio = ratioText(table.series.sealedBytesBefore, table.series.sealedBytes);
-		return `series${sealed > 0 ? ` · ${sealed} sealed` : ''}${ratio ? ` · ${ratio} smaller` : ''}`;
+		return [t('shards.series.label'), sealed > 0 ? t('shards.series.sealed', { count: sealed }) : '', ratio ? t('shards.series.smaller', { ratio }) : ''].filter(Boolean).join(' · ');
 	}
 	if (table.rollup) {
-		return `rollup · ${table.rollup.bucket}`;
+		return t('shards.series.rollup', { bucket: table.rollup.bucket });
 	}
-	return hasPartitions ? 'partitioned' : undefined;
+	return hasPartitions ? t('shards.series.partitioned') : undefined;
 }

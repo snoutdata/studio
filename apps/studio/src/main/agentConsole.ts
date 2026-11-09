@@ -3,6 +3,7 @@
  *  Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { t } from '../shared/i18n/core';
 import { execFile } from 'node:child_process';
 import { existsSync } from 'node:fs';
 
@@ -71,7 +72,7 @@ export type PtyFactory = (plan: SpawnPlan, options: PtyFactoryOptions) => PtyLik
 /** The message the panel shows if the native terminal backend cannot load at all. */
 export class PtyUnavailableError extends Error {
 	constructor(readonly cause: unknown) {
-		super("The terminal backend could not load, so the agent console is unavailable in this build.");
+		super(t('mainErrors.terminalUnavailable'));
 		this.name = 'PtyUnavailableError';
 	}
 }

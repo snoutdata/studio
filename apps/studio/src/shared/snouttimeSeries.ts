@@ -3,6 +3,8 @@
  *  Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { t } from './i18n/core';
+
 // "Make this a series table" in the table designer.
 //
 // A SnoutTime series is an ordinary Postgres table handed to `snouttime.create_series`, which
@@ -69,30 +71,30 @@ export function seriesProblems(draft: SeriesDraft, columns: SeriesColumn[]): str
 	const problems: string[] = [];
 	const column = columns.find((c) => c.name === draft.timeColumn);
 	if (!draft.timeColumn.trim() || !column) {
-		return ['Choose the column the table is partitioned by: a timestamp, a date, or an integer.'];
+		return [t('engineShared.series.chooseColumn')];
 	}
 	const kind = timeKind(column.dataType);
 	if (!kind) {
-		problems.push(`${column.name} is ${column.dataType}; a series is partitioned by a timestamp, a date or an integer column.`);
+		problems.push(t('engineShared.series.badType', { column: column.name, type: column.dataType }));
 		return problems;
 	}
 	if (column.nullable) {
-		problems.push(`${column.name} must not allow NULL: every row needs a time to find its partition.`);
+		problems.push(t('engineShared.series.notNull', { column: column.name }));
 	}
 	const key = columns.filter((c) => c.isPrimaryKey);
 	if (key.length > 0 && !column.isPrimaryKey) {
-		problems.push(`The primary key must include ${column.name}: Postgres can only check uniqueness within one partition.`);
+		problems.push(t('engineShared.series.keyIncludes', { column: column.name }));
 	}
 	const valid = kind === 'integer' ? WIDTH : INTERVAL;
-	const example = kind === 'integer' ? 'a whole number such as 100000' : 'an interval such as 1 day';
+	const integer = kind === 'integer';
 	if (!valid.test(draft.interval)) {
-		problems.push(`Partition size must be ${example}.`);
+		problems.push(integer ? t('engineShared.series.sizeInteger') : t('engineShared.series.sizeInterval'));
 	}
 	if (draft.retention.trim() && !valid.test(draft.retention)) {
-		problems.push(`Keep rows for must be ${example}, or empty to keep everything.`);
+		problems.push(integer ? t('engineShared.series.keepInteger') : t('engineShared.series.keepInterval'));
 	}
 	if (draft.sealAfter.trim() && !(kind === 'integer' ? /^\s*\d+\s*$/ : INTERVAL).test(draft.sealAfter)) {
-		problems.push(`Seal after must be ${kind === 'integer' ? 'a whole number' : 'an interval such as 1 day'}, or empty to never seal.`);
+		problems.push(integer ? t('engineShared.series.sealInteger') : t('engineShared.series.sealInterval'));
 	}
 	return problems;
 }

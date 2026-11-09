@@ -1,0 +1,64 @@
+{
+	"advisory": {
+		"performance": "Dicas de desempenho",
+		"notes": "Notas da consulta",
+		"askTitle": "Pedir a {assistant} um índice ou reescrita",
+		"askFix": "Pedir a {assistant} para corrigir",
+		"dismiss": "Dispensar"
+	},
+	"newMonitor": "Novo monitor",
+	"renameHint": "Clique duas vezes para renomear",
+	"addWidget": "Adicionar widget",
+	"deleteConfirm": "Excluir \"{name}\"?",
+	"delete": "Excluir",
+	"cancel": "Cancelar",
+	"deleteMonitor": "Excluir monitor",
+	"close": "Fechar",
+	"emptyTitle": "Ainda não há monitores",
+	"emptyBody": "Um monitor é um conjunto de widgets SQL ao vivo, consultados em intervalos e plotados ao longo do tempo.",
+	"monitorEmpty": "{name} está vazio",
+	"monitorEmptyBody": "Adicione um widget: uma consulta SQL executada a cada poucos segundos e plotada. Uma tendência amostra um número ao longo do tempo; um snapshot reexecuta uma consulta e substitui o gráfico.",
+	"qp": {
+		"rank": {
+			"time": "Tempo total",
+			"read": "Dados lidos",
+			"memory": "Pico de memória"
+		},
+		"selectToAnalyze": "Selecione uma conexão na barra lateral para analisar",
+		"theDatabase": "o banco",
+		"connectToCollect": "Conecte \"{name}\" para coletar sua carga de trabalho",
+		"thisDatabaseCap": "Este banco",
+		"noStats": "{name} não expõe estatísticas de consultas em execução",
+		"collectTitle": "Coletar as instruções mais pesadas",
+		"title": "Desempenho de consultas",
+		"subtitle": {
+			"time": "instruções mais pesadas por tempo total, em um instante",
+			"read": "instruções mais pesadas por dados lidos, em um instante",
+			"memory": "instruções mais pesadas por pico de memória, em um instante"
+		},
+		"collecting": "Coletando…",
+		"collect": "Coletar dados",
+		"selectDatabase": "Selecione um banco na barra lateral de conexões, conecte-o e clique em \"Coletar dados\" para ver suas consultas mais pesadas.",
+		"noStatsLong": "{name} não expõe estatísticas de consultas em execução, então não há carga de trabalho para analisar.",
+		"collectingLong": "Coletando as instruções mais pesadas…",
+		"thisDatabase": "este banco",
+		"connectSidebar": "Conecte \"{name}\" na barra lateral para coletar suas consultas mais pesadas.",
+		"clickCollect": "Clique em \"Coletar dados\" acima para carregar as consultas mais pesadas de {name}.",
+		"noStatements": "Ainda não há instruções registradas. Execute algumas consultas neste banco e colete de novo.",
+		"analyzeWith": "Analisar esta instrução com {assistant}",
+		"suggestWith": "Sugerir uma otimização com {assistant}",
+		"statements": {
+			"one": "{count} instrução",
+			"other": "{count} instruções"
+		},
+		"allReplicas": "em todas as {n} réplicas",
+		"oneReplica": "só 1 de {n} réplicas",
+		"rankBy": "Ordenar por",
+		"top": "Top",
+		"formatQuery": "Formatar consulta",
+		"hintMysqlDenied": "É preciso SELECT em performance_schema. Peça a um DBA (ex.: GRANT SELECT ON performance_schema.* TO your_user) e colete de novo.",
+		"hintMysqlMissing": "performance_schema parece estar desativado neste servidor. Ative-o (performance_schema=ON) para ver a carga de trabalho.",
+		"hintPgMissing": "É preciso a extensão pg_stat_statements. Execute CREATE EXTENSION pg_stat_statements (e adicione-a a shared_preload_libraries + reinício) e colete de novo.",
+		"hintDenied": "Ler as estatísticas de consultas deste banco exige privilégios extras (ex.: VIEW SERVER STATE no SQL Server, SELECT ANY DICTIONARY no Oracle ou MONITOR no Snowflake). Conceda o acesso e colete de novo."
+	}
+}

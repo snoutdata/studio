@@ -26,6 +26,7 @@ import type { CatalogQuery, SecurityCatalog } from '../catalog';
 import type { SecurityEmitter } from '../emitter';
 import { assertSafeName, assertSafePassword, privilegeList, quoteBracket, quoteLiteral, refusePolicy } from '../emitter';
 import type { GrantScope, GrantTarget, PrincipalRef, SecurityChange } from '../types';
+import { t } from '../../../i18n/core';
 
 /** Database-level principals: users and database roles. `is_fixed_role = 0` drops the built-in
  *  `db_datareader` family, which is noise on every database in the world. */
@@ -104,10 +105,10 @@ WHERE perm.state IN ('G', 'W', 'D')
 export const sqlserverCatalog: SecurityCatalog = {
 	driverId: 'sqlserver',
 	principals: [
-		{ label: 'database users and roles', candidates: [DATABASE_PRINCIPALS] },
-		{ label: 'server logins', candidates: [SERVER_LOGINS] },
+		{ get label() { return t('engineSecurity.catalog.databaseUsersAndRoles'); }, candidates: [DATABASE_PRINCIPALS] },
+		{ get label() { return t('engineSecurity.catalog.serverLogins'); }, candidates: [SERVER_LOGINS] },
 	],
-	grants: [{ label: 'database permissions', candidates: [PERMISSIONS] }],
+	grants: [{ get label() { return t('engineSecurity.catalog.databasePermissions'); }, candidates: [PERMISSIONS] }],
 };
 
 function principalName(ref: PrincipalRef): string {
@@ -167,7 +168,7 @@ export const sqlserverEmitter: SecurityEmitter = {
 				}
 				if (change.draft.kind === 'login') {
 					if (!change.draft.password) {
-						throw new Error('A SQL Server login needs a password.');
+						throw new Error(t('engineSecurity.vendors.sqlserverPassword'));
 					}
 					return [`CREATE LOGIN ${name} WITH PASSWORD = ${quoteLiteral(assertSafePassword(change.draft.password))}`];
 				}

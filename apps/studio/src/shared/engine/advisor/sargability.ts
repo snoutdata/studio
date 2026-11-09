@@ -16,6 +16,7 @@ import { Parser } from 'node-sql-parser';
 
 import type { ColumnInfo, DatabaseSchema, TableInfo } from '../../schema';
 import type { Advisory } from './types';
+import { t } from '../../i18n/core';
 
 const parser = new Parser();
 
@@ -195,13 +196,13 @@ function inspectOperand(side: ExprNode, other: ExprNode, operator: string, ctx: 
 		}
 		if ((operator === 'LIKE' || operator === 'NOT LIKE') && isLeadingWildcard(other)) {
 			pushOnce(ctx, resolved, 'leading-wildcard-like',
-				`\`${operator} '%…'\` on the indexed column ${label(resolved)} can't use its index.`,
-				"A leading `%` means the b-tree index on this column can't be used, so the query scans every row. Consider a full-text index, a trigram index (Postgres `pg_trgm`), or anchoring the pattern (`prefix%`).",
+				t('engineAdvisor.sarg.leadingWildcard', { operator, column: label(resolved) }),
+				t('engineAdvisor.sarg.leadingWildcardWhy'),
 				undefined, columnRange(ctx, side as ColumnRef));
 		} else if (isTypeMismatch(resolved.column, other)) {
 			pushOnce(ctx, resolved, 'type-mismatch',
-				`Comparing the string column ${label(resolved)} to a numeric literal forces an implicit cast.`,
-				"When a string column is compared to a number, the engine converts every row's value to compare, which defeats the index on this column (a common MySQL footgun). Quote the literal so the types match.",
+				t('engineAdvisor.sarg.typeMismatch', { column: label(resolved) }),
+				t('engineAdvisor.sarg.typeMismatchWhy'),
 				undefined, columnRange(ctx, side as ColumnRef));
 		}
 	}
@@ -217,14 +218,14 @@ function reportWrap(colRef: ColumnRef, ctx: LintCtx, kind: Advisory['kind'], op:
 	let message: string;
 	let suggestedSql: string | undefined;
 	if (kind === 'non-sargable-function') {
-		message = `\`${op}(${resolved.column.name})\` can't use the index on ${lbl} — the function runs on every row.`;
+		message = t('engineAdvisor.sarg.wrapFunction', { fn: op, name: resolved.column.name, column: lbl });
 		suggestedSql = rewriteSuggestion(op, resolved, other, operator);
 	} else if (kind === 'non-sargable-cast') {
-		message = `\`CAST(${resolved.column.name} …)\` can't use the index on ${lbl}.`;
+		message = t('engineAdvisor.sarg.wrapCast', { name: resolved.column.name, column: lbl });
 	} else {
-		message = `Arithmetic on ${lbl} (\`${resolved.column.name} ${op} …\`) can't use its index — move the math to the other side.`;
+		message = t('engineAdvisor.sarg.wrapArith', { column: lbl, name: resolved.column.name, op });
 	}
-	const rationale = "Wrapping an indexed column in a function or expression means the index (which stores the raw column value) can't be used, so the query scans the whole table. Rewrite so the bare column is on one side of the comparison, or add an expression index on the wrapped form.";
+	const rationale = t('engineAdvisor.sarg.wrapWhy');
 	pushOnce(ctx, resolved, kind, message, rationale, suggestedSql, callRange(ctx, op, resolved, colRef));
 }
 

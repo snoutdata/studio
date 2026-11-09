@@ -3,6 +3,7 @@
  *  Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { t } from '../shared/i18n/core';
 import { closeSync, constants, existsSync, fstatSync, lstatSync, mkdirSync, openSync, readdirSync, readFileSync, realpathSync, renameSync, statSync, unlinkSync, writeFileSync, writeSync } from 'node:fs';
 import type { Stats } from 'node:fs';
 import { basename, dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
@@ -83,7 +84,7 @@ export class WorkspaceStore {
 		const abs = isAbsolute(pathOrName) ? resolve(pathOrName) : resolve(root, pathOrName);
 		const rel = relative(root, abs);
 		if (rel === '' || rel.startsWith('..') || isAbsolute(rel) || rel.includes(sep)) {
-			throw new Error('Path is outside the workspace.');
+			throw new Error(t('mainErrors.outsideWorkspace'));
 		}
 		return abs;
 	}
@@ -108,10 +109,10 @@ export class WorkspaceStore {
 			try {
 				real = realpathSync(abs);
 			} catch {
-				throw new Error('This file is a link to something that does not exist.');
+				throw new Error(t('mainErrors.brokenLink'));
 			}
 			if (!this.insideRoot(real)) {
-				throw new Error('This file is a link to somewhere outside the workspace.');
+				throw new Error(t('mainErrors.linkOutside'));
 			}
 		}
 		return abs;
@@ -120,7 +121,7 @@ export class WorkspaceStore {
 	/** `abs` for a write into an existing file: never through a link. */
 	private writable(abs: string): string {
 		if (lstatOf(abs)?.isSymbolicLink()) {
-			throw new Error('This file is a link, and the workspace does not write through links.');
+			throw new Error(t('mainErrors.linkNoWrite'));
 		}
 		return abs;
 	}
@@ -278,12 +279,12 @@ export class WorkspaceStore {
 export function readRegularFile(path: string): string {
 	const stat = lstatOf(path);
 	if (!stat) {
-		throw new Error(`"${basename(path)}" was not found, so it was not imported.`);
+		throw new Error(t('mainErrors.wsNotFound', { name: basename(path) }));
 	}
 	if (stat.isSymbolicLink()) {
-		throw new Error(`"${basename(path)}" is a link, so it was not imported. Import the file it points to instead.`);
+		throw new Error(t('mainErrors.wsLink', { name: basename(path) }));
 	}
-	const notFile = `"${basename(path)}" is not a regular file, so it was not imported.`;
+	const notFile = t('mainErrors.wsNotFile', { name: basename(path) });
 	if (!stat.isFile()) {
 		throw new Error(notFile);
 	}

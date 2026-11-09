@@ -5,12 +5,13 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Icon } from './Icon';
-import { Log, Status, type Said } from './projectUi';
+import { Log, Status, type Said, mono } from './projectUi';
 import {
 	gigabytes, isMoving, parsePort, redeployArgs, shortDigest,
 	type CloudContainer, type CloudContainerLogLine, type CloudContainers, type ContainerStatus,
 } from '../../../shared/cloudContainers';
 import type { CloudProjectOp, CloudProjectOps } from '../../../shared/cloudProjects';
+import { formatLocale, t, useT } from '../i18n';
 
 // A cloud project's Snout Containers: its own image, running for as long as the project does, at
 // `/containers/v1/<name>/` on the project's API address. The dashboard's Containers page, plus
@@ -42,20 +43,21 @@ function tone(container: CloudContainer): string {
 }
 
 const STATUS_LABEL: Record<ContainerStatus, string> = {
-	pending: "Waiting for the host",
-	pulling: "Pulling the image",
-	starting: "Starting",
-	running: "Running",
-	restarting: "Restarting",
-	failed: "Failed",
-	stopped: "Stopped",
+	get pending() { return t('cloudProjects.ctr.pending'); },
+	get pulling() { return t('cloudProjects.ctr.pulling'); },
+	get starting() { return t('cloudProjects.ctr.starting'); },
+	get running() { return t('cloudProjects.ctr.running'); },
+	get restarting() { return t('cloudProjects.ctr.restarting'); },
+	get failed() { return t('cloudProjects.ctr.failed'); },
+	get stopped() { return t('cloudProjects.ctr.stopped'); },
 };
 
 function when(iso: string | null): string {
-	return iso ? new Date(iso).toLocaleString() : "unknown";
+	return iso ? new Date(iso).toLocaleString(formatLocale()) : t('projects.common.unknownL');
 }
 
 export function ContainersSection({ projectRef }: { projectRef: string }): JSX.Element {
+	const t = useT();
 	const [listing, setListing] = useState<CloudContainers | null>(null);
 	const [loading, setLoading] = useState(true);
 	const [said, setSaid] = useState<Said>(null);
@@ -99,27 +101,27 @@ export function ContainersSection({ projectRef }: { projectRef: string }): JSX.E
 	return (
 		<>
 			<fieldset>
-				<legend>Containers</legend>
+				<legend>{t('projects.common.containers')}</legend>
 				<p className="field-hint">
-					Your own image, running beside this project for as long as it runs, with <span className="mono">DATABASE_URL</span>, <span className="mono">PORT</span> and the project&apos;s secrets in its environment.
+					{mono(t('cloudProjects.ctr.intro'))}
 				</p>
 				{allowance && allowance.maxContainers > 0 && (
 					<div className="cloud-facts">
-						<span className="muted">Plan</span>
-						<span>{allowance.deployed} of {allowance.maxContainers} deployed, {allowance.memoryMb} MB{allowance.cpuPercent ? ` and ${allowance.cpuPercent}% of a core` : ''} each</span>
+						<span className="muted">{t('projects.common.plan')}</span>
+						<span>{allowance.cpuPercent ? t('cloudProjects.ctr.allowanceCpu', { deployed: allowance.deployed, max: allowance.maxContainers, mb: allowance.memoryMb, cpu: allowance.cpuPercent }) : t('cloudProjects.ctr.allowance', { deployed: allowance.deployed, max: allowance.maxContainers, mb: allowance.memoryMb })}</span>
 						{allowance.egress && allowance.egress.allowanceBytes > 0 && (
 							<>
-								<span className="muted">Sent this month</span>
-								<span>{gigabytes(allowance.egress.usedBytes)} of {gigabytes(allowance.egress.allowanceBytes)}{allowance.egress.held ? " (stopped until the 1st)" : ''}</span>
+								<span className="muted">{t('cloudProjects.ctr.sent')}</span>
+								<span>{gigabytes(allowance.egress.usedBytes)} of {gigabytes(allowance.egress.allowanceBytes)}{allowance.egress.held ? t('cloudProjects.ctr.stoppedUntil') : ''}</span>
 							</>
 						)}
 					</div>
 				)}
-				{loading && !listing && <div className="field-hint">Loading…</div>}
+				{loading && !listing && <div className="field-hint">{t('projects.common.loading')}</div>}
 				{noPlan && (
-					<p className="field-hint">Containers run on every paid plan (Plus, Pro and Business), because a container runs all the time. Change this project&apos;s plan on the dashboard to deploy one.</p>
+					<p className="field-hint">{t('cloudProjects.ctr.paidOnly')}</p>
 				)}
-				{!noPlan && listing && containers.length === 0 && <p className="field-hint">This project runs no container yet. Deploy one below.</p>}
+				{!noPlan && listing && containers.length === 0 && <p className="field-hint">{t('cloudProjects.ctr.none')}</p>}
 				{containers.length > 0 && (
 					<div className="cloud-containers">
 						{containers.map((container) => (
@@ -127,10 +129,10 @@ export function ContainersSection({ projectRef }: { projectRef: string }): JSX.E
 						))}
 					</div>
 				)}
-				<p className="field-hint">Anything written inside a container is lost when it restarts or is redeployed. Keep what matters in your database.</p>
+				<p className="field-hint">{t('cloudProjects.ctr.ephemeral')}</p>
 				<div className="cloud-actions">
 					<span className="spacer" />
-					<button type="button" className="secondary" disabled={loading} onClick={() => void reload()}><Icon name="refresh" /> Refresh</button>
+					<button type="button" className="secondary" disabled={loading} onClick={() => void reload()}><Icon name="refresh" /> {t('projects.common.refresh')}</button>
 				</div>
 				<Status said={said} />
 			</fieldset>
@@ -145,6 +147,7 @@ export function ContainersSection({ projectRef }: { projectRef: string }): JSX.E
 }
 
 function ContainerCard({ projectRef, container, onChanged }: { projectRef: string; container: CloudContainer; onChanged(listing: CloudContainers): void }): JSX.Element {
+	const t = useT();
 	const [busy, setBusy] = useState(false);
 	const [said, setSaid] = useState<Said>(null);
 	const [confirming, setConfirming] = useState(false);
@@ -171,9 +174,9 @@ function ContainerCard({ projectRef, container, onChanged }: { projectRef: strin
 	async function copyUrl(): Promise<void> {
 		try {
 			await navigator.clipboard.writeText(container.url);
-			setSaid({ ok: true, message: "Address copied." });
+			setSaid({ ok: true, message: t('cloudProjects.ctr.copied') });
 		} catch {
-			setSaid({ ok: false, message: "The address could not be copied." });
+			setSaid({ ok: false, message: t('cloudProjects.ctr.notCopied') });
 		}
 	}
 
@@ -183,44 +186,44 @@ function ContainerCard({ projectRef, container, onChanged }: { projectRef: strin
 				<span className={`cloud-dot ${tone(container)}`} aria-hidden="true" />
 				<span className="mono">{container.name}</span>
 				<span className="muted small" title={container.statusAt ? when(container.statusAt) : undefined}>
-					{container.allowed ? STATUS_LABEL[container.status] ?? container.status : "Not covered by your plan"}
+					{container.allowed ? STATUS_LABEL[container.status] ?? container.status : t('cloudProjects.ctr.notCovered')}
 				</span>
-				{container.restarts > 0 && <span className="muted small">restarted {container.restarts} {container.restarts === 1 ? "time" : "times"}</span>}
+				{container.restarts > 0 && <span className="muted small">{t('cloudProjects.ctr.restarted', { count: container.restarts })}</span>}
 			</div>
 			{container.statusDetail && <div className={container.status === 'failed' ? 'form-status error' : 'field-hint'}>{container.statusDetail}</div>}
-			{!container.allowed && <p className="field-hint">This project&apos;s plan runs fewer containers than it has, so this one is stopped. It is kept as it was, and runs again if the plan allows it.</p>}
+			{!container.allowed && <p className="field-hint">{t('cloudProjects.ctr.overPlan')}</p>}
 			<div className="cloud-facts">
-				<span className="muted">Image</span>
-				<span className="mono" title={container.digest}>{container.built ? "Built from a Dockerfile" : container.image} @ {shortDigest(container.digest)}</span>
-				<span className="muted">Port</span>
+				<span className="muted">{t('cloudProjects.ctr.image')}</span>
+				<span className="mono" title={container.digest}>{container.built ? t('cloudProjects.ctr.builtDockerfile') : container.image} @ {shortDigest(container.digest)}</span>
+				<span className="muted">{t('projects.common.port')}</span>
 				<span>{container.port}</span>
-				<span className="muted">Address</span>
+				<span className="muted">{t('projects.common.address')}</span>
 				<span className="mono">{container.url}</span>
-				{container.privateRegistry && <><span className="muted">Registry</span><span>Private, with a stored login</span></>}
-				{container.updatedAt && <><span className="muted">Deployed</span><span>{when(container.updatedAt)}</span></>}
+				{container.privateRegistry && <><span className="muted">{t('cloudProjects.ctr.registry')}</span><span>{t('cloudProjects.ctr.privateLogin')}</span></>}
+				{container.updatedAt && <><span className="muted">{t('cloudProjects.ctr.deployed')}</span><span>{when(container.updatedAt)}</span></>}
 			</div>
 			<div className="cloud-actions">
-				<button type="button" className="secondary" disabled={busy} onClick={() => void act('restart')}><Icon name="debug-restart" /> Restart</button>
+				<button type="button" className="secondary" disabled={busy} onClick={() => void act('restart')}><Icon name="debug-restart" /> {t('cloudProjects.ctr.restart')}</button>
 				<button
 					type="button"
 					className="secondary"
 					disabled={busy}
-					title={container.built ? "Start this build again from scratch" : "Resolve the tag again and run what it points at now"}
+					title={container.built ? t('cloudProjects.ctr.rebuildHint') : t('cloudProjects.ctr.reresolveHint')}
 					onClick={() => void act('redeploy')}
 				>
-					<Icon name="cloud-upload" /> Redeploy
+					<Icon name="cloud-upload" /> {t('cloudProjects.ctr.redeploy')}
 				</button>
-				<button type="button" className="secondary" aria-pressed={showLogs} onClick={() => setShowLogs((on) => !on)}><Icon name="output" /> {showLogs ? "Hide logs" : "Logs"}</button>
-				<button type="button" className="secondary" onClick={() => void copyUrl()}><Icon name="copy" /> Copy address</button>
+				<button type="button" className="secondary" aria-pressed={showLogs} onClick={() => setShowLogs((on) => !on)}><Icon name="output" /> {showLogs ? t('cloudProjects.ctr.hideLogs') : t('cloudProjects.ctr.logs')}</button>
+				<button type="button" className="secondary" onClick={() => void copyUrl()}><Icon name="copy" /> {t('cloudProjects.ctr.copyAddress')}</button>
 				<span className="spacer" />
 				{confirming ? (
 					<>
-						<span className="small cloud-container-confirm">Remove {container.name}? It stops at once.</span>
-						<button type="button" className="danger" disabled={busy} onClick={() => void act('remove')}><Icon name="trash" /> Remove</button>
-						<button type="button" className="secondary" disabled={busy} onClick={() => setConfirming(false)}>Cancel</button>
+						<span className="small cloud-container-confirm">{t('cloudProjects.ctr.removeConfirm', { name: container.name })}</span>
+						<button type="button" className="danger" disabled={busy} onClick={() => void act('remove')}><Icon name="trash" /> {t('projects.common.remove')}</button>
+						<button type="button" className="secondary" disabled={busy} onClick={() => setConfirming(false)}>{t('projects.common.cancel')}</button>
 					</>
 				) : (
-					<button type="button" className="danger" disabled={busy} onClick={() => setConfirming(true)}><Icon name="trash" /> Remove</button>
+					<button type="button" className="danger" disabled={busy} onClick={() => setConfirming(true)}><Icon name="trash" /> {t('projects.common.remove')}</button>
 				)}
 			</div>
 			<Status said={said} />
@@ -230,6 +233,7 @@ function ContainerCard({ projectRef, container, onChanged }: { projectRef: strin
 }
 
 function ContainerLogs({ projectRef, name }: { projectRef: string; name: string }): JSX.Element {
+	const t = useT();
 	const [lines, setLines] = useState<CloudContainerLogLine[] | null>(null);
 	const [errorsOnly, setErrorsOnly] = useState(false);
 	const [said, setSaid] = useState<Said>(null);
@@ -257,14 +261,14 @@ function ContainerLogs({ projectRef, name }: { projectRef: string; name: string 
 			<div className="cloud-actions">
 				<label className="check">
 					<input type="checkbox" checked={errorsOnly} onChange={(e) => setErrorsOnly(e.target.checked)} />
-					Only stderr
+					{t('cloudProjects.ctr.onlyStderr')}
 				</label>
 				<span className="spacer" />
-				<button type="button" className="secondary" disabled={loading} onClick={() => void load()}><Icon name="refresh" /> Reload</button>
+				<button type="button" className="secondary" disabled={loading} onClick={() => void load()}><Icon name="refresh" /> {t('cloudProjects.ctr.reload')}</button>
 			</div>
 			<Status said={said} />
-			{lines === null && !said && <div className="field-hint">Reading the log…</div>}
-			{lines !== null && lines.length === 0 && <p className="field-hint">Nothing printed yet. Lines arrive about once a minute.</p>}
+			{lines === null && !said && <div className="field-hint">{t('cloudProjects.ctr.readingLog')}</div>}
+			{lines !== null && lines.length === 0 && <p className="field-hint">{t('cloudProjects.ctr.noLog')}</p>}
 			{lines !== null && lines.length > 0 && (
 				<pre className="local-log">
 					{lines.map((line) => `${line.at.slice(11, 19)} ${line.stream === 'stderr' ? '!' : ' '} ${line.message}`).join('\n')}
@@ -275,6 +279,7 @@ function ContainerLogs({ projectRef, name }: { projectRef: string; name: string 
 }
 
 function DeployImage({ projectRef, onDeployed }: { projectRef: string; onDeployed(listing: CloudContainers): void }): JSX.Element {
+	const t = useT();
 	const [name, setName] = useState('');
 	const [image, setImage] = useState('');
 	const [port, setPort] = useState('8080');
@@ -298,7 +303,7 @@ function DeployImage({ projectRef, onDeployed }: { projectRef: string; onDeploye
 			}, setSaid);
 			if (next) {
 				onDeployed(next);
-				setSaid({ ok: true, message: `${name.trim()} is deployed. The host pulls it and starts it within a minute.` });
+				setSaid({ ok: true, message: t('cloudProjects.ctr.deployedMsg', { name: name.trim() }) });
 				setRegistryToken('');
 			}
 		} finally {
@@ -308,18 +313,18 @@ function DeployImage({ projectRef, onDeployed }: { projectRef: string; onDeploye
 
 	return (
 		<fieldset>
-			<legend>Deploy an image</legend>
-			<label>Name<input value={name} placeholder="whatsapp" spellCheck={false} autoComplete="off" disabled={busy} onChange={(e) => setName(e.target.value.toLowerCase())} /></label>
-			<label>Image<input value={image} placeholder="ghcr.io/acme/whatsapp:1.2" spellCheck={false} autoComplete="off" disabled={busy} onChange={(e) => setImage(e.target.value)} /></label>
-			<p className="field-hint">Built for linux/arm64. The tag is resolved once, now, and that exact image runs until the next deploy.</p>
-			<label>Port it listens on<input value={port} inputMode="numeric" disabled={busy} onChange={(e) => setPort(e.target.value)} /></label>
+			<legend>{t('cloudProjects.ctr.deployImage')}</legend>
+			<label>{t('projects.common.name')}<input value={name} placeholder="whatsapp" spellCheck={false} autoComplete="off" disabled={busy} onChange={(e) => setName(e.target.value.toLowerCase())} /></label>
+			<label>{t('cloudProjects.ctr.image')}<input value={image} placeholder="ghcr.io/acme/whatsapp:1.2" spellCheck={false} autoComplete="off" disabled={busy} onChange={(e) => setImage(e.target.value)} /></label>
+			<p className="field-hint">{t('cloudProjects.ctr.builtFor')}</p>
+			<label>{t('cloudProjects.ctr.port')}<input value={port} inputMode="numeric" disabled={busy} onChange={(e) => setPort(e.target.value)} /></label>
 			{parsed.problem && <div className="form-status error">{parsed.problem}</div>}
-			<label>Registry user<input value={registryUser} placeholder="Private images only" spellCheck={false} autoComplete="off" disabled={busy} onChange={(e) => setRegistryUser(e.target.value)} /></label>
-			<label>Registry token<input type="password" value={registryToken} autoComplete="new-password" disabled={busy} onChange={(e) => setRegistryToken(e.target.value)} /></label>
-			<p className="field-hint">The token is stored sealed and used only to pull. A redeploy of the same image reuses it.</p>
+			<label>{t('cloudProjects.ctr.regUser')}<input value={registryUser} placeholder={t('cloudProjects.ctr.privateOnly')} spellCheck={false} autoComplete="off" disabled={busy} onChange={(e) => setRegistryUser(e.target.value)} /></label>
+			<label>{t('cloudProjects.ctr.regToken')}<input type="password" value={registryToken} autoComplete="new-password" disabled={busy} onChange={(e) => setRegistryToken(e.target.value)} /></label>
+			<p className="field-hint">{t('cloudProjects.ctr.tokenHint')}</p>
 			<div className="cloud-actions">
 				<button type="button" disabled={busy || !name.trim() || !image.trim() || Boolean(parsed.problem)} onClick={() => void deploy()}>
-					<Icon name="cloud-upload" /> {busy ? "Deploying…" : "Deploy"}
+					<Icon name="cloud-upload" /> {busy ? t('cloudProjects.ctr.deploying') : t('cloudProjects.ctr.deploy')}
 				</button>
 			</div>
 			<Status said={said} />
@@ -329,6 +334,7 @@ function DeployImage({ projectRef, onDeployed }: { projectRef: string; onDeploye
 
 /** "Deploy from a folder": the folder's Dockerfile, built by the Docker on this computer. */
 function DeployFolder({ projectRef, onDeployed }: { projectRef: string; onDeployed(listing: CloudContainers): void }): JSX.Element {
+	const t = useT();
 	const [folder, setFolder] = useState('');
 	const [name, setName] = useState('');
 	const [port, setPort] = useState('8080');
@@ -368,7 +374,7 @@ function DeployFolder({ projectRef, onDeployed }: { projectRef: string; onDeploy
 			}, buildId.current);
 			if (outcome.ok) {
 				onDeployed(outcome.data);
-				setSaid({ ok: true, message: `${name.trim()} is built and deployed. The host starts it within a minute.` });
+				setSaid({ ok: true, message: t('cloudProjects.ctr.builtMsg', { name: name.trim() }) });
 			} else {
 				setSaid({ ok: false, refused: outcome.refused, message: outcome.message });
 			}
@@ -379,23 +385,23 @@ function DeployFolder({ projectRef, onDeployed }: { projectRef: string; onDeploy
 
 	return (
 		<fieldset>
-			<legend>Deploy from a folder</legend>
+			<legend>{t('cloudProjects.ctr.fromFolder')}</legend>
 			<p className="field-hint">
-				Builds the folder&apos;s Dockerfile for linux/arm64 with the Docker on this computer, uploads it to this project, and runs it. Nothing is built on our side, so Docker must be running here.
+				{t('cloudProjects.ctr.folderIntro')}
 			</p>
 			<label>
-				Folder
+				{t('localProjects.common.folder')}
 				<span className="cloud-folder-pick">
-					<input readOnly value={folder} placeholder="No folder chosen" />
-					<button type="button" className="secondary" disabled={busy} onClick={() => void choose()}><Icon name="folder-opened" /> Choose folder…</button>
+					<input readOnly value={folder} placeholder={t('cloudProjects.ctr.noFolder')} />
+					<button type="button" className="secondary" disabled={busy} onClick={() => void choose()}><Icon name="folder-opened" /> {t('cloudProjects.ctr.chooseFolder')}</button>
 				</span>
 			</label>
-			<label>Name<input value={name} placeholder="api" spellCheck={false} autoComplete="off" disabled={busy} onChange={(e) => setName(e.target.value.toLowerCase())} /></label>
-			<label>Port it listens on<input value={port} inputMode="numeric" disabled={busy} onChange={(e) => setPort(e.target.value)} /></label>
+			<label>{t('projects.common.name')}<input value={name} placeholder="api" spellCheck={false} autoComplete="off" disabled={busy} onChange={(e) => setName(e.target.value.toLowerCase())} /></label>
+			<label>{t('cloudProjects.ctr.port')}<input value={port} inputMode="numeric" disabled={busy} onChange={(e) => setPort(e.target.value)} /></label>
 			{parsed.problem && <div className="form-status error">{parsed.problem}</div>}
 			<div className="cloud-actions">
 				<button type="button" disabled={busy || !folder || !name.trim() || Boolean(parsed.problem)} onClick={() => void build()}>
-					<Icon name="package" /> {busy ? "Building…" : "Build and deploy"}
+					<Icon name="package" /> {busy ? t('cloudProjects.ctr.building') : t('cloudProjects.ctr.buildDeploy')}
 				</button>
 			</div>
 			<Log lines={lines} />

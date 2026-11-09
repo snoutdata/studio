@@ -24,6 +24,7 @@ import type { CatalogQuery, SecurityCatalog } from '../catalog';
 import type { SecurityEmitter } from '../emitter';
 import { assertSafeName, assertSafePassword, privilegeList, quoteDouble, refusePolicy } from '../emitter';
 import type { GrantScope, GrantTarget, PrincipalRef, SecurityChange } from '../types';
+import { t } from '../../../i18n/core';
 
 const DBA_USERS = `SELECT u.username AS name,
        'user' AS kind,
@@ -131,16 +132,16 @@ FROM ${view} p`;
 }
 
 const GRANT_QUERIES: CatalogQuery[] = [
-	{ label: 'system privileges', candidates: [sysPrivs('dba_sys_privs', 'p.grantee'), sysPrivs('user_sys_privs', 'p.username')] },
-	{ label: 'object privileges', candidates: [tabPrivs('dba_tab_privs', 'owner'), tabPrivs('all_tab_privs', 'owner'), tabPrivs('all_tab_privs', 'table_schema')] },
-	{ label: 'column privileges', candidates: [colPrivs('dba_col_privs', 'owner'), colPrivs('all_col_privs', 'owner'), colPrivs('all_col_privs', 'table_schema')] },
+	{ get label() { return t('engineSecurity.catalog.systemPrivileges'); }, candidates: [sysPrivs('dba_sys_privs', 'p.grantee'), sysPrivs('user_sys_privs', 'p.username')] },
+	{ get label() { return t('engineSecurity.catalog.objectPrivileges'); }, candidates: [tabPrivs('dba_tab_privs', 'owner'), tabPrivs('all_tab_privs', 'owner'), tabPrivs('all_tab_privs', 'table_schema')] },
+	{ get label() { return t('engineSecurity.catalog.columnPrivileges'); }, candidates: [colPrivs('dba_col_privs', 'owner'), colPrivs('all_col_privs', 'owner'), colPrivs('all_col_privs', 'table_schema')] },
 ];
 
 export const oracleCatalog: SecurityCatalog = {
 	driverId: 'oracle',
 	principals: [
-		{ label: 'users', candidates: [DBA_USERS, ALL_USERS] },
-		{ label: 'roles', candidates: [DBA_ROLES, SESSION_ROLES] },
+		{ get label() { return t('engineSecurity.catalog.users'); }, candidates: [DBA_USERS, ALL_USERS] },
+		{ get label() { return t('engineSecurity.catalog.roles'); }, candidates: [DBA_ROLES, SESSION_ROLES] },
 	],
 	grants: GRANT_QUERIES,
 };
@@ -163,7 +164,7 @@ function onClause(target: GrantTarget): string {
 		return '';
 	}
 	if (target.scope === 'schema' || target.scope === 'database') {
-		throw new Error('Oracle has no schema-wide or database-wide GRANT. Grant the system privilege, or grant on the table.');
+		throw new Error(t('engineSecurity.vendors.oracleNoSchema'));
 	}
 	const object = oracleName(target.object ?? '', 'table name');
 	const owner = target.schema ?? target.database;
@@ -206,7 +207,7 @@ export const oracleEmitter: SecurityEmitter = {
 					return statements;
 				}
 				if (!change.draft.password) {
-					throw new Error('An Oracle user needs a password.');
+					throw new Error(t('engineSecurity.vendors.oraclePassword'));
 				}
 				const statements = [`CREATE USER ${name} IDENTIFIED BY ${quoteDouble(assertSafePassword(change.draft.password))}`];
 				// Without CREATE SESSION the account exists and cannot log in, which looks

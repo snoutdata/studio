@@ -3,6 +3,7 @@
  *  Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { t } from '../../shared/i18n/core';
 import { readFile, stat } from 'node:fs/promises';
 import { basename, extname } from 'node:path';
 
@@ -79,31 +80,31 @@ export async function extractDocument(path: string): Promise<DocumentAttachment>
 
 	const info = await stat(path).catch(() => null);
 	if (!info || !info.isFile()) {
-		throw new Error("Couldn't read that file.");
+		throw new Error(t('mainErrors.docUnreadable'));
 	}
 	if (info.size > MAX_FILE_BYTES) {
-		throw new Error(`"${name}" is too large to attach (over ${Math.round(MAX_FILE_BYTES / (1024 * 1024))} MB).`);
+		throw new Error(t('mainErrors.docTooLarge', { name, max: Math.round(MAX_FILE_BYTES / (1024 * 1024)) }));
 	}
 
 	if (PARSED_SUPPORTED && ext === '.pdf') {
 		const pages = await extractPdfPages(path).catch((err) => {
-			throw new Error(`Couldn't read the PDF "${name}": ${err instanceof Error ? err.message : String(err)}`);
+			throw new Error(t('mainErrors.docPdf', { name, error: err instanceof Error ? err.message : String(err) }));
 		});
 		// A scanned/image-only PDF extracts to nothing usable (often just stray page artifacts), so
 		// require a small minimum of real text before accepting it.
 		return nonEmpty(buildAttachment({ name, text: pages.join('\n\n'), sections: pages, unit: 'page' }),
-			`No text could be extracted from "${name}". It may be a scanned or image-only PDF (no text layer).`, PDF_MIN_CHARS);
+			t('mainErrors.docNoTextScan', { name }), PDF_MIN_CHARS);
 	}
 	if (PARSED_SUPPORTED && ext === '.docx') {
 		const text = await extractDocxText(path).catch((err) => {
-			throw new Error(`Couldn't read the Word document "${name}": ${err instanceof Error ? err.message : String(err)}`);
+			throw new Error(t('mainErrors.docWord', { name, error: err instanceof Error ? err.message : String(err) }));
 		});
-		return nonEmpty(buildAttachment({ name, text, unit: 'section' }), `No text could be extracted from "${name}".`);
+		return nonEmpty(buildAttachment({ name, text, unit: 'section' }), t('mainErrors.docNoText', { name }));
 	}
 	if (TEXT_EXTS.has(ext)) {
 		const text = await readText(path);
 		const markdown = ext === '.md' || ext === '.markdown';
-		return nonEmpty(buildAttachment({ name, text, unit: 'section', markdown }), `"${name}" is empty.`);
+		return nonEmpty(buildAttachment({ name, text, unit: 'section', markdown }), t('mainErrors.docEmpty', { name }));
 	}
 	throw new Error(`Can't attach "${name}". Supported: ${ATTACHABLE_EXTENSIONS.join(', ')}.`);
 }

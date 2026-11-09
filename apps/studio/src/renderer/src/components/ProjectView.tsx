@@ -24,6 +24,7 @@ import { lazyView } from '../lazyView';
 import { CLOUD_VOCABULARY } from '../../../shared/ownLayout';
 import type { LocalProjectRow } from '../../../shared/localStack';
 import type { CloudProjectRow } from '../../../shared/cloudProjects';
+import { useT } from '../i18n';
 
 /**
  * A SnoutData project as a workbench tab, local or cloud: ONE menu, the cloud dashboard's
@@ -58,6 +59,7 @@ const ContainersSection = lazyView(() => import('./ContainersSection').then((m) 
 const NEEDS_RUNNING: ReadonlySet<ProjectSection> = new Set(['extensions', 'cron', 'timeSeries', 'realtime']);
 
 export function ProjectView(props: ProjectViewProps): JSX.Element {
+	const t = useT();
 	const { target } = props;
 	const key = projectKey(target);
 	// One object per project for the life of the tab, so a section's loads do not re-run on every poll.
@@ -71,12 +73,12 @@ export function ProjectView(props: ProjectViewProps): JSX.Element {
 			const view = await window.sqlApi.local.list();
 			const row = view.projects.find((p) => p.id === stableTarget.id);
 			setFound(row ? { kind: 'local', row } : null);
-			setMissing(row ? null : "This project is no longer in the list.");
+			setMissing(row ? null : t('projects.view.gone'));
 		} else {
 			const view = await window.sqlApi.cloudProjects();
 			const row = view.projects.find((p) => p.ref === stableTarget.ref);
 			setFound(row ? { kind: 'cloud', row } : null);
-			setMissing(row ? null : view.unavailable ?? "This project is not in your account any more.");
+			setMissing(row ? null : view.unavailable ?? t('projects.view.notInAccount'));
 		}
 	}, [stableTarget]);
 
@@ -124,8 +126,8 @@ export function ProjectView(props: ProjectViewProps): JSX.Element {
 	const openDatabase = (): void => props.onOpenDatabase(stableTarget);
 	const runSql = (): void => props.onRunSql(stableTarget);
 	const stopped = target.kind === 'local'
-		? "The project is not running. Start it from Overview to use this section."
-		: "The project is paused. Start it from Overview to use this section.";
+		? t('projects.common.notRunningStart')
+		: t('projects.view.paused');
 
 	return (
 		<div className="cloud-project-view">
@@ -133,30 +135,30 @@ export function ProjectView(props: ProjectViewProps): JSX.Element {
 				<nav className="settings-nav">
 					<div className="cloud-project-nav-head">
 						<Icon name={target.kind === 'local' ? 'device-desktop' : 'cloud'} />
-						<span className="cloud-project-nav-name" title={target.kind === 'local' ? undefined : target.ref}>{project?.name ?? (target.kind === 'cloud' ? target.ref : "Project")}</span>
+						<span className="cloud-project-nav-name" title={target.kind === 'local' ? undefined : target.ref}>{project?.name ?? (target.kind === 'cloud' ? target.ref : t('projects.common.project'))}</span>
 					</div>
 					{PROJECT_SECTION_GROUPS.map((group) => (
 						<div key={group.id} className="settings-nav-group">
-							<div className="settings-nav-group-label">{group.label}</div>
+							<div className="settings-nav-group-label">{t(`projects.sectionGroup.${group.id}`)}</div>
 							{listed.filter((s) => s.group === group.id).map((s) => (
 								<button
 									key={s.id}
 									type="button"
 									className={`settings-nav-item${s.id === current.id ? ' active' : ''}`}
-									title={s.label}
+									title={t(`projects.section.${s.id}`)}
 									onClick={() => props.onSection(s.id)}
 								>
 									<Icon name={s.icon} className="settings-nav-icon" />
-									<span>{s.label}</span>
+									<span>{t(`projects.section.${s.id}`)}</span>
 								</button>
 							))}
 						</div>
 					))}
 				</nav>
 				<div className="settings-content">
-					<h3 className="settings-section-title"><PageMark art={current.id} text={current.label} /></h3>
+					<h3 className="settings-section-title"><PageMark art={current.id} text={t(`projects.section.${current.id}`)} /></h3>
 					{missing && <div className="form-status warn">{missing}</div>}
-					{!missing && !found && <div className="field-hint">Loading…</div>}
+					{!missing && !found && <div className="field-hint">{t('projects.common.loading')}</div>}
 					{found && project && NEEDS_RUNNING.has(current.id) && !project.running && <div className="form-status warn">{stopped}</div>}
 					{found && project && (!NEEDS_RUNNING.has(current.id) || project.running) && (
 						<Section
@@ -194,6 +196,7 @@ interface SectionProps {
 
 /** One section: the shared component, or the local or cloud piece where the two really differ. */
 function Section(props: SectionProps): JSX.Element | null {
+	const t = useT();
 	const { found, project } = props;
 	const local = found.kind === 'local' ? found.row : null;
 	const cloud = found.kind === 'cloud' ? found.row : null;
@@ -233,8 +236,8 @@ function Section(props: SectionProps): JSX.Element | null {
 				? <ContainersSection projectRef={cloud.ref} />
 				: (
 					<fieldset>
-						<legend>Containers</legend>
-						<p className="field-hint">A container is your own image, running beside the project for as long as it runs. Containers run on SnoutData Cloud only: a local project has no container runner. Run your image with your own Docker beside it, or copy this project to the cloud from Settings.</p>
+						<legend>{t('projects.common.containers')}</legend>
+						<p className="field-hint">{t('projects.view.containersLocal')}</p>
 					</fieldset>
 				);
 		case 'realtime':
@@ -246,12 +249,12 @@ function Section(props: SectionProps): JSX.Element | null {
 				? <LocalLogs row={local} />
 				: (
 					<>
-						<p className="field-hint">The project's activity log (every change, by whom) is on the dashboard. Postgres's own record of the statements it has run is here.</p>
+						<p className="field-hint">{t('projects.view.logsHint')}</p>
 						{whenRunning(<PostgresStatements target={project.target} />)}
 					</>
 				);
 		case 'shards':
-			return cloud ? <ShardsSection projectRef={cloud.ref} /> : <p className="field-hint">A cluster is for SnoutData Cloud projects.</p>;
+			return cloud ? <ShardsSection projectRef={cloud.ref} /> : <p className="field-hint">{t('projects.view.clusterCloud')}</p>;
 		case 'domains':
 			return local ? <LocalDomains row={local} /> : <CloudDomainsSection projectRef={cloud!.ref} />;
 		case 'settings':
@@ -266,16 +269,17 @@ function Section(props: SectionProps): JSX.Element | null {
 
 /** Copy the whole project to the other side (shared/projectCopy.ts). The work is its own tab. */
 function CopyProject(props: { local: boolean; onCopy(): void }): JSX.Element {
+	const t = useT();
 	return (
 		<fieldset>
-			<legend>{props.local ? "Copy to SnoutData Cloud" : "Copy to this computer"}</legend>
+			<legend>{props.local ? t('projects.copy.toCloudTitle') : t('projects.copy.toLocalTitle')}</legend>
 			<p className="field-hint">
 				{props.local
-					? "Users, database, files, functions and their secrets, into a new or existing cloud project. This project stays as it is."
-					: "Users, database and files, into a local project. This project stays as it is."}
+					? t('projects.copy.toCloudHint')
+					: t('projects.copy.toLocalHint')}
 			</p>
 			<div className="cloud-actions">
-				<button type="button" onClick={props.onCopy}><Icon name={props.local ? 'cloud-upload' : 'cloud-download'} /> {props.local ? "Copy to Cloud…" : "Copy to this computer…"}</button>
+				<button type="button" onClick={props.onCopy}><Icon name={props.local ? 'cloud-upload' : 'cloud-download'} /> {props.local ? t('projects.copy.toCloud') : t('projects.copy.toLocal')}</button>
 			</div>
 		</fieldset>
 	);

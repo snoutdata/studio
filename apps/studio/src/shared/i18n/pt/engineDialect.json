@@ -1,0 +1,23 @@
+{
+	"explain": {
+		"plan": "Plano",
+		"planHint": "As etapas, e o que cada índice descartou antes de um grânulo ser lido.",
+		"estimate": "Estimativa",
+		"estimateHint": "O que executar isto leria: parts, linhas e marcas por tabela.",
+		"pipeline": "Pipeline",
+		"pipelineHint": "Os processadores que levam as linhas, e quantas threads cada um recebe.",
+		"syntax": "Sintaxe",
+		"syntaxHint": "A consulta como o otimizador a reescreveu.",
+		"queryTree": "Árvore da consulta",
+		"queryTreeHint": "A leitura que o analisador faz da consulta, resolvida em ids de coluna e tipos."
+	},
+	"replicasDenied": "Este servidor tem {replicas} réplicas e este usuário não pode ler todas (precisa do grant READ ON REMOTE), então só a réplica que respondeu é mostrada.",
+	"replicasFailed": "Este servidor tem {replicas} réplicas e a leitura em todas falhou, então só a réplica que respondeu é mostrada. {message}",
+	"insert": {
+		"cannotWrite": "Não é possível gravar {value} em uma coluna.",
+		"unsupportedType": "Tipo de valor {type} não aceito em um lote de linhas.",
+		"rowWidth": "A linha tem {values} valores, mas o lote tem {columns} colunas.",
+		"keyMissing": "A chave {key} não está entre as colunas gravadas.",
+		"noUpsert": "{engine} não consegue atualizar e inserir em uma única instrução, então este fluxo não pode fazer upsert nele."
+	}
+}

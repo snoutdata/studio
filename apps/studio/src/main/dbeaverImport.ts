@@ -3,6 +3,7 @@
  *  Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { t } from '../shared/i18n/core';
 import { app } from 'electron';
 import { createDecipheriv } from 'node:crypto';
 import { existsSync, lstatSync, readdirSync, readFileSync } from 'node:fs';
@@ -263,19 +264,19 @@ function buildParsed(
 
 	const notes: string[] = [];
 	if (!driver) {
-		notes.push(`Unsupported driver (${provider || driverId || "unknown"}).`);
+		notes.push(t('mainDiscovery.unsupportedDriver', { driver: provider || driverId || t('mainDiscovery.unknown') }));
 	} else if (awsSecret) {
 		// Credentials come from the secret at connect time; the AWS access key isn't imported.
-		notes.push("Uses AWS Secrets Manager; set an AWS profile or rely on your default AWS credentials after import. Open it and save it once before it connects.");
+		notes.push(t('mainDiscovery.asmImport'));
 		if (!awsSecret.region) {
-			notes.push("AWS region not detected; set it after import.");
+			notes.push(t('mainDiscovery.awsRegion'));
 		}
 	} else {
 		if (!username) {
-			notes.push("Username not found; set it after import.");
+			notes.push(t('mainDiscovery.noUsername'));
 		}
 		if (!password) {
-			notes.push("No saved password; set it after import.");
+			notes.push(t('mainDiscovery.noPassword'));
 		}
 	}
 

@@ -6,6 +6,7 @@
 import { useState } from 'react';
 import { Icon } from './Icon';
 import type { DocumentFieldEdit } from '../mongoDml';
+import { useT } from '../i18n';
 
 // A Compass-style expandable document tree. Renders one row's value map as
 // a collapsible tree: subdocuments and arrays are branches you can expand/collapse; scalars are
@@ -75,6 +76,7 @@ interface NodeProps {
 }
 
 function TreeNode({ name, path, value, depth, defaultOpen, edit }: NodeProps): JSX.Element {
+	const t = useT();
 	const isContainer = value !== null && typeof value === 'object';
 	const [open, setOpen] = useState(defaultOpen);
 	const type = typeLabel(value);
@@ -105,7 +107,7 @@ function TreeNode({ name, path, value, depth, defaultOpen, edit }: NodeProps): J
 				) : (
 					<span
 						className={`doc-val${edited ? ' edited' : ''}${value === null && !edited ? ' null' : ''}${canEdit ? ' editable' : ''}`}
-						title={canEdit ? 'Click to edit' : undefined}
+						title={canEdit ? t('results.doc.clickToEdit') : undefined}
 						onClick={canEdit ? () => edit!.begin(path, edited ? editedText! : rawText(value)) : undefined}
 					>
 						{edited ? editedText : scalarText(value)}
@@ -130,7 +132,7 @@ function TreeNode({ name, path, value, depth, defaultOpen, edit }: NodeProps): J
 				<span className="doc-type">{type}</span>
 			</div>
 			{open && (entries.length === 0
-				? <div className="doc-node doc-leaf doc-empty" style={{ paddingLeft: (depth + 1) * 14 + 8 }}><span className="doc-twisty" /><span className="doc-val null">{Array.isArray(value) ? 'empty array' : 'empty object'}</span></div>
+				? <div className="doc-node doc-leaf doc-empty" style={{ paddingLeft: (depth + 1) * 14 + 8 }}><span className="doc-twisty" /><span className="doc-val null">{Array.isArray(value) ? t('results.doc.emptyArray') : t('results.doc.emptyObject')}</span></div>
 				: entries.map(([k, v, p]) => <TreeNode key={k} name={k} path={p} value={v} depth={depth + 1} defaultOpen={depth === 0} edit={edit} />))}
 		</>
 	);
@@ -148,6 +150,7 @@ interface DocumentTreeProps {
  *  them starts expanded); deeper nesting is collapsed until clicked. When `editable`, scalar leaves
  *  are click-to-edit and a toolbar saves/reverts the pending edits. */
 export function DocumentTree({ document, editable = false, onSave }: DocumentTreeProps): JSX.Element {
+	const t = useT();
 	const [edits, setEdits] = useState<Map<string, string>>(new Map());
 	const [active, setActive] = useState<{ path: string; draft: string } | null>(null);
 
@@ -180,19 +183,19 @@ export function DocumentTree({ document, editable = false, onSave }: DocumentTre
 
 	const entries = Object.entries(document);
 	if (entries.length === 0) {
-		return <div className="doc-tree doc-empty-doc">This document has no fields.</div>;
+		return <div className="doc-tree doc-empty-doc">{t('results.doc.noFields')}</div>;
 	}
 	return (
 		<div className="doc-tree">
 			{editable && (
 				<div className="doc-tree-toolbar">
 					<button type="button" disabled={!dirty} onClick={() => onSave?.(pendingEdits())}>
-						<Icon name="save" /> Save…
+						<Icon name="save" /> {t('results.doc.saveEllipsis')}
 					</button>
 					<button type="button" className="secondary" disabled={!dirty} onClick={() => { setEdits(new Map()); setActive(null); }}>
-						<Icon name="discard" /> Revert
+						<Icon name="discard" /> {t('editor.common.revert')}
 					</button>
-					{edits.size > 0 && <span className="doc-dirty">{edits.size} field{edits.size === 1 ? '' : 's'} edited</span>}
+					{edits.size > 0 && <span className="doc-dirty">{t('results.doc.fieldsEdited', { count: String(edits.size) })}</span>}
 				</div>
 			)}
 			{entries.map(([k, v]) => <TreeNode key={k} name={k} path={k} value={v} depth={0} defaultOpen={true} edit={controls} />)}

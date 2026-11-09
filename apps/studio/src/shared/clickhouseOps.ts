@@ -18,6 +18,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { CLICKHOUSE_APP_MARKER, clickhouseScopeSettings, clickhouseSystemTable, quoteClickHouseIdent, type ReplicaScope } from './engine';
+import { t } from './i18n/core';
 
 export type OpsViewId = 'running' | 'failed' | 'parts' | 'merges' | 'mutations' | 'views' | 'refreshes' | 'dictionaries' | 'disks' | 'detached' | 'columns' | 'replication' | 'repqueue' | 'distqueue' | 'keeper' | 'clusters' | 'ddl' | 'settings' | 'backups' | 'serverlog' | 'crashlog';
 
@@ -26,6 +27,22 @@ export type OpsViewId = 'running' | 'failed' | 'parts' | 'merges' | 'mutations' 
 export type OpsGroup = 'Queries' | 'Storage' | 'Objects' | 'Cluster' | 'Server';
 
 export const OPS_GROUPS: readonly OpsGroup[] = ['Queries', 'Storage', 'Objects', 'Cluster', 'Server'];
+
+/** A group's tab name, in the app's language; the group itself stays an id. */
+export function opsGroupLabel(group: OpsGroup): string {
+	switch (group) {
+		case 'Queries':
+			return t('engineClickhouse.groups.queries');
+		case 'Storage':
+			return t('engineClickhouse.groups.storage');
+		case 'Objects':
+			return t('engineClickhouse.groups.objects');
+		case 'Cluster':
+			return t('engineClickhouse.groups.cluster');
+		default:
+			return t('engineClickhouse.groups.server');
+	}
+}
 
 /** A write a row offers, built from that row's cells. */
 export interface OpsRowAction {
@@ -177,18 +194,18 @@ export const OPS_VIEWS: readonly OpsView[] = [
 	{
 		id: 'running',
 		group: 'Queries',
-		label: 'Running queries',
-		blurb: 'What the server is doing right now, longest first. Stop one that should not be running.',
+		get label() { return t('engineClickhouse.views.running.label'); },
+		get blurb() { return t('engineClickhouse.views.running.blurb'); },
 		sql: (scope) => `SELECT ${replicaColumn(scope)}round(elapsed, 1) AS seconds, user, query, read_rows,
        round(read_bytes / 1048576, 1) AS read_mb, round(memory_usage / 1048576, 1) AS memory_mb, query_id
 FROM ${sys('processes', scope)}
 WHERE query_id != queryID() AND NOT startsWith(query, '${OPS_MARKER}')${initialOnly(scope)}
 ORDER BY elapsed DESC${clickhouseScopeSettings(scope)}`,
-		empty: 'Nothing is running on this server right now.',
+		get empty() { return t('engineClickhouse.views.running.empty'); },
 		action: {
-			label: 'Stop',
+			get label() { return t('engineClickhouse.views.running.stop'); },
 			icon: 'debug-stop',
-			confirm: (row) => `Stop query ${String(row.query_id)} run by ${String(row.user)}? It has been running for ${String(row.seconds)} s.`,
+			confirm: (row) => t('engineClickhouse.confirm.stop', { id: String(row.query_id), user: String(row.user), seconds: String(row.seconds) }),
 			sql: (row, scope) => `KILL QUERY ${onCluster(scope)}WHERE query_id = ${literal(row.query_id)}`,
 			local: (row) => `KILL QUERY WHERE query_id = ${literal(row.query_id)}`,
 		},
@@ -196,8 +213,8 @@ ORDER BY elapsed DESC${clickhouseScopeSettings(scope)}`,
 	{
 		id: 'failed',
 		group: 'Queries',
-		label: 'Failed queries',
-		blurb: 'Errors in the last hour, grouped by kind, most frequent first. What is breaking, beside what is slow. Open one in the server log to see every line the query produced, not just the one it was refused with.',
+		get label() { return t('engineClickhouse.views.failed.label'); },
+		get blurb() { return t('engineClickhouse.views.failed.blurb'); },
 		sql: (scope) => `SELECT errorCodeToName(exception_code) AS error, count() AS times, max(event_time) AS last_seen,
        uniqExact(user) AS users,${scope?.cluster ? " arrayStringConcat(arraySort(groupUniqArray(hostName())), ', ') AS replicas," : ''} substring(any(exception), 1, 400) AS message, any(query) AS example,
        argMax(query_id, event_time) AS last_query_id
@@ -206,16 +223,16 @@ WHERE type IN ('ExceptionBeforeStart', 'ExceptionWhileProcessing') AND event_tim
   AND NOT startsWith(query, '${OPS_MARKER}')${initialOnly(scope)}
 GROUP BY exception_code
 ORDER BY times DESC${clickhouseScopeSettings(scope)}`,
-		empty: 'No query has failed in the last hour.',
+		get empty() { return t('engineClickhouse.views.failed.empty'); },
 		// The link the tracker called "why did this fail": the most recent id of this kind of
 		// failure, opened in the log that holds everything the server said while running it.
-		jump: { label: 'Server log', icon: 'output', view: 'serverlog', column: 'last_query_id' },
+		jump: { get label() { return t('engineClickhouse.views.serverlog.label'); }, icon: 'output', view: 'serverlog', column: 'last_query_id' },
 	},
 	{
 		id: 'parts',
 		group: 'Storage',
-		label: 'Parts',
-		blurb: 'Every INSERT writes a part and merges combine them. Too many parts in one partition slows inserts, then refuses them.',
+		get label() { return t('engineClickhouse.views.parts.label'); },
+		get blurb() { return t('engineClickhouse.views.parts.blurb'); },
 		sql: () => `SELECT database, table, max(parts) AS max_parts_in_a_partition, sum(parts) AS active_parts,
        count() AS partitions, sum(rows) AS rows, round(sum(bytes) / 1048576, 1) AS on_disk_mb
 FROM (
@@ -226,41 +243,41 @@ FROM (
 )
 GROUP BY database, table
 ORDER BY max_parts_in_a_partition DESC`,
-		empty: 'No MergeTree tables with data on this server.',
+		get empty() { return t('engineClickhouse.views.parts.empty'); },
 	},
 	{
 		id: 'merges',
 		group: 'Storage',
-		label: 'Merges',
-		blurb: 'Background merges in progress. A mutation (ALTER UPDATE or DELETE) runs as a merge too.',
+		get label() { return t('engineClickhouse.views.merges.label'); },
+		get blurb() { return t('engineClickhouse.views.merges.blurb'); },
 		sql: (scope) => `SELECT ${replicaColumn(scope)}database, table, round(elapsed, 1) AS seconds, round(progress * 100, 1) AS percent, num_parts,
        round(total_size_bytes_compressed / 1048576, 1) AS size_mb, is_mutation
 FROM ${sys('merges', scope)}
 ORDER BY elapsed DESC${clickhouseScopeSettings(scope)}`,
-		empty: 'No merges are running.',
+		get empty() { return t('engineClickhouse.views.merges.empty'); },
 	},
 	{
 		id: 'mutations',
 		group: 'Storage',
-		label: 'Mutations',
-		blurb: 'ALTER UPDATE and DELETE that have not finished. One that keeps failing blocks the ones after it on the same table.',
+		get label() { return t('engineClickhouse.views.mutations.label'); },
+		get blurb() { return t('engineClickhouse.views.mutations.blurb'); },
 		sql: () => `SELECT database, table, mutation_id, command, create_time, parts_to_do, latest_fail_reason
 FROM system.mutations
 WHERE NOT is_done
 ORDER BY create_time`,
-		empty: 'No mutations are waiting.',
+		get empty() { return t('engineClickhouse.views.mutations.empty'); },
 		action: {
-			label: 'Cancel',
+			get label() { return t('engineClickhouse.views.mutations.cancel'); },
 			icon: 'close',
-			confirm: (row) => `Cancel mutation ${String(row.mutation_id)} on ${String(row.database)}.${String(row.table)}? Parts it already rewrote stay rewritten.`,
+			confirm: (row) => t('engineClickhouse.confirm.cancelMutation', { id: String(row.mutation_id), table: `${String(row.database)}.${String(row.table)}` }),
 			sql: (row) => `KILL MUTATION WHERE database = ${literal(row.database)} AND table = ${literal(row.table)} AND mutation_id = ${literal(row.mutation_id)}`,
 		},
 	},
 	{
 		id: 'views',
 		group: 'Objects',
-		label: 'Materialized views',
-		blurb: 'Each materialized view is an insert trigger: what it reads from, and the table its rows land in.',
+		get label() { return t('engineClickhouse.views.views.label'); },
+		get blurb() { return t('engineClickhouse.views.views.blurb'); },
 		sql: () => `WITH deps AS (
     SELECT arrayJoin(arrayZip(dependencies_database, dependencies_table)) AS dep, database || '.' || name AS source
     FROM system.tables WHERE length(dependencies_table) > 0
@@ -272,40 +289,40 @@ FROM system.tables AS t LEFT JOIN deps ON deps.dep.1 = t.database AND deps.dep.2
 WHERE t.engine = 'MaterializedView'
 GROUP BY t.database, t.name
 ORDER BY t.database, t.name`,
-		empty: 'No materialized views on this server.',
+		get empty() { return t('engineClickhouse.views.views.empty'); },
 	},
 	{
 		id: 'refreshes',
 		group: 'Objects',
-		label: 'Refreshable views',
-		blurb: 'Materialized views that re-run on a schedule (REFRESH EVERY): when each last succeeded, when it runs next, and why it failed.',
+		get label() { return t('engineClickhouse.views.refreshes.label'); },
+		get blurb() { return t('engineClickhouse.views.refreshes.blurb'); },
 		sql: (scope) => `SELECT ${replicaColumn(scope)}database, view, status, last_success_time, round(last_success_duration_ms / 1000, 1) AS last_seconds,
        next_refresh_time, exception
 FROM ${sys('view_refreshes', scope)}
 ORDER BY exception = '' ASC, database, view${clickhouseScopeSettings(scope)}`,
-		empty: 'No refreshable materialized views.',
-		unavailable: { match: /UNKNOWN_TABLE|view_refreshes/, message: 'This server is older than refreshable materialized views.' },
+		get empty() { return t('engineClickhouse.views.refreshes.empty'); },
+		unavailable: { match: /UNKNOWN_TABLE|view_refreshes/, get message() { return t('engineClickhouse.views.refreshes.unavailable'); } },
 		action: {
-			label: 'Refresh now',
+			get label() { return t('engineClickhouse.views.refreshes.now'); },
 			icon: 'play',
-			confirm: (row) => `Run ${String(row.database)}.${String(row.view)} now, instead of waiting for ${String(row.next_refresh_time)}?`,
+			confirm: (row) => t('engineClickhouse.confirm.runNow', { view: `${String(row.database)}.${String(row.view)}`, next: String(row.next_refresh_time) }),
 			sql: (row) => `SYSTEM REFRESH VIEW ${quoteName(row.database)}.${quoteName(row.view)}`,
 		},
 	},
 	{
 		id: 'dictionaries',
 		group: 'Objects',
-		label: 'Dictionaries',
-		blurb: 'In-memory lookup tables. A failed one makes every dictGet on it fail, so its last error is shown in full.',
+		get label() { return t('engineClickhouse.views.dictionaries.label'); },
+		get blurb() { return t('engineClickhouse.views.dictionaries.blurb'); },
 		sql: (scope) => `SELECT ${replicaColumn(scope)}database, name, status, type, element_count AS elements, round(bytes_allocated / 1048576, 2) AS memory_mb,
        last_successful_update_time AS last_loaded, loading_duration AS load_seconds, last_exception
 FROM ${sys('dictionaries', scope)}
 ORDER BY last_exception = '' ASC, database, name${clickhouseScopeSettings(scope)}`,
-		empty: 'No dictionaries on this server.',
+		get empty() { return t('engineClickhouse.views.dictionaries.empty'); },
 		action: {
-			label: 'Reload',
+			get label() { return t('engineClickhouse.views.dictionaries.reload'); },
 			icon: 'refresh',
-			confirm: (row) => `Reload dictionary ${String(row.database)}.${String(row.name)} from its source now?`,
+			confirm: (row) => t('engineClickhouse.confirm.reloadDict', { dict: `${String(row.database)}.${String(row.name)}` }),
 			sql: (row, scope) => `SYSTEM RELOAD DICTIONARY ${onCluster(scope)}${quoteName(row.database)}.${quoteName(row.name)}`,
 			local: (row) => `SYSTEM RELOAD DICTIONARY ${quoteName(row.database)}.${quoteName(row.name)}`,
 		},
@@ -313,30 +330,30 @@ ORDER BY last_exception = '' ASC, database, name${clickhouseScopeSettings(scope)
 	{
 		id: 'disks',
 		group: 'Storage',
-		label: 'Disks',
-		blurb: 'Free space on each disk. Merges need room to write the part they produce, so a full disk stops them first.',
+		get label() { return t('engineClickhouse.views.disks.label'); },
+		get blurb() { return t('engineClickhouse.views.disks.blurb'); },
 		sql: (scope) => `SELECT ${replicaColumn(scope)}name, path, round(free_space / 1073741824, 1) AS free_gb, round(total_space / 1073741824, 1) AS total_gb,
        round(100 - free_space * 100 / nullIf(total_space, 0), 1) AS used_percent
 FROM ${sys('disks', scope)}
 ORDER BY used_percent DESC${clickhouseScopeSettings(scope)}`,
-		empty: 'No disks reported.',
+		get empty() { return t('engineClickhouse.views.disks.empty'); },
 	},
 	{
 		id: 'detached',
 		group: 'Storage',
-		label: 'Detached parts',
-		blurb: 'Parts set aside and no longer read: detached by hand, or by the server because they were broken or unexpected. They still take disk.',
+		get label() { return t('engineClickhouse.views.detached.label'); },
+		get blurb() { return t('engineClickhouse.views.detached.blurb'); },
 		sql: (scope) => `SELECT ${replicaColumn(scope)}database, table, partition_id, name, reason, disk
 FROM ${sys('detached_parts', scope)}
 WHERE ${USER_DATABASES}
 ORDER BY database, table, name${clickhouseScopeSettings(scope)}`,
-		empty: 'No detached parts.',
+		get empty() { return t('engineClickhouse.views.detached.empty'); },
 	},
 	{
 		id: 'columns',
 		group: 'Storage',
-		label: 'Column sizes',
-		blurb: 'The 200 largest columns on disk, and how well each compresses. A poor ratio is often a codec or a LowCardinality away from a big saving.',
+		get label() { return t('engineClickhouse.views.columns.label'); },
+		get blurb() { return t('engineClickhouse.views.columns.blurb'); },
 		sql: () => `SELECT database, table, name AS column, type,
        round(data_compressed_bytes / 1048576, 2) AS compressed_mb,
        round(data_uncompressed_bytes / 1048576, 2) AS uncompressed_mb,
@@ -345,117 +362,117 @@ FROM system.columns
 WHERE ${USER_DATABASES} AND data_compressed_bytes > 0
 ORDER BY data_compressed_bytes DESC
 LIMIT 200`,
-		empty: 'No column holds data yet.',
+		get empty() { return t('engineClickhouse.views.columns.empty'); },
 	},
 	{
 		id: 'replication',
 		group: 'Cluster',
-		label: 'Replication',
-		blurb: 'Replicated tables: how far behind each replica is, and what it still has to do.',
+		get label() { return t('engineClickhouse.views.replication.label'); },
+		get blurb() { return t('engineClickhouse.views.replication.blurb'); },
 		sql: (scope) => `SELECT ${replicaColumn(scope)}database, table, is_readonly, absolute_delay AS delay_s, queue_size, inserts_in_queue, merges_in_queue,
        active_replicas, total_replicas
 FROM ${sys('replicas', scope)}
 ORDER BY absolute_delay DESC${clickhouseScopeSettings(scope)}`,
-		empty: 'No replicated tables on this server.',
+		get empty() { return t('engineClickhouse.views.replication.empty'); },
 	},
 	{
 		id: 'repqueue',
 		group: 'Cluster',
-		label: 'Replication queue',
-		blurb: 'What each replica still has to fetch or merge, and why an entry is stuck. A queue that only grows is the failure behind "the replica is behind".',
+		get label() { return t('engineClickhouse.views.repqueue.label'); },
+		get blurb() { return t('engineClickhouse.views.repqueue.blurb'); },
 		sql: (scope) => `SELECT ${replicaColumn(scope)}database, table, type, new_part_name AS part, num_tries AS tries,
        is_currently_executing AS running, create_time AS queued, last_attempt_time AS last_try,
        substring(concat(ifNull(last_exception, ''), ifNull(postpone_reason, '')), 1, 400) AS problem
 FROM ${sys('replication_queue', scope)}
 ORDER BY num_tries DESC, create_time
 LIMIT 500${clickhouseScopeSettings(scope)}`,
-		empty: 'Every replica has caught up: nothing is waiting to be fetched or merged.',
-		unavailable: { match: /UNKNOWN_TABLE|doesn't exist|does not exist/i, message: 'This server has no replication queue, so it has no replicated tables.' },
+		get empty() { return t('engineClickhouse.views.repqueue.empty'); },
+		unavailable: { match: /UNKNOWN_TABLE|doesn't exist|does not exist/i, get message() { return t('engineClickhouse.views.repqueue.unavailable'); } },
 		action: {
 			// Deliberately node-local and never ON CLUSTER: restarting every replica of a table at
 			// once is how a stuck replica becomes an outage. This re-reads the table's state from
 			// Keeper on the one node the entry is stuck on, which is the documented repair.
-			label: 'Restart replica',
+			get label() { return t('engineClickhouse.views.repqueue.restart'); },
 			icon: 'refresh',
-			confirm: (row) => `Restart the replica of ${String(row.database)}.${String(row.table)} on this node? It re-reads the table's state from Keeper and starts its queue again. Reads and writes to that table pause while it does.`,
+			confirm: (row) => t('engineClickhouse.confirm.restartReplica', { table: `${String(row.database)}.${String(row.table)}` }),
 			sql: (row) => `SYSTEM RESTART REPLICA ${quoteName(row.database)}.${quoteName(row.table)}`,
 		},
 	},
 	{
 		id: 'distqueue',
 		group: 'Cluster',
-		label: 'Distributed inserts',
-		blurb: 'Rows written to a Distributed table that are still on disk here, waiting to be sent to the shard that owns them. Not lost, not yet arrived.',
+		get label() { return t('engineClickhouse.views.distqueue.label'); },
+		get blurb() { return t('engineClickhouse.views.distqueue.blurb'); },
 		sql: (scope) => `SELECT ${replicaColumn(scope)}database, table, is_blocked AS blocked, error_count AS errors, data_files AS files,
        round(data_compressed_bytes / 1048576, 1) AS pending_mb, broken_data_files AS broken,
        substring(ifNull(last_exception, ''), 1, 400) AS problem
 FROM ${sys('distribution_queue', scope)}
 ORDER BY data_files DESC${clickhouseScopeSettings(scope)}`,
-		empty: 'Nothing is waiting to be sent: every Distributed insert has arrived.',
-		unavailable: { match: /UNKNOWN_TABLE|doesn't exist|does not exist/i, message: 'This server has no distribution queue, so it has no Distributed tables.' },
+		get empty() { return t('engineClickhouse.views.distqueue.empty'); },
+		unavailable: { match: /UNKNOWN_TABLE|doesn't exist|does not exist/i, get message() { return t('engineClickhouse.views.distqueue.unavailable'); } },
 		action: {
-			label: 'Send now',
+			get label() { return t('engineClickhouse.views.distqueue.send'); },
 			icon: 'run',
-			confirm: (row) => `Send the ${String(row.files)} pending file(s) for ${String(row.database)}.${String(row.table)} now? It waits until they have gone.`,
+			confirm: (row) => t('engineClickhouse.confirm.sendNow', { files: String(row.files), table: `${String(row.database)}.${String(row.table)}` }),
 			sql: (row) => `SYSTEM FLUSH DISTRIBUTED ${quoteName(row.database)}.${quoteName(row.table)}`,
 		},
 	},
 	{
 		id: 'keeper',
 		group: 'Cluster',
-		label: 'Keeper',
-		blurb: "What the cluster agrees on, read from Keeper itself: every replicated table's log, its replicas and their positions. Read-only, and the last place to look when a queue makes no sense.",
+		get label() { return t('engineClickhouse.views.keeper.label'); },
+		get blurb() { return t('engineClickhouse.views.keeper.blurb'); },
 		// The root listing, for anything that asks a view for its SQL without knowing it browses.
 		sql: () => keeperListSql('/'),
-		empty: 'Nothing is at this path.',
-		unavailable: { match: /NO_ELEMENTS_IN_CONFIG|Zookeeper|Keeper|UNKNOWN_TABLE/i, message: 'This server has no Keeper configured, so there is no coordination tree to read.' },
+		get empty() { return t('engineClickhouse.views.keeper.empty'); },
+		unavailable: { match: /NO_ELEMENTS_IN_CONFIG|Zookeeper|Keeper|UNKNOWN_TABLE/i, get message() { return t('engineClickhouse.views.keeper.unavailable'); } },
 		browse: { root: '/', nameColumn: 'name', childrenColumn: 'children', sql: (path) => keeperListSql(path) },
 	},
 	{
 		id: 'clusters',
 		group: 'Cluster',
-		label: 'Clusters',
-		blurb: 'Every node of every cluster this server knows, and how often reaching it has failed. A rising error count is a node going away.',
+		get label() { return t('engineClickhouse.views.clusters.label'); },
+		get blurb() { return t('engineClickhouse.views.clusters.blurb'); },
 		sql: () => `SELECT cluster, shard_num AS shard, replica_num AS replica, host_name AS host, port, is_local,
        errors_count AS errors, slowdowns_count AS slowdowns, estimated_recovery_time AS recovery_s
 FROM system.clusters
 ORDER BY errors DESC, cluster, shard, replica`,
-		empty: 'This server is not part of a cluster.',
+		get empty() { return t('engineClickhouse.views.clusters.empty'); },
 	},
 	{
 		id: 'ddl',
 		group: 'Cluster',
-		label: 'DDL queue',
-		blurb: 'ON CLUSTER statements and how far each host got with them. A host stuck in the queue is behind on schema.',
+		get label() { return t('engineClickhouse.views.ddl.label'); },
+		get blurb() { return t('engineClickhouse.views.ddl.blurb'); },
 		sql: () => `SELECT entry, host, status, exception_code, query_create_time AS created, query
 FROM system.distributed_ddl_queue
 WHERE status != 'Finished'
 ORDER BY query_create_time DESC
 LIMIT 200`,
-		empty: 'Every ON CLUSTER statement has finished on every host.',
-		unavailable: { match: /NO_ELEMENTS_IN_CONFIG|Zookeeper|Keeper/i, message: 'This server has no Keeper configured, so there are no ON CLUSTER statements to track.' },
+		get empty() { return t('engineClickhouse.views.ddl.empty'); },
+		unavailable: { match: /NO_ELEMENTS_IN_CONFIG|Zookeeper|Keeper/i, get message() { return t('engineClickhouse.views.ddl.unavailable'); } },
 	},
 	{
 		id: 'serverlog',
 		group: 'Server',
-		label: 'Server log',
+		get label() { return t('engineClickhouse.views.serverlog.label'); },
 		// `level` is an Enum8 ordered Fatal .. Trace, and it is tempting to write `level <= 'Warning'`
 		// for "this bad or worse". That compiles, runs, and is WRONG: the comparison is against the
 		// string, so 'Trace' <= 'Warning' alphabetically and the filter lets everything through. The
 		// list is the honest form, and the live server is what caught it.
-		blurb: "The server's own log, as rows. Unfiltered it is the problems of the last hour; put a query id in the box and it is every line that query produced, which is the whole answer to \"why did that fail\" rather than the one line the client was sent.",
+		get blurb() { return t('engineClickhouse.views.serverlog.blurb'); },
 		sql: (scope) => `SELECT ${replicaColumn(scope)}event_time AS at, toString(level) AS level, logger_name AS logger, query_id, message
 FROM ${sys('text_log', scope)}
 WHERE event_time > now() - INTERVAL 1 HOUR AND level IN ('Fatal', 'Critical', 'Error', 'Warning')
 ORDER BY event_time DESC
 LIMIT 500${clickhouseScopeSettings(scope)}`,
-		empty: 'Nothing above a warning in the last hour.',
+		get empty() { return t('engineClickhouse.views.serverlog.empty'); },
 		// Not "an error": logging to a table is OFF in a default install, so the honest answer names
 		// the switch rather than reporting a missing table as a fault.
-		unavailable: { match: /UNKNOWN_TABLE|doesn't exist|does not exist/i, message: "This server does not log to a table. Switch it on with a <text_log> section in the server's config, and it will record its own log as rows from the next restart." },
+		unavailable: { match: /UNKNOWN_TABLE|doesn't exist|does not exist/i, get message() { return t('engineClickhouse.views.serverlog.unavailable'); } },
 		filter: {
-			label: 'Query id or text',
-			placeholder: 'a query id, or a word from the message',
+			get label() { return t('engineClickhouse.views.serverlog.filterLabel'); },
+			get placeholder() { return t('engineClickhouse.views.serverlog.filterPlaceholder'); },
 			// Every level, and a day rather than an hour: a filter means the person knows what they
 			// are looking for, and the line they need is as likely to be a Debug as an Error.
 			sql: (value, scope) => `SELECT ${replicaColumn(scope)}event_time AS at, toString(level) AS level, logger_name AS logger, query_id, message
@@ -469,37 +486,37 @@ LIMIT 500${clickhouseScopeSettings(scope)}`,
 	{
 		id: 'crashlog',
 		group: 'Server',
-		label: 'Crashes',
-		blurb: 'Signals the server has died on, with the stack it died in. A table that does not exist is the good outcome.',
+		get label() { return t('engineClickhouse.views.crashes.label'); },
+		get blurb() { return t('engineClickhouse.views.crashes.blurb'); },
 		sql: (scope) => `SELECT ${replicaColumn(scope)}event_time AS at, signal, thread_id, query_id, version,
        substring(arrayStringConcat(trace_full, ' | '), 1, 2000) AS stack
 FROM ${sys('crash_log', scope)}
 ORDER BY event_time DESC
 LIMIT 50${clickhouseScopeSettings(scope)}`,
-		empty: 'No crash has been recorded on this server.',
+		get empty() { return t('engineClickhouse.views.crashes.empty'); },
 		// The table is CREATED by the first crash, so its absence is the answer, not a failure.
-		unavailable: { match: /UNKNOWN_TABLE|doesn't exist|does not exist/i, message: 'No crash has ever been recorded on this server: ClickHouse creates that table the first time it dies, and it is not there.' },
+		unavailable: { match: /UNKNOWN_TABLE|doesn't exist|does not exist/i, get message() { return t('engineClickhouse.views.crashes.unavailable'); } },
 	},
 	{
 		id: 'settings',
 		group: 'Server',
-		label: 'Changed settings',
-		blurb: "Settings that differ from ClickHouse's defaults for this user: what makes this server behave unlike the documentation.",
+		get label() { return t('engineClickhouse.views.settings.label'); },
+		get blurb() { return t('engineClickhouse.views.settings.blurb'); },
 		sql: () => `SELECT name, value, default, description
 FROM system.settings
 WHERE changed
 ORDER BY name`,
-		empty: "This user runs on ClickHouse's default settings.",
+		get empty() { return t('engineClickhouse.views.settings.empty'); },
 	},
 	{
 		id: 'backups',
 		group: 'Server',
-		label: 'Backups',
-		blurb: 'BACKUP and RESTORE since the server started: whether each finished, how big it was, and why one failed.',
+		get label() { return t('engineClickhouse.views.backups.label'); },
+		get blurb() { return t('engineClickhouse.views.backups.blurb'); },
 		sql: (scope) => `SELECT ${replicaColumn(scope)}name, status, start_time, end_time, num_files AS files, round(total_size / 1048576, 1) AS size_mb, error
 FROM ${sys('backups', scope)}
 ORDER BY start_time DESC${clickhouseScopeSettings(scope)}`,
-		empty: 'No BACKUP or RESTORE has run since this server started.',
+		get empty() { return t('engineClickhouse.views.backups.empty'); },
 	},
 ];
 
@@ -595,7 +612,7 @@ function bytes(n: number): string {
 }
 
 function unknown(view: OpsViewId, title: string): HealthItem {
-	return { level: 'unknown', title, detail: 'This user cannot read the system table it needs.', view };
+	return { level: 'unknown', title, detail: t('engineClickhouse.health.cannotRead'), view };
 }
 
 /** Read the numbers into four verdicts, worst first within the fixed order of the cards. */
@@ -603,100 +620,100 @@ export function assessHealth(input: HealthInput): HealthItem[] {
 	const items: HealthItem[] = [];
 
 	if (input.worstPartition === undefined) {
-		items.push(unknown('parts', 'Parts'));
+		items.push(unknown('parts', t('engineClickhouse.health.parts')));
 	} else if (input.worstPartition === null) {
-		items.push({ level: 'ok', title: 'Parts', detail: 'No MergeTree data yet.', view: 'parts' });
+		items.push({ level: 'ok', title: t('engineClickhouse.health.parts'), detail: t('engineClickhouse.health.noMergeTree'), view: 'parts' });
 	} else {
 		const delayAt = input.delayAt ?? DEFAULT_DELAY_AT;
 		const throwAt = input.throwAt ?? DEFAULT_THROW_AT;
 		const { database, table, parts } = input.worstPartition;
 		const where = `${database}.${table}`;
 		if (parts >= throwAt) {
-			items.push({ level: 'error', title: 'Too many parts', detail: `${where} has ${parts.toLocaleString()} parts in one partition. Inserts into it are being refused (limit ${throwAt.toLocaleString()}).`, view: 'parts' });
+			items.push({ level: 'error', title: t('engineClickhouse.health.tooManyParts'), detail: t('engineClickhouse.health.tooManyPartsDetail', { where, parts, limit: throwAt }), view: 'parts' });
 		} else if (parts >= delayAt) {
-			items.push({ level: 'warn', title: 'Inserts slowed', detail: `${where} has ${parts.toLocaleString()} parts in one partition. Inserts are being delayed from ${delayAt.toLocaleString()}, refused at ${throwAt.toLocaleString()}.`, view: 'parts' });
+			items.push({ level: 'warn', title: t('engineClickhouse.health.insertsSlowed'), detail: t('engineClickhouse.health.insertsSlowedDetail', { where, parts, delay: delayAt, limit: throwAt }), view: 'parts' });
 		} else if (parts >= delayAt / 2) {
-			items.push({ level: 'warn', title: 'Parts piling up', detail: `${where} has ${parts.toLocaleString()} parts in one partition, half way to the ${delayAt.toLocaleString()} where inserts slow down. Batch inserts, or check merges.`, view: 'parts' });
+			items.push({ level: 'warn', title: t('engineClickhouse.health.partsPiling'), detail: t('engineClickhouse.health.partsPilingDetail', { where, parts, delay: delayAt }), view: 'parts' });
 		} else {
-			items.push({ level: 'ok', title: 'Parts', detail: `At most ${parts.toLocaleString()} parts in a partition (${where}). Inserts slow at ${delayAt.toLocaleString()}.`, view: 'parts' });
+			items.push({ level: 'ok', title: t('engineClickhouse.health.parts'), detail: t('engineClickhouse.health.partsOk', { parts, where, delay: delayAt }), view: 'parts' });
 		}
 	}
 
 	if (!input.mutations) {
-		items.push(unknown('mutations', 'Mutations'));
+		items.push(unknown('mutations', t('engineClickhouse.health.mutations')));
 	} else if (input.mutations.failing > 0) {
-		items.push({ level: 'error', title: 'Mutations failing', detail: `${input.mutations.failing} of ${input.mutations.pending} pending mutations keep failing, and they block the ones behind them on the same table.`, view: 'mutations' });
+		items.push({ level: 'error', title: t('engineClickhouse.health.mutationsFailing'), detail: t('engineClickhouse.health.mutationsFailingDetail', { failing: input.mutations.failing, pending: input.mutations.pending }), view: 'mutations' });
 	} else if (input.mutations.pending > 0) {
-		items.push({ level: 'warn', title: 'Mutations pending', detail: `${input.mutations.pending} mutation${input.mutations.pending === 1 ? ' has' : 's have'} not finished yet.`, view: 'mutations' });
+		items.push({ level: 'warn', title: t('engineClickhouse.health.mutationsPending'), detail: t('engineClickhouse.health.mutationsPendingDetail', { count: input.mutations.pending }), view: 'mutations' });
 	} else {
-		items.push({ level: 'ok', title: 'Mutations', detail: 'None waiting.', view: 'mutations' });
+		items.push({ level: 'ok', title: t('engineClickhouse.health.mutations'), detail: t('engineClickhouse.health.noneWaiting'), view: 'mutations' });
 	}
 
 	if (!input.replication) {
-		items.push(unknown('replication', 'Replication'));
+		items.push(unknown('replication', t('engineClickhouse.health.replication')));
 	} else if (input.replication.tables === 0) {
-		items.push({ level: 'ok', title: 'Replication', detail: 'No replicated tables on this server.', view: 'replication' });
+		items.push({ level: 'ok', title: t('engineClickhouse.health.replication'), detail: t('engineClickhouse.health.noReplicated'), view: 'replication' });
 	} else if (input.replication.readonly > 0) {
-		items.push({ level: 'error', title: 'Replicas read-only', detail: `${input.replication.readonly} replicated table${input.replication.readonly === 1 ? ' is' : 's are'} read-only, usually a lost connection to Keeper. Inserts into them fail.`, view: 'replication' });
+		items.push({ level: 'error', title: t('engineClickhouse.health.replicasReadonly'), detail: t('engineClickhouse.health.replicasReadonlyDetail', { count: input.replication.readonly }), view: 'replication' });
 	} else if (input.replication.delay >= REPLICA_LAG_WARN_S) {
-		items.push({ level: 'warn', title: 'Replica lag', detail: `A replica is ${Math.round(input.replication.delay).toLocaleString()} s behind.`, view: 'replication' });
+		items.push({ level: 'warn', title: t('engineClickhouse.health.replicaLag'), detail: t('engineClickhouse.health.replicaLagDetail', { seconds: Math.round(input.replication.delay) }), view: 'replication' });
 	} else {
-		items.push({ level: 'ok', title: 'Replication', detail: `${input.replication.tables} replicated table${input.replication.tables === 1 ? '' : 's'}, in step.`, view: 'replication' });
+		items.push({ level: 'ok', title: t('engineClickhouse.health.replication'), detail: t('engineClickhouse.health.replicatedInStep', { count: input.replication.tables }), view: 'replication' });
 	}
 
 	if (input.disk === undefined) {
-		items.push(unknown('disks', 'Disk'));
+		items.push(unknown('disks', t('engineClickhouse.health.disk')));
 	} else if (input.disk === null) {
-		items.push({ level: 'ok', title: 'Disk', detail: 'No disks reported.', view: 'disks' });
+		items.push({ level: 'ok', title: t('engineClickhouse.health.disk'), detail: t('engineClickhouse.health.noDisks'), view: 'disks' });
 	} else {
 		const { name, usedPercent, free } = input.disk;
 		const detached = input.detached ?? 0;
 		if (usedPercent >= DISK_ERROR_PERCENT) {
-			items.push({ level: 'error', title: 'Disk nearly full', detail: `Disk ${name} is ${usedPercent}% used (${bytes(free)} free). Merges need room to write, and stop first.`, view: 'disks' });
+			items.push({ level: 'error', title: t('engineClickhouse.health.diskNearlyFull'), detail: t('engineClickhouse.health.diskNearlyFullDetail', { name, used: usedPercent, free: bytes(free) }), view: 'disks' });
 		} else if (usedPercent >= DISK_WARN_PERCENT) {
-			items.push({ level: 'warn', title: 'Disk filling up', detail: `Disk ${name} is ${usedPercent}% used (${bytes(free)} free).`, view: 'disks' });
+			items.push({ level: 'warn', title: t('engineClickhouse.health.diskFilling'), detail: t('engineClickhouse.health.diskFillingDetail', { name, used: usedPercent, free: bytes(free) }), view: 'disks' });
 		} else if (detached > 0) {
-			items.push({ level: 'warn', title: 'Detached parts', detail: `${detached} detached part${detached === 1 ? '' : 's'} still on disk, no longer read.`, view: 'detached' });
+			items.push({ level: 'warn', title: t('engineClickhouse.health.detachedParts'), detail: t('engineClickhouse.health.detachedDetail', { count: detached }), view: 'detached' });
 		} else {
-			items.push({ level: 'ok', title: 'Disk', detail: `Disk ${name} is ${usedPercent}% used, ${bytes(free)} free.`, view: 'disks' });
+			items.push({ level: 'ok', title: t('engineClickhouse.health.disk'), detail: t('engineClickhouse.health.diskOk', { name, used: usedPercent, free: bytes(free) }), view: 'disks' });
 		}
 	}
 
 	if (!input.dictionaries) {
-		items.push(unknown('dictionaries', 'Dictionaries'));
+		items.push(unknown('dictionaries', t('engineClickhouse.health.dictionaries')));
 	} else if (input.dictionaries.failing > 0) {
-		items.push({ level: 'error', title: 'Dictionary failing', detail: `${input.dictionaries.failing} of ${input.dictionaries.total} dictionaries failed to load; every dictGet on them fails.`, view: 'dictionaries' });
+		items.push({ level: 'error', title: t('engineClickhouse.health.dictFailing'), detail: t('engineClickhouse.health.dictFailingDetail', { failing: input.dictionaries.failing, total: input.dictionaries.total }), view: 'dictionaries' });
 	} else {
-		items.push({ level: 'ok', title: 'Dictionaries', detail: input.dictionaries.total === 0 ? 'No dictionaries.' : `${input.dictionaries.total} loaded without errors.`, view: 'dictionaries' });
+		items.push({ level: 'ok', title: t('engineClickhouse.health.dictionaries'), detail: input.dictionaries.total === 0 ? t('engineClickhouse.health.noDicts') : t('engineClickhouse.health.dictsLoaded', { n: input.dictionaries.total }), view: 'dictionaries' });
 	}
 
 	if (input.refreshes && input.refreshes.total > 0) {
 		const { total, failing } = input.refreshes;
 		items.push(failing > 0
-			? { level: 'error', title: 'Refresh failing', detail: `${failing} of ${total} refreshable view${total === 1 ? '' : 's'} failed their last refresh and are serving old data.`, view: 'refreshes' }
-			: { level: 'ok', title: 'Refreshable views', detail: `${total} refreshing on schedule.`, view: 'refreshes' });
+			? { level: 'error', title: t('engineClickhouse.health.refreshFailing'), detail: t('engineClickhouse.health.refreshFailingDetail', { failing, count: total }), view: 'refreshes' }
+			: { level: 'ok', title: t('engineClickhouse.health.refreshableViews'), detail: t('engineClickhouse.health.refreshingSchedule', { n: total }), view: 'refreshes' });
 	}
 
 	if (!input.failed) {
-		items.push(unknown('failed', 'Failed queries'));
+		items.push(unknown('failed', t('engineClickhouse.health.failed')));
 	} else {
 		const { n, kinds } = input.failed;
 		items.push({
 			level: n >= FAILED_WARN ? 'warn' : 'ok',
-			title: 'Failed queries',
-			detail: n === 0 ? 'None in the last hour.' : `${n.toLocaleString()} in the last hour, ${kinds} kind${kinds === 1 ? '' : 's'} of error.`,
+			title: t('engineClickhouse.health.failed'),
+			detail: n === 0 ? t('engineClickhouse.health.noneLastHour') : t('engineClickhouse.health.failedDetail', { n, count: kinds }),
 			view: 'failed',
 		});
 	}
 
 	if (!input.running) {
-		items.push(unknown('running', 'Running'));
+		items.push(unknown('running', t('engineClickhouse.health.running')));
 	} else {
 		const { n, longest } = input.running;
 		items.push({
 			level: 'ok',
-			title: 'Running',
-			detail: n === 0 ? 'Nothing running.' : `${n} quer${n === 1 ? 'y' : 'ies'}, the longest for ${Math.round(longest).toLocaleString()} s.`,
+			title: t('engineClickhouse.health.running'),
+			detail: n === 0 ? t('engineClickhouse.health.nothingRunning') : t('engineClickhouse.health.runningDetail', { count: n, seconds: Math.round(longest) }),
 			view: 'running',
 		});
 	}

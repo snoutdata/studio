@@ -3,6 +3,7 @@
  *  Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { t } from '../shared/i18n/core';
 import { CloudRequestError, detailFrom, type CloudApi, type CloudProjectSummary } from './cloudApi';
 import type { CloudActionOutcome, CloudCreateForm, CloudCreateOutcome, CloudProjectRow, CloudProjectsView } from '../shared/cloudProjects';
 
@@ -62,7 +63,7 @@ export function toRow(project: CloudProjectSummary): CloudProjectRow {
 	// project rather than of the moment and the user set it themselves. Everything else
 	// resolves in a second or two, so "wait" is a better answer than a sentence.
 	const pauseRefusal = project.production
-		? "This project is marked production, so it is never paused."
+		? t('mainProjects.prodNeverPaused')
 		: undefined;
 
 	return {
@@ -141,7 +142,7 @@ export async function cloudProjectsView(api: CloudApi, sleep: (ms: number) => Pr
 	if (!account) {
 		// Not an error and not an empty list. An empty list would say "you have no
 		// databases", which is a different and more discouraging thing to be told.
-		return { account: null, projects: [], unavailable: "Sign in to SnoutData to see your hosted databases." };
+		return { account: null, projects: [], unavailable: t('mainProjects.signInToSee') };
 	}
 	try {
 		const projects = await listThroughBlips(api, sleep);
@@ -150,11 +151,11 @@ export async function cloudProjectsView(api: CloudApi, sleep: (ms: number) => Pr
 			account,
 			projects: rows,
 			unavailable: rows.length === 0
-				? "This account has no hosted databases yet."
+				? t('mainProjects.noHosted')
 				: undefined,
 		};
 	} catch (error) {
-		return { account, projects: [], unavailable: `Could not reach SnoutData Cloud: ${detailFrom(error)}` };
+		return { account, projects: [], unavailable: t('mainProjects.cloudUnreachable', { detail: detailFrom(error) }) };
 	}
 }
 
@@ -183,11 +184,11 @@ export async function askCloudProject(
 		if (!result.changed) {
 			// Already where it was asked to be. Saying "asked to stop" here would have the
 			// user waiting for something that is not going to happen.
-			return { ok: true, message: action === 'pause' ? "Already stopped." : "Already running." };
+			return { ok: true, message: action === 'pause' ? t('mainProjects.alreadyStopped') : t('mainProjects.alreadyRunning') };
 		}
 		return {
 			ok: true,
-			message: action === 'pause' ? "Asked it to stop. This takes a few seconds." : "Asked it to start. This takes a few seconds.",
+			message: action === 'pause' ? t('mainProjects.askedStop') : t('mainProjects.askedStart'),
 		};
 	} catch (error) {
 		// A refusal comes back as the control plane's own sentence ("a production project
@@ -224,7 +225,7 @@ export async function createCloudProject(
 ): Promise<CloudCreateOutcome> {
 	const name = form.name.trim();
 	if (!name) {
-		return { ok: false, refused: true, message: "A project needs a name." };
+		return { ok: false, refused: true, message: t('mainProjects.needsName') };
 	}
 	let ref: string;
 	try {
@@ -240,10 +241,10 @@ export async function createCloudProject(
 			ok: true,
 			ref,
 			connected: false,
-			message: `Created ${ref}. It is starting. Adding it as a connection failed (${detailFrom(error)}); use Import to add it.`,
+			message: t('mainProjects.createdNoConn', { ref, detail: detailFrom(error) }),
 		};
 	}
-	return { ok: true, ref, connected: true, message: `Created ${ref} and added it as a connection. It is starting, which takes about half a minute.` };
+	return { ok: true, ref, connected: true, message: t('mainProjects.createdConn', { ref }) };
 }
 
 /**
@@ -264,6 +265,6 @@ export async function deleteCloudProject(
 		return failed(error);
 	}
 	const removed = await removeConnections(ref).catch(() => 0);
-	const base = changed ? "Asked it to delete. This takes a few seconds." : "Already deleted.";
-	return { ok: true, message: removed > 0 ? `${base} Its connection was removed.` : base };
+	const base = changed ? t('mainProjects.askedDelete') : t('mainProjects.alreadyDeleted');
+	return { ok: true, message: removed > 0 ? t('mainProjects.connRemoved', { base }) : base };
 }

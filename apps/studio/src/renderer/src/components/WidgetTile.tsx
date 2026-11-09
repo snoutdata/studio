@@ -8,6 +8,7 @@ import { Icon } from './Icon';
 import { effectiveIntervalSec, type MonitorWidget, type TrendSample } from '../../../shared/monitor';
 import type { QueryResult } from '../../../shared/query';
 import { latestTrendValue, resultScalar, resultToChartSpec, trendToChartSpec } from '../monitorChart';
+import { formatLocale, useT } from '../i18n';
 
 // One monitor widget. A `trend` widget reads its accumulated samples from the SQLite store and
 // appends live ticks pushed by the main poller. A `snapshot` widget re-runs its SQL on an interval
@@ -34,12 +35,13 @@ function formatNumber(value: number | string | null): string {
 		return "—";
 	}
 	if (typeof value === 'number') {
-		return value.toLocaleString();
+		return value.toLocaleString(formatLocale());
 	}
 	return value;
 }
 
 export function WidgetTile(props: WidgetTileProps): JSX.Element {
+	const t = useT();
 	const { widget } = props;
 	const [samples, setSamples] = useState<TrendSample[]>([]);
 	const [result, setResult] = useState<QueryResult | null>(null);
@@ -132,19 +134,19 @@ export function WidgetTile(props: WidgetTileProps): JSX.Element {
 	// This is the core of keeping a many-series chart from dragging the app down over time.
 	const trendChart = useMemo(
 		() => (
-			<Suspense fallback={<div className="widget-tile-empty">Loading chart…</div>}>
+			<Suspense fallback={<div className="widget-tile-empty">{t('dashboard.tile.loadingChart')}</div>}>
 				<ChartCanvas spec={trendToChartSpec(widget.title, widget.viz, samples)} />
 			</Suspense>
 		),
-		[widget.title, widget.viz, samples],
+		[widget.title, widget.viz, samples, t],
 	);
 	const snapshotChart = useMemo(
 		() => (result ? (
-			<Suspense fallback={<div className="widget-tile-empty">Loading chart…</div>}>
+			<Suspense fallback={<div className="widget-tile-empty">{t('dashboard.tile.loadingChart')}</div>}>
 				<ChartCanvas spec={resultToChartSpec(widget.title, widget.viz, result)} />
 			</Suspense>
 		) : null),
-		[widget.title, widget.viz, result],
+		[widget.title, widget.viz, result, t],
 	);
 
 	function errorBox(): JSX.Element {
@@ -158,13 +160,13 @@ export function WidgetTile(props: WidgetTileProps): JSX.Element {
 			return <div className="widget-tile-error widget-tile-paused" title={widget.paused}><Icon name="debug-pause" /> {widget.paused}</div>;
 		}
 		if (loading) {
-			return <div className="widget-tile-empty">Loading…</div>;
+			return <div className="widget-tile-empty">{t('projects.common.loading')}</div>;
 		}
 		if (widget.kind === 'trend') {
 			// A poll error only takes over the tile when there's nothing accumulated to show; once
 			// samples exist, keep plotting them (a transient error doesn't blank the chart).
 			if (samples.length === 0) {
-				return error ? errorBox() : <div className="widget-tile-empty">Waiting for the first sample…</div>;
+				return error ? errorBox() : <div className="widget-tile-empty">{t('dashboard.tile.waiting')}</div>;
 			}
 			if (widget.viz === 'number') {
 				return <div className="widget-tile-number">{formatNumber(latestTrendValue(samples))}</div>;
@@ -176,7 +178,7 @@ export function WidgetTile(props: WidgetTileProps): JSX.Element {
 		}
 		// snapshot
 		if (!result) {
-			return error ? errorBox() : <div className="widget-tile-empty">No data.</div>;
+			return error ? errorBox() : <div className="widget-tile-empty">{t('dashboard.tile.noData')}</div>;
 		}
 		if (widget.viz === 'number') {
 			return <div className="widget-tile-number">{formatNumber(resultScalar(result))}</div>;
@@ -184,7 +186,7 @@ export function WidgetTile(props: WidgetTileProps): JSX.Element {
 		if (widget.viz === 'table') {
 			return <ResultTable result={result} />;
 		}
-		return snapshotChart ?? <div className="widget-tile-empty">No data.</div>;
+		return snapshotChart ?? <div className="widget-tile-empty">{t('dashboard.tile.noData')}</div>;
 	}
 
 	return (
@@ -192,12 +194,12 @@ export function WidgetTile(props: WidgetTileProps): JSX.Element {
 			<div className="widget-tile-head">
 				<span className="widget-tile-title" title={widget.title}>{widget.title}</span>
 				<span className="widget-tile-meta">
-					{props.connectionLabel ?? "No connection"} · every {interval}s
+					{props.connectionLabel ?? t('dashboard.tile.noConn')} · {t('dashboard.tile.every', { seconds: interval })}
 					<Countdown intervalSec={interval} pollAt={lastPollAt} active={props.active} />
 				</span>
 				<span className="spacer" />
-				<button className="icon-button" title="Edit widget" onClick={props.onEdit}><Icon name="edit" /></button>
-				<button className="icon-button" title="Delete widget" onClick={props.onDelete}><Icon name="trash" /></button>
+				<button className="icon-button" title={t('dashboard.widget.edit')} onClick={props.onEdit}><Icon name="edit" /></button>
+				<button className="icon-button" title={t('dashboard.tile.delete')} onClick={props.onDelete}><Icon name="trash" /></button>
 			</div>
 			<div className="widget-tile-body">{body()}</div>
 		</div>
@@ -210,6 +212,7 @@ export function WidgetTile(props: WidgetTileProps): JSX.Element {
  * Restarts at each actual poll (`pollAt` changes); floors at 0 if a poll runs late.
  */
 function Countdown({ intervalSec, pollAt, active }: { intervalSec: number; pollAt: number; active: boolean }): JSX.Element {
+	const t = useT();
 	const [left, setLeft] = useState(intervalSec);
 	useEffect(() => { setLeft(intervalSec); }, [pollAt, intervalSec]);
 	useEffect(() => {
@@ -220,7 +223,7 @@ function Countdown({ intervalSec, pollAt, active }: { intervalSec: number; pollA
 		const id = window.setInterval(() => setLeft((s) => (s > 0 ? s - 1 : 0)), 1000);
 		return () => window.clearInterval(id);
 	}, [active]);
-	return <span className="widget-tile-countdown" title="Seconds until the next refresh"> · {left}s</span>;
+	return <span className="widget-tile-countdown" title={t('dashboard.tile.nextRefresh')}> · {left}s</span>;
 }
 
 /** Recent trend samples as a small table (newest first). */
@@ -235,9 +238,9 @@ function TrendTable({ samples }: { samples: TrendSample[] }): JSX.Element {
 			<tbody>
 				{recent.map((s, i) => (
 					<tr key={i}>
-						<td>{new Date(s.t).toLocaleTimeString()}</td>
+						<td>{new Date(s.t).toLocaleTimeString(formatLocale())}</td>
 						{grouped && <td>{s.series}</td>}
-						<td>{s.value === null ? "—" : s.value.toLocaleString()}</td>
+						<td>{s.value === null ? "—" : s.value.toLocaleString(formatLocale())}</td>
 					</tr>
 				))}
 			</tbody>

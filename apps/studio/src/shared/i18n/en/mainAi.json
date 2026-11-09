@@ -1,0 +1,21 @@
+{
+	"noLocalModel": "This build does not include a model on this computer, so it cannot explain the review. Choose another way to review this repository in Settings, Snoutbot.",
+	"signIn": "Sign in to use the assistant",
+	"offline": "Offline: can't reach the gateway {detail}",
+	"usageLimit": "Monthly usage limit reached",
+	"noApiKey": "No API key: add your {label} key below",
+	"modelReplied": "Model replied: {reply}",
+	"connectedEmpty": "Connected (empty reply).",
+	"spendLimit": "{provider} reports your account has hit its spending limit. Raise the limit (or check billing) with {provider}, then try again.",
+	"ollamaDown": "Can't reach Ollama at {endpoint}. Start it (run \"ollama serve\") and make sure the model is pulled, then try again.",
+	"cloudRejected": "{provider} rejected the request. Check the API key under Settings → AI → Chat. ({message})",
+	"byokRejected": "{provider} rejected your API key. Check it under Settings → AI. ({message})",
+	"addKey": "Add your {provider} API key under Settings → AI to use this provider.",
+	"aiNotParsed": "The AI translation could not be parsed as a MongoDB pipeline. Try rephrasing, or author a native aggregation pipeline.",
+	"aiNotObject": "The AI translation was not a MongoDB pipeline object. Try rephrasing, or author a native aggregation pipeline.",
+	"aiNoCollection": "Could not determine which collection to query from the AI translation. Author a native aggregation pipeline instead.",
+	"aiNoPipeline": "The AI translation did not contain a valid aggregation pipeline (an array of stages). Author a native aggregation pipeline instead.",
+	"signInPeriod": "Sign in to use the assistant.",
+	"rulesOnly": "This repository is reviewed by the rules alone. No model is called.",
+	"noByok": "No bring-your-own-key provider is set up. Add a key under Settings → AI."
+}

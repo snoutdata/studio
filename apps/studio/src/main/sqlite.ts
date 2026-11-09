@@ -3,6 +3,7 @@
  *  Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { t } from '../shared/i18n/core';
 import type Database from 'better-sqlite3';
 
 /*
@@ -23,7 +24,7 @@ import type Database from 'better-sqlite3';
  *  was in, since "better-sqlite3" means nothing to them. */
 export class SqliteUnavailableError extends Error {
 	constructor(readonly feature: string, readonly cause: unknown) {
-		super(`${feature} needs its local database, which this build cannot load. Reinstalling the app usually fixes it.`);
+		super(t('mainErrors.sqliteMissing', { feature }));
 		this.name = 'SqliteUnavailableError';
 	}
 }

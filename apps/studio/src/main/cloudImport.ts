@@ -3,6 +3,7 @@
  *  Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { t } from '../shared/i18n/core';
 import type { ConnectionFormValues, ImportItem, ImportItemRef, ImportScanResult } from '../shared/forms';
 import type { ConnectionConfig } from '../shared/connection';
 import { detailFrom, type CloudApi, type CloudProjectSummary } from './cloudApi';
@@ -68,14 +69,14 @@ export function projectToValues(project: CloudProjectSummary): ConnectionFormVal
 function noteFor(project: CloudProjectSummary, existing: ConnectionConfig | undefined): string | undefined {
 	const parts: string[] = [];
 	if (existing) {
-		parts.push(`updates "${existing.label}"`);
+		parts.push(t('mainProjects.updatesLabel', { label: existing.label }));
 	}
 	if (project.readOnly) {
-		parts.push("over its storage quota, so it is refusing writes");
+		parts.push(t('mainProjects.overQuota'));
 	} else if (project.state === 'paused' || !project.wakesInstantly) {
 		// Worth saying because the first connection will be slow and look broken
 		// otherwise; the front door wakes it while the client waits.
-		parts.push("paused, so the first connection wakes it and takes a few seconds");
+		parts.push(t('mainProjects.pausedWakes'));
 	} else if (project.state !== 'ready') {
 		parts.push(project.state);
 	}
@@ -95,21 +96,21 @@ export async function scanSnoutdataCloud(api: CloudApi, existing: ConnectionConf
 	if (!account) {
 		// Not an error and not an empty list: an empty list would read as "you have no
 		// databases", which is a different and discouraging thing to be told.
-		return { ...empty, unavailable: "Sign in to SnoutData to import your hosted databases." };
+		return { ...empty, unavailable: t('mainProjects.signInToImport') };
 	}
 
 	let projects: CloudProjectSummary[];
 	try {
 		projects = await api.list();
 	} catch (error) {
-		return { ...empty, unavailable: `Could not reach SnoutData Cloud: ${detailFrom(error)}` };
+		return { ...empty, unavailable: t('mainProjects.cloudUnreachable', { detail: detailFrom(error) }) };
 	}
 
 	if (projects.length === 0) {
 		return {
 			...empty,
 			sources: [account],
-			unavailable: "This account has no hosted databases yet. Create one from the Cloud panel.",
+			unavailable: t('mainProjects.noHostedCreate'),
 		};
 	}
 

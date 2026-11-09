@@ -6,6 +6,7 @@
 import { useCallback, useEffect, useState } from 'react';
 
 import { Icon } from './Icon';
+import { useT } from '../i18n';
 import { RenderSurface, type ChatRunOutcome, type ChatRunState, type InsertTarget, type RenderItem } from './RenderSurface';
 import { blocksFromMarkdown } from '../renderBlocks';
 import { canvasFor, clearCanvas, subscribeCanvas } from '../agentCanvas';
@@ -51,6 +52,7 @@ export function AgentCanvas({
 	kind, placement, connectionLabel, isDocument, hasConnection,
 	onInsertSql, onInsertSqlNewTab, onInsertPipeline, onRunSql, runOutcome,
 }: AgentCanvasProps): JSX.Element {
+	const t = useT();
 	// What this agent has drawn. The store lives outside React because the thing that writes to it is
 	// a capability invoked from main, which has no component to call into.
 	const [canvas, setCanvas] = useState(() => canvasFor(kind));
@@ -100,10 +102,10 @@ export function AgentCanvas({
 		<div className={`agent-canvas${placement === 'tab' ? ' in-tab' : ''}`}>
 			<div className="agent-canvas-head">
 				<Icon name={descriptor.icon} />
-				<span className="agent-canvas-title">Shown by {descriptor.label}</span>
+				<span className="agent-canvas-title">{t('agents.canvas.shownBy', { agent: descriptor.label })}</span>
 				<span className="spacer" />
 				{canvas.length > 0 && (
-					<button className="icon-btn" aria-label="Clear what is shown" onClick={() => clearCanvas(kind)}><Icon name="clear-all" /></button>
+					<button className="icon-btn" aria-label={t('agents.canvas.clear')} onClick={() => clearCanvas(kind)}><Icon name="clear-all" /></button>
 				)}
 			</div>
 			<RenderSurface
@@ -123,11 +125,9 @@ export function AgentCanvas({
 					// empty rather than look broken.
 					<div className="agent-canvas-empty">
 						<Icon name="preview" />
-						<h3>Nothing shown yet</h3>
+						<h3>{t('agents.canvas.emptyTitle')}</h3>
 						<p>
-							{descriptor.label} shows things here instead of printing them into its terminal: rows it
-							fetched, a query it is proposing, a chart. Anything with SQL in it arrives as a card you
-							can insert or run.
+							{t('agents.canvas.emptyBody', { agent: descriptor.label })}
 						</p>
 					</div>
 				)}

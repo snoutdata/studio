@@ -1,0 +1,106 @@
+{
+	"class": {
+		"add": "Añadir",
+		"alter": "Modificar",
+		"drop": "Eliminar"
+	},
+	"confirm": {
+		"target": "el destino",
+		"title": {
+			"one": "¿Aplicar {count} sentencia a {target}?",
+			"other": "¿Aplicar {count} sentencias a {target}?"
+		},
+		"apply": "Aplicar",
+		"changes": "Esto modifica",
+		"including": ", incluidos",
+		"destructive": {
+			"one": "{count} cambio destructivo",
+			"other": "{count} cambios destructivos"
+		},
+		"canLose": "que pueden perder datos",
+		"transactional": "Se ejecuta en una sola transacción (todo o nada).",
+		"oneByOne": "Las sentencias se aplican una a una; un fallo se puede corregir y reanudar."
+	},
+	"title": "Sincronización de esquema",
+	"pick": {
+		"heading": "Sincronizar el esquema de una base de datos",
+		"intro": "El **origen** define el esquema deseado; el **destino** se modifica para coincidir. Ambos deben estar conectados y usar el mismo tipo de base de datos.",
+		"needTwo": "Conecta al menos dos bases de datos del mismo tipo para sincronizar.",
+		"source": "Origen (estado deseado)",
+		"selectConnection": "Selecciona una conexión…",
+		"target": "Destino (se modificará)",
+		"readOnlyTarget": "(solo lectura, no se puede modificar)",
+		"comparing": "Comparando…",
+		"compare": "Comparar esquemas"
+	},
+	"inSync": "Sincronizado",
+	"inSyncBody": "El destino ya coincide con el origen. No hacen falta cambios.",
+	"chooseOther": "Elegir otras bases de datos",
+	"close": "Cerrar",
+	"chip": {
+		"dropTitle": "Elimina los objetos que solo existen en el destino. Ocúltalo para sincronizar de forma aditiva, sin quitar nada.",
+		"toggle": {
+			"add": "Mostrar u ocultar las adiciones",
+			"alter": "Mostrar u ocultar las modificaciones",
+			"drop": "Mostrar u ocultar las eliminaciones"
+		},
+		"noKeys": "Sin cambios de claves, índices o claves foráneas en este diff.",
+		"keysTitle": "Las claves, índices y claves foráneas pueden fallar si el destino tiene filas duplicadas o huérfanas (un problema de datos, no de esquema). Ocúltalos para sincronizar el resto y añádelos cuando los datos estén limpios.",
+		"keys": "Claves e índices"
+	},
+	"selected": {
+		"one": "{count} seleccionado",
+		"other": "{count} seleccionados"
+	},
+	"unselectAll": "Deseleccionar todo",
+	"selectAll": "Seleccionar todo",
+	"filter": "Filtrar cambios…",
+	"clearFilter": "Borrar filtro",
+	"applied": {
+		"one": "{count} sentencia aplicada.",
+		"other": "{count} sentencias aplicadas."
+	},
+	"stillDiffer": {
+		"one": "{count} cambio sigue pendiente.",
+		"other": "{count} cambios siguen pendientes."
+	},
+	"additive": "Sincronización aditiva: no se quitará nada del destino.",
+	"noMatch": "Ningún cambio coincide con \"{query}\".",
+	"cardTitle": "Clic para incluir o excluir, Mayús+clic para seleccionar un rango",
+	"canLoseData": "Puede perder datos",
+	"migrationSql": "SQL de migración",
+	"statements": {
+		"one": "{count} sentencia",
+		"other": "{count} sentencias"
+	},
+	"copyScript": "Copiar el script completo",
+	"back": "Atrás",
+	"selectedOf": "{n} de {total} seleccionados",
+	"destructiveCount": {
+		"one": "{count} destructivo",
+		"other": "{count} destructivos"
+	},
+	"applyProd": "Aplicar en PRODUCCIÓN",
+	"applyBtn": "Aplicar",
+	"applying": "Aplicando la migración…",
+	"runningAgainst": "Ejecutando en {name}.",
+	"statementFailed": "Sentencia {n} de {total} con error",
+	"migrationStopped": "Migración detenida",
+	"rolledBack": "transacción revertida",
+	"correctedStatement": "Sentencia corregida",
+	"editRetry": "edita y luego Reintentar",
+	"sentTo": "Enviado a {assistant}. Lee su arreglo en el chat, pega la sentencia corregida arriba y luego Reintentar.",
+	"stoppedBody": "La migración se detuvo antes de poder señalar una sentencia concreta. Vuelve a los cambios o recalcula el diff con la base de datos en vivo.",
+	"askFix": "Pedir a {assistant} que lo arregle",
+	"resyncTitle": "Volver a inspeccionar el destino y reconstruir el diff (tras corregir la causa, p. ej. quitar filas duplicadas).",
+	"resync": "Resincronizar",
+	"backToChanges": "Volver a los cambios",
+	"stop": "Detener",
+	"retry": "Reintentar",
+	"applied2": "Migración aplicada",
+	"appliedBody": {
+		"one": "{count} sentencia aplicada a {target}. Las bases de datos están sincronizadas.",
+		"other": "{count} sentencias aplicadas a {target}. Las bases de datos están sincronizadas."
+	},
+	"done": "Listo"
+}

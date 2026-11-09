@@ -3,6 +3,7 @@
  *  Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { t } from '../../shared/i18n/core';
 import { createSign } from 'node:crypto';
 
 import { netFetch } from '../netFetch';
@@ -111,7 +112,7 @@ export function signAppJwt(config: GithubAppConfig, now = Date.now()): string {
 	} catch (err) {
 		// The single most likely setup mistake, and the raw OpenSSL text for it is unreadable.
 		throw new ForgeError(
-			`That private key could not be used to sign. Check it is the .pem GitHub generated for the App, pasted whole, including the BEGIN and END lines. (${err instanceof Error ? err.message : String(err)})`,
+			t('mainReview.keyUnusable', { error: err instanceof Error ? err.message : String(err) }),
 			0,
 			false,
 		);
@@ -165,7 +166,7 @@ export class GithubAppAuth {
 		const installation = this.installationId ?? defaultInstallation(await this.installations());
 		if (installation === undefined) {
 			throw new ForgeError(
-				"Snoutbot is installed on more than one account, so it cannot tell which one to review as. Choose one in Settings.",
+				t('mainReview.multiInstall'),
 				0,
 				false,
 			);
@@ -174,7 +175,7 @@ export class GithubAppAuth {
 		const body = await this.appRequest(`/app/installations/${installation}/access_tokens`, 'POST');
 		const parsed = body as { token?: string; expires_at?: string };
 		if (!parsed.token) {
-			throw new ForgeError("GitHub did not return an installation token for this App.", 0, false);
+			throw new ForgeError(t('mainReview.noInstallToken'), 0, false);
 		}
 		this.cached = {
 			token: parsed.token,
@@ -228,10 +229,10 @@ export class GithubAppAuth {
 async function appErrorMessage(response: Response): Promise<string> {
 	const text = await response.text().catch(() => '');
 	if (response.status === 401) {
-		return "GitHub rejected the App's credentials. Check the App ID matches the private key, and that this computer's clock is right.";
+		return t('mainReview.appCredsRejected');
 	}
 	if (response.status === 404) {
-		return "GitHub does not know that App ID. Check it against the App's settings page.";
+		return t('mainReview.unknownAppId');
 	}
-	return `GitHub refused the App request (${response.status}). ${text.slice(0, 200)}`.trim();
+	return t('mainReview.appRefused', { status: response.status, text: text.slice(0, 200) }).trim();
 }

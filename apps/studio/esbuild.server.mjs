@@ -111,12 +111,14 @@ if (tests) {
 		loader: { '.css': 'empty' },
 		external: [...common.external, 'three', 'three/*'],
 	};
-	await esbuild.build({ ...common, ...liby, sourcemap: false, entryPoints, outdir: 'out/tests', outbase: 'src' });
+	// Every test bundle answers in English, as the app does: t('x.y') needs its catalog registered.
+	const i18n = { inject: ['src/shared/i18n/testEnglish.ts'] };
+	await esbuild.build({ ...common, ...liby, ...i18n, sourcemap: false, entryPoints, outdir: 'out/tests', outbase: 'src' });
 	// The package's own tests (hers, and her Studio half), under out/tests too, so
 	// `node --test "out/tests/**/*.test.js"` runs them. The stub has none.
 	const libyTests = LIBY_PATHS.real ? [...findTests(LIBY_PATHS.src), ...findTests(LIBY_PATHS.studioDir)] : [];
 	if (libyTests.length > 0) {
-		await esbuild.build({ ...common, ...liby, sourcemap: false, entryPoints: libyTests, outdir: 'out/tests/companion', outbase: LIBY_PATHS.dir });
+		await esbuild.build({ ...common, ...liby, ...i18n, sourcemap: false, entryPoints: libyTests, outdir: 'out/tests/companion', outbase: LIBY_PATHS.dir });
 	}
 	console.log(`built ${entryPoints.length + libyTests.length} test bundle(s) → out/tests (${libyTests.length} from the companion's package)`);
 } else if (watch) {

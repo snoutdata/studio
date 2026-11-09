@@ -7,6 +7,7 @@ import { Icon } from './Icon';
 import { WorkbenchArt } from '../art/Illustrations';
 import { shortcutKeys } from '../shortcuts';
 import { CHECKLIST_TASKS, type ChecklistTaskId } from '../onboarding';
+import { useT } from '../i18n';
 import type { ResolvedKeybinding } from '../../../shared/keybindings';
 
 interface WelcomeProps {
@@ -39,18 +40,19 @@ interface Action {
  *  view: a drawing of the workbench (art/Illustrations.tsx, the website's style) above a short list
  *  of starter actions with key hints. */
 export function Welcome({ onNewQuery, onOpenCommandPalette, onOpenFile, onSave, onRun, onFormat, onCloseTab, onAddConnection, bindings, tasks, onOpenChecklist, onboardingEnabled }: WelcomeProps): JSX.Element {
-	const done = CHECKLIST_TASKS.filter((t) => tasks[t.id]).length;
+	const t = useT();
+	const done = CHECKLIST_TASKS.filter((task) => tasks[task.id]).length;
 	const total = CHECKLIST_TASKS.length;
 	const comboFor = (id: string): string | undefined => bindings.find((b) => b.id === id)?.combo;
 	const actions: Action[] = [
-		{ label: "New Query", commandId: 'new', run: onNewQuery },
-		{ label: "Show All Commands", commandId: 'commandPalette', run: onOpenCommandPalette },
-		{ label: "Open File", commandId: 'open', run: onOpenFile },
-		{ label: "Save File", commandId: 'saveFile', run: onSave },
-		{ label: "Run Query", commandId: 'run', run: onRun },
-		{ label: "Format SQL", commandId: 'format', run: onFormat },
-		{ label: "Close Tab", commandId: 'closeTab', run: onCloseTab },
-		{ label: "Add Connection", run: onAddConnection },
+		{ label: t('commands.new'), commandId: 'new', run: onNewQuery },
+		{ label: t('shell.welcome.showAllCommands'), commandId: 'commandPalette', run: onOpenCommandPalette },
+		{ label: t('shell.welcome.openFile'), commandId: 'open', run: onOpenFile },
+		{ label: t('commands.saveFile'), commandId: 'saveFile', run: onSave },
+		{ label: t('commands.run'), commandId: 'run', run: onRun },
+		{ label: t('commands.format'), commandId: 'format', run: onFormat },
+		{ label: t('commands.closeTab'), commandId: 'closeTab', run: onCloseTab },
+		{ label: t('shell.welcome.addConnection'), run: onAddConnection },
 	];
 	return (
 		<div className="welcome">
@@ -58,7 +60,7 @@ export function Welcome({ onNewQuery, onOpenCommandPalette, onOpenFile, onSave, 
 			{onboardingEnabled && done < total && (
 				<button type="button" className="welcome-checklist-btn" onClick={onOpenChecklist}>
 					<Icon name="rocket" />
-					<span>Getting started</span>
+					<span>{t('onboarding.gettingStarted')}</span>
 					<span className="welcome-checklist-count">{done}/{total}</span>
 				</button>
 			)}

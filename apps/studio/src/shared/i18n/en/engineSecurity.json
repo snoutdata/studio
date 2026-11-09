@@ -1,0 +1,125 @@
+{
+	"unsupported": {
+		"sqlite": "SQLite has no users or privileges. Access to the database is access to the file.",
+		"duckdb": "DuckDB has no users or privileges. Access to the database is access to the file.",
+		"pinecone": "Pinecone has no database users. Access is controlled by the API key on the connection.",
+		"mongodb": "MongoDB manages users through its own commands rather than SQL. Not supported yet.",
+		"snowflake": "Snowflake users and roles are not supported yet.",
+		"redshift": "Redshift users and groups are not supported yet.",
+		"db2": "Db2 authorities and privileges are not supported yet.",
+		"hana": "SAP HANA users and roles are not supported yet.",
+		"logs": "A log service has no database users. Who can read these logs is set by the cloud account this connection uses, in your cloud provider.",
+		"generic": "Users and privileges are not supported for this connection yet."
+	},
+	"target": {
+		"global": "the whole server",
+		"database": "database {path}",
+		"schema": "schema {path}"
+	},
+	"policyOn": " on {path}",
+	"kind": {
+		"rowPolicy": "row policy",
+		"quota": "quota",
+		"settingsProfile": "settings profile"
+	},
+	"everyoneExcept": "everyone except {names}",
+	"everyone": "everyone",
+	"nobody": "nobody",
+	"createPolicy": {
+		"rowPolicy": "Create the {label}, applying to {who}.",
+		"quota": "Create the {label}, applying to {who}.",
+		"settingsProfile": "Create the {label}, applying to {who}."
+	},
+	"dropPolicy": {
+		"rowPolicy": "Drop the {label}.",
+		"quota": "Drop the {label}.",
+		"settingsProfile": "Drop the {label}."
+	},
+	"setPolicy": {
+		"rowPolicy": "Make the {label} apply to {who}.",
+		"quota": "Make the {label} apply to {who}.",
+		"settingsProfile": "Make the {label} apply to {who}."
+	},
+	"createPrincipal": {
+		"user": "Create the user {who}.",
+		"role": "Create the role {who}.",
+		"login": "Create the login {who}.",
+		"group": "Create the group {who}."
+	},
+	"dropPrincipal": {
+		"user": "Drop the user {who}, and everything granted to it.",
+		"role": "Drop the role {who}, and everything granted to it.",
+		"login": "Drop the login {who}, and everything granted to it.",
+		"group": "Drop the group {who}, and everything granted to it."
+	},
+	"setPassword": "Set a new password for {who}.",
+	"enable": "Let {who} sign in again.",
+	"disable": "Stop {who} from signing in.",
+	"grant": "Grant {privileges} on {target} to {who}.",
+	"revoke": "Take {privileges} on {target} away from {who}.",
+	"grantRole": "Add {who} to the role {role}.",
+	"revokeRole": "Remove {who} from the role {role}.",
+	"emitter": {
+		"empty": "The {what} cannot be empty.",
+		"badName": "The {what} \"{name}\" contains a character that is not allowed in a name.",
+		"passwordEmpty": "The password cannot be empty.",
+		"passwordBad": "The password contains a character that is not allowed.",
+		"badPrivilege": "\"{privilege}\" is not a valid privilege name.",
+		"noPrivilege": "Select at least one privilege.",
+		"kindRowPolicy": "row policy",
+		"kindQuota": "quota",
+		"kindSettingsProfile": "settings profile",
+		"policyUnsupported": "{engine} {kind} objects are not supported by SnoutData yet.",
+		"badExpression": "The {what} cannot contain a semicolon or a comment.",
+		"badSetting": "\"{name}\" is not a valid setting name.",
+		"settingNoValue": "A setting needs a value."
+	},
+	"what": {
+		"columnName": "column name",
+		"databaseName": "database name",
+		"host": "host",
+		"objectName": "object name",
+		"principalName": "principal name",
+		"roleName": "role name",
+		"rowPolicyFilter": "row policy filter",
+		"schemaName": "schema name",
+		"tableName": "table name",
+		"userName": "user name",
+		"userOrRoleName": "user or role name"
+	},
+	"catalog": {
+		"accountsAndRoles": "accounts and roles",
+		"accounts": "accounts",
+		"columnPrivileges": "column privileges",
+		"databasePermissions": "database permissions",
+		"databasePrivileges": "database privileges",
+		"databaseUsersAndRoles": "database users and roles",
+		"objectPrivileges": "object privileges",
+		"privileges": "privileges",
+		"quotas": "quotas",
+		"rolesAndUsers": "roles and users",
+		"roles": "roles",
+		"rowPolicies": "row policies",
+		"schemaPrivileges": "schema privileges",
+		"serverLogins": "server logins",
+		"settingsProfiles": "settings profiles",
+		"systemPrivileges": "system privileges",
+		"tableAndViewPrivileges": "table and view privileges",
+		"tablePrivileges": "table privileges",
+		"users": "users"
+	},
+	"vendors": {
+		"pgNoGlobal": "PostgreSQL has no server-wide GRANT. Grant on a database, schema or table instead.",
+		"oracleNoSchema": "Oracle has no schema-wide or database-wide GRANT. Grant the system privilege, or grant on the table.",
+		"oraclePassword": "An Oracle user needs a password.",
+		"sqlserverPassword": "A SQL Server login needs a password.",
+		"chNoSchema": "ClickHouse has no schemas. Grant on a database or on a table instead.",
+		"chProfileEmpty": "A settings profile needs at least one setting.",
+		"chQuotaWhole": "A quota window has to be a whole number of units.",
+		"chQuotaUnit": "\"{unit}\" is not a window a ClickHouse quota can be measured over.",
+		"chQuotaMetric": "\"{name}\" is not something a ClickHouse quota can limit.",
+		"chQuotaNumber": "The limit for {metric} has to be a number.",
+		"chQuotaWindow": "A quota needs a window to measure over.",
+		"chRolePassword": "A ClickHouse role has no password. Create a user instead, or leave the password blank."
+	}
+}

@@ -1,0 +1,23 @@
+{
+	"explain": {
+		"plan": "Plan",
+		"planHint": "Les étapes, et ce que chaque index a écarté avant la lecture d'un granule.",
+		"estimate": "Estimation",
+		"estimateHint": "Ce que lirait cette requête : parts, lignes et marques par table.",
+		"pipeline": "Pipeline",
+		"pipelineHint": "Les processeurs qui transportent les lignes, et le nombre de threads de chacun.",
+		"syntax": "Syntaxe",
+		"syntaxHint": "La requête telle que l'optimiseur l'a réécrite.",
+		"queryTree": "Arbre de requête",
+		"queryTreeHint": "La lecture de la requête par l'analyseur, résolue en identifiants de colonnes et en types."
+	},
+	"replicasDenied": "Ce serveur a {replicas} réplicas et cet utilisateur ne peut pas les lire tous (il lui faut le droit READ ON REMOTE) : seule la réplica qui a répondu est affichée.",
+	"replicasFailed": "Ce serveur a {replicas} réplicas et la lecture sur l'ensemble a échoué : seule la réplica qui a répondu est affichée. {message}",
+	"insert": {
+		"cannotWrite": "Impossible d'écrire {value} dans une colonne.",
+		"unsupportedType": "Type de valeur {type} non pris en charge dans un lot de lignes.",
+		"rowWidth": "La ligne a {values} valeurs mais le lot a {columns} colonnes.",
+		"keyMissing": "La clé {key} ne fait pas partie des colonnes écrites.",
+		"noUpsert": "{engine} ne peut pas mettre à jour et insérer en une seule instruction : ce flux ne peut donc pas y faire d'upsert."
+	}
+}

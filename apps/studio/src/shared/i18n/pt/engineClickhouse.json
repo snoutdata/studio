@@ -1,0 +1,209 @@
+{
+	"groups": {
+		"queries": "Consultas",
+		"storage": "Armazenamento",
+		"objects": "Objetos",
+		"cluster": "Cluster",
+		"server": "Servidor"
+	},
+	"views": {
+		"running": {
+			"label": "Consultas em execução",
+			"blurb": "O que o servidor está fazendo agora, as mais longas primeiro. Pare uma que não deveria estar rodando.",
+			"empty": "Nada está rodando neste servidor agora.",
+			"stop": "Parar"
+		},
+		"failed": {
+			"label": "Consultas com falha",
+			"blurb": "Erros da última hora, agrupados por tipo, os mais frequentes primeiro. O que está quebrando, ao lado do que está lento. Abra um no log do servidor para ver cada linha da consulta, não só a da recusa.",
+			"empty": "Nenhuma consulta falhou na última hora."
+		},
+		"serverlog": {
+			"label": "Log do servidor",
+			"blurb": "O log do próprio servidor, em linhas. Sem filtro são os problemas da última hora; coloque um id de consulta na caixa e são todas as linhas que ela produziu, a resposta inteira a \"por que falhou\" em vez da única linha enviada ao cliente.",
+			"empty": "Nada acima de um aviso na última hora.",
+			"unavailable": "Este servidor não grava o log em uma tabela. Ative com uma seção <text_log> na configuração do servidor, e ele vai gravar o próprio log em linhas a partir do próximo reinício.",
+			"filterLabel": "Id da consulta ou texto",
+			"filterPlaceholder": "um id de consulta, ou uma palavra da mensagem"
+		},
+		"parts": {
+			"label": "Parts",
+			"blurb": "Cada INSERT grava uma part e os merges as combinam. Parts demais em uma partição deixam os inserts lentos e depois os recusam.",
+			"empty": "Nenhuma tabela MergeTree com dados neste servidor."
+		},
+		"merges": {
+			"label": "Merges",
+			"blurb": "Merges em segundo plano em andamento. Uma mutação (ALTER UPDATE ou DELETE) também roda como um merge.",
+			"empty": "Nenhum merge em andamento."
+		},
+		"mutations": {
+			"label": "Mutações",
+			"blurb": "ALTER UPDATE e DELETE não terminados. Uma que continua falhando bloqueia as seguintes na mesma tabela.",
+			"empty": "Nenhuma mutação na fila.",
+			"cancel": "Cancelar"
+		},
+		"views": {
+			"label": "Views materializadas",
+			"blurb": "Cada view materializada é um gatilho de insert: de onde ela lê e a tabela onde as linhas caem.",
+			"empty": "Nenhuma view materializada neste servidor."
+		},
+		"refreshes": {
+			"label": "Views atualizáveis",
+			"blurb": "Views materializadas que rodam de novo em um agendamento (REFRESH EVERY): quando cada uma teve sucesso, quando roda de novo e por que falhou.",
+			"empty": "Nenhuma view materializada atualizável.",
+			"unavailable": "Este servidor é anterior às views materializadas atualizáveis.",
+			"now": "Atualizar agora"
+		},
+		"dictionaries": {
+			"label": "Dicionários",
+			"blurb": "Tabelas de consulta em memória. Uma com falha faz cada dictGet falhar, então o último erro é mostrado por inteiro.",
+			"empty": "Nenhum dicionário neste servidor.",
+			"reload": "Recarregar"
+		},
+		"disks": {
+			"label": "Discos",
+			"blurb": "Espaço livre em cada disco. Os merges precisam de espaço para gravar a part que produzem, então um disco cheio os para primeiro.",
+			"empty": "Nenhum disco informado."
+		},
+		"detached": {
+			"label": "Parts desanexadas",
+			"blurb": "Parts deixadas de lado e não mais lidas: desanexadas à mão ou pelo servidor por estarem quebradas ou inesperadas. Ainda ocupam disco.",
+			"empty": "Nenhuma part desanexada."
+		},
+		"columns": {
+			"label": "Tamanhos das colunas",
+			"blurb": "As 200 maiores colunas em disco e como cada uma comprime. Uma taxa ruim costuma estar a um codec ou um LowCardinality de uma grande economia.",
+			"empty": "Nenhuma coluna tem dados ainda."
+		},
+		"replication": {
+			"label": "Replicação",
+			"blurb": "Tabelas replicadas: o atraso de cada réplica e o que ainda falta fazer.",
+			"empty": "Nenhuma tabela replicada neste servidor."
+		},
+		"repqueue": {
+			"label": "Fila de replicação",
+			"blurb": "O que cada réplica ainda precisa buscar ou mesclar, e por que uma entrada travou. Uma fila que só cresce é a falha por trás de \"a réplica está atrasada\".",
+			"empty": "Todas as réplicas estão em dia: nada aguarda ser buscado ou mesclado.",
+			"unavailable": "Este servidor não tem fila de replicação, então não tem tabelas replicadas.",
+			"restart": "Reiniciar réplica"
+		},
+		"distqueue": {
+			"label": "Inserts distribuídos",
+			"blurb": "Linhas gravadas em uma tabela Distributed que ainda estão aqui em disco, aguardando envio ao shard dono. Não perdidas, ainda não chegaram.",
+			"empty": "Nada aguardando envio: todos os inserts Distributed chegaram.",
+			"unavailable": "Este servidor não tem fila de distribuição, então não tem tabelas Distributed.",
+			"send": "Enviar agora"
+		},
+		"keeper": {
+			"label": "Keeper",
+			"blurb": "O que o cluster concorda, lido do próprio Keeper: o log de cada tabela replicada, suas réplicas e posições. Somente leitura, e o último lugar para olhar quando uma fila não faz sentido.",
+			"empty": "Nada neste caminho.",
+			"unavailable": "Este servidor não tem Keeper configurado, então não há árvore de coordenação para ler."
+		},
+		"clusters": {
+			"label": "Clusters",
+			"blurb": "Cada nó de cada cluster que este servidor conhece e quantas vezes falhou ao alcançá-lo. Uma contagem de erros subindo é um nó saindo.",
+			"empty": "Este servidor não faz parte de um cluster."
+		},
+		"ddl": {
+			"label": "Fila DDL",
+			"blurb": "Instruções ON CLUSTER e até onde cada host chegou com elas. Um host travado na fila está atrasado no schema.",
+			"empty": "Todas as instruções ON CLUSTER terminaram em todos os hosts.",
+			"unavailable": "Este servidor não tem Keeper configurado, então não há instruções ON CLUSTER para acompanhar."
+		},
+		"crashes": {
+			"label": "Falhas",
+			"blurb": "Sinais com que o servidor caiu, com a pilha em que caiu. Uma tabela que não existe é o bom resultado.",
+			"empty": "Nenhuma falha foi registrada neste servidor.",
+			"unavailable": "Nenhuma falha foi registrada neste servidor: o ClickHouse cria essa tabela na primeira vez que cai, e ela não existe."
+		},
+		"settings": {
+			"label": "Ajustes alterados",
+			"blurb": "Ajustes diferentes dos padrões do ClickHouse para este usuário: o que faz este servidor se comportar diferente da documentação.",
+			"empty": "Este usuário usa os ajustes padrão do ClickHouse."
+		},
+		"backups": {
+			"label": "Backups",
+			"blurb": "BACKUP e RESTORE desde que o servidor iniciou: se cada um terminou, o tamanho e por que falhou.",
+			"empty": "Nenhum BACKUP ou RESTORE desde que este servidor iniciou."
+		}
+	},
+	"confirm": {
+		"stop": "Parar a consulta {id} de {user}? Ela está rodando há {seconds} s.",
+		"cancelMutation": "Cancelar a mutação {id} em {table}? As parts já reescritas continuam reescritas.",
+		"runNow": "Executar {view} agora, em vez de esperar {next}?",
+		"reloadDict": "Recarregar o dicionário {dict} da origem agora?",
+		"restartReplica": "Reiniciar a réplica de {table} neste nó? Ela relê o estado da tabela no Keeper e reinicia a fila. Leituras e escritas nessa tabela pausam enquanto isso.",
+		"sendNow": "Enviar agora os {files} arquivo(s) pendentes de {table}? Aguarda até terem sido enviados."
+	},
+	"health": {
+		"cannotRead": "Este usuário não consegue ler a tabela de sistema necessária.",
+		"parts": "Parts",
+		"mutations": "Mutações",
+		"replication": "Replicação",
+		"disk": "Disco",
+		"dictionaries": "Dicionários",
+		"failed": "Consultas com falha",
+		"running": "Em execução",
+		"noMergeTree": "Ainda sem dados MergeTree.",
+		"tooManyParts": "Parts demais",
+		"tooManyPartsDetail": "{where} tem {parts} parts em uma partição. Os inserts estão sendo recusados (limite {limit}).",
+		"insertsSlowed": "Inserts lentos",
+		"insertsSlowedDetail": "{where} tem {parts} parts em uma partição. Os inserts atrasam a partir de {delay} e são recusados em {limit}.",
+		"partsPiling": "Parts se acumulando",
+		"partsPilingDetail": "{where} tem {parts} parts em uma partição, na metade do caminho para as {delay} em que os inserts ficam lentos. Agrupe os inserts ou verifique os merges.",
+		"partsOk": "No máximo {parts} parts em uma partição ({where}). Os inserts ficam lentos em {delay}.",
+		"mutationsFailing": "Mutações falhando",
+		"mutationsFailingDetail": "{failing} de {pending} mutações pendentes continuam falhando e bloqueiam as seguintes na mesma tabela.",
+		"mutationsPending": "Mutações pendentes",
+		"mutationsPendingDetail": {
+			"one": "{count} mutação ainda não terminou.",
+			"other": "{count} mutações ainda não terminaram."
+		},
+		"noneWaiting": "Nenhuma na fila.",
+		"noReplicated": "Nenhuma tabela replicada neste servidor.",
+		"replicasReadonly": "Réplicas somente leitura",
+		"replicasReadonlyDetail": {
+			"one": "{count} tabela replicada está somente leitura, em geral uma conexão perdida com o Keeper. Os inserts falham.",
+			"other": "{count} tabelas replicadas estão somente leitura, em geral uma conexão perdida com o Keeper. Os inserts falham."
+		},
+		"replicaLag": "Atraso da réplica",
+		"replicaLagDetail": "Uma réplica está {seconds} s atrasada.",
+		"replicatedInStep": {
+			"one": "{count} tabela replicada, em dia.",
+			"other": "{count} tabelas replicadas, em dia."
+		},
+		"noDisks": "Nenhum disco informado.",
+		"diskNearlyFull": "Disco quase cheio",
+		"diskNearlyFullDetail": "O disco {name} está {used}% usado ({free} livres). Os merges precisam de espaço para gravar e param primeiro.",
+		"diskFilling": "Disco enchendo",
+		"diskFillingDetail": "O disco {name} está {used}% usado ({free} livres).",
+		"detachedParts": "Parts desanexadas",
+		"detachedDetail": {
+			"one": "{count} part desanexada ainda em disco, não mais lida.",
+			"other": "{count} parts desanexadas ainda em disco, não mais lidas."
+		},
+		"diskOk": "O disco {name} está {used}% usado, {free} livres.",
+		"dictFailing": "Dicionário com falha",
+		"dictFailingDetail": "{failing} de {total} dicionários não carregaram; cada dictGet neles falha.",
+		"noDicts": "Nenhum dicionário.",
+		"dictsLoaded": "{n} carregados sem erros.",
+		"refreshFailing": "Atualização com falha",
+		"refreshFailingDetail": {
+			"one": "{failing} de {count} view atualizável falhou na última atualização e está servindo dados antigos.",
+			"other": "{failing} de {count} views atualizáveis falharam na última atualização e estão servindo dados antigos."
+		},
+		"refreshableViews": "Views atualizáveis",
+		"refreshingSchedule": "{n} atualizando conforme o agendamento.",
+		"noneLastHour": "Nenhuma na última hora.",
+		"failedDetail": {
+			"one": "{n} na última hora, {count} tipo de erro.",
+			"other": "{n} na última hora, {count} tipos de erro."
+		},
+		"nothingRunning": "Nada em execução.",
+		"runningDetail": {
+			"one": "{count} consulta, a mais longa há {seconds} s.",
+			"other": "{count} consultas, a mais longa há {seconds} s."
+		}
+	}
+}

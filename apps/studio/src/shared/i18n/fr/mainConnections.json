@@ -1,0 +1,22 @@
+{
+	"readOnlyVerb": "La connexion « {label} » est en lecture seule : {verb} est bloqué.",
+	"sendsTo": " et les envoie à {host}",
+	"awsImported": "« {label} » a été importé et récupère ses identifiants depuis AWS Secrets Manager (secret « {secretId} »){where}. Ouvrez-le avec Modifier, vérifiez où il se connecte, puis enregistrez-le avant de vous connecter.",
+	"tunnelTo": " vers {host}:{port}",
+	"sshImported": "« {label} » a été importé et passe par un tunnel SSH{where}, avec votre propre clé SSH. Ouvrez-le avec Modifier, vérifiez où il se connecte, puis enregistrez-le avant de vous connecter.",
+	"notSnoutSignIn": "Cette connexion n'utilise pas votre compte SnoutData.",
+	"snoutSignInUnavailable": "Cette connexion utilise votre compte SnoutData, qui n'est pas encore disponible.",
+	"noPipeline": "Cette connexion exécute le SQL directement : il n'y a pas de traduction en pipeline.",
+	"readOnlyWrites": "La connexion « {label} » est en lecture seule : cette requête écrit des données et est bloquée.",
+	"readOnlyLoad": "La connexion « {label} » est en lecture seule : le chargement de fichier est bloqué.",
+	"syncGone": "La connexion source ou cible n'existe plus.",
+	"syncAcross": "Impossible de synchroniser entre types de bases différents (« {driver} » → « {targetDriver} »). La source et la cible doivent utiliser le même pilote.",
+	"sourceNotConnected": "La source « {label} » n'est pas connectée.",
+	"targetNotConnected": "La cible « {label} » n'est pas connectée.",
+	"readOnlySync": "La connexion « {label} » est en lecture seule : Schema Sync ne peut pas modifier son schéma.",
+	"componentConnect": "Cette base de données nécessite un téléchargement unique de composant ({totalLabel}). Cliquez sur Connecter pour l'installer.",
+	"notSupportedOs": "Cette base de données n'est pas encore prise en charge sur votre système d'exploitation.",
+	"componentSave": "Cette base de données nécessite un téléchargement unique de composant ({totalLabel}). Enregistrez la connexion et cliquez sur Connecter pour l'installer.",
+	"similarityNeedsEmbed": "La recherche de similarité nécessite un modèle d'embeddings, auquel cette version n'a pas encore accès.",
+	"cloudAccountGone": "Le compte cloud utilisé par cette connexion n'existe plus. Modifiez la connexion pour en choisir un, ou rajoutez-le dans Paramètres."
+}

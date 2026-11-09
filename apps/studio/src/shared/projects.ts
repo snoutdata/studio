@@ -3,6 +3,8 @@
  *  Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { t } from './i18n/core';
+
 // A SnoutData project, local or in the cloud, as the desktop's project tab sees it.
 //
 // One menu and one set of sections serve both kinds, the way the cloud dashboard's sections serve
@@ -81,28 +83,28 @@ export const PROJECT_SECTIONS: ReadonlyArray<{
 	 */
 	gated?: 'shards';
 }> = [
-	{ id: 'overview', label: "Overview", icon: 'home', group: 'database' },
-	{ id: 'database', label: "Database", icon: 'database', group: 'database' },
-	{ id: 'extensions', label: "Extensions", icon: 'extensions', group: 'database' },
-	{ id: 'cron', label: "Cron", icon: 'clock', group: 'database' },
-	{ id: 'timeSeries', label: "Time series", icon: 'graph-line', group: 'database' },
-	{ id: 'shards', label: "Cluster", icon: 'split-horizontal', group: 'database', gated: 'shards' },
-	{ id: 'auth', label: "Auth", icon: 'shield', group: 'services' },
-	{ id: 'storage', label: "Storage", icon: 'folder', group: 'services' },
-	{ id: 'dataApi', label: "Data API", icon: 'json', group: 'services' },
-	{ id: 'functions', label: "Functions", icon: 'code', group: 'services' },
-	{ id: 'containers', label: "Containers", icon: 'package', group: 'services' },
-	{ id: 'realtime', label: "Realtime", icon: 'pulse', group: 'services' },
-	{ id: 'push', label: "Push", icon: 'bell', group: 'services' },
-	{ id: 'logs', label: "Logs", icon: 'history', group: 'manage' },
-	{ id: 'domains', label: "Domains", icon: 'globe', group: 'manage' },
-	{ id: 'settings', label: "Settings", icon: 'settings-gear', group: 'manage' },
+	{ id: 'overview', get label() { return t('engineShared.project.overview'); }, icon: 'home', group: 'database' },
+	{ id: 'database', get label() { return t('engineShared.project.database'); }, icon: 'database', group: 'database' },
+	{ id: 'extensions', get label() { return t('engineShared.project.extensions'); }, icon: 'extensions', group: 'database' },
+	{ id: 'cron', get label() { return t('engineShared.project.cron'); }, icon: 'clock', group: 'database' },
+	{ id: 'timeSeries', get label() { return t('engineShared.project.timeSeries'); }, icon: 'graph-line', group: 'database' },
+	{ id: 'shards', get label() { return t('engineShared.project.shards'); }, icon: 'split-horizontal', group: 'database', gated: 'shards' },
+	{ id: 'auth', get label() { return t('engineShared.project.auth'); }, icon: 'shield', group: 'services' },
+	{ id: 'storage', get label() { return t('engineShared.project.storage'); }, icon: 'folder', group: 'services' },
+	{ id: 'dataApi', get label() { return t('engineShared.project.dataApi'); }, icon: 'json', group: 'services' },
+	{ id: 'functions', get label() { return t('engineShared.project.functions'); }, icon: 'code', group: 'services' },
+	{ id: 'containers', get label() { return t('engineShared.project.containers'); }, icon: 'package', group: 'services' },
+	{ id: 'realtime', get label() { return t('engineShared.project.realtime'); }, icon: 'pulse', group: 'services' },
+	{ id: 'push', get label() { return t('engineShared.project.push'); }, icon: 'bell', group: 'services' },
+	{ id: 'logs', get label() { return t('engineShared.project.logs'); }, icon: 'history', group: 'manage' },
+	{ id: 'domains', get label() { return t('engineShared.project.domains'); }, icon: 'globe', group: 'manage' },
+	{ id: 'settings', get label() { return t('engineShared.project.settings'); }, icon: 'settings-gear', group: 'manage' },
 ];
 
 export const PROJECT_SECTION_GROUPS: ReadonlyArray<{ id: ProjectSectionGroup; label: string }> = [
-	{ id: 'database', label: "Database" },
-	{ id: 'services', label: "Services" },
-	{ id: 'manage', label: "Manage" },
+	{ id: 'database', get label() { return t('engineShared.projectGroup.database'); } },
+	{ id: 'services', get label() { return t('engineShared.projectGroup.services'); } },
+	{ id: 'manage', get label() { return t('engineShared.projectGroup.manage'); } },
 ];
 
 /** A section id from anywhere (a saved tab, an agent's argument), or Overview. */

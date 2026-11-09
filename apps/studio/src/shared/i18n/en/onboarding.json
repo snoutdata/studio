@@ -1,0 +1,29 @@
+{
+	"gettingStarted": "Getting started",
+	"minimize": "Minimize",
+	"dontShowAgain": "Don't show again",
+	"allSet": "You're all set. Happy querying!",
+	"takeTour": "Take a quick tour",
+	"checklist": {
+		"addConnection": {
+			"label": "Add a database connection",
+			"hint": "Connect a MySQL, Postgres, or SQL Server database."
+		},
+		"run": {
+			"label": "Run a query",
+			"hint": "Type SQL in the editor and press Run (or Ctrl/Cmd+Enter)."
+		},
+		"explore": {
+			"label": "Explore a table",
+			"hint": "Double-click a table in the sidebar to browse its data."
+		},
+		"ai": {
+			"label": "Ask {assistant}",
+			"hint": "Insert SQL that {assistant} proposes into your editor."
+		},
+		"save": {
+			"label": "Save a query",
+			"hint": "Keep a query you'll reuse for later."
+		}
+	}
+}

@@ -1,0 +1,64 @@
+{
+	"advisory": {
+		"performance": "Performance advice",
+		"notes": "Query notes",
+		"askTitle": "Ask {assistant} to suggest an index or rewrite",
+		"askFix": "Ask {assistant} to fix",
+		"dismiss": "Dismiss"
+	},
+	"newMonitor": "New monitor",
+	"renameHint": "Double-click to rename",
+	"addWidget": "Add widget",
+	"deleteConfirm": "Delete \"{name}\"?",
+	"delete": "Delete",
+	"cancel": "Cancel",
+	"deleteMonitor": "Delete monitor",
+	"close": "Close",
+	"emptyTitle": "No monitors yet",
+	"emptyBody": "A monitor is a set of live SQL widgets, polled on an interval and plotted over time.",
+	"monitorEmpty": "{name} is empty",
+	"monitorEmptyBody": "Add a widget: a SQL query polled every few seconds and plotted. A trend samples a number over time; a snapshot re-runs a query and replaces the chart.",
+	"qp": {
+		"rank": {
+			"time": "Total time",
+			"read": "Data read",
+			"memory": "Peak memory"
+		},
+		"selectToAnalyze": "Select a connection in the sidebar to analyze",
+		"theDatabase": "the database",
+		"connectToCollect": "Connect \"{name}\" to collect its workload",
+		"thisDatabaseCap": "This database",
+		"noStats": "{name} exposes no runtime query statistics",
+		"collectTitle": "Collect the heaviest statements",
+		"title": "Query Performance",
+		"subtitle": {
+			"time": "heaviest statements by total time, point-in-time",
+			"read": "heaviest statements by data read, point-in-time",
+			"memory": "heaviest statements by peak memory, point-in-time"
+		},
+		"collecting": "Collecting…",
+		"collect": "Collect data",
+		"selectDatabase": "Select a database in the connections sidebar, connect it, then click \"Collect data\" to see its heaviest queries.",
+		"noStatsLong": "{name} exposes no runtime query statistics, so there is no workload to analyze.",
+		"collectingLong": "Collecting the heaviest statements…",
+		"thisDatabase": "this database",
+		"connectSidebar": "Connect \"{name}\" in the sidebar to collect its heaviest queries.",
+		"clickCollect": "Click \"Collect data\" above to load {name}'s heaviest queries.",
+		"noStatements": "No statements recorded yet. Run some queries against this database, then collect again.",
+		"analyzeWith": "Analyze this statement with {assistant}",
+		"suggestWith": "Suggest an optimization with {assistant}",
+		"statements": {
+			"one": "{count} statement",
+			"other": "{count} statements"
+		},
+		"allReplicas": "across all {n} replicas",
+		"oneReplica": "1 of {n} replicas only",
+		"rankBy": "Rank by",
+		"top": "Top",
+		"formatQuery": "Format query",
+		"hintMysqlDenied": "This needs SELECT on performance_schema. Ask a DBA to grant it (e.g. GRANT SELECT ON performance_schema.* TO your_user), then collect again.",
+		"hintMysqlMissing": "performance_schema appears to be disabled on this server. Enable it (performance_schema=ON) to see the workload.",
+		"hintPgMissing": "This needs the pg_stat_statements extension. Run CREATE EXTENSION pg_stat_statements (and add it to shared_preload_libraries + restart), then collect again.",
+		"hintDenied": "Reading this database's query statistics needs extra privileges (e.g. VIEW SERVER STATE on SQL Server, SELECT ANY DICTIONARY on Oracle, or MONITOR on Snowflake). Grant access, then collect again."
+	}
+}

@@ -3,6 +3,7 @@
  *  Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { t } from '../shared/i18n/core';
 import { chmodSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
@@ -379,7 +380,7 @@ export class ComponentStore {
 	async install(id: ComponentId, onProgress: (p: ComponentInstallProgress) => void, options: DownloadOptions = {}): Promise<void> {
 		const bundle = bundleFor(id);
 		if (!bundle) {
-			throw new Error(`No ${spec(id).displayName} download is available for ${platformKey()} yet.`);
+			throw new Error(t('mainErrors.noDownload', { name: spec(id).displayName, platform: platformKey() }));
 		}
 		// Never fetch a vendor's file before its licence was accepted, whoever is asking.
 		this.terms.assertAccepted(bundle);

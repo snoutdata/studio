@@ -3,6 +3,7 @@
  *  Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { t } from '../../shared/i18n/core';
 import { execFile } from 'node:child_process';
 import { existsSync } from 'node:fs';
 
@@ -117,7 +118,7 @@ export function heidiSessionsToFound(file: string, sessions: HeidiSessions): Fou
 				sslMode: ssl ? 'insecure' : undefined,
 			};
 			if (netType === 1) {
-				notes.push("HeidiSQL connects over a named pipe; this imports it as TCP.");
+				notes.push(t('mainDiscovery.namedPipe'));
 			}
 			if (netType === 2 && v.get('SSHtunnelHost')) {
 				values.ssh = {
@@ -127,13 +128,13 @@ export function heidiSessionsToFound(file: string, sessions: HeidiSessions): Fou
 					privateKeyPath: v.get('SSHtunnelPrivateKey') || undefined,
 					keepAlive: true,
 				};
-				notes.push("The SSH password is not imported.");
+				notes.push(t('mainDiscovery.sshPwNotImported'));
 			}
 		} else if (netType >= 3 && netType <= 7) {
 			const inst = parseSqlServerInstance(v.get('Host') ?? '');
 			values = { ...base, driver: 'sqlserver', host: inst.host, port: inst.port ?? portFrom(v.get('Port'), 1433), database, ssl, sslMode: ssl ? 'insecure' : undefined };
 			if (windowsAuth) {
-				notes.push("Uses Windows authentication, which has no username to import; set a SQL login after import.");
+				notes.push(t('mainDiscovery.windowsNoUser'));
 			}
 		} else if (netType === 8) {
 			values = { ...base, driver: 'postgres', host: v.get('Host') ?? '', port: portFrom(v.get('Port'), 5432), database, ssl, sslMode: ssl ? 'insecure' : undefined };
@@ -150,12 +151,12 @@ export function heidiSessionsToFound(file: string, sessions: HeidiSessions): Fou
 				sourceName: name,
 				supported: false,
 				importsPassword: false,
-				note: `Unsupported HeidiSQL network type (${netType}).`,
+				note: t('mainDiscovery.unsupportedNet', { netType }),
 			});
 			continue;
 		}
 		if (!windowsAuth && !password) {
-			notes.push("No saved password; set it after import.");
+			notes.push(t('mainDiscovery.noPassword'));
 		}
 		out.push({
 			ref: { file, connId: path },

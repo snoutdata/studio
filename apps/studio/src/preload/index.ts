@@ -7,6 +7,7 @@ import { contextBridge, ipcRenderer, webUtils, type IpcRendererEvent } from 'ele
 import type { CompletionItem, CompletionList, Hover, Position } from 'vscode-languageserver-protocol';
 
 import type { AppMenu } from '../shared/menu';
+import type { LanguagePreference, LanguageState } from '../shared/i18n/core';
 import type { LoadFileChoice, ServerExportOutcome, SqlSyntaxDiagnostic, TableFunctionOutcome } from '../shared/engine';
 import type { ConnectionConfig, SshTunnelProfile } from '../shared/connection';
 import type { CloudAccountForm, CloudAccountView, CloudContainerList, CloudTestResult, CloudVendor, CloudVendorInfo, ImportableCredential, LogScopeList, LogServiceInfo } from '../shared/cloud';
@@ -604,6 +605,9 @@ const sqlApi = {
 	// perform.
 	setWindowChrome: (color: string, symbolColor: string): Promise<void> => ipcRenderer.invoke('app:setWindowChrome', color, symbolColor),
 	menuModel: (): Promise<AppMenu[]> => ipcRenderer.invoke('app:menuModel'),
+	// Synchronous on purpose: read once before the first paint, so a window never paints in the wrong language.
+	languageState: (): LanguageState => ipcRenderer.sendSync('i18n:state') as LanguageState,
+	setLanguagePreference: (preference: LanguagePreference): Promise<LanguageState> => ipcRenderer.invoke('i18n:setPreference', preference),
 	menuRole: (role: string): Promise<void> => ipcRenderer.invoke('app:menuRole', role),
 	/** Total working-set memory across all of the app's processes, in bytes (status bar). */
 	appMemory: (): Promise<{ bytes: number }> => ipcRenderer.invoke('app:memory'),

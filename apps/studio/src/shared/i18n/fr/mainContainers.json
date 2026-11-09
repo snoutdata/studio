@@ -1,0 +1,19 @@
+{
+	"noDocker": "Le déploiement depuis un dossier utilise votre propre Docker, introuvable sur cet ordinateur. Installez Docker Desktop, ou déployez une image depuis un registre.",
+	"dockerDown": "Docker est installé mais pas lancé. Lancez Docker, puis relancez le build.",
+	"dockerStopped": "Docker a cessé de répondre pendant le build. Lancez Docker, puis relancez le build.",
+	"noArm64Base": "Une image utilisée en FROM dans le Dockerfile n'a pas de version linux/arm64, et SnoutData Cloud ne fonctionne qu'en arm64. Utilisez une image de base publiée pour arm64 (la plupart des images officielles le sont).",
+	"buildFailedDetail": "Le build a échoué : {detail}",
+	"buildFailed": "Le build a échoué. Sa sortie est ci-dessus.",
+	"tooLargeCompressed": "L'image est trop volumineuse pour être envoyée. L'image d'un conteneur peut faire au plus 1 Go compressé ; une base plus légère (alpine, distroless, -slim) résout généralement le problème.",
+	"uploadFailed": "L'envoi a échoué ({status}). Relancez le build dans un instant.",
+	"noUploadLink": "SnoutData Cloud n'a pas fourni de lien d'envoi. Réessayez dans un instant.",
+	"noDockerfile": "{folder} ne contient pas de Dockerfile.",
+	"noBuildx": "Ce Docker n'a pas buildx, qui compile pour linux/arm64. Mettez à jour Docker Desktop, ou installez le plugin buildx.",
+	"building": "Build de {folder} pour linux/arm64…",
+	"noArchive": "Docker a terminé sans écrire d'archive d'image : il n'y a rien à envoyer.",
+	"tooLargeSized": "L'image fait {size}, et l'image d'un conteneur peut faire au plus 1 Go compressé. Une base plus légère (alpine, distroless, -slim) résout généralement le problème.",
+	"uploading": "Envoi de l'image ({size})…",
+	"execFormat": "Une étape du build a lancé un programme arm64 que cet ordinateur ne peut pas exécuter. Docker Desktop les exécute par émulation. Sous Linux, configurez l'émulation comme l'indique le guide multi-plateforme de Docker (docs.docker.com/build/building/multi-platform) ; sa commande habituelle lance une image tierce avec un accès root, lisez-la avant de l'exécuter.",
+	"noContainerd": "Le builder par défaut de ce Docker ne peut pas écrire d'archive d'image. Activez le magasin d'images containerd (Docker Desktop : Settings, General, \"Use containerd for pulling and storing images\"), ou créez un builder capable avec : docker buildx create --use"
+}

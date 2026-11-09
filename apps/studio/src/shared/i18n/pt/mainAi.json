@@ -1,0 +1,21 @@
+{
+	"noLocalModel": "Esta versão não inclui um modelo neste computador, então não pode explicar a revisão. Escolha outra forma de revisar este repositório em Configurações, Snoutbot.",
+	"signIn": "Entre para usar o assistente",
+	"offline": "Offline: não foi possível acessar o gateway {detail}",
+	"usageLimit": "Limite de uso mensal atingido",
+	"noApiKey": "Sem chave de API: adicione sua chave {label} abaixo",
+	"modelReplied": "O modelo respondeu: {reply}",
+	"connectedEmpty": "Conectado (resposta vazia).",
+	"spendLimit": "{provider} informa que sua conta atingiu o limite de gastos. Aumente o limite (ou verifique a cobrança) em {provider} e tente de novo.",
+	"ollamaDown": "Não foi possível acessar o Ollama em {endpoint}. Inicie (execute \"ollama serve\"), verifique se o modelo foi baixado e tente de novo.",
+	"cloudRejected": "{provider} rejeitou a solicitação. Verifique a chave de API em Configurações → IA → Chat. ({message})",
+	"byokRejected": "{provider} rejeitou sua chave de API. Verifique em Configurações → IA. ({message})",
+	"addKey": "Adicione sua chave de API {provider} em Configurações → IA para usar este provedor.",
+	"aiNotParsed": "A tradução por IA não pôde ser interpretada como pipeline do MongoDB. Tente reformular ou escreva um pipeline de agregação nativo.",
+	"aiNotObject": "A tradução por IA não era um objeto de pipeline do MongoDB. Tente reformular ou escreva um pipeline de agregação nativo.",
+	"aiNoCollection": "Não foi possível determinar qual coleção consultar a partir da tradução por IA. Escreva um pipeline de agregação nativo.",
+	"aiNoPipeline": "A tradução por IA não continha um pipeline de agregação válido (um array de estágios). Escreva um pipeline de agregação nativo.",
+	"signInPeriod": "Entre para usar o assistente.",
+	"rulesOnly": "Este repositório é revisado só pelas regras. Nenhum modelo é chamado.",
+	"noByok": "Nenhum provedor com chave própria configurado. Adicione uma chave em Configurações → IA."
+}

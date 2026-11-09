@@ -1,0 +1,10 @@
+{
+	"boundary": {
+		"rulesOnly": "Nenhuma explicação é escrita e nenhum modelo é chamado. Os achados são as palavras das próprias regras.",
+		"local": "O modelo roda neste computador, então nada da revisão é enviado a lugar nenhum. Em troca, consome tempo e energia desta máquina.",
+		"snoutAi": "O SQL alterado e os achados tirados do seu banco de dados são enviados aos nossos servidores para serem escritos, e isso sai da sua cota de IA.",
+		"ollamaLocal": "O modelo roda neste computador, no seu Ollama. Nada da revisão é enviado a lugar nenhum.",
+		"ollamaRemote": "O SQL alterado e os achados tirados do seu banco de dados são enviados ao servidor Ollama que você indicou ({host}). Eles não chegam até nós.",
+		"byok": "O SQL alterado e os achados tirados do seu banco de dados são enviados à {vendor} com a sua própria chave. Eles não chegam até nós."
+	}
+}

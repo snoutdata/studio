@@ -1,0 +1,254 @@
+{
+	"cell": {
+		"copyPath": "Copiar o caminho que lê este valor",
+		"editValue": "Editar valor: {column}",
+		"expand": "Expandir",
+		"formatJson": "Formatar JSON",
+		"items": {
+			"one": "{count} item",
+			"other": "{count} itens"
+		},
+		"keys": {
+			"one": "{count} chave",
+			"other": "{count} chaves"
+		},
+		"prettyJson": "Tentar formatar o valor como JSON",
+		"reformat": "Reformatar o valor",
+		"text": "Texto",
+		"tree": "Árvore",
+		"viewValue": "Ver valor: {column}"
+	},
+	"doc": {
+		"clickToEdit": "Clique para editar",
+		"emptyArray": "array vazio",
+		"emptyObject": "objeto vazio",
+		"fieldsEdited": {
+			"one": "{count} campo editado",
+			"other": "{count} campos editados"
+		},
+		"noFields": "Este documento não tem campos.",
+		"saveEllipsis": "Salvar…"
+	},
+	"edit": {
+		"addNewRow": "Adicionar uma nova linha",
+		"addRow": "Adicionar linha",
+		"hint": "Clique duas vezes em uma célula para editar · clique no # para marcar uma linha para exclusão",
+		"logEvents": "Eventos de log não podem ser editados: um serviço de logs na nuvem é somente leitura.",
+		"mongoNote": "Essas alterações são aplicadas uma de cada vez, não em uma única transação. Se uma falhar, as anteriores já estarão salvas.",
+		"nothingToSave": "Nada para salvar. Primeiro preencha uma linha nova ou altere uma célula.",
+		"saveFailed": "Falha ao salvar as alterações.",
+		"unsaved": "Alterações não salvas"
+	},
+	"explain": {
+		"againTitle": "Explicar novamente",
+		"condition": "Condição",
+		"copy": "Copiar",
+		"copyTitle": "Copiar esta resposta",
+		"explaining": "Explicando…",
+		"fromProjection": "Respondido a partir da projeção {target}",
+		"granules": "Grânulos",
+		"index": "Índice",
+		"keys": "Chaves",
+		"marks": "Marks",
+		"narrowed": "{selected} de {initial} ({pct}%)",
+		"noTable": "Esta instrução não lê nenhuma tabela, então não há nada para estimar.",
+		"notAPlan": "O servidor respondeu, mas não com um plano que possa ser lido aqui.",
+		"notExplained": "Este servidor não explicou essa instrução.",
+		"ofTable": "Da tabela",
+		"parts": "Parts",
+		"partsTail": ", {parts} parts",
+		"readFull": "{what}: todos os {count} grânulos, nenhum ignorado.",
+		"readPartial": "{what}: {granules} grânulos{parts}.",
+		"reads": "Lê {target}",
+		"rowCountUnknown": "A contagem de linhas desta tabela não foi carregada.",
+		"rows": "Linhas",
+		"rowsInTable": "{rows} linhas na tabela",
+		"table": "Tabela",
+		"wouldRead": {
+			"one": "Leria cerca de {rows} linhas de 1 tabela, antes de executar.",
+			"other": "Leria cerca de {rows} linhas de {count} tabelas, antes de executar."
+		}
+	},
+	"export": {
+		"anySize": "- qualquer tamanho",
+		"clipboard": "Copiar para a área de transferência",
+		"export": "Exportar",
+		"fromServer": "Direto do servidor",
+		"fullData": "Dados completos",
+		"gridData": "Dados da grade",
+		"noLimit": "- sem limite",
+		"title": "Exportar resultados"
+	},
+	"filter": {
+		"clear": "Limpar filtro",
+		"contains": "contém {value}"
+	},
+	"fk": {
+		"notFound": "Nenhuma linha referenciada encontrada.",
+		"open": "Abrir em nova aba"
+	},
+	"footer": {
+		"bytesRead": "{bytes} lidos",
+		"bytesTitle": "Bytes que o banco de dados leu para responder. Em um motor colunar, é o custo de uma consulta, seja qual for o número de linhas retornadas.",
+		"counting": "Contando…",
+		"countTotal": "Contar total",
+		"cutShort": "cortado",
+		"cutShortTitle": "Um limite interrompeu a leitura antes do fim do intervalo, então isto é só o início da resposta. Reduza o intervalo ou adicione um filtro.",
+		"editingProd": "Editando prod",
+		"editingProdTitle": "A edição está permitida nesta conexão de produção até o app reiniciar. Clique para bloquear novamente.",
+		"eventsRead": "{scanned} eventos foram lidos para responder.",
+		"eventsReadMatched": "{scanned} eventos foram lidos para responder, dos quais {matched} corresponderam.",
+		"limitMore": "Auto-LIMIT {limit} foi adicionado. Próximo depois da última linha busca mais {limit}. Altere o tamanho em Configurações → Editor e consultas.",
+		"limitNote": "Auto-LIMIT {limit} foi adicionado. Altere em Configurações → Editor e consultas.",
+		"ofTotal": "de {count} no total",
+		"readOnly": "Somente leitura",
+		"rows": {
+			"one": "{count} linha",
+			"other": "{count} linhas"
+		},
+		"rowsRead": "{scanned} linhas foram lidas para responder.",
+		"rowsReadMatched": "{scanned} linhas foram lidas para responder, das quais {matched} corresponderam.",
+		"scanned": "{scanned} examinadas",
+		"trueTotalTitle": "Total real, ignorando o limite de busca"
+	},
+	"grid": {
+		"columnDefault": "Valor padrão da coluna: deixe em branco para usar \"{value}\"",
+		"deleteHint": "Clique para marcar esta linha para exclusão",
+		"inside": "{count} dentro",
+		"lockedTitle": "Esta é uma conexão de produção, então a edição está bloqueada. Escolha \"Permitir edição\" para desbloquear nesta sessão.",
+		"openAsTree": "Abrir este valor como árvore",
+		"peek": "Espiar linha referenciada",
+		"resize": "Arraste para redimensionar a coluna",
+		"sort": "Clique para ordenar",
+		"viewDocument": "Ver documento"
+	},
+	"lines": {
+		"closeAll": "Todas as linhas estão abertas. Clique para fechar todas.",
+		"openAll": "Abrir todas as linhas (payloads formatados)"
+	},
+	"log": {
+		"changeReruns": "Alterar isto executa a instrução novamente.",
+		"changeWrites": "Alterar isto grava o intervalo na instrução e a executa.",
+		"days": "{n} d",
+		"fromSql": "do SQL",
+		"fromSqlTitle": "Este intervalo veio da instrução, então o controle acima não se aplica a ele. Remova o limite de tempo do WHERE para usá-lo.",
+		"last15m": "Últimos 15 minutos",
+		"last1h": "Última hora",
+		"last24h": "Últimas 24 horas",
+		"last30d": "Últimos 30 dias",
+		"last6h": "Últimas 6 horas",
+		"last7d": "Últimos 7 dias",
+		"noEvents": "Nenhum evento: {window}.",
+		"noRangeAdd": "A instrução não indicava um intervalo de tempo, então foi isso que rodou. Volte mais no tempo ou adicione seu próprio limite com `WHERE ts >= ago('24h')`.",
+		"noRangeEdits": "A instrução não indicava um intervalo de tempo, então foi isso que rodou. Voltar mais no tempo grava o intervalo no seu SQL, como `WHERE ts >= ago('24h')`.",
+		"searched": "Busca de {start} a {end}.",
+		"windowRange": "{start} a {end}",
+		"windowSpan": "{span} até {end}"
+	},
+	"menu": {
+		"allowEditing": "Permitir edição (nesta sessão)",
+		"copy": "Copiar",
+		"copyAbove": "Copiar da linha acima",
+		"copyBelow": "Copiar da linha abaixo",
+		"copyRow": "Copiar linha",
+		"deleteRow": "Excluir linha",
+		"duplicateRow": "Duplicar linha",
+		"editCell": "Editar célula",
+		"editValue": "Editar valor…",
+		"exclude": "Excluir este valor",
+		"filterSort": "Filtrar e ordenar",
+		"filterTo": "Filtrar por este valor",
+		"foreignKey": "Chave estrangeira",
+		"generateSql": "Gerar SQL",
+		"openReferenced": "Abrir linha referenciada",
+		"orderAsc": "Ordem crescente",
+		"orderDesc": "Ordem decrescente",
+		"paste": "Colar",
+		"removeRow": "Remover linha",
+		"setNull": "Definir como NULL",
+		"undoDelete": "Desfazer exclusão",
+		"viewValue": "Ver valor…"
+	},
+	"mode": {
+		"grid": "Visualização em grade",
+		"json": "Visualização JSON (linha ativa)",
+		"log": "Leitor de logs (uma linha por evento, expansível)",
+		"record": "Visualização de registro (uma linha por vez)",
+		"tree": "Árvore de documento (linha ativa, expansível)"
+	},
+	"paging": {
+		"all": "Todas",
+		"fetchMore": "Buscar mais linhas",
+		"fetchNext": "Buscar as próximas {count} linhas",
+		"first": "Primeira página",
+		"lastLoaded": "Última página carregada",
+		"next": "Próxima página",
+		"perPage": "Por página",
+		"previous": "Página anterior",
+		"range": "{range} de {total}"
+	},
+	"record": {
+		"next": "Próximo registro",
+		"position": "linha {row} de {total}",
+		"previous": "Registro anterior"
+	},
+	"search": {
+		"clear": "Limpar busca",
+		"columnsLabel": "Buscar em todas as colunas",
+		"columnsTitle": "Buscar em todas as colunas das linhas carregadas na grade",
+		"linesLabel": "Buscar nas linhas carregadas",
+		"linesTitle": "Busca nas linhas carregadas no leitor. Encontra em qualquer parte de um evento, inclusive dentro de um payload recolhido.",
+		"placeholder": "Buscar"
+	},
+	"surface": {
+		"blocked": "Bloqueado, nada foi executado.",
+		"cancelled": "Cancelado, nada foi executado.",
+		"copy": "Copiar",
+		"describe": "Descrever",
+		"failed": "A consulta falhou.",
+		"insert": "Inserir no editor",
+		"insertNew": "Inserir em um novo editor",
+		"insertPipeline": "Inserir na aba de pipeline",
+		"listTables": "Listar tabelas",
+		"pipelineOf": "Pipeline de {connection}",
+		"ranChanged": {
+			"one": "Executado. {count} linha alterada.",
+			"other": "Executado. {count} linhas alteradas."
+		},
+		"ranChangedMs": {
+			"one": "Executado. {count} linha alterada em {ms} ms.",
+			"other": "Executado. {count} linhas alteradas em {ms} ms."
+		},
+		"ranReturned": {
+			"one": "Executado. {count} linha retornada.",
+			"other": "Executado. {count} linhas retornadas."
+		},
+		"ranReturnedMs": {
+			"one": "Executado. {count} linha retornada em {ms} ms.",
+			"other": "Executado. {count} linhas retornadas em {ms} ms."
+		},
+		"running": "Executando…",
+		"runQuery": "Executar consulta",
+		"searchColumns": "Buscar colunas"
+	},
+	"view": {
+		"connecting": "Conectando ao banco de dados…",
+		"noWritePath": "Este backend não tem caminho de escrita: um evento de log ingerido não pode ser alterado.",
+		"prodLocked": "Esta é uma conexão de produção, então a edição está bloqueada. Clique para permitir a edição nesta sessão.",
+		"reconnect": "Reconectar e tentar de novo",
+		"rowsAffected": {
+			"one": "{count} linha afetada",
+			"other": "{count} linhas afetadas"
+		},
+		"runKeys": "executa a instrução sob o cursor, ou a seleção.",
+		"runPrompt": "Execute uma consulta para ver os resultados aqui.",
+		"writeFailed": "A escrita falhou."
+	},
+	"wrap": {
+		"full": "Linhas expandidas até o valor inteiro. Clique para linhas únicas.",
+		"lines": "Quebrando em {lines} linhas. Clique para expandir cada linha até o valor inteiro.",
+		"off": "Quebrar texto longo em {lines} linhas (clique de novo para expandir cada linha)",
+		"tooMany": "Linhas demais nesta página para expandir cada uma, então ficam em {lines} linhas. Clique para linhas únicas."
+	},
+	"zeroOfZero": "0 de 0"
+}

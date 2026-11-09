@@ -23,6 +23,7 @@
 import { findAtDepth, maskSql, splitAtDepth } from '../parse/mask';
 import type { MaskedSql } from '../parse/mask';
 import { splitStatementSpans } from '../parse/sqlStatement';
+import { t } from '../../i18n/core';
 
 export type HazardKind =
 	| 'set-boolean-expression' // `SET a = x AND b = y` — one assignment, not two
@@ -135,11 +136,9 @@ function setClauseHazards(sql: string, m: MaskedSql, from: number, to: number, o
 		out.push({
 			kind: 'set-boolean-expression',
 			message: ignored.length > 0
-				? `Only "${column}" is assigned. ${list(ignored)} will NOT be updated.`
-				: `Only "${column}" is assigned, and its value is a boolean expression, not the value it looks like.`,
-			rationale: `${operator} does not separate assignments in a SET clause, a comma does. `
-				+ `This parses as the single assignment "${column} = (${value})", `
-				+ "so the whole right-hand side collapses to one true/false/NULL value and every other column named in it is only being compared, not set.",
+				? t('engineAdvisor.hazards.setIgnored', { column, ignored: list(ignored) })
+				: t('engineAdvisor.hazards.setBoolean', { column }),
+			rationale: t('engineAdvisor.hazards.setWhy', { operator, column, value }),
 			suggestedSql: commaForm(sql, m, start, part.end),
 			range: { start, end: part.end },
 		});
@@ -175,10 +174,9 @@ function nullComparisonHazards(m: MaskedSql, from: number, to: number, out: Stat
 		out.push({
 			kind: 'null-comparison',
 			message: negated
-				? "\"<> NULL\" never matches any row, not even the non-NULL ones."
-				: "\"= NULL\" never matches any row, not even the NULL ones.",
-			rationale: "Comparing anything to NULL yields NULL (unknown), never true, so the predicate filters everything out. "
-				+ `Use ${negated ? "IS NOT NULL" : "IS NULL"} instead.`,
+				? t('engineAdvisor.hazards.nullNotEqual')
+				: t('engineAdvisor.hazards.nullEqual'),
+			rationale: t('engineAdvisor.hazards.nullWhy', { fix: negated ? 'IS NOT NULL' : 'IS NULL' }),
 			range: { start: hit.index, end: hit.index + hit[0].length },
 		});
 	}
@@ -202,19 +200,19 @@ function mutationHazards(sql: string, m: MaskedSql, from: number, to: number, ou
 	const start = from + hit[1].length;
 	const range = { start, end: start + hit[2].length };
 	if (hit[2].toUpperCase() === 'DELETE') {
-		const table = /ALTER\s+TABLE\s+([^\s(]+)/i.exec(sql.slice(from, to))?.[1] ?? 'the table';
+		const table = /ALTER\s+TABLE\s+([^\s(]+)/i.exec(sql.slice(from, to))?.[1] ?? t('engineAdvisor.hazards.theTable');
 		out.push({
 			kind: 'clickhouse-mutation',
-			message: `ALTER TABLE ... DELETE rewrites every part of ${table} that holds a matching row, in the background, and cannot be rolled back.`,
-			rationale: `This is a mutation, not a row delete. A lightweight DELETE FROM ${table} WHERE ... (ClickHouse 23.3 and later) marks the rows deleted at once and drops them in ordinary merges, which is far cheaper; ALTER TABLE ... DELETE is for when the disk space must come back now. Watch it in Operations > Storage > Mutations.`,
+			message: t('engineAdvisor.hazards.chDelete', { table }),
+			rationale: t('engineAdvisor.hazards.chDeleteWhy', { table }),
 			range,
 		});
 		return;
 	}
 	out.push({
 		kind: 'clickhouse-mutation',
-		message: 'ALTER TABLE ... UPDATE rewrites every column it sets in every part that holds a matching row, in the background, and cannot be rolled back.',
-		rationale: 'This is a mutation, not a row update: on a large table it is a long rewrite, and a failing one blocks the mutations after it on the same table. Narrow the WHERE as far as it will go, and watch it in Operations > Storage > Mutations.',
+		message: t('engineAdvisor.hazards.chUpdate'),
+		rationale: t('engineAdvisor.hazards.chUpdateWhy'),
 		range,
 	});
 }

@@ -4,6 +4,8 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { ASSISTANT_NAME } from '../../shared/assistant';
+import { formatLocale, t, useI18n } from './i18n';
+import { LIBY_LANGUAGE } from './libyFacts';
 import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { RunLogsQuery } from './logContext';
 import { createPortal } from 'react-dom';
@@ -59,7 +61,7 @@ import { ExportMenu, type ExportSource, type CopyFormat } from './components/Exp
 import { RunSplitButton } from './components/RunSplitButton';
 import type { ResetOptions, SettingsTab } from './components/SettingsModal';
 import type { ProEnginePage } from './proSeam';
-import { TabBar, type EditorTab } from './components/TabBar';
+import { TabBar, tabLabel, type EditorTab } from './components/TabBar';
 import { TitleBar } from './components/TitleBar';
 import { PipelineBar } from './components/PipelineBar';
 import { FindBar } from './components/FindBar';
@@ -84,7 +86,7 @@ import { useConfirm } from './components/ConfirmDialog';
 import { Icon } from './components/Icon';
 import { applyTheme, loadTheme, nextTheme, type Theme } from './theme';
 import { clamp, DEFAULT_LAYOUT, loadLayout, saveLayout, type Layout, type SideView } from './layout';
-import { DEFAULT_DOCKS, DOCK_AREAS, agentSurfaceHome, areaAtPoint, areaLabel, cloneDocks, dropTool, focusWorkbench, hideTool, isDefaultLayout, isToolVisible, moveTool, placementOf, resizeArea, showTool, toggleTool, toolLabel, type DockArea, type DockLayout, type DockRect, type ToolId } from './docking';
+import { DEFAULT_DOCKS, DOCK_AREAS, agentSurfaceHome, areaAtPoint, cloneDocks, dropTool, focusWorkbench, hideTool, isDefaultLayout, isToolVisible, moveTool, placementOf, resizeArea, showTool, toggleTool, toolLabel, type DockArea, type DockLayout, type DockRect, type ToolId } from './docking';
 import { DockAreaView, DockTool, DomSlot } from './components/DockAreaView';
 import { PanelMenu } from './components/PanelMenu';
 import { DockDropZones } from './components/DockDropZones';
@@ -106,7 +108,7 @@ import { buildMigrationFixPrompt, buildErrorHelpPrompt, buildOptimizeQueryPrompt
 import { AdvisoryStrip } from './components/AdvisoryStrip';
 import { PreflightWarnModal } from './components/PreflightWarnModal';
 import { useProdUnlocked } from './prodUnlock';
-import { notify, notifyError, onNotify, useNotifications, dismiss as dismissNotification, clearAll as clearNotifications, markAllRead as markNotificationsRead, type AppNotification } from './notifications';
+import { notify, notifyError, notifyText, onNotify, useNotifications, dismiss as dismissNotification, clearAll as clearNotifications, markAllRead as markNotificationsRead, type AppNotification } from './notifications';
 import type { TableDraft } from './ddl';
 import { setCanvasFallbackAgent } from './capabilities/canvas';
 import { canvasFor, subscribeCanvas } from './agentCanvas';
@@ -224,22 +226,31 @@ interface KeysetSequence {
 	conditions: string[];
 }
 
-const COMPACT = new Intl.NumberFormat(undefined, { notation: 'compact', maximumFractionDigits: 1 });
-
 /** ` · 12.4M rows (45%) · 1.1 GB read · 512 MB memory`: what a running query has done so far. */
 function describeProgress(progress: QueryProgress): string {
 	const parts: string[] = [];
 	if (progress.rowsRead !== undefined) {
+		const compact = new Intl.NumberFormat(formatLocale(), { notation: 'compact', maximumFractionDigits: 1 });
 		const pct = progress.totalRowsEstimate ? ` (${Math.min(100, Math.round((progress.rowsRead / progress.totalRowsEstimate) * 100))}%)` : '';
-		parts.push(`${COMPACT.format(progress.rowsRead)} rows${pct}`);
+		parts.push(t('shell.run.progressRows', { rows: compact.format(progress.rowsRead), pct }));
 	}
 	if (progress.bytesRead !== undefined) {
-		parts.push(`${formatBytes(progress.bytesRead)} read`);
+		parts.push(t('shell.run.progressRead', { size: formatBytes(progress.bytesRead) }));
 	}
 	if (progress.memoryBytes !== undefined) {
-		parts.push(`${formatBytes(progress.memoryBytes)} memory`);
+		parts.push(t('shell.run.progressMemory', { size: formatBytes(progress.memoryBytes) }));
 	}
 	return parts.map((part) => ` · ${part}`).join('');
+}
+
+/** One key per area: "to the left" is worded differently in each language. */
+function moveCommandLabel(tool: ToolId, area: DockArea): Pick<Command, 'label' | 'labelKey' | 'labelVars'> {
+	const labelVars = { tool: toolLabel(tool) };
+	switch (area) {
+		case 'left': return { label: t('commands.moveToLeft', labelVars), labelKey: 'commands.moveToLeft', labelVars };
+		case 'right': return { label: t('commands.moveToRight', labelVars), labelKey: 'commands.moveToRight', labelVars };
+		case 'bottom': return { label: t('commands.moveToBottom', labelVars), labelKey: 'commands.moveToBottom', labelVars };
+	}
 }
 
 function basename(path: string): string {
@@ -266,6 +277,8 @@ function pipelineComment(native: Extract<NativeQuery, { lang: 'mongo' }>): strin
 }
 
 export function App(): JSX.Element {
+	// The text below reads the plain `t` (always the current language, also from a stale callback); this makes a switch re-render it all.
+	const { locale } = useI18n();
 	const [state, setState] = useState<ConnectionsState>(EMPTY_STATE);
 	// The cell + row the user has focused in the results grid, reported up by ResultsGrid, so the
 	// AI chat can ground in "the value the user is looking at" (ambient context, A3). Cleared when
@@ -291,7 +304,7 @@ export function App(): JSX.Element {
 	resultTabsRef.current = resultTabs;
 	const activeResultIdRef = useRef<string | null>(null);
 	activeResultIdRef.current = activeResultId;
-	const activeResult = resultTabs.find((t) => t.id === activeResultId) ?? null;
+	const activeResult = resultTabs.find((rt) => rt.id === activeResultId) ?? null;
 	// Derived views of the active result tab, so every existing read site keeps its old name.
 	const response = activeResult?.response ?? null;
 	const resultConnectionId = activeResult?.connectionId;   // the connection that produced the results
@@ -301,7 +314,7 @@ export function App(): JSX.Element {
 	const totalCount = activeResult?.totalCount ?? null;
 	// Patch one result tab in place (the active tab's run/count writes go through here).
 	const patchResult = useCallback((id: string, partial: Partial<ResultTab>): void => {
-		setResultTabs((prev) => prev.map((t) => (t.id === id ? { ...t, ...partial } : t)));
+		setResultTabs((prev) => prev.map((tab) => (tab.id === id ? { ...tab, ...partial } : tab)));
 	}, []);
 	const [countingTotal, setCountingTotal] = useState(false);
 	const [activeSchema, setActiveSchema] = useState<DatabaseSchema | null>(null);
@@ -309,7 +322,7 @@ export function App(): JSX.Element {
 	// further down; read only when a query has failed, long after render).
 	const coachQueryError = useCallback((error: string, sql: string | undefined): void => {
 		const schema = activeSchemaRef.current;
-		const glance: SchemaGlance | null = schema ? { tables: schema.tables.map((t) => ({ name: t.name, columns: t.columns.map((c) => c.name) })) } : null;
+		const glance: SchemaGlance | null = schema ? { tables: schema.tables.map((table) => ({ name: table.name, columns: table.columns.map((c) => c.name) })) } : null;
 		const move = queryErrorAdvice(error, sql, glance);
 		if (move) {
 			libyCall(move);
@@ -678,7 +691,7 @@ export function App(): JSX.Element {
 	}, [theme]);
 	// The quick toggle (activity-bar icon, command palette) cycles through the registry, so
 	// every theme is reachable without opening Settings; the Settings picker selects directly.
-	const toggleTheme = (): void => setTheme((t) => nextTheme(t));
+	const toggleTheme = (): void => setTheme((current) => nextTheme(current));
 
 	// Persist onboarding progress (tour-seen / checklist-dismissed / completed tasks).
 	useEffect(() => {
@@ -714,7 +727,7 @@ export function App(): JSX.Element {
 	useEffect(() => onMomentRequest((id) => {
 		const moment = MOMENTS[id];
 		const seen = loadMomentsSeen();
-		if (!shouldShowMoment(moment, seen, getStage().queue.map((t) => t.id), appSettingsRef.current)) {
+		if (!shouldShowMoment(moment, seen, getStage().queue.map((item) => item.id), appSettingsRef.current)) {
 			return;
 		}
 		if (moment.kind === 'milestone') {
@@ -919,8 +932,8 @@ export function App(): JSX.Element {
 				notify({
 					severity: 'warn',
 					source: 'secrets',
-					title: "Passwords are saved without a password vault",
-					detail: "This computer has no password vault (keyring), so Studio saves your database passwords in a file only your user account can read. Anyone who can use your account could read them. To keep them in a vault, install one, such as GNOME Keyring, and restart Studio.",
+					title: notifyText.t('notifications.noVault.title'),
+					detail: notifyText.t('notifications.noVault.detail'),
 				});
 				void window.sqlApi.secretStorage.warned();
 			}).catch(() => undefined);
@@ -989,7 +1002,7 @@ export function App(): JSX.Element {
 		setAuthBusy(true);
 		setSignInError(null);
 		void window.sqlApi.authSignIn(provider, workEmail).catch((err) => {
-			notifyError("Sign-in failed", errorMessage(err), { source: 'auth' });
+			notifyError(notifyText.t('notifications.signInFailed'), errorMessage(err), { source: 'auth' });
 			setSignInError(errorMessage(err));
 			setAuthBusy(false);
 		});
@@ -1086,7 +1099,7 @@ export function App(): JSX.Element {
 	useEffect(() => {
 		const sync = (): void => {
 			for (const kind of AGENT_KINDS) {
-				const existing = tabsRef.current.find((t) => t.kind === 'agentView' && t.agent === kind);
+				const existing = tabsRef.current.find((tab) => tab.kind === 'agentView' && tab.agent === kind);
 				if (agentSurfaceHome(layout.docks, kind) === 'panel') {
 					// The surface moved into the console. Leaving the tab behind would render the same
 					// push in two places, which is two things to dismiss and two places to look.
@@ -1104,7 +1117,7 @@ export function App(): JSX.Element {
 					// The tab is already open. A push does NOT steal focus from the editor the user is
 					// typing in; it marks the tab instead, so new work is visible without taking the screen.
 					if (agentTabMark.current.get(kind) !== latest && activeTabIdRef.current !== existing.id) {
-						setTabs((prev) => prev.map((t) => (t.id === existing.id ? { ...t, attention: true } : t)));
+						setTabs((prev) => prev.map((tab) => (tab.id === existing.id ? { ...tab, attention: true } : tab)));
 					}
 					agentTabMark.current.set(kind, latest);
 					continue;
@@ -1426,7 +1439,7 @@ export function App(): JSX.Element {
 		if (!tabId) {
 			return;
 		}
-		setTabs((prev) => prev.map((t) => (t.id === tabId ? { ...t, connectionId } : t)));
+		setTabs((prev) => prev.map((tab) => (tab.id === tabId ? { ...tab, connectionId } : tab)));
 	}, []);
 	// Connections that were open last launch (captured once so the restore below reads the
 	// saved set, not a list the persist effect may have just rewritten), and a guard so the
@@ -1435,7 +1448,7 @@ export function App(): JSX.Element {
 	const restoredConns = useRef(false);
 
 	function markDirty(id: string): void {
-		setTabs((prev) => prev.map((t) => (t.id === id && !t.dirty ? { ...t, dirty: true } : t)));
+		setTabs((prev) => prev.map((tab) => (tab.id === id && !tab.dirty ? { ...tab, dirty: true } : tab)));
 	}
 
 	function createTab(content: string, opts?: { filePath?: string; title?: string; connectionId?: string; surface?: 'sql' | 'native'; language?: string; collection?: string; atEnd?: boolean }): string {
@@ -1453,10 +1466,11 @@ export function App(): JSX.Element {
 			notifyDidOpen(model);
 		}
 		model.onDidChangeContent(() => markDirty(id));
+		// The stored name is English (the assistant reads it, a saved session keeps it); TabBar's tabLabel translates it on screen.
 		const title = opts?.title ?? `Untitled-${untitledSeq.current++}`;
 		// New tabs inherit the focused tab's connection (fallback: the default connection).
 		const connectionId = opts?.connectionId
-			?? tabs.find((t) => t.id === activeTabIdRef.current)?.connectionId
+			?? tabs.find((tab) => tab.id === activeTabIdRef.current)?.connectionId
 			?? appSettings.defaultConnectionId
 			?? undefined;
 		setTabs((prev) => [...prev, { id, title, filePath: opts?.filePath, dirty: false, connectionId, surface: opts?.surface, language: opts?.language, collection: opts?.collection }]);
@@ -1476,7 +1490,7 @@ export function App(): JSX.Element {
 	 *  on the surface switch, but a Mongo user shouldn't land on "Mongo pretending to be relational"
 	 *  first. The tab inherits the focused/default connection the same way {@link createTab} does. */
 	function newQueryTab(): string {
-		const inheritId = tabs.find((t) => t.id === activeTabIdRef.current)?.connectionId ?? appSettings.defaultConnectionId ?? undefined;
+		const inheritId = tabs.find((tab) => tab.id === activeTabIdRef.current)?.connectionId ?? appSettings.defaultConnectionId ?? undefined;
 		const cfg = inheritId ? state.connections.find((c) => c.id === inheritId) : undefined;
 		if (cfg && backendKindForDriver(cfg.driver) === 'document') {
 			return createPipelineTab(inheritId, undefined);
@@ -1501,7 +1515,7 @@ export function App(): JSX.Element {
 		if (!tabId) {
 			return;
 		}
-		const tab = tabs.find((t) => t.id === tabId);
+		const tab = tabs.find((tab) => tab.id === tabId);
 		if (!tab) {
 			return;
 		}
@@ -1526,27 +1540,27 @@ export function App(): JSX.Element {
 			}
 		}
 		const collection = tab.collection ?? mongoCollectionNames()[0];
-		setTabs((prev) => prev.map((t) => (t.id === tabId ? { ...t, surface, language: surface === 'native' ? 'json' : 'sql', collection } : t)));
+		setTabs((prev) => prev.map((tab) => (tab.id === tabId ? { ...tab, surface, language: surface === 'native' ? 'json' : 'sql', collection } : tab)));
 	}
 
 	/** Set the target collection of the focused native pipeline tab. */
 	function setActiveCollection(collection: string): void {
 		const tabId = activeTabIdRef.current;
 		if (tabId) {
-			setTabs((prev) => prev.map((t) => (t.id === tabId ? { ...t, collection } : t)));
+			setTabs((prev) => prev.map((tab) => (tab.id === tabId ? { ...tab, collection } : tab)));
 		}
 	}
 
 	/** Collection names from the active connection's schema (document backends only). */
 	function mongoCollectionNames(): string[] {
-		return (activeSchema?.tables ?? []).filter((t) => t.kind === 'collection' || t.kind === 'view').map((t) => t.name);
+		return (activeSchema?.tables ?? []).filter((table) => table.kind === 'collection' || table.kind === 'view').map((table) => table.name);
 	}
 
 	/** Drag-reorder: move the dragged tab to where the drop-target tab currently sits. */
 	function reorderTabs(fromId: string, toId: string): void {
 		setTabs((prev) => {
-			const from = prev.findIndex((t) => t.id === fromId);
-			const to = prev.findIndex((t) => t.id === toId);
+			const from = prev.findIndex((tab) => tab.id === fromId);
+			const to = prev.findIndex((tab) => tab.id === toId);
 			if (from < 0 || to < 0 || from === to) {
 				return prev;
 			}
@@ -1558,12 +1572,12 @@ export function App(): JSX.Element {
 	}
 
 	function closeTab(id: string, options: { keepFlowFocus?: boolean } = {}): void {
-		const tab = tabs.find((t) => t.id === id);
+		const tab = tabs.find((tab) => tab.id === id);
 		if (!tab) {
 			return;
 		}
 		if (tab.dirty) {
-			setCloseConfirm({ id, title: tab.title });
+			setCloseConfirm({ id, title: tabLabel(tab, state.connections, t) });
 			return;
 		}
 		doCloseTab(id, options);
@@ -1572,14 +1586,14 @@ export function App(): JSX.Element {
 	/** `keepFlowFocus` is for replacing one flow tab with another (openFlow): the panels must stay
 	 *  collapsed, and what the user had open before the FIRST flow must not be forgotten. */
 	function doCloseTab(id: string, options: { keepFlowFocus?: boolean } = {}): void {
-		if (!options.keepFlowFocus && tabs.find((t) => t.id === id)?.kind === 'flow') {
+		if (!options.keepFlowFocus && tabs.find((tab) => tab.id === id)?.kind === 'flow') {
 			restoreFlowFocus();
 		}
 		// Orbit's panel is the tab's controls and nothing else, so it goes with the tab. Left
 		// showing, it would be an empty pane offering to reopen what you just closed. The left
 		// area hands itself back to the connections rather than to nothing: a side bar that
 		// vanishes because you closed a tab is not an improvement on an empty panel.
-		if (tabs.find((t) => t.id === id)?.kind === 'orbit') {
+		if (tabs.find((tab) => tab.id === id)?.kind === 'orbit') {
 			setDocks((d) => {
 				const next = hideTool(d, 'orbit');
 				return placementOf(d, 'orbit') === 'left' ? showTool(next, 'connections') : next;
@@ -1590,11 +1604,11 @@ export function App(): JSX.Element {
 		surfaceBuffersRef.current.delete(id);
 		tableTabsRef.current.delete(id);
 		objectTabsRef.current.delete(id);
-		const remaining = tabs.filter((t) => t.id !== id);
+		const remaining = tabs.filter((tab) => tab.id !== id);
 		setTabs(remaining);
 		if (activeTabId === id) {
 			if (remaining.length > 0) {
-				const idx = tabs.findIndex((t) => t.id === id);
+				const idx = tabs.findIndex((tab) => tab.id === id);
 				setActiveTabId(remaining[Math.min(idx, remaining.length - 1)].id);
 			} else {
 				// Closing the last tab: don't auto-spawn a new one — the workbench
@@ -1614,7 +1628,7 @@ export function App(): JSX.Element {
 	 * are two tabs rather than one confused one.
 	 */
 	function openAgentTab(kind: AgentKind): void {
-		const existing = tabsRef.current.find((t) => t.kind === 'agentView' && t.agent === kind);
+		const existing = tabsRef.current.find((tab) => tab.kind === 'agentView' && tab.agent === kind);
 		if (existing) {
 			setActiveTabId(existing.id);
 			return;
@@ -1628,7 +1642,7 @@ export function App(): JSX.Element {
 	/** Close an agent's tab, keeping the focus somewhere sensible. Never dirty and never holds a
 	 *  Monaco model, so this is the whole of it. */
 	function closeAgentTab(id: string): void {
-		const remaining = tabsRef.current.filter((t) => t.id !== id);
+		const remaining = tabsRef.current.filter((tab) => tab.id !== id);
 		setTabs(remaining);
 		setActiveTabId((current) => (current === id ? (remaining.length > 0 ? remaining[remaining.length - 1].id : null) : current));
 	}
@@ -1639,7 +1653,7 @@ export function App(): JSX.Element {
 			return;
 		}
 		// Already open: switch to its tab instead of opening a duplicate.
-		const existing = tabs.find((t) => t.filePath === result.path);
+		const existing = tabs.find((tab) => tab.filePath === result.path);
 		if (existing) {
 			setActiveTabId(existing.id);
 			return;
@@ -1651,7 +1665,7 @@ export function App(): JSX.Element {
 		if (!activeTabId) {
 			return;
 		}
-		const tab = tabs.find((t) => t.id === activeTabId);
+		const tab = tabs.find((tab) => tab.id === activeTabId);
 		const model = modelsRef.current.get(activeTabId);
 		if (!tab || !model) {
 			return;
@@ -1661,8 +1675,8 @@ export function App(): JSX.Element {
 			// Already a file (workspace or opened from disk): overwrite in place, no dialog.
 			const saved = await window.sqlApi.saveFile(tab.filePath, content);
 			if (saved) {
-				setTabs((prev) => prev.map((t) => (t.id === activeTabId ? { ...t, dirty: false } : t)));
-				setStatus(`Saved ${basename(saved)}`);
+				setTabs((prev) => prev.map((tab) => (tab.id === activeTabId ? { ...tab, dirty: false } : tab)));
+				setStatus(t('shell.status.saved', { file: basename(saved) }));
 				setWorkspaceRev((r) => r + 1);
 				markTask('save');
 				libyFeel({ kind: 'saved' });
@@ -1671,8 +1685,8 @@ export function App(): JSX.Element {
 		}
 		// Untitled: auto-name from the SQL and save straight into the workspace (no save dialog).
 		const file = await window.sqlApi.workspace.create(suggestFileName(content), content);
-		setTabs((prev) => prev.map((t) => (t.id === activeTabId ? { ...t, filePath: file.path, title: file.name, dirty: false } : t)));
-		setStatus(`Saved ${file.name}`);
+		setTabs((prev) => prev.map((tab) => (tab.id === activeTabId ? { ...tab, filePath: file.path, title: file.name, dirty: false } : tab)));
+		setStatus(t('shell.status.saved', { file: file.name }));
 		setWorkspaceRev((r) => r + 1);
 		markTask('save');
 		libyFeel({ kind: 'saved' });
@@ -1682,7 +1696,7 @@ export function App(): JSX.Element {
 
 	/** Open a workspace file in an editor tab (reuses the tab if it's already open). */
 	async function openWorkspaceFile(path: string): Promise<void> {
-		const existing = tabs.find((t) => t.filePath === path);
+		const existing = tabs.find((tab) => tab.filePath === path);
 		if (existing) {
 			setActiveTabId(existing.id);
 			return;
@@ -1715,7 +1729,7 @@ export function App(): JSX.Element {
 			initialized.current = true;
 			const session = loadSession();
 			if (session && session.tabs.length > 0) {
-				const ids = session.tabs.map((t) => createTab(t.content, { filePath: t.filePath, title: t.title, connectionId: t.connectionId, surface: t.surface, language: t.language, collection: t.collection, atEnd: true }));
+				const ids = session.tabs.map((saved) => createTab(saved.content, { filePath: saved.filePath, title: saved.title, connectionId: saved.connectionId, surface: saved.surface, language: saved.language, collection: saved.collection, atEnd: true }));
 				setActiveTabId(ids[Math.min(session.activeIndex, ids.length - 1)] ?? ids[0]);
 				untitledSeq.current = session.tabs.length + 1;
 			} else {
@@ -1733,17 +1747,17 @@ export function App(): JSX.Element {
 	// tree on demand instead. (Result tabs live only in the results pane, never persisted.)
 	useEffect(() => {
 		function persist(): void {
-			const sqlTabs = tabs.filter((t) => t.kind === undefined || t.kind === 'sql');
-			const saved: SavedTab[] = sqlTabs.map((t) => ({
-				title: t.title,
-				content: modelsRef.current.get(t.id)?.getValue() ?? '',
-				filePath: t.filePath,
-				connectionId: t.connectionId,
-				surface: t.surface,
-				language: t.language,
-				collection: t.collection,
+			const sqlTabs = tabs.filter((tab) => tab.kind === undefined || tab.kind === 'sql');
+			const saved: SavedTab[] = sqlTabs.map((tab) => ({
+				title: tab.title,
+				content: modelsRef.current.get(tab.id)?.getValue() ?? '',
+				filePath: tab.filePath,
+				connectionId: tab.connectionId,
+				surface: tab.surface,
+				language: tab.language,
+				collection: tab.collection,
 			}));
-			const activeIndex = Math.max(0, sqlTabs.findIndex((t) => t.id === activeTabId));
+			const activeIndex = Math.max(0, sqlTabs.findIndex((tab) => tab.id === activeTabId));
 			saveSession({ tabs: saved, activeIndex });
 		}
 		window.addEventListener('beforeunload', persist);
@@ -1755,7 +1769,7 @@ export function App(): JSX.Element {
 		if (!activeTabId) {
 			return;
 		}
-		setTabs((prev) => (prev.some((t) => t.id === activeTabId && t.attention) ? prev.map((t) => (t.id === activeTabId ? { ...t, attention: false } : t)) : prev));
+		setTabs((prev) => (prev.some((tab) => tab.id === activeTabId && tab.attention) ? prev.map((tab) => (tab.id === activeTabId ? { ...tab, attention: false } : tab)) : prev));
 	}, [activeTabId]);
 
 	/** Put the cursor on the last line and scroll it into view. What "land at the end" means, in one
@@ -1894,7 +1908,7 @@ export function App(): JSX.Element {
 
 	// The focused tab's connection IS the active connection — run, schema completion and AI
 	// grounding all follow whichever tab has focus, so different tabs can target different DBs.
-	const activeTab = tabs.find((t) => t.id === activeTabId);
+	const activeTab = tabs.find((tab) => tab.id === activeTabId);
 	const activeId = activeTab?.connectionId;
 	// The one rule for what Liby grounds on, in either view: docked, the editor's connection (its
 	// toolbar is the picker); in the full view, Liby's own pick, since the editor is hidden and may
@@ -1929,28 +1943,28 @@ export function App(): JSX.Element {
 		const schema = activeIdRef.current === connId ? activeSchemaRef.current : null;
 		return {
 			sql,
-			tableRows: (table) => schema?.tables.find((t) => t.name === table)?.stats?.rowCount,
+			tableRows: (table) => schema?.tables.find((tableItem) => tableItem.name === table)?.stats?.rowCount,
 			partition: schema ? partitionIndex(schema.tables) : undefined,
 		};
 	}, []);
 
 	// The Query Performance tab has no in-panel connection picker: the sidebar rebinds its connection
 	// like any other tab. Keep its title naming the analyzed DB so it follows a sidebar rebind.
-	const workloadConnId = tabs.find((t) => t.kind === 'workload')?.connectionId;
+	const workloadConnId = tabs.find((tab) => tab.kind === 'workload')?.connectionId;
 	useEffect(() => {
 		setTabs((prev) => {
 			let changed = false;
-			const next = prev.map((t) => {
-				if (t.kind !== 'workload') {
-					return t;
+			const next = prev.map((tab) => {
+				if (tab.kind !== 'workload') {
+					return tab;
 				}
-				const conn = t.connectionId ? state.connections.find((c) => c.id === t.connectionId) : undefined;
+				const conn = tab.connectionId ? state.connections.find((c) => c.id === tab.connectionId) : undefined;
 				const title = conn ? `Query Performance · ${conn.label}` : 'Query Performance';
-				if (title === t.title) {
-					return t;
+				if (title === tab.title) {
+					return tab;
 				}
 				changed = true;
-				return { ...t, title };
+				return { ...tab, title };
 			});
 			return changed ? next : prev;
 		});
@@ -1958,21 +1972,21 @@ export function App(): JSX.Element {
 	}, [workloadConnId, state.connections]);
 
 	// Users & Privileges has no in-panel picker either: same sidebar rebinding, same title rule.
-	const securityConnId = tabs.find((t) => t.kind === 'security')?.connectionId;
+	const securityConnId = tabs.find((tab) => tab.kind === 'security')?.connectionId;
 	useEffect(() => {
 		setTabs((prev) => {
 			let changed = false;
-			const next = prev.map((t) => {
-				if (t.kind !== 'security') {
-					return t;
+			const next = prev.map((tab) => {
+				if (tab.kind !== 'security') {
+					return tab;
 				}
-				const conn = t.connectionId ? state.connections.find((c) => c.id === t.connectionId) : undefined;
+				const conn = tab.connectionId ? state.connections.find((c) => c.id === tab.connectionId) : undefined;
 				const title = conn ? `Users \u0026 Privileges \u00b7 ${conn.label}` : 'Users \u0026 Privileges';
-				if (title === t.title) {
-					return t;
+				if (title === tab.title) {
+					return tab;
 				}
 				changed = true;
-				return { ...t, title };
+				return { ...tab, title };
 			});
 			return changed ? next : prev;
 		});
@@ -2018,13 +2032,13 @@ export function App(): JSX.Element {
 	// gets nothing.
 	useEffect(() => {
 		if (activeTab?.surface === 'native') {
-			const collections = (activeSchema?.tables ?? []).filter((t) => t.kind === 'collection' || t.kind === 'view').map((t) => t.name);
+			const collections = (activeSchema?.tables ?? []).filter((table) => table.kind === 'collection' || table.kind === 'view').map((table) => table.name);
 			// Seed an empty target with the first collection once the schema is in.
 			if (!activeTab.collection && collections.length > 0) {
 				setActiveCollection(collections[0]);
 			}
 			const fields = activeTab.collection
-				? (activeSchema?.tables.find((t) => t.name === activeTab.collection)?.columns.map((c) => c.name) ?? [])
+				? (activeSchema?.tables.find((table) => table.name === activeTab.collection)?.columns.map((c) => c.name) ?? [])
 				: [];
 			setPipelineSchema(fields, collections);
 		} else {
@@ -2075,52 +2089,52 @@ export function App(): JSX.Element {
 		// Only editable when the focused tab still points at the connection that produced
 		// these rows — otherwise switching tabs could aim an UPDATE at the wrong database.
 		if (!response?.ok) {
-			return { reason: 'The last statement returned no result set to edit.' };
+			return { reason: t('shell.notEditable.noResult') };
 		}
 		if (!activeConfig || resultConnectionId !== activeId) {
-			return { reason: 'These rows came from a different connection than the one this tab is on.' };
+			return { reason: t('shell.notEditable.otherConnection') };
 		}
 		if (!activeSchema) {
-			return { reason: 'The schema has not been introspected yet, so the result cannot be traced to a table.' };
+			return { reason: t('shell.notEditable.noSchema') };
 		}
 		if (activeConfig.readOnly) {
-			return { reason: 'This connection is marked read-only in its settings.' };
+			return { reason: t('shell.notEditable.readOnly') };
 		}
 		const src = editableSource(lastSql);
 		if (!src) {
-			return { reason: 'Editing needs a plain single-table SELECT: no join, union, group by, distinct, having or subquery.' };
+			return { reason: t('shell.notEditable.notSimple') };
 		}
 		const named = src.schema ? `${src.schema}.${src.table}` : src.table;
-		const matches = activeSchema.tables.filter((t) =>
-			t.name.toLowerCase() === src.table.toLowerCase()
-			&& (src.schema === undefined || (t.schema ?? '').toLowerCase() === src.schema.toLowerCase()));
+		const matches = activeSchema.tables.filter((tableItem) =>
+			tableItem.name.toLowerCase() === src.table.toLowerCase()
+			&& (src.schema === undefined || (tableItem.schema ?? '').toLowerCase() === src.schema.toLowerCase()));
 		if (matches.length === 0) {
-			return { reason: `"${named}" is not in this connection's schema index. Refresh the schema, or qualify it with its schema name.` };
+			return { reason: t('shell.notEditable.notIndexed', { name: named }) };
 		}
 		if (matches.length > 1) {
 			// An ambiguous name ⇒ not editable: an UPDATE would have to guess which schema.
-			return { reason: `"${named}" exists in ${matches.length} schemas on this connection. Qualify it as schema.table to edit.` };
+			return { reason: t('shell.notEditable.ambiguous', { name: named, count: matches.length }) };
 		}
 		const table = matches[0];
 		if (table.kind !== 'table') {
-			return { reason: `"${named}" is a ${table.kind}, not a table.` };
+			return { reason: t('shell.notEditable.notATable', { name: named, kind: table.kind }) };
 		}
 		const pk = primaryKeyNames(table);
 		if (pk.length === 0) {
-			return { reason: `"${named}" has no primary key, so a row cannot be addressed for UPDATE or DELETE.` };
+			return { reason: t('shell.notEditable.noPrimaryKey', { name: named }) };
 		}
 		const cols = new Set(table.columns.map((c) => c.name.toLowerCase()));
 		const selected = new Set(response.result.fields.map((f) => f.name.toLowerCase()));
 		const foreign = response.result.fields.filter((f) => !cols.has(f.name.toLowerCase())).map((f) => f.name);
 		if (foreign.length) {
-			return { reason: `The result has columns that are not columns of "${named}": ${foreign.join(', ')}.` };
+			return { reason: t('shell.notEditable.foreignColumns', { name: named, columns: foreign.join(', ') }) };
 		}
 		const missing = pk.filter((name) => !selected.has(name.toLowerCase()));
 		if (missing.length) {
-			return { reason: `Select the primary key (${missing.join(', ')}) for the rows to be editable.` };
+			return { reason: t('shell.notEditable.selectPrimaryKey', { columns: missing.join(', ') }) };
 		}
 		return { table, driver: activeConfig.driver };
-	}, [response, activeSchema, activeConfig, lastSql, resultConnectionId, activeId]);
+	}, [response, activeSchema, activeConfig, lastSql, resultConnectionId, activeId, locale]);
 
 	// The connection AI completion/edit grounds its schema in. The focused tab's bound connection
 	// ALWAYS wins when it has one (the dialect resolves from the driver even when it isn't connected
@@ -2154,7 +2168,7 @@ export function App(): JSX.Element {
 			onTranslateToPipeline: async (sql) => {
 				const id = groundingConnectionId();
 				if (!id) {
-					setStatus('Connect to a database first.', 'danger');
+					setStatus(t('shell.status.connectFirst'), 'danger');
 					return null;
 				}
 				// Explicit user action ⇒ allow the AI step (deterministic still wins for simple SQL).
@@ -2164,7 +2178,7 @@ export function App(): JSX.Element {
 					return null;
 				}
 				if (res.native.lang !== 'mongo') {
-					setStatus('Pipeline translation is only available for MongoDB connections.', 'danger');
+					setStatus(t('shell.status.pipelineMongoOnly'), 'danger');
 					return null;
 				}
 				return pipelineComment(res.native);
@@ -2187,7 +2201,7 @@ export function App(): JSX.Element {
 		cancelledConnectsRef.current.delete(id); // fresh attempt clears any stale cancel flag
 		startConnecting(id); // drives the sidebar row's spinner + Cancel for EVERY connect path
 		if (!quiet) {
-			setStatus('Connecting…');
+			setStatus(t('shell.status.connecting'));
 		}
 		try {
 			const result = await window.sqlApi.connect(id);
@@ -2198,7 +2212,7 @@ export function App(): JSX.Element {
 				return false;
 			}
 			if (!quiet) {
-				setStatus(`Connected · ${result.tableCount} tables`);
+				setStatus(t('shell.status.connectedTables', { count: result.tableCount }));
 				const opened = state.connections.find((c) => c.id === id);
 				libyFeel({ kind: 'connection-ok', label: opened?.label, production: opened?.environment === 'prod' });
 			}
@@ -2227,7 +2241,7 @@ export function App(): JSX.Element {
 			}
 			// The error lives in the notifications center + toast now; clear the transient status line.
 			setStatus('');
-			notifyError("Connection failed", errorMessage(err), { source: 'connection', connectionId: id, connectionLabel: state.connections.find((c) => c.id === id)?.label });
+			notifyError(notifyText.t('notifications.connectionFailed'), errorMessage(err), { source: 'connection', connectionId: id, connectionLabel: state.connections.find((c) => c.id === id)?.label });
 			return false;
 		} finally {
 			stopConnecting(id);
@@ -2236,7 +2250,7 @@ export function App(): JSX.Element {
 
 	const disconnect = useCallback(async (id: string): Promise<void> => {
 		await window.sqlApi.disconnect(id);
-		setStatus('Disconnected');
+		setStatus(t('shell.status.disconnected'));
 	}, []);
 
 	// Give up on a slow connect: flag it so the in-flight connect()'s late result/error is
@@ -2268,12 +2282,12 @@ export function App(): JSX.Element {
 	}
 
 	const remove = useCallback(async (config: ConnectionConfig): Promise<void> => {
-		if (!(await confirm({ title: `Delete connection "${config.label}"?`, body: "Its stored credentials will be removed too. This cannot be undone.", confirmLabel: "Delete", danger: true }))) {
+		if (!(await confirm({ title: t('shell.deleteConnection.title', { name: config.label }), body: t('shell.deleteConnection.body'), confirmLabel: t('shell.common.delete'), danger: true }))) {
 			return;
 		}
 		await window.sqlApi.deleteConnection(config.id);
 		// Unbind the deleted connection from any tab that referenced it.
-		setTabs((prev) => prev.map((t) => (t.connectionId === config.id ? { ...t, connectionId: undefined } : t)));
+		setTabs((prev) => prev.map((tab) => (tab.connectionId === config.id ? { ...tab, connectionId: undefined } : tab)));
 	}, [confirm]);
 
 	// Reset chosen categories of settings/data back to defaults. The Settings modal confirms
@@ -2296,7 +2310,7 @@ export function App(): JSX.Element {
 				await window.sqlApi.deleteConnection(c.id);
 			}
 			// Unbind every tab from a now-deleted connection.
-			setTabs((prev) => prev.map((t) => ({ ...t, connectionId: undefined })));
+			setTabs((prev) => prev.map((tab) => ({ ...tab, connectionId: undefined })));
 			await reload();
 		}
 		if (opts.queries) {
@@ -2342,7 +2356,7 @@ export function App(): JSX.Element {
 	 */
 	/** The SQL tab an agent's card acts on: the last one open. */
 	function editorTabForAgent(): EditorTab | undefined {
-		return tabsRef.current.filter((t) => t.kind === undefined || t.kind === 'sql').at(-1);
+		return tabsRef.current.filter((tab) => tab.kind === undefined || tab.kind === 'sql').at(-1);
 	}
 
 	/**
@@ -2415,7 +2429,7 @@ export function App(): JSX.Element {
 	// table's own header once the tab has laid out. Its own tips budget keeps this to a few, ever.
 	function tableFacts(table: TableInfo): TableFacts {
 		const schema = activeSchemaRef.current;
-		const referencedBy = schema ? schema.tables.filter((t) => t !== table && t.foreignKeys.some((fk) => fk.referencedTable === table.name)).map((t) => t.name) : [];
+		const referencedBy = schema ? schema.tables.filter((tableItem) => tableItem !== table && tableItem.foreignKeys.some((fk) => fk.referencedTable === table.name)).map((table) => table.name) : [];
 		return {
 			name: table.name,
 			columns: table.columns.length,
@@ -2455,7 +2469,7 @@ export function App(): JSX.Element {
 	// sidebar like any other tab), so there's just one tool tab — a second invocation focuses it
 	// rather than stacking duplicates.
 	function openQueryPerf(): void {
-		const existing = tabs.find((t) => t.kind === 'workload');
+		const existing = tabs.find((tab) => tab.kind === 'workload');
 		if (existing) {
 			setActiveTabId(existing.id);
 			return;
@@ -2475,10 +2489,10 @@ export function App(): JSX.Element {
 		// A caller that names a connection (the assistant) rebinds the tab to it; otherwise the tab
 		// follows the sidebar like the Query Performance one.
 		const bindTo = connectionId ?? activeId;
-		const existing = tabs.find((t) => t.kind === 'security');
+		const existing = tabs.find((tab) => tab.kind === 'security');
 		if (existing) {
 			if (connectionId && existing.connectionId !== connectionId) {
-				setTabs((prev) => prev.map((t) => (t.id === existing.id ? { ...t, connectionId } : t)));
+				setTabs((prev) => prev.map((tab) => (tab.id === existing.id ? { ...tab, connectionId } : tab)));
 			}
 			setActiveTabId(existing.id);
 			return;
@@ -2497,10 +2511,10 @@ export function App(): JSX.Element {
 		const bindTo = connectionId ?? activeId;
 		const conn = bindTo ? state.connections.find((c) => c.id === bindTo) : undefined;
 		const title = conn ? `Operations · ${conn.label}` : 'ClickHouse Operations';
-		const existing = tabs.find((t) => t.kind === 'chOps');
+		const existing = tabs.find((tab) => tab.kind === 'chOps');
 		if (existing) {
 			if (bindTo && existing.connectionId !== bindTo) {
-				setTabs((prev) => prev.map((t) => (t.id === existing.id ? { ...t, connectionId: bindTo, title } : t)));
+				setTabs((prev) => prev.map((tab) => (tab.id === existing.id ? { ...tab, connectionId: bindTo, title } : tab)));
 			}
 			setActiveTabId(existing.id);
 			return;
@@ -2517,10 +2531,10 @@ export function App(): JSX.Element {
 		const bindTo = connectionId ?? activeId;
 		const conn = bindTo ? state.connections.find((c) => c.id === bindTo) : undefined;
 		const title = conn ? `Remote data · ${conn.label}` : 'Remote data';
-		const existing = tabs.find((t) => t.kind === 'chRemote');
+		const existing = tabs.find((tab) => tab.kind === 'chRemote');
 		if (existing) {
 			if (bindTo && existing.connectionId !== bindTo) {
-				setTabs((prev) => prev.map((t) => (t.id === existing.id ? { ...t, connectionId: bindTo, title } : t)));
+				setTabs((prev) => prev.map((tab) => (tab.id === existing.id ? { ...tab, connectionId: bindTo, title } : tab)));
 			}
 			setActiveTabId(existing.id);
 			return;
@@ -2551,7 +2565,7 @@ export function App(): JSX.Element {
 	// Open (or focus) the schema-sync workspace as a tab, so the SQL editor and everything else
 	// stay one click away in the tab strip. Only one sync tab exists at a time.
 	function openSchemaSync(): void {
-		const existing = tabs.find((t) => t.kind === 'schemaSync');
+		const existing = tabs.find((tab) => tab.kind === 'schemaSync');
 		if (existing) {
 			setActiveTabId(existing.id);
 			return;
@@ -2568,7 +2582,7 @@ export function App(): JSX.Element {
 		if (!hasReleaseNotes()) {
 			return;
 		}
-		const existing = tabs.find((t) => t.kind === 'releaseNotes');
+		const existing = tabs.find((tab) => tab.kind === 'releaseNotes');
 		if (existing) {
 			setActiveTabId(existing.id);
 			return;
@@ -2588,7 +2602,7 @@ export function App(): JSX.Element {
 		if (runId) {
 			setReviewSelect({ runId, nonce: Date.now() });
 		}
-		const existing = tabs.find((t) => t.kind === 'review');
+		const existing = tabs.find((tab) => tab.kind === 'review');
 		if (existing) {
 			setActiveTabId(existing.id);
 			return;
@@ -2601,9 +2615,9 @@ export function App(): JSX.Element {
 
 	// A SnoutData Cloud project's tab: one per project, opened at the section the tree row named.
 	function openCloudProject(ref: string, name: string, section: ProjectSection): void {
-		const existing = tabs.find((t) => t.kind === 'cloudProject' && t.cloudRef === ref);
+		const existing = tabs.find((tab) => tab.kind === 'cloudProject' && tab.cloudRef === ref);
 		if (existing) {
-			setTabs((prev) => prev.map((t) => (t.id === existing.id ? { ...t, cloudSection: section } : t)));
+			setTabs((prev) => prev.map((tab) => (tab.id === existing.id ? { ...tab, cloudSection: section } : tab)));
 			setActiveTabId(existing.id);
 			return;
 		}
@@ -2615,7 +2629,7 @@ export function App(): JSX.Element {
 
 	// Copying a whole project to the other side (shared/projectCopy.ts): one tab per source project.
 	function openProjectCopy(source: ProjectTarget, name: string): void {
-		const existing = tabs.find((t) => t.kind === 'projectCopy' && t.copySource && projectKey(t.copySource) === projectKey(source));
+		const existing = tabs.find((tab) => tab.kind === 'projectCopy' && tab.copySource && projectKey(tab.copySource) === projectKey(source));
 		if (existing) {
 			setActiveTabId(existing.id);
 			return;
@@ -2628,7 +2642,7 @@ export function App(): JSX.Element {
 
 	// Local projects: one setup wizard tab, and one tab per project.
 	function openLocalSetup(): void {
-		const existing = tabs.find((t) => t.kind === 'localSetup');
+		const existing = tabs.find((tab) => tab.kind === 'localSetup');
 		if (existing) {
 			setActiveTabId(existing.id);
 			return;
@@ -2640,9 +2654,9 @@ export function App(): JSX.Element {
 	}
 
 	function openLocalProject(localId: string, name: string, section: ProjectSection): void {
-		const existing = tabs.find((t) => t.kind === 'localProject' && t.localId === localId);
+		const existing = tabs.find((tab) => tab.kind === 'localProject' && tab.localId === localId);
 		if (existing) {
-			setTabs((prev) => prev.map((t) => (t.id === existing.id ? { ...t, localSection: section } : t)));
+			setTabs((prev) => prev.map((tab) => (tab.id === existing.id ? { ...tab, localSection: section } : tab)));
 			setActiveTabId(existing.id);
 			return;
 		}
@@ -2720,7 +2734,7 @@ export function App(): JSX.Element {
 
 	// Open (or focus) the monitors view (live DB monitors). Only one monitor tab exists at a time.
 	function openMonitors(): void {
-		const existing = tabs.find((t) => t.kind === 'monitor');
+		const existing = tabs.find((tab) => tab.kind === 'monitor');
 		if (existing) {
 			setActiveTabId(existing.id);
 			return;
@@ -2740,7 +2754,7 @@ export function App(): JSX.Element {
 			focusOrbit: (table: string) => {
 				// Honest false rather than a silent no-op: the tool tells the model to open Orbit
 				// first instead of reporting a focus that never happened.
-				if (!tabs.some((t) => t.kind === 'orbit') || !activeSchema) {
+				if (!tabs.some((tab) => tab.kind === 'orbit') || !activeSchema) {
 					return false;
 				}
 				setOrbitFocus({ table, nonce: Date.now() });
@@ -2759,7 +2773,7 @@ export function App(): JSX.Element {
 		}
 		// The controls are a docked panel, so opening Orbit means showing both halves.
 		setDocks((d) => showTool(d, 'orbit'));
-		const existing = tabs.find((t) => t.kind === 'orbit');
+		const existing = tabs.find((tab) => tab.kind === 'orbit');
 		if (existing) {
 			setActiveTabId(existing.id);
 			return;
@@ -2777,7 +2791,7 @@ export function App(): JSX.Element {
 	// Open (or focus) the Data Flows wizard. One flow tab at a time; a dropped file or a saved
 	// flow id opens it already parsed rather than on a blank step.
 	function openFlow(options: { path?: string; flowId?: string; companion?: ToolId } = {}): void {
-		const existing = tabs.find((t) => t.kind === 'flow');
+		const existing = tabs.find((tab) => tab.kind === 'flow');
 		if (existing && !options.path && !options.flowId) {
 			setActiveTabId(existing.id);
 			return;
@@ -2789,7 +2803,7 @@ export function App(): JSX.Element {
 		tabSeq.current += 1;
 		const id = `tab-${tabSeq.current}`;
 		flowTabsRef.current.set(id, options);
-		setTabs((prev) => [...prev.filter((t) => t.kind !== 'flow'), { id, title: 'Data Flow', dirty: false, kind: 'flow' }]);
+		setTabs((prev) => [...prev.filter((tab) => tab.kind !== 'flow'), { id, title: 'Data Flow', dirty: false, kind: 'flow' }]);
 		setActiveTabId(id);
 		takeFlowFocus(options.companion);
 	}
@@ -2798,7 +2812,7 @@ export function App(): JSX.Element {
 	// simulated run that shows the progress screen before the runner exists.
 	const movePreviewRef = useRef(false);
 	function openMove(options: { preview?: boolean } = {}): void {
-		const existing = tabs.find((t) => t.kind === 'move');
+		const existing = tabs.find((tab) => tab.kind === 'move');
 		if (existing && !options.preview) {
 			setActiveTabId(existing.id);
 			return;
@@ -2809,7 +2823,7 @@ export function App(): JSX.Element {
 		movePreviewRef.current = options.preview === true;
 		tabSeq.current += 1;
 		const id = `tab-${tabSeq.current}`;
-		setTabs((prev) => [...prev.filter((t) => t.kind !== 'move'), { id, title: 'Move Database', dirty: false, kind: 'move' }]);
+		setTabs((prev) => [...prev.filter((tab) => tab.kind !== 'move'), { id, title: 'Move Database', dirty: false, kind: 'move' }]);
 		setActiveTabId(id);
 	}
 
@@ -2818,7 +2832,7 @@ export function App(): JSX.Element {
 	const [vectorSearchFlowId, setVectorSearchFlowId] = useState<string | null>(null);
 	function openVectorSearch(flowId: string): void {
 		setVectorSearchFlowId(flowId);
-		const existing = tabs.find((t) => t.kind === 'vectorSearch');
+		const existing = tabs.find((tab) => tab.kind === 'vectorSearch');
 		if (existing) {
 			setActiveTabId(existing.id);
 			return;
@@ -2912,11 +2926,11 @@ export function App(): JSX.Element {
 	const runDdl = useCallback(async (connectionId: string, sql: string): Promise<{ ok: boolean; error?: string }> => {
 		const res = await window.sqlApi.execute({ connectionId, sql });
 		if (!res.ok) {
-			notifyError("Apply changes failed", res.error, { source: 'ddl', connectionId });
+			notifyError(notifyText.t('notifications.applyFailed'), res.error, { source: 'ddl', connectionId });
 			return { ok: false, error: res.error };
 		}
 		await window.sqlApi.refresh(connectionId).catch(() => undefined);
-		setStatus('Applied changes');
+		setStatus(t('shell.status.appliedChanges'));
 		return { ok: true };
 	}, [setStatus]);
 
@@ -2926,11 +2940,11 @@ export function App(): JSX.Element {
 	const runScript = useCallback(async (connectionId: string, statements: string[]): Promise<{ ok: boolean; error?: string }> => {
 		const res = await window.sqlApi.executeScript({ connectionId, statements });
 		if (!res.ok) {
-			notifyError("Apply changes failed", res.error, { source: 'ddl', connectionId });
+			notifyError(notifyText.t('notifications.applyFailed'), res.error, { source: 'ddl', connectionId });
 			return { ok: false, error: res.error };
 		}
 		await window.sqlApi.refresh(connectionId).catch(() => undefined);
-		setStatus('Applied changes');
+		setStatus(t('shell.status.appliedChanges'));
 		return { ok: true };
 	}, [setStatus]);
 
@@ -2939,14 +2953,14 @@ export function App(): JSX.Element {
 	const runWrites = useCallback(async (connectionId: string, writes: MongoWrite[]): Promise<{ ok: boolean; error?: string }> => {
 		const res = await window.sqlApi.executeWrites({ connectionId, writes });
 		if (!res.ok) {
-			notifyError("Apply changes failed", res.error, { source: 'ddl', connectionId });
+			notifyError(notifyText.t('notifications.applyFailed'), res.error, { source: 'ddl', connectionId });
 			return { ok: false, error: res.error };
 		}
 		// A data write doesn't change structure, so don't block the save on a full re-introspection
 		// (for MongoDB that samples every collection — seconds on a real DB). Fire it off; the grid
 		// reload shows the new rows and the 15s schema poll catches any structural drift.
 		void window.sqlApi.refresh(connectionId).catch(() => undefined);
-		setStatus('Applied changes');
+		setStatus(t('shell.status.appliedChanges'));
 		return { ok: true };
 	}, [setStatus]);
 
@@ -2956,11 +2970,11 @@ export function App(): JSX.Element {
 	const runMongoDdl = useCallback(async (connectionId: string, ops: MongoDdl[]): Promise<{ ok: boolean; error?: string }> => {
 		const res = await window.sqlApi.executeMongoDdl({ connectionId, ops });
 		if (!res.ok) {
-			notifyError("Apply changes failed", res.error, { source: 'ddl', connectionId });
+			notifyError(notifyText.t('notifications.applyFailed'), res.error, { source: 'ddl', connectionId });
 			return { ok: false, error: res.error };
 		}
 		await window.sqlApi.refresh(connectionId).catch(() => undefined);
-		setStatus('Applied changes');
+		setStatus(t('shell.status.appliedChanges'));
 		return { ok: true };
 	}, [setStatus]);
 
@@ -2982,7 +2996,7 @@ export function App(): JSX.Element {
 		const cid = newCollection.connectionId;
 		setNewCollection(null);
 		const schema = await window.sqlApi.getSchema(cid);
-		const created = schema?.tables.find((t) => t.name === name);
+		const created = schema?.tables.find((table) => table.name === name);
 		if (created) {
 			openTable(cid, created, { tab: 'properties' });
 		}
@@ -2999,20 +3013,20 @@ export function App(): JSX.Element {
 			return;
 		}
 		tableTabsRef.current.set(activeTabId, { ...cur, table, createInSchema: undefined });
-		setTabs((prev) => prev.map((t) => (t.id === activeTabId ? { ...t, title: table.name } : t)));
+		setTabs((prev) => prev.map((tab) => (tab.id === activeTabId ? { ...tab, title: table.name } : tab)));
 	}
 
 	// Pin/unpin a result tab. A pinned tab is never overwritten by the next run (a fresh live tab
 	// opens instead), so the user can keep a result around while iterating.
 	function toggleResultPin(id: string): void {
-		setResultTabs((prev) => prev.map((t) => (t.id === id ? { ...t, pinned: !t.pinned } : t)));
+		setResultTabs((prev) => prev.map((tab) => (tab.id === id ? { ...tab, pinned: !tab.pinned } : tab)));
 	}
 
 	// Close a result tab; if it was active, fall to a neighbour (DBeaver-style).
 	function closeResultTab(id: string): void {
 		setResultTabs((prev) => {
-			const idx = prev.findIndex((t) => t.id === id);
-			const remaining = prev.filter((t) => t.id !== id);
+			const idx = prev.findIndex((tab) => tab.id === id);
+			const remaining = prev.filter((tab) => tab.id !== id);
 			if (activeResultIdRef.current === id) {
 				setActiveResultId(remaining.length > 0 ? remaining[Math.min(idx, remaining.length - 1)].id : null);
 			}
@@ -3112,7 +3126,7 @@ export function App(): JSX.Element {
 			if (!sql) {
 				continue;
 			}
-			otherTabs.push({ title: tabs.find((t) => t.id === id)?.title ?? 'query', sql });
+			otherTabs.push({ title: tabs.find((tab) => tab.id === id)?.title ?? 'query', sql });
 		}
 		// The user's saved connections (identity only — no host/credentials), so the assistant can
 		// resolve "prod"/"staging"/a name to a connection and know which one is active, without a
@@ -3167,8 +3181,8 @@ export function App(): JSX.Element {
 		}
 		const text = format === 'tsv' ? toTsv(response.result) : toCsv(response.result);
 		void navigator.clipboard.writeText(text).then(
-			() => setStatus(`Copied ${response.result.rows.length} rows as ${format.toUpperCase()}.`),
-			() => setStatus('Copy failed.', 'danger'),
+			() => setStatus(t('shell.status.copiedRows', { count: response.result.rows.length, format: format.toUpperCase() })),
+			() => setStatus(t('shell.status.copyFailed'), 'danger'),
 		);
 	}
 
@@ -3179,24 +3193,24 @@ export function App(): JSX.Element {
 			const nameSql = currentSql();
 			if (source === 'full') {
 				if (!activeId || !activeConnected) {
-					setStatus('Connect to the database first.', 'danger');
+					setStatus(t('shell.status.connectDatabaseFirst'), 'danger');
 					return;
 				}
 				if (!nameSql) {
-					setStatus('Nothing to export.', 'danger');
+					setStatus(t('shell.status.nothingToExport'), 'danger');
 					return;
 				}
-				setStatus('Exporting…');
+				setStatus(t('shell.status.exporting'));
 				const res = await window.sqlApi.execute({ connectionId: activeId, sql: nameSql });
 				if (!res.ok) {
 					setStatus('');
-					notifyError("Export failed", res.error, { source: 'export', connectionId: activeId, sql: nameSql });
+					notifyError(notifyText.t('notifications.exportFailed'), res.error, { source: 'export', connectionId: activeId, sql: nameSql });
 					return;
 				}
 				data = res.result;
 			} else {
 				if (!response || !response.ok) {
-					setStatus('No results to export.', 'danger');
+					setStatus(t('shell.status.noResultsToExport'), 'danger');
 					return;
 				}
 				data = response.result;
@@ -3208,11 +3222,11 @@ export function App(): JSX.Element {
 				? await window.sqlApi.exportXlsx(name, toXlsxSheet(data, nameSql))
 				: await window.sqlApi.exportData(name, serializeResult(data, format));
 			if (saved) {
-				setStatus(`Exported ${data.rows.length.toLocaleString()} ${data.rows.length === 1 ? 'row' : 'rows'} → ${basename(saved)}`);
+				setStatus(t('shell.status.exportedRows', { count: data.rows.length, file: basename(saved) }));
 			}
 		} catch (err) {
 			setStatus('');
-			notifyError("Export failed", errorMessage(err), { source: 'export' });
+			notifyError(notifyText.t('notifications.exportFailed'), errorMessage(err), { source: 'export' });
 		}
 	}
 
@@ -3227,39 +3241,39 @@ export function App(): JSX.Element {
 	async function exportFromServer(formatId: string): Promise<void> {
 		const sql = currentSql();
 		if (!activeId || !activeConnected) {
-			setStatus('Connect to the database first.', 'danger');
+			setStatus(t('shell.status.connectDatabaseFirst'), 'danger');
 			return;
 		}
 		if (!sql) {
-			setStatus('Nothing to export.', 'danger');
+			setStatus(t('shell.status.nothingToExport'), 'danger');
 			return;
 		}
-		setStatus('Exporting…');
+		setStatus(t('shell.status.exporting'));
 		const outcome = await window.sqlApi.exportServerSide({ connectionId: activeId, sql, formatId, suggestedName: exportFileName(sql, 'csv').replace(/\.csv$/, '') });
 		if (outcome.ok) {
-			setStatus(`Exported ${formatBytes(outcome.bytes)} in ${(outcome.durationMs / 1000).toFixed(1)}s → ${basename(outcome.path)}`);
+			setStatus(t('shell.status.exportedBytes', { size: formatBytes(outcome.bytes), seconds: (outcome.durationMs / 1000).toFixed(1), file: basename(outcome.path) }));
 			return;
 		}
 		setStatus('');
 		if (!outcome.cancelled) {
-			notifyError("Export failed", outcome.error ?? 'The server did not say why.', { source: 'export', connectionId: activeId, sql });
+			notifyError(notifyText.t('notifications.exportFailed'), outcome.error ?? notifyText.t('notifications.serverNoReason'), { source: 'export', connectionId: activeId, sql });
 		}
 	}
 
 	async function saveCurrentQuery(): Promise<void> {
 		const sql = currentSql();
 		if (!sql) {
-			setStatus('Nothing to save');
+			setStatus(t('shell.status.nothingToSave'));
 			return;
 		}
-		const name = window.prompt('Save query as:');
+		const name = window.prompt(t('shell.status.saveQueryPrompt'));
 		if (!name?.trim()) {
 			return;
 		}
 		await window.sqlApi.saveQuery(name.trim(), sql);
 		markTask('save');
 		libyFeel({ kind: 'saved' });
-		setStatus(`Saved query "${name.trim()}"`);
+		setStatus(t('shell.status.savedQuery', { name: name.trim() }));
 	}
 
 	// Post-run index/scan advisor (query advisor, Pillar 2 Tier B). When a SELECT ran slower than the
@@ -3371,7 +3385,7 @@ export function App(): JSX.Element {
 			}
 			if (!result.ok && result.cancelled) {
 				// User aborted: leave any prior results in place; just note the cancellation.
-				setStatus('Query cancelled.');
+				setStatus(t('shell.status.queryCancelled'));
 				if (chatRunId) {
 					setChatRunOutcome({ runId: chatRunId, status: 'cancelled' });
 				}
@@ -3400,12 +3414,12 @@ export function App(): JSX.Element {
 			}
 			// Row count + duration live in the results footer; a failure shows in the grid + the
 			// notifications center, so just clear the "Running…" line either way.
-			setStatus(result.ok && result.aiTranslated ? `Translated by ${ASSISTANT_NAME}.` : '');
+			setStatus(result.ok && result.aiTranslated ? t('shell.status.translatedBy', { assistant: ASSISTANT_NAME }) : '');
 			if (!result.ok) {
 				// The companion is told before the notifications center records the failure, so the
 				// center can see it has already been passed on.
 				coachQueryError(result.error, sql);
-				notifyError("Query failed", result.error, { source: 'query', connectionId: activeId, sql });
+				notifyError(notifyText.t('notifications.queryFailed'), result.error, { source: 'query', connectionId: activeId, sql });
 			}
 			if (chatRunId) {
 				// A statement with no result set (an UPDATE/INSERT/DELETE/DDL) reports affected rows in
@@ -3419,7 +3433,7 @@ export function App(): JSX.Element {
 			patchResult(targetId, { response: { ok: false, error: msg }, connectionId: activeId, ranAt: Date.now() });
 			setStatus('');
 			coachQueryError(msg, sql);
-			notifyError("Query failed", msg, { source: 'query', connectionId: activeId, sql });
+			notifyError(notifyText.t('notifications.queryFailed'), msg, { source: 'query', connectionId: activeId, sql });
 			if (chatRunId) {
 				setChatRunOutcome({ runId: chatRunId, status: 'error', message: msg });
 			}
@@ -3448,7 +3462,7 @@ export function App(): JSX.Element {
 		try {
 			const result = await window.sqlApi.execute({ connectionId: activeId, native });
 			if (!result.ok && result.cancelled) {
-				setStatus('Query cancelled.');
+				setStatus(t('shell.status.queryCancelled'));
 				return;
 			}
 			patchResult(targetId, { response: result, connectionId: activeId, ranAt: Date.now() });
@@ -3458,13 +3472,13 @@ export function App(): JSX.Element {
 			}
 			setStatus('');
 			if (!result.ok) {
-				notifyError("Query failed", result.error, { source: 'query', connectionId: activeId, sql: display });
+				notifyError(notifyText.t('notifications.queryFailed'), result.error, { source: 'query', connectionId: activeId, sql: display });
 			}
 		} catch (err) {
 			const msg = errorMessage(err);
 			patchResult(targetId, { response: { ok: false, error: msg }, connectionId: activeId, ranAt: Date.now() });
 			setStatus('');
-			notifyError("Query failed", msg, { source: 'query', connectionId: activeId, sql: display });
+			notifyError(notifyText.t('notifications.queryFailed'), msg, { source: 'query', connectionId: activeId, sql: display });
 		} finally {
 			stopRunning(targetId);
 		}
@@ -3477,12 +3491,12 @@ export function App(): JSX.Element {
 		// Reached from the AI menu and the palette with nothing on screen to fix, this used to
 		// return without a word, which reads as a broken menu item.
 		if (!response || response.ok || !lastSql) {
-			setStatus("Nothing to fix: the last query did not fail. When one does, this sends it and its error to the assistant.");
+			setStatus(t('shell.status.nothingToFix'));
 			return;
 		}
 		const connectionId = resultConnectionId ?? activeId;
 		if (!connectionId) {
-			setStatus("Nothing to fix: the failed query's connection is gone.");
+			setStatus(t('shell.status.nothingToFixGone'));
 			return;
 		}
 		setChatOpen(true);
@@ -3499,7 +3513,7 @@ export function App(): JSX.Element {
 	}
 	function libyGlance(): SchemaGlance | null {
 		const schema = activeSchemaRef.current;
-		return schema ? { tables: schema.tables.map((t) => ({ name: t.name, columns: t.columns.map((c) => c.name) })) } : null;
+		return schema ? { tables: schema.tables.map((table) => ({ name: table.name, columns: table.columns.map((c) => c.name) })) } : null;
 	}
 	function libyResult(): ResultFacts | undefined {
 		if (!response) {
@@ -3630,6 +3644,7 @@ export function App(): JSX.Element {
 		deeper: (question) => libyLiveRef.current.deeper(question),
 		busy: () => tourActiveRef.current,
 		off: () => setAppSettings((current) => ({ ...current, disableMascot: true })),
+		language: LIBY_LANGUAGE,
 	}));
 
 	// A screen helper's actions run here.
@@ -3754,7 +3769,7 @@ export function App(): JSX.Element {
 		// A run always shows its result: the pane starts closed for a new user, and one the user
 		// collapsed would otherwise hide what they just asked for.
 		setLayout((l) => (l.resultsCollapsed ? { ...l, resultsCollapsed: false } : l));
-		const cur = resultTabsRef.current.find((t) => t.id === activeResultIdRef.current) ?? null;
+		const cur = resultTabsRef.current.find((rt) => rt.id === activeResultIdRef.current) ?? null;
 		// Reuse the active result tab only when it isn't mid-run: routing a new run into a busy tab
 		// would clobber its in-flight result, so a run started while the current tab is working
 		// transparently opens a fresh tab and runs there concurrently.
@@ -3778,7 +3793,7 @@ export function App(): JSX.Element {
 	// run() (editor buffer) and runProposedSql() (the chat "Run" button).
 	const ensureRunnableConnection = useCallback(async (): Promise<boolean> => {
 		if (!activeId) {
-			setStatus('Select a connection to run a query.', 'danger');
+			setStatus(t('shell.status.selectConnection'), 'danger');
 			return false;
 		}
 		if (!activeConnected) {
@@ -3809,7 +3824,7 @@ export function App(): JSX.Element {
 		const tables = activeSchemaRef.current?.tables ?? [];
 		const wanted = shape.table.toLowerCase();
 		const qualifier = shape.schema?.toLowerCase();
-		const candidates = tables.filter((t) => t.name.toLowerCase() === wanted && (!qualifier || t.schema?.toLowerCase() === qualifier));
+		const candidates = tables.filter((table) => table.name.toLowerCase() === wanted && (!qualifier || table.schema?.toLowerCase() === qualifier));
 		// An ambiguous name (same table in two schemas, unqualified) could resolve to the wrong
 		// table's key, so require exactly one match.
 		const key = candidates.length === 1 ? keysetKeyFor(candidates[0]) : null;
@@ -3845,7 +3860,7 @@ export function App(): JSX.Element {
 		if (activeConfig?.readOnly) {
 			const destructive = destructiveStatement(sql, activeConfig.driver);
 			if (destructive) {
-				const message = `Connection is read-only, so ${destructive.verb} is blocked.`;
+				const message = t('shell.status.readOnlyBlocked', { verb: destructive.verb });
 				setStatus(message, 'danger');
 				if (chatRunId) {
 					setChatRunOutcome({ runId: chatRunId, status: 'blocked', message });
@@ -3894,7 +3909,7 @@ export function App(): JSX.Element {
 			setChatRunOutcome({
 				runId,
 				status: 'blocked',
-				message: activeIdRef.current ? "Couldn't connect, so nothing ran." : "Select a connection to run a query.",
+				message: activeIdRef.current ? t('shell.status.couldNotConnect') : t('shell.status.selectConnection'),
 			});
 			return;
 		}
@@ -3911,7 +3926,7 @@ export function App(): JSX.Element {
 			const buffer = modelsRef.current.get(activeTab.id)?.getValue() ?? '';
 			const collection = activeTab.collection;
 			if (!collection) {
-				setStatus('Pick a collection for the pipeline.', 'danger');
+				setStatus(t('shell.status.pickCollectionPipeline'), 'danger');
 				return;
 			}
 			let pipeline: object[];
@@ -3925,7 +3940,7 @@ export function App(): JSX.Element {
 			const profile = profileFor(backendKindForDriver(activeConfig?.driver));
 			const writes = profile.isDestructive(native, activeConfig?.driver);
 			if (activeConfig?.readOnly && writes) {
-				setStatus('Connection is read-only, so this pipeline (it writes data) is blocked.', 'danger');
+				setStatus(t('shell.status.readOnlyPipeline'), 'danger');
 				return;
 			}
 			const label = activeConfig?.label ?? '?';
@@ -3978,7 +3993,7 @@ export function App(): JSX.Element {
 		const tab = activeTab;
 		const collection = tab?.collection;
 		if (!tab || !collection) {
-			setStatus('Pick a collection to explain.', 'danger');
+			setStatus(t('shell.status.pickCollectionExplain'), 'danger');
 			return;
 		}
 		let pipeline: object[];
@@ -3993,10 +4008,10 @@ export function App(): JSX.Element {
 		}
 		const native: NativeQuery = { lang: 'mongo', collection, pipeline, explain: true };
 		const label = activeConfig?.label ?? '?';
-		const ts = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+		const ts = new Date().toLocaleTimeString(formatLocale(), { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 		const targetId = resolveResultTarget(false, label);
 		const display = `db.${collection}.aggregate(${JSON.stringify(pipeline)}).explain()`;
-		patchResult(targetId, { title: `${label} · explain · ${ts}`, connectionLabel: label, appliedLimit: undefined, lastRawSql: display });
+		patchResult(targetId, { title: t('shell.results.explainOf', { connection: label, time: ts }), connectionLabel: label, appliedLimit: undefined, lastRawSql: display });
 		await executeNativeQuery(native, display, targetId);
 	}, [activeTab, activeConfig, ensureRunnableConnection, resolveResultTarget, patchResult, executeNativeQuery]);
 
@@ -4025,12 +4040,12 @@ export function App(): JSX.Element {
 
 	// Patch one step of the script log on the given result tab (immutable, leaves other tabs/steps).
 	const patchScriptStep = useCallback((id: string, index: number, partial: Partial<ScriptRun['steps'][number]>): void => {
-		setResultTabs((prev) => prev.map((t) => {
-			if (t.id !== id || !t.script) {
-				return t;
+		setResultTabs((prev) => prev.map((tab) => {
+			if (tab.id !== id || !tab.script) {
+				return tab;
 			}
-			const steps = t.script.steps.map((s, i) => (i === index ? { ...s, ...partial } : s));
-			return { ...t, script: { ...t.script, steps } };
+			const steps = tab.script.steps.map((s, i) => (i === index ? { ...s, ...partial } : s));
+			return { ...tab, script: { ...tab.script, steps } };
 		}));
 	}, []);
 
@@ -4089,7 +4104,7 @@ export function App(): JSX.Element {
 				cancelled = true;
 				break;
 			}
-			setResultTabs((prev) => prev.map((t) => (t.id === targetId && t.script ? { ...t, script: { ...t.script, current: i } } : t)));
+			setResultTabs((prev) => prev.map((tab) => (tab.id === targetId && tab.script ? { ...tab, script: { ...tab.script, current: i } } : tab)));
 			patchScriptStep(targetId, i, { status: 'running' });
 			markStatement(i);
 			const sql = spans[i].sql;
@@ -4097,7 +4112,7 @@ export function App(): JSX.Element {
 			if (activeConfig?.readOnly) {
 				const destructive = destructiveStatement(sql, activeConfig.driver);
 				if (destructive) {
-					patchScriptStep(targetId, i, { status: 'error', error: `Connection is read-only, so ${destructive.verb} is blocked.` });
+					patchScriptStep(targetId, i, { status: 'error', error: t('shell.status.readOnlyBlocked', { verb: destructive.verb }) });
 					errorCount += 1;
 					continue;
 				}
@@ -4130,19 +4145,19 @@ export function App(): JSX.Element {
 		editor?.updateOptions({ glyphMargin: false });
 		// Finalize: mark any not-yet-run steps as skipped (cancel), drop the running marker, and show
 		// the last successful result in the grid alongside the log.
-		setResultTabs((prev) => prev.map((t) => {
-			if (t.id !== targetId || !t.script) {
-				return t;
+		setResultTabs((prev) => prev.map((tab) => {
+			if (tab.id !== targetId || !tab.script) {
+				return tab;
 			}
-			const steps = cancelled ? t.script.steps.map((s) => (s.status === 'pending' ? { ...s, status: 'skipped' as const } : s)) : t.script.steps;
-			return { ...t, script: { ...t.script, steps, current: -1, finishedAt: Date.now() }, response: lastOk ?? t.response, connectionId: activeId, ranAt: Date.now() };
+			const steps = cancelled ? tab.script.steps.map((s) => (s.status === 'pending' ? { ...s, status: 'skipped' as const } : s)) : tab.script.steps;
+			return { ...tab, script: { ...tab.script, steps, current: -1, finishedAt: Date.now() }, response: lastOk ?? tab.response, connectionId: activeId, ranAt: Date.now() };
 		}));
 		stopRunning(targetId);
 		scriptRunningRef.current = false;
 		if (okCount > 0) {
 			markTask('run');
 		}
-		setStatus(cancelled ? `Script cancelled: ${okCount} ok, ${errorCount} failed.` : `Script done: ${okCount} ok, ${errorCount} failed.`, errorCount > 0 ? 'danger' : 'info');
+		setStatus(t(cancelled ? 'shell.status.scriptCancelled' : 'shell.status.scriptDone', { ok: okCount, failed: errorCount }), errorCount > 0 ? 'danger' : 'info');
 	}, [activeId, activeConfig, markTask, patchScriptStep, setStatus, startRunning, stopRunning]);
 
 	// "Run script" entry: split the whole editor buffer into statements and run them sequentially.
@@ -4158,7 +4173,7 @@ export function App(): JSX.Element {
 			return;
 		}
 		if (!activeId) {
-			setStatus('Select a connection to run a query.', 'danger');
+			setStatus(t('shell.status.selectConnection'), 'danger');
 			return;
 		}
 		if (!activeConnected) {
@@ -4173,14 +4188,14 @@ export function App(): JSX.Element {
 		const buffer = sourceModel?.getValue() ?? '';
 		const spans = splitStatementSpans(buffer);
 		if (spans.length === 0) {
-			setStatus('Nothing to run.');
+			setStatus(t('shell.status.nothingToRun'));
 			return;
 		}
 		const label = activeConfig?.label ?? '?';
-		const ts = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+		const ts = new Date().toLocaleTimeString(formatLocale(), { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 		const targetId = resolveResultTarget(opts?.newTab ?? false, label);
 		patchResult(targetId, {
-			title: `Script · ${ts}`,
+			title: t('shell.results.scriptAt', { time: ts }),
 			connectionLabel: label,
 			appliedLimit: undefined,
 			lastRawSql: buffer,
@@ -4211,7 +4226,7 @@ export function App(): JSX.Element {
 		const dialect = dialectFor(activeConfig?.driver);
 		const variants = dialect.explainVariants;
 		if (!variants || variants.length === 0) {
-			setStatus(`${dialect.displayName} has one plan form, which the query advisor already reads for you.`, 'danger');
+			setStatus(t('shell.status.planForm', { dialect: dialect.displayName }), 'danger');
 			return;
 		}
 		const sql = currentSql();
@@ -4219,7 +4234,7 @@ export function App(): JSX.Element {
 			return;
 		}
 		if (!/^\s*(select|with)\b/i.test(sql)) {
-			setStatus('Only a SELECT can be explained.', 'danger');
+			setStatus(t('shell.status.onlySelectExplain'), 'danger');
 			return;
 		}
 		if (!(await ensureRunnableConnection())) {
@@ -4233,7 +4248,7 @@ export function App(): JSX.Element {
 		const ts = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 		const targetId = resolveResultTarget(false, label);
 		patchResult(targetId, {
-			title: `Explain · ${ts}`,
+			title: t('shell.results.explainAt', { time: ts }),
 			connectionId,
 			connectionLabel: label,
 			appliedLimit: undefined,
@@ -4255,7 +4270,7 @@ export function App(): JSX.Element {
 		if (activeIdRef.current !== connectionId) {
 			return undefined;
 		}
-		const found = (activeSchemaRef.current?.tables ?? []).filter((t) => t.name === table && (database === '' || !t.schema || t.schema === database));
+		const found = (activeSchemaRef.current?.tables ?? []).filter((tableItem) => tableItem.name === table && (database === '' || !tableItem.schema || tableItem.schema === database));
 		return found.length === 1 ? found[0].stats?.rowCount : undefined;
 	}
 
@@ -4273,7 +4288,7 @@ export function App(): JSX.Element {
 		if (activeResult?.script) {
 			cancelScriptRef.current = true; // stop this "Run script" loop between statements
 		}
-		setStatus('Cancelling…');
+		setStatus(t('shell.status.cancelling'));
 		await window.sqlApi.cancelQuery(conn).catch(() => undefined);
 	}, [activeResultId, activeResult, activeId, setStatus]);
 
@@ -4360,12 +4375,12 @@ export function App(): JSX.Element {
 		if (!activeId) {
 			return;
 		}
-		setStatus('Reconnecting…');
+		setStatus(t('shell.status.reconnecting'));
 		try {
 			await window.sqlApi.connect(activeId);
 		} catch (err) {
 			setStatus('');
-			notifyError("Reconnect failed", errorMessage(err), { source: 'connection', connectionId: activeId });
+			notifyError(notifyText.t('notifications.reconnectFailed'), errorMessage(err), { source: 'connection', connectionId: activeId });
 			return;
 		}
 		// Replay the same query that just failed into the same result tab (the auto-LIMITed SQL the
@@ -4379,7 +4394,7 @@ export function App(): JSX.Element {
 			// is precisely the mismatch that repeats or skips rows.
 			await executeSql(lastSql, activeResultId, { keyset: activeResult?.keyset });
 		} else {
-			setStatus('Reconnected.');
+			setStatus(t('shell.status.reconnected'));
 		}
 	}, [activeId, lastSql, activeResult, activeResultId, executeSql, executeNativeQuery, setStatus]);
 
@@ -4439,14 +4454,14 @@ export function App(): JSX.Element {
 			if (res.ok && res.result.rows.length > 0 && targetId) {
 				patchResult(targetId, { totalCount: Number(res.result.rows[0][0]) });
 			} else if (res.ok) {
-				setStatus('Count returned no rows.');
+				setStatus(t('shell.status.countNoRows'));
 			} else {
 				setStatus('');
-				notifyError("Count failed", res.error, { source: 'query', connectionId: activeId });
+				notifyError(notifyText.t('notifications.countFailed'), res.error, { source: 'query', connectionId: activeId });
 			}
 		} catch (err) {
 			setStatus('');
-			notifyError("Count failed", errorMessage(err), { source: 'query', connectionId: activeId });
+			notifyError(notifyText.t('notifications.countFailed'), errorMessage(err), { source: 'query', connectionId: activeId });
 		} finally {
 			setCountingTotal(false);
 		}
@@ -4464,7 +4479,7 @@ export function App(): JSX.Element {
 	// total ordering they aren't guaranteed disjoint.
 	const fetchMore = useCallback(async (): Promise<{ added: number; more: boolean }> => {
 		const targetId = activeResultIdRef.current;
-		const tab = resultTabsRef.current.find((t) => t.id === targetId) ?? null;
+		const tab = resultTabsRef.current.find((rt) => rt.id === targetId) ?? null;
 		const limit = tab?.appliedLimit;
 		const connId = activeIdRef.current;
 		if (!tab || !targetId || !limit || !connId || !tab.response?.ok) {
@@ -4501,21 +4516,21 @@ export function App(): JSX.Element {
 				: { connectionId: connId, native: next });
 			if (!res.ok) {
 				if (!res.cancelled) {
-					notifyError("Fetch more failed", res.error, { source: 'query', connectionId: connId, sql: next.lang === 'sql' ? next.sql : undefined });
+					notifyError(notifyText.t('notifications.fetchMoreFailed'), res.error, { source: 'query', connectionId: connId, sql: next.lang === 'sql' ? next.sql : undefined });
 				}
 				// Leave the button live so the user can retry; nothing in the grid changed.
 				return { added: 0, more: true };
 			}
 			// The tab was re-run (or reloaded) while this window was in flight: drop it rather than
 			// stitch rows onto a result they no longer belong to.
-			const current = resultTabsRef.current.find((t) => t.id === targetId);
+			const current = resultTabsRef.current.find((rt) => rt.id === targetId);
 			if (!current || current.response !== previous) {
 				return { added: 0, more: false };
 			}
 			// Rows are positional, so a window whose shape doesn't match would garble the grid rather
 			// than extend it (a DDL change between windows is the realistic way this happens).
 			if (res.result.fields.length !== previous.result.fields.length) {
-				notifyError("Fetch more failed", "The next rows came back with a different set of columns, so they weren't added. Re-run the query.", { source: 'query', connectionId: connId });
+				notifyError(notifyText.t('notifications.fetchMoreFailed'), notifyText.t('notifications.fetchMoreColumns'), { source: 'query', connectionId: connId });
 				return { added: 0, more: false };
 			}
 			const added = res.result.rows.length;
@@ -4532,7 +4547,7 @@ export function App(): JSX.Element {
 			}
 			return { added, more: added >= limit };
 		} catch (err) {
-			notifyError("Fetch more failed", errorMessage(err), { source: 'query', connectionId: connId });
+			notifyError(notifyText.t('notifications.fetchMoreFailed'), errorMessage(err), { source: 'query', connectionId: connId });
 			return { added: 0, more: true };
 		} finally {
 			stopRunning(targetId);
@@ -4620,8 +4635,8 @@ export function App(): JSX.Element {
 	const isSchemaSyncTab = activeTab?.kind === 'schemaSync';
 	const isReleaseNotesTab = activeTab?.kind === 'releaseNotes';
 	const isMonitorTab = activeTab?.kind === 'monitor';
-	const schemaSyncTab = tabs.find((t) => t.kind === 'schemaSync');
-	const monitorTab = tabs.find((t) => t.kind === 'monitor');
+	const schemaSyncTab = tabs.find((tab) => tab.kind === 'schemaSync');
+	const monitorTab = tabs.find((tab) => tab.kind === 'monitor');
 	// Orbit stays MOUNTED while another tab is on screen (a WebGL context recreated on every tab
 	// switch is worse than one kept alive) and its render loop is paused instead — see OrbitView.
 	const isOrbitTab = activeTab?.kind === 'orbit';
@@ -4629,8 +4644,8 @@ export function App(): JSX.Element {
 	const isChRemoteTab = activeTab?.kind === 'chRemote';
 	const isCloudProjectTab = activeTab?.kind === 'cloudProject';
 	const isLocalTab = activeTab?.kind === 'localSetup' || activeTab?.kind === 'localProject' || activeTab?.kind === 'projectCopy';
-	const projectCopyTabs = tabs.filter((t) => t.kind === 'projectCopy' && t.copySource);
-	const orbitTab = tabs.find((t) => t.kind === 'orbit');
+	const projectCopyTabs = tabs.filter((tab) => tab.kind === 'projectCopy' && tab.copySource);
+	const orbitTab = tabs.find((tab) => tab.kind === 'orbit');
 	// Orbit's own database picker. Built here so the rail can say which connection it drew and
 	// point at another without Orbit knowing anything about how a connection is opened.
 	const orbitConnections = useMemo(
@@ -4638,25 +4653,25 @@ export function App(): JSX.Element {
 		[state.connections, state.connectedIds],
 	);
 	const isFlowTab = activeTab?.kind === 'flow';
-	const flowTab = tabs.find((t) => t.kind === 'flow');
+	const flowTab = tabs.find((tab) => tab.kind === 'flow');
 	const isMoveTab = activeTab?.kind === 'move';
-	const moveTab = tabs.find((t) => t.kind === 'move');
+	const moveTab = tabs.find((tab) => tab.kind === 'move');
 	const isVectorSearchTab = activeTab?.kind === 'vectorSearch';
-	const vectorSearchTab = tabs.find((t) => t.kind === 'vectorSearch');
+	const vectorSearchTab = tabs.find((tab) => tab.kind === 'vectorSearch');
 	const isReviewTab = activeTab?.kind === 'review';
-	const reviewTab = tabs.find((t) => t.kind === 'review');
+	const reviewTab = tabs.find((tab) => tab.kind === 'review');
 	// What a coding agent has shown, when its console is docked at the bottom. One per agent.
 	const isAgentTab = activeTab?.kind === 'agentView';
-	const agentTabs = tabs.filter((t) => t.kind === 'agentView');
+	const agentTabs = tabs.filter((tab) => tab.kind === 'agentView');
 	const objectData = activeTabId && isObjectTab ? objectTabsRef.current.get(activeTabId) : undefined;
 	const tableData = activeTabId ? tableTabsRef.current.get(activeTabId) : undefined;
 	// The assistant header's grounding chip: named ONLY for surfaces the ambient context really
 	// carries (flow wizard, table tab, object tab) — a chip on a tab the model can't see would
 	// promise context that isn't there.
 	const assistantContext = isFlowTab
-		? "Data Flow wizard"
+		? t('shell.assistantContext.flowWizard')
 		: tableData?.table
-			? `Table ${tableData.table.name}`
+			? t('shell.assistantContext.table', { name: tableData.table.name })
 			: objectData
 				? `${objectData.kind} ${objectData.name}`
 				: undefined;
@@ -4718,10 +4733,10 @@ export function App(): JSX.Element {
 	const movePanelCommands: Command[] = useMemo(() => movableTools.flatMap((tool) =>
 		DOCK_AREAS.filter((area) => area !== placementOf(layout.docks, tool)).map((area) => ({
 			id: `move:${tool}:${area}`,
-			label: `Move ${toolLabel(tool)} to ${areaLabel(area)}`,
+			...moveCommandLabel(tool, area),
 			run: () => setDocks((d) => moveTool(d, tool, area)),
 		}))
-	), [movableTools, layout.docks, setDocks]);
+	), [movableTools, layout.docks, setDocks, locale]);
 
 	/**
 	 * Liby's two views. Full is a view of the SAME instance (the panel is re-homed, never
@@ -4751,74 +4766,74 @@ export function App(): JSX.Element {
 	}
 
 	const commands: Command[] = [
-		{ id: 'new', label: 'New Query', hint: hintFor('new'), run: () => newQueryTab() },
-		...(activeIsDocument ? [{ id: 'newPipeline', label: 'New Aggregation Pipeline (MongoDB)', run: () => { createPipelineTab(activeId, mongoCollectionNames()[0]); } }] : []),
-		{ id: 'open', label: 'Open File…', hint: hintFor('open'), run: () => void openFile() },
-		{ id: 'saveFile', label: 'Save File', hint: hintFor('saveFile'), run: () => void saveActiveFile() },
-		{ id: 'saveQuery', label: 'Save Query…', run: () => void saveCurrentQuery() },
-		{ id: 'run', label: 'Run Query', hint: hintFor('run'), run: () => void run() },
-		{ id: 'runNewTab', label: 'Run in New Tab', run: () => void run({ newTab: true }) },
-		{ id: 'runScript', label: 'Run as Script', run: () => void runAllStatements() },
-		...(canExplain ? [{ id: 'explain', label: 'Explain Query Plan', run: () => void explainStatement() }] : []),
-		{ id: 'format', label: 'Format SQL', hint: hintFor('format'), run: formatEditor },
+		{ id: 'new', label: t('commands.new'), hint: hintFor('new'), run: () => newQueryTab() },
+		...(activeIsDocument ? [{ id: 'newPipeline', label: t('commands.newPipeline'), run: () => { createPipelineTab(activeId, mongoCollectionNames()[0]); } }] : []),
+		{ id: 'open', label: t('commands.open'), hint: hintFor('open'), run: () => void openFile() },
+		{ id: 'saveFile', label: t('commands.saveFile'), hint: hintFor('saveFile'), run: () => void saveActiveFile() },
+		{ id: 'saveQuery', label: t('commands.saveQuery'), run: () => void saveCurrentQuery() },
+		{ id: 'run', label: t('commands.run'), hint: hintFor('run'), run: () => void run() },
+		{ id: 'runNewTab', label: t('commands.runNewTab'), run: () => void run({ newTab: true }) },
+		{ id: 'runScript', label: t('commands.runScript'), run: () => void runAllStatements() },
+		...(canExplain ? [{ id: 'explain', label: t('commands.explain'), run: () => void explainStatement() }] : []),
+		{ id: 'format', label: t('commands.format'), hint: hintFor('format'), run: formatEditor },
 		...(visibleAgents.length > 0 ? [
-			{ id: 'agentConsole', label: 'Agent Console: Show/Hide', run: () => setDocks((d) => toggleTool(d, `agent:${consoleKind}`)) },
-			{ id: 'agentConsoleRestart', label: 'Agent Console: Restart Agent', run: () => { setDocks((d) => showTool(d, `agent:${consoleKind}`)); void window.sqlApi.agentConsole.restart(consoleKind); } },
+			{ id: 'agentConsole', label: t('commands.agentConsole'), run: () => setDocks((d) => toggleTool(d, `agent:${consoleKind}`)) },
+			{ id: 'agentConsoleRestart', label: t('commands.agentConsoleRestart'), run: () => { setDocks((d) => showTool(d, `agent:${consoleKind}`)); void window.sqlApi.agentConsole.restart(consoleKind); } },
 		] : []),
-		{ id: 'connectionsView', label: 'Show Connections', run: () => showSideView('connections') },
-		{ id: 'workspaceView', label: 'Show Workspace Files', run: () => showSideView('workspace') },
-		{ id: 'newWorkspaceFile', label: 'New Workspace File', run: () => void newWorkspaceFile() },
-		{ id: 'importWorkspaceFile', label: 'Import Files to Workspace…', run: () => setWorkspaceImport(true) },
-		{ id: 'openWorkspaceFolder', label: 'Change Workspace Folder…', run: () => void window.sqlApi.workspace.setRoot().then((root) => { if (root) { showSideView('workspace'); setWorkspaceRev((r) => r + 1); } }) },
-		{ id: 'history', label: 'Show Query History & Saved', run: () => showSideView('history') },
-		...(mcpActive ? [{ id: 'agentLog', label: 'Show Agent (MCP) Log', run: () => showSideView('mcplog') }] : []),
-		{ id: 'notifications', label: 'Show Notifications', run: openNotifications },
-		{ id: 'assistant', label: `Toggle ${ASSISTANT_NAME}`, run: toggleAssistant },
-		{ id: 'assistantFull', label: fullChat ? `${ASSISTANT_NAME}: Exit Full Screen` : `${ASSISTANT_NAME}: Full Screen`, run: () => setAssistantFull(!fullChat) },
-		{ id: 'libyHelp', label: `${ASSISTANT_NAME}: Help Me Here`, hint: hintFor('libyHelp'), run: summonLiby },
-		{ id: 'fixError', label: `${ASSISTANT_NAME}: Fix Last Error`, run: fixWithAI },
-		{ id: 'aiComplete', label: `${ASSISTANT_NAME}: Complete at Cursor`, hint: hintFor('aiComplete'), run: () => triggerAiCompletion(editorRef.current) },
-		{ id: 'aiEdit', label: `${ASSISTANT_NAME}: Edit / Generate (inline)`, hint: hintFor('aiEdit'), run: () => triggerAiEdit(editorRef.current) },
-		{ id: 'settings', label: 'Settings…', run: () => setSettings({}) },
-		{ id: 'account', label: 'Account…', run: () => setSettings({ tab: 'account' }) },
-		{ id: 'aiSettings', label: 'AI Settings…', run: () => setSettings({ tab: 'ai' }) },
-		{ id: 'dataGenSettings', label: 'Data Generation Settings…', run: () => setSettings({ tab: 'datagen' }) },
-		{ id: 'cloudSettings', label: 'Cloud Accounts…', run: () => setSettings({ tab: 'cloud' }) },
-		{ id: 'dashboardView', label: 'Show Dashboard', run: () => showSideView('dashboard') },
-		{ id: 'localSetup', label: 'Dashboard: Set Up a Local Project…', run: openLocalSetup },
-		{ id: 'auditLog', label: 'AI Audit Log…', run: () => setSettings({ tab: 'audit' }) },
-		{ id: 'addConn', label: 'Add Connection…', run: () => setForm({}) },
-		{ id: 'schemaSync', label: 'Sync Schema…', run: openSchemaSync },
-		{ id: 'monitors', label: 'Monitors…', run: openMonitors },
-		{ id: 'orbit', label: 'Orbit: map this database in 3D', run: openOrbit },
+		{ id: 'connectionsView', label: t('commands.connectionsView'), run: () => showSideView('connections') },
+		{ id: 'workspaceView', label: t('commands.workspaceView'), run: () => showSideView('workspace') },
+		{ id: 'newWorkspaceFile', label: t('commands.newWorkspaceFile'), run: () => void newWorkspaceFile() },
+		{ id: 'importWorkspaceFile', label: t('commands.importWorkspaceFile'), run: () => setWorkspaceImport(true) },
+		{ id: 'openWorkspaceFolder', label: t('commands.openWorkspaceFolder'), run: () => void window.sqlApi.workspace.setRoot().then((root) => { if (root) { showSideView('workspace'); setWorkspaceRev((r) => r + 1); } }) },
+		{ id: 'history', label: t('commands.history'), run: () => showSideView('history') },
+		...(mcpActive ? [{ id: 'agentLog', label: t('commands.agentLog'), run: () => showSideView('mcplog') }] : []),
+		{ id: 'notifications', label: t('commands.notifications'), run: openNotifications },
+		{ id: 'assistant', label: t('commands.assistant', { assistant: ASSISTANT_NAME }), run: toggleAssistant },
+		{ id: 'assistantFull', label: fullChat ? t('commands.assistantExitFull', { assistant: ASSISTANT_NAME }) : t('commands.assistantFull', { assistant: ASSISTANT_NAME }), run: () => setAssistantFull(!fullChat) },
+		{ id: 'libyHelp', label: t('commands.libyHelp', { assistant: ASSISTANT_NAME }), hint: hintFor('libyHelp'), run: summonLiby },
+		{ id: 'fixError', label: t('commands.fixError', { assistant: ASSISTANT_NAME }), run: fixWithAI },
+		{ id: 'aiComplete', label: t('commands.aiComplete', { assistant: ASSISTANT_NAME }), hint: hintFor('aiComplete'), run: () => triggerAiCompletion(editorRef.current) },
+		{ id: 'aiEdit', label: t('commands.aiEdit', { assistant: ASSISTANT_NAME }), hint: hintFor('aiEdit'), run: () => triggerAiEdit(editorRef.current) },
+		{ id: 'settings', label: t('commands.settings'), run: () => setSettings({}) },
+		{ id: 'account', label: t('commands.account'), run: () => setSettings({ tab: 'account' }) },
+		{ id: 'aiSettings', label: t('commands.aiSettings'), run: () => setSettings({ tab: 'ai' }) },
+		{ id: 'dataGenSettings', label: t('commands.dataGenSettings'), run: () => setSettings({ tab: 'datagen' }) },
+		{ id: 'cloudSettings', label: t('commands.cloudSettings'), run: () => setSettings({ tab: 'cloud' }) },
+		{ id: 'dashboardView', label: t('commands.dashboardView'), run: () => showSideView('dashboard') },
+		{ id: 'localSetup', label: t('commands.localSetup'), run: openLocalSetup },
+		{ id: 'auditLog', label: t('commands.auditLog'), run: () => setSettings({ tab: 'audit' }) },
+		{ id: 'addConn', label: t('commands.addConn'), run: () => setForm({}) },
+		{ id: 'schemaSync', label: t('commands.schemaSync'), run: openSchemaSync },
+		{ id: 'monitors', label: t('commands.monitors'), run: openMonitors },
+		{ id: 'orbit', label: t('commands.orbit'), run: openOrbit },
 		// Snoutbot. Both ids are also what the tray's submenu opens.
-		{ id: 'reviews', label: 'Snoutbot: Show Reviews', run: openReviews },
-		{ id: 'snoutbotSettings', label: 'Snoutbot Settings…', run: () => setSettings({ tab: 'snoutbot' }) },
+		{ id: 'reviews', label: t('commands.reviews'), run: openReviews },
+		{ id: 'snoutbotSettings', label: t('commands.snoutbotSettings'), run: () => setSettings({ tab: 'snoutbot' }) },
 		// The same poll the tray's "Check Now" and the settings button run. It says nothing itself:
 		// a review that starts puts up its own card, and one that finds nothing should not.
-		{ id: 'snoutbotCheck', label: 'Snoutbot: Check for New Pull Requests', run: () => { void window.sqlApi.review.pollNow(); } },
-		{ id: 'moveDatabase', label: 'Move Database…', run: () => openMove() },
-		{ id: 'flowsPanel', label: 'Show Data Flows', run: () => showSideView('flows') },
+		{ id: 'snoutbotCheck', label: t('commands.snoutbotCheck'), run: () => { void window.sqlApi.review.pollNow(); } },
+		{ id: 'moveDatabase', label: t('commands.moveDatabase'), run: () => openMove() },
+		{ id: 'flowsPanel', label: t('commands.flowsPanel'), run: () => showSideView('flows') },
 		// Creating and importing a flow are only offered by a build that has Data Flows; without it
 		// the Flows view says where the feature is.
 		...(PRO_AVAILABLE ? [
-			{ id: 'newFlow', label: 'New Data Flow…', run: () => openFlow() },
+			{ id: 'newFlow', label: t('commands.newFlow'), run: () => openFlow() },
 			// Import is on the palette as well as the Flows panel, so a `.snoutflow` somebody sent
 			// you is openable without first knowing which side view it lives behind.
-			{ id: 'importFlow', label: 'Import Data Flow…', run: () => { void importFlowFromFile(); } },
+			{ id: 'importFlow', label: t('commands.importFlow'), run: () => { void importFlowFromFile(); } },
 		] : []),
-		{ id: 'queryPerformance', label: 'Query Performance…', run: openQueryPerf },
-		{ id: 'security', label: 'Users & Privileges…', run: openSecurity },
-		{ id: 'clickhouseOps', label: 'ClickHouse Operations…', run: () => openChOps() },
-		{ id: 'clickhouseRemote', label: 'ClickHouse Remote Data…', run: () => openChRemote() },
-		{ id: 'closeTab', label: 'Close Tab', hint: hintFor('closeTab'), run: () => { if (activeTabId) { closeTab(activeTabId); } } },
-		{ id: 'toggleSidebar', label: 'Toggle Sidebar', run: () => setDocks((d) => (d.left.active ? hideTool(d, d.left.active) : showTool(d, d.left.tools[0] ?? 'connections'))) },
+		{ id: 'queryPerformance', label: t('commands.queryPerformance'), run: openQueryPerf },
+		{ id: 'security', label: t('commands.security'), run: openSecurity },
+		{ id: 'clickhouseOps', label: t('commands.clickhouseOps'), run: () => openChOps() },
+		{ id: 'clickhouseRemote', label: t('commands.clickhouseRemote'), run: () => openChRemote() },
+		{ id: 'closeTab', label: t('commands.closeTab'), hint: hintFor('closeTab'), run: () => { if (activeTabId) { closeTab(activeTabId); } } },
+		{ id: 'toggleSidebar', label: t('commands.toggleSidebar'), run: () => setDocks((d) => (d.left.active ? hideTool(d, d.left.active) : showTool(d, d.left.tools[0] ?? 'connections'))) },
 		// Moving a panel is on the palette as well as its header menu, so it is keyboard-reachable.
 		// One command per tool per area it is not already in.
 		...movePanelCommands,
-		{ id: 'toggleResults', label: 'Toggle Results Panel', run: () => setLayout((l) => ({ ...l, resultsCollapsed: !l.resultsCollapsed })) },
-		{ id: 'theme', label: 'Switch Theme', run: toggleTheme },
-		{ id: 'checkUpdate', label: 'Check for Updates…', run: checkForUpdates },
+		{ id: 'toggleResults', label: t('commands.toggleResults'), run: () => setLayout((l) => ({ ...l, resultsCollapsed: !l.resultsCollapsed })) },
+		{ id: 'theme', label: t('commands.theme'), run: toggleTheme },
+		{ id: 'checkUpdate', label: t('commands.checkUpdate'), run: checkForUpdates },
 		// DEV-ONLY: preview the auto-update UI without a real release (the dev build's updater
 		// always reports "up to date"). "Downloading" shows the ambient status-bar progress;
 		// "Ready" shows the restart toast (click Later to see it collapse to the status-bar pill).
@@ -4842,17 +4857,17 @@ export function App(): JSX.Element {
 			// The move's progress screen on a simulated run, before the runner exists.
 			{ id: 'devMoveProgress', label: 'Dev: Preview Move Progress', run: () => openMove({ preview: true }) },
 		] : []),
-		{ id: 'about', label: 'About SnoutData Studio', run: () => setAboutOpen(true) },
-		...(hasReleaseNotes() ? [{ id: 'releaseNotes', label: 'Show Release Notes', run: openReleaseNotes }] : []),
-		{ id: 'startTour', label: 'Take a Quick Tour', run: startTour },
-		{ id: 'findDatabases', label: 'Find Databases…', run: () => setDiscovery('manual') },
-		{ id: 'gettingStarted', label: 'Show Getting Started Checklist', run: openChecklist },
+		{ id: 'about', label: t('commands.about'), run: () => setAboutOpen(true) },
+		...(hasReleaseNotes() ? [{ id: 'releaseNotes', label: t('commands.releaseNotes'), run: openReleaseNotes }] : []),
+		{ id: 'startTour', label: t('commands.startTour'), run: startTour },
+		{ id: 'findDatabases', label: t('commands.findDatabases'), run: () => setDiscovery('manual') },
+		{ id: 'gettingStarted', label: t('commands.gettingStarted'), run: openChecklist },
 		...state.connections
 			.filter((c) => !state.connectedIds.includes(c.id))
-			.map((c) => ({ id: `connect-${c.id}`, label: `Connect: ${c.label}`, run: () => void connect(c.id) })),
+			.map((c) => ({ id: `connect-${c.id}`, label: t('commands.connectTo', { connection: c.label }), labelKey: 'commands.connectTo', labelVars: { connection: c.label }, run: () => void connect(c.id) })),
 		...state.connections
 			.filter((c) => state.connectedIds.includes(c.id))
-			.map((c) => ({ id: `disconnect-${c.id}`, label: `Disconnect: ${c.label}`, run: () => void disconnect(c.id) })),
+			.map((c) => ({ id: `disconnect-${c.id}`, label: t('commands.disconnectFrom', { connection: c.label }), labelKey: 'commands.disconnectFrom', labelVars: { connection: c.label }, run: () => void disconnect(c.id) })),
 	];
 	// Keep the menu-command handler's view of the commands current (rebuilt each render).
 	commandsRef.current = commands;
@@ -4891,12 +4906,12 @@ export function App(): JSX.Element {
 			setAppSetting: (key, value) => setAppSettings((s) => ({ ...s, [key]: value }) as AppSettings),
 			setTheme: (dark) => setTheme(dark ? 'dark' : 'light'),
 			notifyKnowledgeChanged: () => setKnowledgeRev((r) => r + 1),
-			resultConnectionId: () => resultTabsRef.current.find((t) => t.id === activeResultIdRef.current)?.connectionId,
+			resultConnectionId: () => resultTabsRef.current.find((rt) => rt.id === activeResultIdRef.current)?.connectionId,
 			getQueryResult: (maxRows) => {
 				// Read from the refs, not the `response` closure: a capability call arrives via IPC
 				// after run_current's own round-trip, by which point this render's closure is stale —
 				// the refs always mirror the live active result tab.
-				const active = resultTabsRef.current.find((t) => t.id === activeResultIdRef.current) ?? null;
+				const active = resultTabsRef.current.find((rt) => rt.id === activeResultIdRef.current) ?? null;
 				const resp = active?.response ?? null;
 				if (!resp) {
 					return { status: 'none' };
@@ -4921,7 +4936,7 @@ export function App(): JSX.Element {
 		snapshot: () => ({
 			connections: state.connections.map((c) => ({ id: c.id, label: c.label, driver: c.driver, environment: c.environment, connected: state.connectedIds.includes(c.id) })),
 			activeConnectionId: activeId,
-			tabs: tabs.map((t) => ({ id: t.id, title: t.title, kind: t.kind ?? 'sql', connectionId: t.connectionId, active: t.id === activeTabId })),
+			tabs: tabs.map((tab) => ({ id: tab.id, title: tab.title, kind: tab.kind ?? 'sql', connectionId: tab.connectionId, active: tab.id === activeTabId })),
 			appSettings,
 			shortcuts: keybindingsRef.current.map((b) => ({ id: b.id, label: b.label, keys: formatShortcut(b.combo) })),
 		}),
@@ -4990,7 +5005,7 @@ export function App(): JSX.Element {
 			);
 			case 'workspace': return (
 				<WorkspaceFilesPanel
-					activePath={tabs.find((t) => t.id === activeTabId)?.filePath}
+					activePath={tabs.find((tab) => tab.id === activeTabId)?.filePath}
 					rev={workspaceRev}
 					onOpen={(path) => void openWorkspaceFile(path)}
 					onImport={() => setWorkspaceImport(true)}
@@ -5029,7 +5044,7 @@ export function App(): JSX.Element {
 			);
 			case 'orbit': return (
 				<OrbitRailPanel
-					open={tabs.some((t) => t.kind === 'orbit')}
+					open={tabs.some((tab) => tab.kind === 'orbit')}
 					onOpen={() => openOrbit()}
 					hostRef={setOrbitRailHost}
 					onCollapse={() => setDocks((d) => hideTool(d, 'orbit'))}
@@ -5053,7 +5068,7 @@ export function App(): JSX.Element {
 	return (
 		<LibyProvider host={libyHost}>
 		<div className={`app activity-bar-${appSettings.activityBarPosition}`}>
-			<TitleBar title={activeTab?.title} onCommand={runMenuCommand} />
+			<TitleBar title={activeTab ? tabLabel(activeTab, state.connections, t) : undefined} onCommand={runMenuCommand} />
 			{/* Every icon-only button's tooltip, app-wide (HoverTip.tsx says why not `title`). */}
 			<IconButtonTips />
 			{/* Every <select>'s list, app-wide: ours instead of the OS menu (SelectPopover.tsx). */}
@@ -5065,7 +5080,7 @@ export function App(): JSX.Element {
 					area="left"
 					size={layout.docks.left.size}
 					// In the full view Liby has left its dock, so a left area showing only Liby is empty.
-					visible={shownTools.some((t) => placementOf(layout.docks, t) === 'left' && !(fullChat && t === 'assistant'))}
+					visible={shownTools.some((tool) => placementOf(layout.docks, tool) === 'left' && !(fullChat && tool === 'assistant'))}
 					onResize={(delta) => setLayout((l) => ({ ...l, docks: resizeArea(l.docks, 'left', l.docks.left.size + delta, window.innerWidth, window.innerHeight) }))}
 					hostRef={dockHostRefs.left}
 				/>
@@ -5074,7 +5089,7 @@ export function App(): JSX.Element {
 				{tabs.length > 0 && isReadOnlyTab && (
 					<div className="toolbar">
 						<ConnectionChip
-							label={viewConn?.label ?? viewConnId ?? "No connection"}
+							label={viewConn?.label ?? viewConnId ?? t('shell.common.noConnection')}
 							connected={viewConnId !== undefined && state.connectedIds.includes(viewConnId)}
 							prod={viewConn?.environment === 'prod'}
 						/>
@@ -5084,8 +5099,8 @@ export function App(): JSX.Element {
 				{tabs.length > 0 && !isReadOnlyTab && !isSchemaSyncTab && !isMonitorTab && !isFlowTab && !isMoveTab && !isVectorSearchTab && !isAgentTab && !isOrbitTab && (
 					<div className="toolbar editor-toolbar">
 						{running ? (
-							<button className="run cancel" type="button" onClick={() => void cancelRun()} title="Cancel the running query">
-								<Icon name="stop-circle" /> Cancel
+							<button className="run cancel" type="button" onClick={() => void cancelRun()} title={t('shell.run.cancelTitle')}>
+								<Icon name="stop-circle" /> {t('shell.common.cancel')}
 							</button>
 						) : (
 							<RunSplitButton
@@ -5099,10 +5114,10 @@ export function App(): JSX.Element {
 						{running && (() => {
 							const warn = appSettings.slowQueryWarnMs > 0 && elapsedMs >= appSettings.slowQueryWarnMs;
 							return (
-								<span className={`run-elapsed${warn ? ' warn' : ''}`} title={warn ? "This query is taking longer than expected. Click Cancel to stop it." : undefined}>
+								<span className={`run-elapsed${warn ? ' warn' : ''}`} title={warn ? t('shell.run.slowTitle') : undefined}>
 									{warn && <Icon name="warning" />}
-									{warn ? 'Taking longer than expected… ' : 'Running… '}{(elapsedMs / 1000).toFixed(1)}s
-									{runProgress && <span className="run-progress" title="What the server has read so far, and the memory the query holds">{describeProgress(runProgress)}</span>}
+									{t(warn ? 'shell.run.slowElapsed' : 'shell.run.elapsed', { seconds: (elapsedMs / 1000).toFixed(1) })}
+									{runProgress && <span className="run-progress" title={t('shell.run.progressTitle')}>{describeProgress(runProgress)}</span>}
 								</span>
 							);
 						})()}
@@ -5111,8 +5126,8 @@ export function App(): JSX.Element {
 							isConnected={(id) => state.connectedIds.includes(id)}
 							value={activeId}
 							onChange={selectConnection}
-							noneLabel="No connection"
-							title="Connection for this editor tab"
+							noneLabel={t('shell.common.noConnection')}
+							title={t('shell.toolbar.connectionForTab')}
 							onAdd={() => setForm({})}
 						/>
 						{activeIsDocument && (
@@ -5133,19 +5148,19 @@ export function App(): JSX.Element {
 						    connect that hung could only be waited out from here. */}
 						{activeId !== undefined && connectingIds.has(activeId) && (
 							<span className="connect-inflight">
-								<span className="icon-btn connecting" aria-label="Connecting…"><Icon name="loading" className="codicon-modifier-spin" /></span>
-								<button className="icon-btn cancel-connect" type="button" aria-label="Cancel connecting" onClick={() => cancelConnect(activeId)}><Icon name="stop-circle" /></button>
+								<span className="icon-btn connecting" aria-label={t('shell.common.connecting')}><Icon name="loading" className="codicon-modifier-spin" /></span>
+								<button className="icon-btn cancel-connect" type="button" aria-label={t('shell.common.cancelConnecting')} onClick={() => cancelConnect(activeId)}><Icon name="stop-circle" /></button>
 							</span>
 						)}
 						{activeId !== undefined && !connectingIds.has(activeId) && connectedFlashId === activeId && (
-							<span className="icon-btn connected-flash" aria-label="Connected"><Icon name="check" /></span>
+							<span className="icon-btn connected-flash" aria-label={t('shell.common.connected')}><Icon name="check" /></span>
 						)}
 						{activeId !== undefined && !connectingIds.has(activeId) && connectedFlashId !== activeId && !activeConnected && (
-							<button className="icon-btn" type="button" aria-label="Connect" onClick={() => void connectFromToolbar(activeId)}><Icon name="plug" /></button>
+							<button className="icon-btn" type="button" aria-label={t('shell.common.connect')} onClick={() => void connectFromToolbar(activeId)}><Icon name="plug" /></button>
 						)}
 						<span className="spacer" />
 						<span className={status.tone === 'danger' ? 'status danger' : 'status'}>{status.text}</span>
-						<button className="secondary" type="button" onClick={() => void saveActiveFile()}><Icon name="save" /> Save File</button>
+						<button className="secondary" type="button" onClick={() => void saveActiveFile()}><Icon name="save" /> {t('commands.saveFile')}</button>
 					</div>
 				)}
 				{activeIsDocument && findOpen && !isReadOnlyTab && (
@@ -5167,7 +5182,7 @@ export function App(): JSX.Element {
 						// tab whose panel is not optional furniture: without the rail there is nothing
 						// to operate the world with, and the floating fallback is for somebody who
 						// deliberately hid it, not the default anyone should meet.
-						if (tabs.find((t) => t.id === id)?.kind === 'orbit') {
+						if (tabs.find((tab) => tab.id === id)?.kind === 'orbit') {
 							setDocks((d) => showTool(d, 'orbit'));
 						}
 					}}
@@ -5225,12 +5240,12 @@ export function App(): JSX.Element {
 						<div className="pane-header">
 							<button
 								className="icon-btn"
-								aria-label={layout.resultsCollapsed ? 'Expand results' : 'Collapse results'}
+								aria-label={t(layout.resultsCollapsed ? 'shell.results.expand' : 'shell.results.collapse')}
 								onClick={() => setLayout((l) => ({ ...l, resultsCollapsed: !l.resultsCollapsed }))}
 							>
 								<Icon name={layout.resultsCollapsed ? 'chevron-up' : 'chevron-down'} />
 							</button>
-							<span>RESULTS</span>
+							<span>{t('shell.results.header')}</span>
 							<span className="spacer" />
 							<ExportMenu
 								hasResults={response?.ok === true}
@@ -5243,46 +5258,46 @@ export function App(): JSX.Element {
 						</div>
 						{!layout.resultsCollapsed && resultTabs.length > 0 && (
 							<div className="result-tabs" role="tablist">
-								{resultTabs.map((t) => (
+								{resultTabs.map((rt) => (
 									<div
-										key={t.id}
+										key={rt.id}
 										role="tab"
-										aria-selected={t.id === activeResultId}
-										className={`result-tab-chip${t.id === activeResultId ? ' active' : ''}${t.pinned ? ' pinned' : ''}`}
-										onClick={() => setActiveResultId(t.id)}
-										onDoubleClick={() => setRenamingResultId(t.id)}
-										title={`${t.connectionLabel}${t.ranAt ? ` · ${new Date(t.ranAt).toLocaleString()}` : ''}\nDouble-click to rename`}
+										aria-selected={rt.id === activeResultId}
+										className={`result-tab-chip${rt.id === activeResultId ? ' active' : ''}${rt.pinned ? ' pinned' : ''}`}
+										onClick={() => setActiveResultId(rt.id)}
+										onDoubleClick={() => setRenamingResultId(rt.id)}
+										title={`${rt.connectionLabel}${rt.ranAt ? ` · ${new Date(rt.ranAt).toLocaleString(formatLocale())}` : ''}\n${t('shell.results.renameHint')}`}
 									>
 										<span
 											className="result-tab-pin"
-											title={t.pinned ? 'Unpin (allow overwrite)' : 'Pin (keep across runs)'}
-											onClick={(e) => { e.stopPropagation(); toggleResultPin(t.id); }}
+											title={t(rt.pinned ? 'shell.results.unpin' : 'shell.results.pin')}
+											onClick={(e) => { e.stopPropagation(); toggleResultPin(rt.id); }}
 										>
-											<Icon name={t.pinned ? 'pinned' : 'pin'} />
+											<Icon name={rt.pinned ? 'pinned' : 'pin'} />
 										</span>
-										{runningTargets.has(t.id) && (
-											<span className="result-tab-running" title="Query running…"><Icon name="loading" className="codicon-modifier-spin" /></span>
+										{runningTargets.has(rt.id) && (
+											<span className="result-tab-running" title={t('shell.results.running')}><Icon name="loading" className="codicon-modifier-spin" /></span>
 										)}
-										{renamingResultId === t.id ? (
+										{renamingResultId === rt.id ? (
 											<input
 												className="result-tab-rename"
-												defaultValue={t.title}
+												defaultValue={rt.title}
 												autoFocus
 												onFocus={(e) => e.target.select()}
 												onClick={(e) => e.stopPropagation()}
-												onBlur={(e) => commitResultRename(t.id, e.target.value)}
+												onBlur={(e) => commitResultRename(rt.id, e.target.value)}
 												onKeyDown={(e) => {
-													if (e.key === 'Enter') { commitResultRename(t.id, e.currentTarget.value); }
+													if (e.key === 'Enter') { commitResultRename(rt.id, e.currentTarget.value); }
 													else if (e.key === 'Escape') { setRenamingResultId(null); }
 												}}
 											/>
 										) : (
-											<span className="result-tab-title">{t.title || 'Results'}</span>
+											<span className="result-tab-title">{rt.title || t('shell.results.results')}</span>
 										)}
 										<span
 											className="result-tab-close"
-											title="Close result tab"
-											onClick={(e) => { e.stopPropagation(); closeResultTab(t.id); }}
+											title={t('shell.results.close')}
+											onClick={(e) => { e.stopPropagation(); closeResultTab(rt.id); }}
 										>
 											<Icon name="close" />
 										</span>
@@ -5290,7 +5305,7 @@ export function App(): JSX.Element {
 								))}
 							</div>
 						)}
-						{running && <div className="progress-bar" title="Query running…" />}
+						{running && <div className="progress-bar" title={t('shell.results.running')} />}
 						{!layout.resultsCollapsed && activeResult?.script && (
 							<ScriptLog run={activeResult.script} />
 						)}
@@ -5409,7 +5424,7 @@ export function App(): JSX.Element {
 					<LocalSetupView
 						key={activeTabId}
 						onOpenProject={(id, name) => {
-							setTabs((prev) => prev.filter((t) => t.id !== activeTabId));
+							setTabs((prev) => prev.filter((tab) => tab.id !== activeTabId));
 							openLocalProject(id, name, 'overview');
 						}}
 						onOpenDatabase={(id) => void openLocalDatabase(id)}
@@ -5421,7 +5436,7 @@ export function App(): JSX.Element {
 						key={activeTabId}
 						target={(activeTab?.kind === 'localProject' ? { kind: 'local', id: activeTab.localId as string } : { kind: 'cloud', ref: activeTab?.cloudRef as string }) satisfies ProjectTarget}
 						section={projectSection(activeTab?.kind === 'localProject' ? activeTab.localSection : activeTab?.cloudSection)}
-						onSection={(section) => setTabs((prev) => prev.map((t) => (t.id === activeTabId ? (t.kind === 'localProject' ? { ...t, localSection: section } : { ...t, cloudSection: section }) : t)))}
+						onSection={(section) => setTabs((prev) => prev.map((tab) => (tab.id === activeTabId ? (tab.kind === 'localProject' ? { ...tab, localSection: section } : { ...tab, cloudSection: section }) : tab)))}
 						onOpenDatabase={(target) => void (target.kind === 'local' ? openLocalDatabase(target.id) : openCloudDatabase(target.ref))}
 						onRunSql={(target) => void openProjectSql(target)}
 						onClosed={() => closeTab(activeTabId)}
@@ -5499,7 +5514,7 @@ export function App(): JSX.Element {
 								// Bind the ORBIT tab explicitly rather than through bindConnection, which targets
 								// whatever has focus: the rail is a docked panel and can be on screen while
 								// another tab is the focused one.
-								setTabs((prev) => prev.map((t) => (t.id === orbitTab.id ? { ...t, connectionId: id } : t)));
+								setTabs((prev) => prev.map((tab) => (tab.id === orbitTab.id ? { ...tab, connectionId: id } : tab)));
 								if (id !== undefined && !state.connectedIds.includes(id)) {
 									void connect(id, false);
 								}
@@ -5508,7 +5523,7 @@ export function App(): JSX.Element {
 							focusRequest={orbitFocus}
 							railHost={orbitRailHost}
 							onOpenTable={(ref) => {
-								const found = activeSchema?.tables.find((t) => t.name === ref.name && (ref.schema === undefined || t.schema === ref.schema));
+								const found = activeSchema?.tables.find((table) => table.name === ref.name && (ref.schema === undefined || table.schema === ref.schema));
 								if (found && activeId) {
 									openTable(activeId, found);
 								}
@@ -5582,7 +5597,7 @@ export function App(): JSX.Element {
 						<AgentCanvas
 							kind={tab.agent ?? 'claude'}
 							placement="tab"
-							connectionLabel={activeConfig?.label ?? "no connection"}
+							connectionLabel={activeConfig?.label ?? t('shell.common.noConnectionLower')}
 							isDocument={activeIsDocument}
 							hasConnection={activeId !== undefined && state.connectedIds.includes(activeId)}
 							onInsertSql={insertIntoEditorTab}
@@ -5607,7 +5622,7 @@ export function App(): JSX.Element {
 				<DockAreaView
 					area="bottom"
 					size={layout.docks.bottom.size}
-					visible={shownTools.some((t) => placementOf(layout.docks, t) === 'bottom')}
+					visible={shownTools.some((tool) => placementOf(layout.docks, tool) === 'bottom')}
 					onResize={(delta) => setLayout((l) => ({ ...l, docks: resizeArea(l.docks, 'bottom', l.docks.bottom.size + delta, window.innerWidth, window.innerHeight) }))}
 					hostRef={dockHostRefs.bottom}
 				/>
@@ -5615,7 +5630,7 @@ export function App(): JSX.Element {
 			<DockAreaView
 				area="right"
 				size={layout.docks.right.size}
-				visible={shownTools.some((t) => placementOf(layout.docks, t) === 'right') && !fullChat}
+				visible={shownTools.some((tool) => placementOf(layout.docks, tool) === 'right') && !fullChat}
 				onResize={(delta) => setLayout((l) => ({ ...l, docks: resizeArea(l.docks, 'right', l.docks.right.size + delta, window.innerWidth, window.innerHeight) }))}
 				hostRef={dockHostRefs.right}
 			/>
@@ -5625,7 +5640,7 @@ export function App(): JSX.Element {
 			 * unmounted assistant is a lost conversation, so these are mounted once, here, and
 			 * only ever hidden.
 			 */}
-			{shownTools.filter((t) => t !== 'assistant' && !t.startsWith('agent:')).map((tool) => (
+			{shownTools.filter((tool) => tool !== 'assistant' && !tool.startsWith('agent:')).map((tool) => (
 				<DockTool key={tool} host={dockHosts[placementOf(layout.docks, tool)]} visible onContextMenu={toolContextMenu(tool)} onHeaderPointerDown={(e) => beginToolDrag(tool, e)}>
 					{sidePanelNode(tool)}
 				</DockTool>
@@ -5657,7 +5672,7 @@ export function App(): JSX.Element {
 							onOpenSurface={() => openAgentTab(agent.kind)}
 							canvasHeight={layout.agentCanvasHeight}
 							onResizeCanvas={(dy) => setLayout((l) => ({ ...l, agentCanvasHeight: clamp(l.agentCanvasHeight + dy, 100, 720) }))}
-							connectionLabel={activeConfig?.label ?? "no connection"}
+							connectionLabel={activeConfig?.label ?? t('shell.common.noConnectionLower')}
 							isDocument={activeIsDocument}
 							hasConnection={activeId !== undefined && state.connectedIds.includes(activeId)}
 							onInsertSql={insertIntoEditorTab}
@@ -5834,8 +5849,8 @@ export function App(): JSX.Element {
 			{newCollection && (
 				<div className="modal-backdrop" onClick={() => !newCollectionBusy && setNewCollection(null)}>
 					<div className="modal" onClick={(e) => e.stopPropagation()}>
-						<h3>New collection</h3>
-						<label>Collection name
+						<h3>{t('shell.newCollection.title')}</h3>
+						<label>{t('shell.newCollection.name')}
 							<input
 								type="text"
 								autoFocus
@@ -5847,9 +5862,9 @@ export function App(): JSX.Element {
 							/>
 						</label>
 						<div className="modal-actions">
-							<button type="button" className="copy" onClick={() => setNewCollection(null)} disabled={newCollectionBusy}><Icon name="close" /> Cancel</button>
+							<button type="button" className="copy" onClick={() => setNewCollection(null)} disabled={newCollectionBusy}><Icon name="close" /> {t('shell.common.cancel')}</button>
 							<button type="button" onClick={() => void submitNewCollection()} disabled={newCollectionBusy || newCollection.name.trim() === ''}>
-								<Icon name={newCollectionBusy ? 'loading' : 'add'} className={newCollectionBusy ? 'codicon-modifier-spin' : undefined} /> Create
+								<Icon name={newCollectionBusy ? 'loading' : 'add'} className={newCollectionBusy ? 'codicon-modifier-spin' : undefined} /> {t('shell.common.create')}
 							</button>
 						</div>
 					</div>
@@ -5871,7 +5886,7 @@ export function App(): JSX.Element {
 					onCancel={() => {
 						const { chatRunId } = pendingRun;
 						setPendingRun(null);
-						setStatus('Cancelled');
+						setStatus(t('shell.status.cancelled'));
 						if (chatRunId) {
 							setChatRunOutcome({ runId: chatRunId, status: 'cancelled' });
 						}
@@ -5886,7 +5901,7 @@ export function App(): JSX.Element {
 					onCancel={() => {
 						const { chatRunId } = pendingPreflight;
 						setPendingPreflight(null);
-						setStatus('Cancelled');
+						setStatus(t('shell.status.cancelled'));
 						if (chatRunId) {
 							setChatRunOutcome({ runId: chatRunId, status: 'cancelled' });
 						}
@@ -5928,7 +5943,7 @@ export function App(): JSX.Element {
 					onCancel={() => {
 						const { chatRunId } = pendingAiTranscribe;
 						setPendingAiTranscribe(null);
-						setStatus('Translation cancelled.');
+						setStatus(t('shell.status.translationCancelled'));
 						if (chatRunId) {
 							setChatRunOutcome({ runId: chatRunId, status: 'cancelled' });
 						}
@@ -5949,7 +5964,7 @@ export function App(): JSX.Element {
 					database={activeConfig.database}
 					verb="script"
 					unfiltered={false}
-					onCancel={() => { setPendingScriptRun(null); setStatus('Cancelled'); }}
+					onCancel={() => { setPendingScriptRun(null); setStatus(t('shell.status.cancelled')); }}
 					onConfirm={() => { const { targetId, spans, model } = pendingScriptRun; setPendingScriptRun(null); void executeScriptSteps(targetId, spans, model); }}
 				/>
 			)}
@@ -5959,7 +5974,7 @@ export function App(): JSX.Element {
 					database={activeConfig.database}
 					verb="write"
 					unfiltered={false}
-					onCancel={() => { setPendingNativeRun(null); setStatus('Cancelled'); }}
+					onCancel={() => { setPendingNativeRun(null); setStatus(t('shell.status.cancelled')); }}
 					onConfirm={() => { const { native, display, targetId } = pendingNativeRun; setPendingNativeRun(null); void executeNativeQuery(native, display, targetId); }}
 				/>
 			)}
@@ -5984,7 +5999,7 @@ export function App(): JSX.Element {
 			)}
 			{quitOpen && (
 				<ConfirmQuit
-					dirty={tabs.some((t) => t.dirty)}
+					dirty={tabs.some((tab) => tab.dirty)}
 					onCancel={() => setQuitOpen(false)}
 					onConfirm={() => { setQuitOpen(false); void window.sqlApi.confirmQuit(); }}
 				/>
@@ -6052,7 +6067,7 @@ export function App(): JSX.Element {
 					}}
 				/>
 			)}
-			{tourActive && <Spotlight steps={tourSteps} onFinish={finishTour} finishLabel="Let's go!" />}
+			{tourActive && <Spotlight steps={tourSteps} onFinish={finishTour} finishLabel={t('shell.tour.letsGo')} />}
 			{/* The companion (@snout/liby), mounted once, and paused while the tour runs. */}
 			<Liby paused={tourActive} />
 			{/* The getting-started checklist as a floating side card (or collapsed pill). On the

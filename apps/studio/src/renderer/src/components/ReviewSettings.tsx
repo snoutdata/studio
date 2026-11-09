@@ -25,7 +25,20 @@ import { Icon } from './Icon';
 import { ReviewArt } from '../art/Illustrations';
 import { SettingsIntro } from './SettingsIntro';
 import { useConfirm } from './ConfirmDialog';
-import { secretsPlace, useSecretsWeak } from '../secretsPlace';
+import { useSecretsWeak } from '../secretsPlace';
+import { formatLocale, rich, useT } from '../i18n';
+
+/** What each token permission buys, by the permission's own name (which is GitHub's and GitLab's,
+ *  so it stays as they write it). The English is on the tables in shared/review.ts. */
+const GRANT_WHY: Record<string, string> = {
+	'Repository access': 'review.grants.repositoryAccess',
+	'Contents: Read-only': 'review.grants.contents',
+	'Pull requests: Read and write': 'review.grants.pullRequests',
+	'Issues: Read and write': 'review.grants.issues',
+	'Commit statuses: Read and write': 'review.grants.commitStatuses',
+	'Metadata: Read-only': 'review.grants.metadata',
+	api: 'review.grants.gitlabApi',
+};
 
 /**
  * Move to another rung, keeping what the new one can use.
@@ -83,9 +96,9 @@ function methodOfKind(kind: ReviewMethod['kind'], current: ReviewMethod): Review
  * two rows apart.
  */
 const REVIEW_TABS = [
-	{ id: 'code', label: 'Where your code lives' },
-	{ id: 'reviewing', label: 'Reviewing' },
-	{ id: 'repos', label: 'Repositories' },
+	{ id: 'code', labelKey: 'review.tabs.code' },
+	{ id: 'reviewing', labelKey: 'review.tabs.reviewing' },
+	{ id: 'repos', labelKey: 'review.tabs.repos' },
 ] as const;
 
 type ReviewTab = typeof REVIEW_TABS[number]['id'];
@@ -97,6 +110,7 @@ interface Props {
 }
 
 export function ReviewSettings({ connections, onOpenReviews }: Props): JSX.Element {
+	const t = useT();
 	const [status, setStatus] = useState<ReviewStatus | undefined>();
 	const [repoRef, setRepoRef] = useState('');
 	/** Which host a hand-typed repository belongs to; the text alone cannot say. */
@@ -176,7 +190,7 @@ export function ReviewSettings({ connections, onOpenReviews }: Props): JSX.Eleme
 	}, [connected, available, listBusy, listError, loadRepositories]);
 
 	if (!status) {
-		return <div className="muted small">Loading…</div>;
+		return <div className="muted small">{t('settings.common.loading')}</div>;
 	}
 
 	const addRepo = async (): Promise<void> => {
@@ -203,9 +217,9 @@ export function ReviewSettings({ connections, onOpenReviews }: Props): JSX.Eleme
 	const stopWatching = async (repo: { id: string; owner: string; name: string }): Promise<void> => {
 		const configured = status?.repos.find((r) => r.id === repo.id)?.connectionId;
 		if (configured && !(await confirm({
-			title: `Stop watching ${repo.owner}/${repo.name}?`,
-			body: "Its database binding and review settings are forgotten. Watching it again starts from the defaults.",
-			confirmLabel: "Stop watching",
+			title: t('review.stopTitle', { repo: `${repo.owner}/${repo.name}` }),
+			body: t('review.stopBody'),
+			confirmLabel: t('review.stopWatching'),
 			danger: true,
 		}))) {
 			return;
@@ -258,22 +272,18 @@ export function ReviewSettings({ connections, onOpenReviews }: Props): JSX.Eleme
 	return (
 		<div className="review-settings">
 			<SettingsIntro art={ReviewArt}>
-				<p>
-					Snoutbot reviews the database change in a pull request against the database it is going to
-					land on. Comment <code>@snoutbot review</code> on a pull request, or let it review every
-					one that touches SQL.
-				</p>
+				<p>{rich(t('review.intro'))}</p>
 			</SettingsIntro>
 
 			<div className="tabs review-section-tabs">
-				{REVIEW_TABS.map((t) => (
+				{REVIEW_TABS.map((entry) => (
 					<button
 						type="button"
-						key={t.id}
-						className={tab === t.id ? 'tab active' : 'tab'}
-						onClick={() => setTab(t.id)}
+						key={entry.id}
+						className={tab === entry.id ? 'tab active' : 'tab'}
+						onClick={() => setTab(entry.id)}
 					>
-						{t.label}
+						{t(entry.labelKey)}
 					</button>
 				))}
 			</div>
@@ -297,7 +307,7 @@ export function ReviewSettings({ connections, onOpenReviews }: Props): JSX.Eleme
 							onClick={() => setForgeTab(forge.kind)}
 						>
 							<Icon name={FORGE_LABELS[forge.kind].icon} /> {FORGE_LABELS[forge.kind].name}
-							{forge.hasToken && <span className="tab-dot" title="Connected" />}
+							{forge.hasToken && <span className="tab-dot" title={t('review.connected')} />}
 						</button>
 					))}
 				</div>
@@ -322,23 +332,19 @@ export function ReviewSettings({ connections, onOpenReviews }: Props): JSX.Eleme
 						disabled={!connected}
 						onChange={async (e) => setStatus(await window.sqlApi.review.setEnabled(e.target.checked))}
 					/>
-					<span>Watch my repositories</span>
+					<span>{t('review.watchMine')}</span>
 				</label>
-				<p className="muted small">
-					GitHub cannot reach this computer, so SnoutData Studio checks for new pull requests and for
-					<code> @snoutbot</code> comments every {status.pollSeconds} seconds. Reviews happen while
-					the app is running; closing the window keeps it in the tray, quitting stops it.
-				</p>
+				<p className="muted small">{rich(t('review.pollHelp', { seconds: status.pollSeconds }))}</p>
 				<label>
-					Check every
+					{t('review.checkEvery')}
 					<select
 						value={status.pollSeconds}
 						onChange={async (e) => setStatus(await window.sqlApi.review.setPollSeconds(Number(e.target.value)))}
 					>
-						<option value={30}>30 seconds</option>
-						<option value={60}>1 minute</option>
-						<option value={300}>5 minutes</option>
-						<option value={900}>15 minutes</option>
+						<option value={30}>{t('review.poll30')}</option>
+						<option value={60}>{t('review.poll60')}</option>
+						<option value={300}>{t('review.poll300')}</option>
+						<option value={900}>{t('review.poll900')}</option>
 					</select>
 				</label>
 				<div className="row">
@@ -357,16 +363,16 @@ export function ReviewSettings({ connections, onOpenReviews }: Props): JSX.Eleme
 						}}
 					>
 						<Icon name={checking ? 'sync' : 'search'} className={checking ? 'spin' : undefined} />
-						{checking ? 'Checking…' : 'Check now'}
+						{checking ? t('review.checking') : t('review.checkNow')}
 					</button>
 					{onOpenReviews && (
 						<button onClick={onOpenReviews}>
-							<Icon name="git-pull-request" /> Show reviews
+							<Icon name="git-pull-request" /> {t('review.showReviews')}
 						</button>
 					)}
 					{status.activity
 						? <span className="muted small"><Icon name="sync" className="spin" /> {status.activity}…</span>
-						: checking && <span className="muted small">Asking {FORGE_LABELS[activeForge].name} what has changed…</span>}
+						: checking && <span className="muted small">{t('review.askingForge', { forge: FORGE_LABELS[activeForge].name })}</span>}
 				</div>
 				{status.lastError && <div className="form-error">{status.lastError}</div>}
 			</fieldset>
@@ -382,17 +388,10 @@ export function ReviewSettings({ connections, onOpenReviews }: Props): JSX.Eleme
 				    of cards, all in one column with the right two thirds of the screen empty. */}
 				<div className="review-pick">
 				{!connected ? (
-					<p className="muted small">
-						Connect a GitHub or GitLab account on the "Where your code lives" tab, and the
-						repositories those tokens can reach appear here to pick from.
-					</p>
+					<p className="muted small">{t('review.connectFirst')}</p>
 				) : (
 					<>
-						<p className="muted small">
-							These are the repositories your token can reach. Pick one to start watching it, and it
-							gets a card below where you choose the database its SQL is reviewed against. If one you
-							expect is missing, the token's access is what decides, so widen it on GitHub.
-						</p>
+						<p className="muted small">{t('review.pickHelp')}</p>
 						{/* A combo, not a tick list of everything the token can see. The list WAS the whole
 						    reachable set with the watched ones ticked inside it, which meant the repositories
 						    actually being reviewed were a handful of ticks scattered through a scrolling box of
@@ -414,22 +413,22 @@ export function ReviewSettings({ connections, onOpenReviews }: Props): JSX.Eleme
 							>
 								<option value="">
 									{listBusy && available === undefined
-										? `Asking ${FORGE_LABELS[activeForge].name} which repositories this token can reach…`
+										? t('review.askingWhich', { forge: FORGE_LABELS[activeForge].name })
 										: unwatched.length > 0
-											? `Pick a repository to watch (${unwatched.length})`
-											: "Every repository this token can reach is already watched"}
+											? t('review.pickRepo', { count: unwatched.length })
+											: t('review.allWatched')}
 								</option>
 								{unwatched.map((repo) => (
 									<option key={repo.id} value={repo.id}>
 										{repo.owner}/{repo.name}
-										{repo.private ? ' · private' : ''}
-										{repo.archived ? ' · archived' : ''}
-										{repo.canComment ? '' : ' · cannot comment'}
+										{repo.private ? ` · ${t('review.private')}` : ''}
+										{repo.archived ? ` · ${t('review.archived')}` : ''}
+										{repo.canComment ? '' : ` · ${t('review.cannotComment')}`}
 									</option>
 								))}
 							</select>
 							<button disabled={listBusy} onClick={() => void loadRepositories()}>
-								<Icon name="refresh" /> {listBusy ? 'Loading…' : 'Refresh'}
+								<Icon name="refresh" /> {listBusy ? t('settings.common.loading') : t('settings.common.refresh')}
 							</button>
 						</div>
 						{/* The roll call, under the picker that cannot be it: a repository LEAVES the combo
@@ -444,9 +443,9 @@ export function ReviewSettings({ connections, onOpenReviews }: Props): JSX.Eleme
 										<span className="review-watched-name">
 											<span className="muted">{repo.owner}/</span>{repo.name}
 										</span>
-										{!repo.enabled && <span className="muted small">paused</span>}
+										{!repo.enabled && <span className="muted small">{t('review.paused')}</span>}
 										<button type="button" className="link-btn" onClick={() => void stopWatching(repo)}>
-											Remove
+											{t('review.remove')}
 										</button>
 									</li>
 								))}
@@ -455,7 +454,7 @@ export function ReviewSettings({ connections, onOpenReviews }: Props): JSX.Eleme
 						{listError && (
 							<div className="form-error">
 								{listError}
-								<button className="link-btn" onClick={() => void loadRepositories()}>Try again</button>
+								<button className="link-btn" onClick={() => void loadRepositories()}>{t('review.tryAgain')}</button>
 							</div>
 						)}
 						{available !== undefined && available.length === 0 && (
@@ -465,26 +464,18 @@ export function ReviewSettings({ connections, onOpenReviews }: Props): JSX.Eleme
 							// from here — so both are named, with the page that fixes them.
 							<div className="review-empty-list">
 								<p>
-									<Icon name="warning" /> This token cannot reach any repositories.
+									<Icon name="warning" /> {t('review.noReach')}
 								</p>
-								<p className="muted small">
-									Snoutbot can only watch what the token can already see, so there is nothing to
-									offer. Two things cause this:
-								</p>
+								<p className="muted small">{t('review.noReachHelp')}</p>
 								<ul className="muted small">
 									<li>
-										It was not granted the repositories. A GitHub fine-grained token lists them one
-										by one, and "All repositories" is not the default; a classic token needs the
-										<code> repo</code> scope, and a GitLab one needs
-										<code> {GITLAB_TOKEN_SCOPE}</code>.
+										{rich(t('review.cause1', { scope: GITLAB_TOKEN_SCOPE }))}
+										{' '}
 										{scopesReported.length > 0
-											? ` The connected token reports: ${scopesReported.join(', ')}.`
-											: ' No scopes are reported, which is normal for a GitHub fine-grained token and for GitLab: check the token was granted the projects you expect.'}
+											? t('review.scopesReport', { scopes: scopesReported.join(', ') })
+											: t('review.noScopes')}
 									</li>
-									<li>
-										Your organization requires SSO and this token has not been authorized for it.
-										Both hosts hide those repositories entirely rather than refusing them.
-									</li>
+									<li>{t('review.cause2')}</li>
 								</ul>
 								<div className="row">
 									{status.forges.filter((f) => f.hasToken).map((f) => (
@@ -494,11 +485,11 @@ export function ReviewSettings({ connections, onOpenReviews }: Props): JSX.Eleme
 												f.kind === 'gitlab' ? gitlabTokenUrl(f.baseUrl ?? '') : GITHUB_FINE_GRAINED_URL,
 											)}
 										>
-											<Icon name="link-external" /> Check the token on {FORGE_LABELS[f.kind].name}
+											<Icon name="link-external" /> {t('review.checkTokenOn', { forge: FORGE_LABELS[f.kind].name })}
 										</button>
 									))}
 									<button className="secondary" onClick={() => void loadRepositories()}>
-										<Icon name="refresh" /> Look again
+										<Icon name="refresh" /> {t('review.lookAgain')}
 									</button>
 								</div>
 							</div>
@@ -507,16 +498,13 @@ export function ReviewSettings({ connections, onOpenReviews }: Props): JSX.Eleme
 				)}
 
 				<details className="muted small">
-					<summary>Add one by name instead</summary>
-					<p>
-						For a repository the list above cannot show, name it directly. Snoutbot still needs the
-						token to be able to reach it.
-					</p>
+					<summary>{t('review.addByName')}</summary>
+					<p>{t('review.addByNameHelp')}</p>
 					<div className="row">
 						<input
 							className="grow"
 							value={repoRef}
-							placeholder="owner/name, or paste the repository URL"
+							placeholder={t('review.repoPlaceholder')}
 							onChange={(e) => setRepoRef(e.target.value)}
 							onKeyDown={(e) => {
 								if (e.key === 'Enter' && repoRef.trim() !== '') {
@@ -525,7 +513,7 @@ export function ReviewSettings({ connections, onOpenReviews }: Props): JSX.Eleme
 							}}
 						/>
 						<button disabled={repoRef.trim() === ''} onClick={() => void addRepo()}>
-							<Icon name="eye" /> Watch
+							<Icon name="eye" /> {t('review.watch')}
 						</button>
 					</div>
 					{repoError && <div className="form-error">{repoError}</div>}
@@ -534,10 +522,7 @@ export function ReviewSettings({ connections, onOpenReviews }: Props): JSX.Eleme
 
 				<div className="review-watched">
 				{status.repos.length === 0 ? (
-					<p className="muted small">
-						Nothing is being watched yet. Pick a repository above, then choose which of your
-						connections its SQL should be reviewed against.
-					</p>
+					<p className="muted small">{t('review.nothingWatched')}</p>
 				) : (
 					<div className="review-repos">
 						{status.repos.map((repo) => (
@@ -577,7 +562,8 @@ function ForgeCard({
 	onChanged(status: ReviewStatus): void;
 	onConnected(): void;
 }): JSX.Element {
-	const keyPlace = secretsPlace(useSecretsWeak());
+	const t = useT();
+	const keyPlace = t(useSecretsWeak() ? 'settings.secretsPlace.file' : 'settings.secretsPlace.keychain');
 	const [token, setToken] = useState('');
 	const [busy, setBusy] = useState(false);
 	const [error, setError] = useState<string | undefined>();
@@ -604,11 +590,11 @@ function ForgeCard({
 			    App concept, and a project access token there already runs as a bot user. */}
 			{forge.kind === 'github' && (
 				<>
-					<p className="small">Reviews are posted by:</p>
+					<p className="small">{t('review.postedBy')}</p>
 					<div className="review-identity">
 						{([
-							['token', 'You', 'A personal access token. No setup, and the comment carries your name.'],
-							['app', 'Snoutbot', 'A GitHub App in your own organization. Comments come from snoutbot[bot], and its key stays on this computer.'],
+							['token', t('review.identityYou'), t('review.identityYouWhy')],
+							['app', 'Snoutbot', t('review.identityAppWhy')],
 						] as const).map(([value, title, why]) => (
 							<button
 								key={value}
@@ -631,12 +617,12 @@ function ForgeCard({
 			) : forge.hasToken ? (
 				<div className="row spread">
 					<div>
-						<Icon name={label.icon} /> Connected as <strong>{forge.login ?? 'your account'}</strong>
+						<Icon name={label.icon} /> {rich(t('review.connectedAs', { login: forge.login ?? t('review.yourAccount') }))}
 						{forge.scopes.length > 0 && <span className="muted small"> ({forge.scopes.join(', ')})</span>}
 						{forge.kind === 'gitlab' && forge.baseUrl && (
-							<span className="muted small"> at {forge.baseUrl}</span>
+							<span className="muted small"> {t('review.atBase', { url: forge.baseUrl })}</span>
 						)}
-						<div className="muted small">Reviews are posted by this account.</div>
+						<div className="muted small">{t('review.postedByThis')}</div>
 					</div>
 					<button
 						onClick={async () => {
@@ -644,40 +630,34 @@ function ForgeCard({
 							onChanged(await window.sqlApi.review.clearToken(forge.kind));
 						}}
 					>
-						<Icon name="debug-disconnect" /> Disconnect
+						<Icon name="debug-disconnect" /> {t('review.disconnect')}
 					</button>
 				</div>
 			) : null}
 			{forge.hasToken && forge.auth !== 'app' && <BotAccountNote forge={forge.kind} />}
 			{forge.hasToken || (forge.kind === 'github' && forge.auth === 'app') ? null : (
 				<>
-					<p className="muted small">
-						Snoutbot posts as whoever the token below belongs to: as you, if it is your own token,
-						or as a bot if you give it a bot's (see "Post as a bot" once it is connected). The
-						token is kept {keyPlace} and never leaves this computer.
-					</p>
+					<p className="muted small">{t('review.postsAs', { place: keyPlace })}</p>
 					{/* What to tick, UP HERE rather than folded away below the token field. It was one
 					    comma-joined sentence inside a <details>, which is the wrong shape for something
 					    the user reads on this screen and ticks on another one. Each line says what it
 					    buys, which is also the argument that the set is minimal. */}
-					<p className="small">What to allow on the token, and nothing else:</p>
+					<p className="small">{t('review.whatToAllow')}</p>
 					<ul className="review-grants">
 						{(forge.kind === 'gitlab' ? GITLAB_TOKEN_PERMISSIONS : GITHUB_FINE_GRAINED_PERMISSIONS).map((grant) => (
 							<li key={grant.name}>
 								<code>{grant.name}</code>
-								<span className="why">{grant.why}</span>
+								<span className="why">{GRANT_WHY[grant.name] ? t(GRANT_WHY[grant.name]) : grant.why}</span>
 							</li>
 						))}
 					</ul>
 					<p className="muted small">
-						{forge.kind === 'gitlab'
-							? "Snoutbot never pushes, merges or changes a branch. On a merge request it posts one note and edits it as the review changes, adds an emoji to the note that asked, and sets a status on the commit. The api scope allows more than that; GitLab has no narrower one."
-							: "Snoutbot never pushes, merges or changes a branch. On a pull request it posts one comment and edits it as the review changes, adds a reaction to the comment that asked, and sets a status on the commit."}
+						{forge.kind === 'gitlab' ? t('review.neverPushesGitlab') : t('review.neverPushesGithub')}
 					</p>
 					{forge.kind === 'gitlab' && (
 						<>
 							<label>
-								Which GitLab
+								{t('review.whichGitlab')}
 								<input
 									value={baseUrl}
 									placeholder="https://gitlab.com"
@@ -692,14 +672,11 @@ function ForgeCard({
 									}}
 								/>
 							</label>
-							<p className="muted small">
-								Your company's own instance, if you have one. The token below has to come from
-								whichever GitLab this points at.
-							</p>
+							<p className="muted small">{t('review.whichGitlabHelp')}</p>
 						</>
 					)}
 					<label>
-						Personal access token
+						{t('review.pat')}
 						<input
 							type="password"
 							value={token}
@@ -716,7 +693,7 @@ function ForgeCard({
 					</label>
 					<div className="row">
 						<button className="primary" disabled={busy || token.trim() === ''} onClick={() => void save()}>
-							<Icon name="plug" /> {busy ? 'Checking…' : 'Connect'}
+							<Icon name="plug" /> {busy ? t('review.checkingShort') : t('review.connect')}
 						</button>
 						<button
 							onClick={() => window.sqlApi.openExternal(
@@ -725,33 +702,20 @@ function ForgeCard({
 									: GITHUB_FINE_GRAINED_URL,
 							)}
 						>
-							<Icon name="link-external" /> Create a token on {label.name}
+							<Icon name="link-external" /> {t('review.createTokenOn', { forge: label.name })}
 						</button>
 					</div>
 					{error && <div className="form-error">{error}</div>}
 					<details className="muted small">
-						<summary>{forge.kind === 'github' ? 'Why fine-grained, and what to do if your organization refuses it' : 'Why GitLab asks for so much'}</summary>
+						<summary>{forge.kind === 'github' ? t('review.whyGithub') : t('review.whyGitlab')}</summary>
 						{forge.kind === 'gitlab' ? (
-							<p>
-								<code>{GITLAB_TOKEN_SCOPE}</code> is a broad scope, and GitLab has no narrower one that
-								can both read a merge request and post a note. That is the whole reason this token stays
-								on your computer rather than being handed to a service.
-							</p>
+							<p>{rich(t('review.gitlabBroad', { scope: GITLAB_TOKEN_SCOPE }))}</p>
 						) : (
 							<>
+								<p>{t('review.fineGrained1')}</p>
+								<p>{rich(t('review.fineGrained2'))}</p>
 								<p>
-									GitHub cannot pre-tick the fine-grained form from a link, so the permissions above
-									have to be set by hand. If the repository belongs to an organization, an owner also
-									has to approve the token before it works.
-								</p>
-								<p>
-									It is worth the extra minute. The older <code>repo</code> scope is one switch that
-									grants read and write to every repository your account can touch, now and in the
-									future, including pushing code. Snoutbot reads pull requests, comments on them and sets a commit status.
-								</p>
-								<p>
-									If your organization has not enabled fine-grained tokens, or you are on an older
-									GitHub Enterprise Server, they are refused; a{' '}
+									{t('review.fineGrained3Before')}{' '}
 									<a
 										href="#"
 										onClick={(e) => {
@@ -759,10 +723,9 @@ function ForgeCard({
 											window.sqlApi.openExternal(GITHUB_CLASSIC_TOKEN_URL);
 										}}
 									>
-										classic token
+										{t('review.classicToken')}
 									</a>{' '}
-									is the fallback, with <code>repo</code>, or <code>public_repo</code> for public
-									repositories only.
+									{rich(t('review.fineGrained3After'))}
 								</p>
 							</>
 						)}
@@ -795,7 +758,8 @@ function GithubAppSetup({
 	onChanged(status: ReviewStatus): void;
 	onConnected(): void;
 }): JSX.Element {
-	const keyPlace = secretsPlace(useSecretsWeak());
+	const t = useT();
+	const keyPlace = t(useSecretsWeak() ? 'settings.secretsPlace.file' : 'settings.secretsPlace.keychain');
 	const [appId, setAppId] = useState(forge.appId ?? '');
 	const [busy, setBusy] = useState(false);
 	const [error, setError] = useState<string | undefined>();
@@ -823,35 +787,32 @@ function GithubAppSetup({
 			{forge.hasToken ? (
 				<div className="row spread">
 					<div>
-						<Icon name="github" /> Posting as <strong>{forge.login ?? 'the App'}</strong>
+						<Icon name="github" /> {rich(t('review.postingAs', { login: forge.login ?? t('review.theApp') }))}
 						<div className="muted small">
-							App {forge.appId}
-							{forge.appInstallationId ? `, installation ${forge.appInstallationId}` : ''}.
-							The private key is kept {keyPlace} and never leaves this computer.
+							{forge.appInstallationId
+								? t('review.appLineInstall', { id: forge.appId ?? '', installation: String(forge.appInstallationId) })
+								: t('review.appLine', { id: forge.appId ?? '' })}.{' '}
+							{t('review.privateKeyKept', { place: keyPlace })}
 						</div>
 					</div>
 					<button onClick={() => void choose()} disabled={busy}>
-						<Icon name="key" /> {busy ? 'Checking…' : 'Replace key'}
+						<Icon name="key" /> {busy ? t('review.checkingShort') : t('review.replaceKey')}
 					</button>
 				</div>
 			) : (
 				<>
-					<p className="muted small">
-						A GitHub App belongs to your organization, not to us. Create one, install it on the
-						repositories Snoutbot should review, then give it its id and key here. Its comments
-						come from <code>snoutbot[bot]</code>, and the key is kept {keyPlace}.
-					</p>
+					<p className="muted small">{rich(t('review.appHelp', { place: keyPlace }))}</p>
 					<ol className="muted small review-app-steps">
 						<li>
-							Create the App, and give it these repository permissions:{' '}
+							{t('review.appStep1')}{' '}
 							{GITHUB_FINE_GRAINED_PERMISSIONS.filter((g) => g.name !== 'Repository access').map((g) => g.name).join(', ')}.
 						</li>
-						<li>Generate a private key on its settings page. GitHub downloads a <code>.pem</code>.</li>
-						<li>Install it on the repositories to review, then paste its App ID below.</li>
+						<li>{rich(t('review.appStep2'))}</li>
+						<li>{t('review.appStep3')}</li>
 					</ol>
 					<div className="row">
 						<button onClick={() => window.sqlApi.openExternal(GITHUB_NEW_APP_URL)}>
-							<Icon name="link-external" /> Create the App on GitHub
+							<Icon name="link-external" /> {t('review.createAppOn')}
 						</button>
 					</div>
 					<label>
@@ -867,7 +828,7 @@ function GithubAppSetup({
 					</label>
 					<div className="row">
 						<button className="primary" disabled={busy || appId.trim() === ''} onClick={() => void choose()}>
-							<Icon name="folder-opened" /> {busy ? 'Checking…' : 'Choose the private key…'}
+							<Icon name="folder-opened" /> {busy ? t('review.checkingShort') : t('review.chooseKey')}
 						</button>
 					</div>
 					{error && <div className="form-error">{error}</div>}
@@ -875,27 +836,23 @@ function GithubAppSetup({
 			)}
 			{result && installations.length === 0 && (
 				<div className="review-empty-list">
-					<p><Icon name="warning" /> {result.name} is not installed anywhere yet.</p>
-					<p className="muted small">
-						The credentials are right, so this is the last step: install the App on the
-						repositories it should review. Until then there is nothing for it to look at, and
-						nothing here will report an error.
-					</p>
+					<p><Icon name="warning" /> {t('review.notInstalled', { name: result.name })}</p>
+					<p className="muted small">{t('review.notInstalledHelp')}</p>
 					<div className="row">
 						<button onClick={() => window.sqlApi.openExternal(`https://github.com/apps/${result.login.replace('[bot]', '')}/installations/new`)}>
-							<Icon name="link-external" /> Install it
+							<Icon name="link-external" /> {t('review.installIt')}
 						</button>
 					</div>
 				</div>
 			)}
 			{installations.length > 1 && (
 				<label>
-					Review as
+					{t('review.reviewAs')}
 					<select
 						value={forge.appInstallationId ?? ''}
 						onChange={async (e) => onChanged(await window.sqlApi.review.setGithubInstallation(Number(e.target.value)))}
 					>
-						<option value="">Choose an account</option>
+						<option value="">{t('review.chooseAccount')}</option>
 						{installations.map((i) => (
 							<option key={i.id} value={i.id}>{i.account}</option>
 						))}
@@ -920,38 +877,25 @@ function GithubAppSetup({
  * to, and it recognises its own comments by a marker rather than by who wrote them.
  */
 function BotAccountNote({ forge }: { forge: ReviewForge }): JSX.Element {
+	const t = useT();
 	return (
 		<details className="muted small">
-			<summary>Post as a bot, not as you</summary>
-			<p>
-				A comment is written by whoever the token belongs to. Neither GitHub nor GitLab lets a
-				token post under a different name, so if reviews should come from "snoutbot" rather than
-				from you, connect a token that belongs to a bot account. Nothing else changes: the review
-				is the same, and Snoutbot still recognises its own comments.
-			</p>
+			<summary>{t('review.botSummary')}</summary>
+			<p>{t('review.botHelp')}</p>
 			{forge === 'gitlab' ? (
 				<ol>
-					<li>In the project (or group), open Settings, Access tokens.</li>
-					<li>
-						Create one with the <code>{GITLAB_TOKEN_SCOPE}</code> scope and the Developer role.
-						GitLab runs it as a bot user, so there is no second account to create.
-					</li>
-					<li>Disconnect above, and connect that token instead.</li>
+					<li>{t('review.botGitlab1')}</li>
+					<li>{rich(t('review.botGitlab2', { scope: GITLAB_TOKEN_SCOPE }))}</li>
+					<li>{t('review.botGitlab3')}</li>
 				</ol>
 			) : (
 				<ol>
-					<li>Create a second GitHub account for it, what GitHub calls a machine user.</li>
-					<li>Invite it to the repositories it should review, with write access.</li>
-					<li>
-						Sign in as it, create a fine-grained token with the permissions listed above, then
-						disconnect here and connect that token instead.
-					</li>
+					<li>{t('review.botGithub1')}</li>
+					<li>{t('review.botGithub2')}</li>
+					<li>{t('review.botGithub3')}</li>
 				</ol>
 			)}
-			<p>
-				Either way the review comment says who wrote it, in its heading and its footer, so it
-				reads as Snoutbot's even while your name is on the byline.
-			</p>
+			<p>{t('review.botFooter')}</p>
 		</details>
 	);
 }
@@ -964,6 +908,7 @@ interface RepoCardProps {
 }
 
 function RepoCard({ repo, connections, onPatch, onRemove }: RepoCardProps): JSX.Element {
+	const t = useT();
 	return (
 		<fieldset className="review-repo">
 			<legend>
@@ -972,7 +917,7 @@ function RepoCard({ repo, connections, onPatch, onRemove }: RepoCardProps): JSX.
 
 			<label className="check">
 				<input type="checkbox" checked={repo.enabled} onChange={(e) => onPatch({ enabled: e.target.checked })} />
-				<span>Watch this repository</span>
+				<span>{t('review.watchThis')}</span>
 			</label>
 
 			{/* The four choices, 2-up. One per row they were a column of four short selects down the
@@ -982,48 +927,45 @@ function RepoCard({ repo, connections, onPatch, onRemove }: RepoCardProps): JSX.
 			<div className="review-repo-grid">
 			<div className="review-repo-field">
 			<label>
-				Review against
+				{t('review.reviewAgainst')}
 				<select value={repo.connectionId ?? ''} onChange={(e) => onPatch({ connectionId: e.target.value || undefined })}>
-					<option value="">No database (review the text only)</option>
+					<option value="">{t('review.noDb')}</option>
 					{connections.map((c) => (
 						<option key={c.id} value={c.id}>
 							{c.label}
-							{c.environment === 'prod' ? ' (production)' : ''}
+							{c.environment === 'prod' ? ` ${t('review.production')}` : ''}
 						</option>
 					))}
 				</select>
 			</label>
 			{repo.connectionId && !repo.connectionLabel && (
-				<div className="form-error">That connection no longer exists. Pick another, or reviews stay text-only.</div>
+				<div className="form-error">{t('review.connectionGone')}</div>
 			)}
 			{repo.connectionIsProd && (
 				<p className="muted small">
-					<Icon name="warning" /> This is a production connection, so reviews now wait for you to
-					read them before they post. Snoutbot only ever reads, and only ever counts (it never
-					returns rows), but a staging copy of the same schema gives you almost every finding with
-					none of the load.
+					<Icon name="warning" /> {t('review.prodWarning')}
 				</p>
 			)}
 			</div>
 
 			<div className="review-repo-field">
 			<label>
-				Run
+				{t('review.run')}
 				<select value={repo.auto} onChange={(e) => onPatch({ auto: e.target.value })}>
-					<option value="sql-only">On any pull request that touches SQL</option>
-					<option value="always">On every pull request</option>
-					<option value="mention">Only when someone asks with @snoutbot</option>
+					<option value="sql-only">{t('review.runSqlOnly')}</option>
+					<option value="always">{t('review.runAlways')}</option>
+					<option value="mention">{t('review.runMention')}</option>
 				</select>
 			</label>
 			</div>
 
 			<div className="review-repo-field">
 			<label>
-				How deep
+				{t('review.howDeep')}
 				<select value={repo.depth} onChange={(e) => onPatch({ depth: e.target.value })}>
-					<option value="connected">Read the schema and measure the data</option>
-					<option value="schema">Read the schema only</option>
-					<option value="static">Read the diff only</option>
+					<option value="connected">{t('review.deepConnected')}</option>
+					<option value="schema">{t('review.deepSchema')}</option>
+					<option value="static">{t('review.deepStatic')}</option>
 				</select>
 			</label>
 			</div>
@@ -1035,27 +977,27 @@ function RepoCard({ repo, connections, onPatch, onRemove }: RepoCardProps): JSX.
 			    The sentence below is COMPUTED by `reviewBoundary`, never typed here, which is what
 			    stops this screen and the code disagreeing about where the data goes. */}
 			<label>
-				How it is reviewed
+				{t('review.howReviewed')}
 				<select
 					value={repo.method.kind}
 					onChange={(e) => onPatch({ method: methodOfKind(e.target.value as ReviewMethod['kind'], repo.method) })}
 				>
-					<option value="deterministic">The rules only</option>
+					<option value="deterministic">{t('review.methodRules')}</option>
 					{/* The model on this computer is Data Flows' local runtime: a build without Data Flows
 					    does not offer it, and shows a repository already set to it as unavailable. */}
 					{(PRO_AVAILABLE || repo.method.kind === 'localEngine') && (
 						<option value="localEngine" disabled={!PRO_AVAILABLE}>
-							{PRO_AVAILABLE ? "The rules, explained by the model on this computer" : "The rules, explained by the model on this computer (not in this build)"}
+							{PRO_AVAILABLE ? t('review.methodLocal') : t('review.methodLocalNotInBuild')}
 						</option>
 					)}
-					<option value="snoutAi">The rules, explained by SnoutData AI</option>
-					<option value="byok">The rules, explained by a model of my own</option>
+					<option value="snoutAi">{t('review.methodSnoutAi')}</option>
+					<option value="byok">{t('review.methodByok')}</option>
 				</select>
 			</label>
 			{repo.method.kind === 'byok' && (
 				<div className="review-method-byok">
 					<label>
-						Provider
+						{t('review.provider')}
 						<select
 							value={repo.method.provider}
 							onChange={(e) => onPatch({ method: { ...repo.method, provider: e.target.value as ByokProvider } })}
@@ -1067,7 +1009,7 @@ function RepoCard({ repo, connections, onPatch, onRemove }: RepoCardProps): JSX.
 						</select>
 					</label>
 					<label>
-						Model
+						{t('review.model')}
 						<input
 							value={repo.method.model}
 							placeholder={repo.method.provider === 'ollama' ? 'qwen2.5:7b' : 'gpt-4o-mini'}
@@ -1078,7 +1020,7 @@ function RepoCard({ repo, connections, onPatch, onRemove }: RepoCardProps): JSX.
 						// The host is what decides whether this rung is local or a hop onto their
 						// network, so it is asked for here rather than assumed to be this machine.
 						<label>
-							Server
+							{t('review.server')}
 							<input
 								value={repo.method.host ?? ''}
 								placeholder="http://127.0.0.1:11434"
@@ -1091,10 +1033,7 @@ function RepoCard({ repo, connections, onPatch, onRemove }: RepoCardProps): JSX.
 			<p className="muted small review-method-boundary" data-boundary={reviewBoundary(repo.method).boundary}>
 				{reviewBoundary(repo.method).sentence}
 			</p>
-			<p className="muted small">
-				The findings never move between these. Every one of them is decided by the rules and
-				measured against your database, whichever one you pick.
-			</p>
+			<p className="muted small">{t('review.findingsSame')}</p>
 			</div>
 			</div>
 
@@ -1106,13 +1045,11 @@ function RepoCard({ repo, connections, onPatch, onRemove }: RepoCardProps): JSX.
 					checked={repo.approveBeforePosting}
 					onChange={(e) => onPatch({ approveBeforePosting: e.target.checked })}
 				/>
-				<span>Let me read the review before it is posted</span>
+				<span>{t('review.readBeforePost')}</span>
 			</label>
 			<p className="muted small">
-				{repo.approveBeforePosting
-					? "Reviews wait in the app until you post them, and the check on the commit stays amber while they wait."
-					: "Reviews are posted as a comment on the pull request as soon as they finish, and the check on the commit turns green or red. Snoutbot posts as you."}
-				{repo.connectionIsProd && " A review against a production connection always waits for you, whatever this says."}
+				{repo.approveBeforePosting ? t('review.waitsInApp') : t('review.postedDirect')}
+				{repo.connectionIsProd && ` ${t('review.prodAlwaysWaits')}`}
 			</p>
 
 			{/* Off by default: an automatic review runs a stranger's SQL past the bound database
@@ -1123,20 +1060,18 @@ function RepoCard({ repo, connections, onPatch, onRemove }: RepoCardProps): JSX.
 					checked={repo.reviewOutsiders}
 					onChange={(e) => onPatch({ reviewOutsiders: e.target.checked })}
 				/>
-				<span>Also review changes from forks and outside contributors automatically</span>
+				<span>{t('review.reviewOutsiders')}</span>
 			</label>
 			<p className="muted small">
-				{repo.reviewOutsiders
-					? "Every pull request is reviewed on its own, including ones opened from a fork by someone who cannot write to this repository."
-					: "Only changes from people who can write to this repository are reviewed on their own. Anyone else's waits until one of them comments a review command; comments from anyone else are ignored."}
+				{repo.reviewOutsiders ? t('review.outsidersOn') : t('review.outsidersOff')}
 			</p>
 
 			<div className="row spread">
 				<span className="muted small">
-					{repo.lastPolledAt ? `Last checked ${new Date(repo.lastPolledAt).toLocaleTimeString()}` : 'Not checked yet'}
+					{repo.lastPolledAt ? t('review.lastChecked', { time: new Date(repo.lastPolledAt).toLocaleTimeString(formatLocale()) }) : t('review.notChecked')}
 				</span>
 				<button className="danger" onClick={onRemove}>
-					<Icon name="eye-closed" /> Stop watching
+					<Icon name="eye-closed" /> {t('review.stopWatching')}
 				</button>
 			</div>
 		</fieldset>

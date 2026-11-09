@@ -3,6 +3,8 @@
  *  Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { t } from '../../shared/i18n/core';
+
 // What a database port SAYS it is.
 //
 // An open port is a guess; a greeting is an answer. So each well-known port is probed with the
@@ -86,7 +88,7 @@ export function sniffMysqlGreeting(buf: Buffer): SniffVerdict | null {
 	}
 	if (kind === 0xff && buf.length >= 7) {
 		const text = buf.subarray(7, 4 + payloadLen).toString('utf8').replace(/^#\w{5}/, '').trim();
-		return { driver: 'mysql-aurora', product: 'MySQL', note: text ? `The server said: ${text}` : undefined };
+		return { driver: 'mysql-aurora', product: 'MySQL', note: text ? t('mainDiscovery.serverSaid', { text }) : undefined };
 	}
 	return null;
 }

@@ -1,0 +1,82 @@
+{
+	"check": {
+		"checked": {
+			"one": "{count} tabla comprobada",
+			"other": "{count} tablas comprobadas"
+		},
+		"clean": "{checked}: cada clave, clave foránea e índice está donde el clúster lo necesita.",
+		"toFix": "{n} por corregir",
+		"toLookAt": "{n} por revisar",
+		"suggestions": {
+			"one": "{count} sugerencia",
+			"other": "{count} sugerencias"
+		},
+		"summary": "{checked}: {parts}."
+	},
+	"severity": {
+		"fix": "Corregir",
+		"worthAlook": "Revisar",
+		"suggestion": "Sugerencia"
+	},
+	"slots": "{used} de {max} plazas de proyecto en uso en el plan {tier}",
+	"tierCurrent": "actual",
+	"plan": {
+		"none": "ninguno",
+		"noMove": {
+			"one": "{count} paso ({kinds}); no se mueve nada y las escrituras no se pausan.",
+			"other": "{count} pasos ({kinds}); no se mueve nada y las escrituras no se pausan."
+		},
+		"moves": {
+			"one": "{count} cambio, unas {rows} filas, unos {seconds} s de copia, las escrituras se pausan unos {ms} ms.",
+			"other": "{count} cambios, unas {rows} filas, unos {seconds} s de copia, las escrituras se pausan unos {ms} ms."
+		}
+	},
+	"join": {
+		"joining": "uniéndose al clúster",
+		"spreading": "tomando su parte de los datos",
+		"stopped": "detenido",
+		"starting": "arrancando como copia del nodo principal"
+	},
+	"ran": {
+		"notCluster": "Este proyecto no es un clúster.",
+		"notClusterAnyMore": "Este proyecto ya no es un clúster. La base de datos se reinicia una vez mientras sus servicios vuelven a su pod.",
+		"rejoining": "{node} se une de nuevo al clúster.",
+		"leftAsIs": "{node} se queda como está.",
+		"retrying": "El clúster reintenta ese paso.",
+		"dropped": "El resto de esa petición se descartó. No cambió nada más.",
+		"jobStarted": "Tarea {job} iniciada. Su progreso está en Tareas.",
+		"createdJoining": {
+			"one": "Un nodo está en camino. Arranca como copia del nodo principal, se une al clúster y toma por sí solo su parte de los datos.",
+			"other": "{count} nodos están en camino. Cada uno arranca como copia del nodo principal, se une al clúster y toma por sí solo su parte de los datos."
+		},
+		"createdStarting": {
+			"one": "Un nodo arranca como copia del nodo principal. Conéctalo cuando esté listo.",
+			"other": "{count} nodos arrancan como copia del nodo principal. Conecta cada uno cuando esté listo."
+		},
+		"podDeleted": "El pod de {pod} se está eliminando.",
+		"alreadyNodes": "El proyecto ya tiene {nodes} nodos.",
+		"alreadyCluster": "Este proyecto ya es un clúster.",
+		"nowCluster": "Este proyecto ya es un clúster. El router y los servicios arrancan en pods propios, y la base de datos sigue funcionando.",
+		"replicaMaking": "Se está creando una réplica del nodo {node} desde su copia de seguridad. Protege el nodo cuando ya lo sigue.",
+		"replicaRemoving": "La réplica del nodo {node} se está quitando, y se libera su plaza de proyecto.",
+		"noReplica": "El nodo {node} no tiene réplica. No cambió nada.",
+		"marked": "Marcado como visto. La alerta sigue abierta hasta que termine lo que indica.",
+		"done": "Hecho."
+	},
+	"replica": {
+		"protected": "Protegido por una réplica",
+		"making": "Se está creando una réplica",
+		"none": "Sin réplica",
+		"failingOver": "Su réplica está tomando su lugar",
+		"failoverFailed": "Su réplica no pudo tomar su lugar"
+	},
+	"failover": {
+		"stopped": "El nodo se detiene",
+		"replicaTakes": "Su réplica toma su lugar",
+		"newReplica": "Se crea una nueva réplica"
+	},
+	"blocked": {
+		"firstBackup": "Su primera copia de seguridad aún no ha terminado, y la réplica se crea a partir de ella.",
+		"noSlot": "Una réplica ocupa una plaza de proyecto, y todas las de tu plan están en uso."
+	}
+}

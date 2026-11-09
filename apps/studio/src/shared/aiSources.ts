@@ -13,6 +13,7 @@
 // Pure on purpose: the renderer and main both use it, and it is unit-tested without Electron.
 
 import { BYOK_PROVIDER_DEFAULTS, isByokProvider, isReasoningModel, type AiModelInfo, type AiProviderId, type AiSettings, type ProjectAiSelection } from './ai';
+import { t } from './i18n/core';
 
 /** One project the relay lists (`POST cloud-project-ai {action: "ai-sources"}`). `models` is null
  *  when the project is paused or its gateway did not answer: it is shown as nothing, never woken. */
@@ -181,13 +182,14 @@ export interface PickerGroup {
 export function modelSourceLine(m: AiModelInfo): string {
 	if (m.provider === 'snout-project') {
 		const vendor = billedBy(m);
-		return vendor ? `${m.projectName ?? m.projectRef}: the project's ${vendor} key` : `${m.projectName ?? m.projectRef}: the project's keys`;
+		const project = m.projectName ?? m.projectRef ?? '';
+		return vendor ? t('engineShared.ai.projectVendorKey', { project, vendor }) : t('engineShared.ai.projectKeys', { project });
 	}
 	if (isByokProvider(m.provider)) {
-		return `Your ${BYOK_PROVIDER_DEFAULTS[m.provider].label} key`;
+		return t('engineShared.ai.yourKey', { provider: BYOK_PROVIDER_DEFAULTS[m.provider].label });
 	}
 	if (m.provider === 'ollama') {
-		return 'Ollama on your computer';
+		return t('engineShared.ai.ollamaLocal');
 	}
 	return 'SnoutData AI';
 }
@@ -212,14 +214,14 @@ export function groupPickerModels(models: AiModelInfo[]): PickerGroup[] {
 	}
 	const groups: PickerGroup[] = [];
 	if (cloud.length) {
-		groups.push({ id: 'snoutdata', title: "SnoutData AI", subtitle: "Uses your balance", models: cloud });
+		groups.push({ id: 'snoutdata', title: "SnoutData AI", subtitle: t('engineShared.ai.usesBalance'), models: cloud });
 	}
 	for (const [ref, list] of projects) {
 		const vendors = [...new Set(list.map(billedBy).filter((v): v is string => !!v))];
 		groups.push({
 			id: `project:${ref}`,
 			title: list[0].projectName || ref,
-			subtitle: vendors.length ? `Your project's keys, billed by ${joinNames(vendors)}` : "Your project's keys",
+			subtitle: vendors.length ? t('engineShared.ai.projectKeysBilled', { vendors: joinNames(vendors) }) : t('engineShared.ai.yourProjectKeys'),
 			models: list,
 		});
 	}
@@ -228,8 +230,8 @@ export function groupPickerModels(models: AiModelInfo[]): PickerGroup[] {
 		const local = own.every((m) => m.provider === 'ollama');
 		groups.push({
 			id: 'own',
-			title: "Your keys",
-			subtitle: local ? "Runs on your computer" : `Billed by ${joinNames(vendors.filter((v) => v !== 'Ollama'))}`,
+			title: t('engineShared.ai.yourKeys'),
+			subtitle: local ? t('engineShared.ai.runsLocal') : t('engineShared.ai.billedBy', { vendors: joinNames(vendors.filter((v) => v !== 'Ollama')) }),
 			models: own,
 		});
 	}
@@ -264,13 +266,15 @@ export function projectRefusal(message: string, projectName: string): string | n
 		// Not JSON: keep the text.
 	}
 	if (code === 'ai-off' || (status === 404 && /ai.?off|switched off/i.test(detail))) {
-		return `The AI gateway of ${projectName} is switched off. Switch it on in the project's dashboard, or pick another model.`;
+		return t('engineShared.ai.gatewayOff', { project: projectName });
 	}
 	if (status === 403) {
-		return `You may not use the AI of ${projectName}. Pick another model, or ask the project's owner for access.`;
+		return t('engineShared.ai.gatewayForbidden', { project: projectName });
 	}
 	if (status === 401) {
-		return `SnoutData Cloud did not accept your sign-in for ${projectName}. Sign in again, then try once more.`;
+		return t('engineShared.ai.gatewaySignIn', { project: projectName });
 	}
-	return `${projectName}'s AI gateway refused the request: ${detail || `status ${status}`}`;
+	return detail
+		? t('engineShared.ai.gatewayRefused', { project: projectName, detail })
+		: t('engineShared.ai.gatewayRefusedStatus', { project: projectName, status: String(status) });
 }

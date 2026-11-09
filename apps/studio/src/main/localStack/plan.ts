@@ -3,6 +3,7 @@
  *  Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { t } from '../../shared/i18n/core';
 import { createHash, createHmac, pbkdf2Sync, randomBytes } from 'node:crypto';
 
 import type {
@@ -63,7 +64,7 @@ export function stackFileProblem(file: { path: string; sha256: string }, bytes: 
 	if (actual === file.sha256) {
 		return null;
 	}
-	return `The downloaded ${file.path} is not the published snout-stack file this version of the app expects (its SHA-256 does not match), so nothing was written or run. Try again later, or report it.`;
+	return t('mainLocalStack.hashMismatch', { path: file.path });
 }
 
 /**
@@ -77,11 +78,11 @@ export async function downloadStack(fetcher: typeof fetch): Promise<{ files: Map
 		try {
 			const res = await fetcher(`${STACK_SOURCE}/${file.path}`, { signal: AbortSignal.timeout(30000) });
 			if (!res.ok) {
-				return { problem: `Could not download the stack: ${file.path}: HTTP ${res.status}` };
+				return { problem: t('mainLocalStack.downloadHttp', { path: file.path, status: res.status }) };
 			}
 			bytes = new Uint8Array(await res.arrayBuffer());
 		} catch (err) {
-			return { problem: `Could not download the stack: ${err instanceof Error ? err.message : String(err)}` };
+			return { problem: t('mainLocalStack.downloadError', { error: err instanceof Error ? err.message : String(err) }) };
 		}
 		const problem = stackFileProblem(file, bytes);
 		if (problem) {
@@ -141,16 +142,16 @@ export function isMailKind(value: unknown): value is LocalMailKind {
 /** Why a template would send a mail nobody can act on (the cloud's own check), or null. */
 export function mailTemplateProblem(subject: string, body: string): string | null {
 	if (!subject.trim() || !body.trim()) {
-		return "A template needs a subject and a body.";
+		return t('mainLocalStack.templateNeedsBoth');
 	}
 	if (subject.includes('\n')) {
-		return "The subject is one line.";
+		return t('mainLocalStack.subjectOneLine');
 	}
 	if (!/\{\{\s*\.(ConfirmationURL|Token|TokenHash)\s*\}\}/.test(body)) {
-		return "The template must include {{ .ConfirmationURL }} (or {{ .Token }}), or your users get an email with nothing to click.";
+		return t('mainLocalStack.templateNeedsLink');
 	}
 	if ((body.match(/\{\{/g) ?? []).length !== (body.match(/\}\}/g) ?? []).length) {
-		return "The template has an unmatched {{ or }}.";
+		return t('mainLocalStack.templateUnmatched');
 	}
 	return null;
 }
@@ -164,10 +165,10 @@ export function mailTemplateProblem(subject: string, body: string): string | nul
 /** A secret's name: a variable name, and not one the platform sets. */
 export function secretNameProblem(name: string): string | null {
 	if (!/^[A-Za-z_][A-Za-z0-9_]{0,127}$/.test(name)) {
-		return "A secret's name is letters, digits and underscores, and does not start with a digit.";
+		return t('mainLocalStack.secretName');
 	}
 	if (/^(SNOUTDATA_|DENO_)/i.test(name)) {
-		return "Names starting SNOUTDATA_ or DENO_ are the platform's.";
+		return t('mainLocalStack.secretReserved');
 	}
 	return null;
 }
@@ -175,9 +176,9 @@ export function secretNameProblem(name: string): string | null {
 /** Why a value cannot be a secret, or null: the stack's reader is one line per variable. */
 export function secretValueProblem(value: string): string | null {
 	if (value.length === 0) {
-		return "A secret needs a value.";
+		return t('mainLocalStack.secretValue');
 	}
-	return /[\r\n]/.test(value) ? "A secret is one line. For a key file, store it base64 encoded and decode it in the function." : null;
+	return /[\r\n]/.test(value) ? t('mainLocalStack.secretOneLine') : null;
 }
 
 /** The names set in a functions/.env. */
@@ -428,26 +429,26 @@ export function envFor(form: LocalSetupForm): Record<string, string | undefined>
 /** Why the form cannot be sent, or null. The ports' availability is asked separately. */
 export function formProblem(form: LocalSetupForm): string | null {
 	if (!form.name.trim()) {
-		return "Give the project a name.";
+		return t('mainLocalStack.nameProject');
 	}
 	if (!form.folder.trim()) {
-		return "Choose a folder for the project.";
+		return t('mainLocalStack.chooseFolder');
 	}
-	for (const [label, port] of [["API port", form.apiPort], ["Database port", form.dbPort]] as const) {
+	for (const [label, port] of [[t('mainLocalStack.apiPort'), form.apiPort], [t('mainLocalStack.dbPort'), form.dbPort]] as const) {
 		if (!Number.isInteger(port) || port < 1024 || port > 65535) {
-			return `${label} must be a number from 1024 to 65535.`;
+			return t('mainLocalStack.portRange', { label });
 		}
 	}
 	if (form.apiPort === form.dbPort) {
-		return "The API and the database need different ports.";
+		return t('mainLocalStack.differentPorts');
 	}
 	if (!/^https?:\/\/\S+$/.test(form.siteUrl.trim())) {
-		return "Site URL must start with http:// or https://.";
+		return t('mainLocalStack.siteUrlScheme');
 	}
 	if (!form.bundledStorage) {
 		const s3 = form.s3;
 		if (!s3 || !s3.endpoint.trim() || !s3.bucket.trim() || !s3.accessKey || !s3.secretKey) {
-			return "Without the bundled file store, give your own S3 endpoint, bucket and keys.";
+			return t('mainLocalStack.ownS3');
 		}
 	}
 	return null;
@@ -568,26 +569,26 @@ export function envForSettings(change: LocalSettingsChange, current?: LocalSetti
 export function settingsProblem(change: LocalSettingsChange): string | null {
 	for (const url of change.redirectUrls ?? []) {
 		if (url.trim() && !/^[a-z][a-z0-9+.-]*:\/\/\S+$/i.test(url.trim())) {
-			return `${url.trim()} is not an address. Each redirect address starts with its scheme, like https://.`;
+			return t('mainLocalStack.redirectNotAddress', { url: url.trim() });
 		}
 		if (url.includes(',')) {
-			return "A redirect address cannot hold a comma.";
+			return t('mainLocalStack.redirectComma');
 		}
 	}
 	if (change.functionsMemoryMb !== undefined && (change.functionsMemoryMb < 64 || change.functionsMemoryMb > 4096)) {
-		return "A function's memory is between 64 and 4096 MB.";
+		return t('mainLocalStack.fnMemory');
 	}
 	if (change.functionsContainerMb !== undefined && change.functionsContainerMb < 256) {
-		return "The functions together need at least 256 MB.";
+		return t('mainLocalStack.fnMemoryTotal');
 	}
 	if (change.functionsMemoryMb !== undefined && change.functionsContainerMb !== undefined && change.functionsMemoryMb > change.functionsContainerMb) {
-		return "One function cannot have more memory than all of them share.";
+		return t('mainLocalStack.fnMemoryOver');
 	}
 	if (change.functionsWallMs !== undefined && (change.functionsWallMs < 1000 || change.functionsWallMs > 3600000)) {
-		return "A call may run between 1 second and 1 hour.";
+		return t('mainLocalStack.callDuration');
 	}
 	if (change.functionsCpuMs !== undefined && (change.functionsCpuMs < 100 || change.functionsCpuMs > 600000)) {
-		return "A call's CPU time is between 100 ms and 10 minutes.";
+		return t('mainLocalStack.callCpu');
 	}
 	return null;
 }
@@ -596,14 +597,14 @@ export function settingsProblem(change: LocalSettingsChange): string | null {
 export function publicUrlProblem(url: string): string | null {
 	const value = url.trim();
 	if (!/^https?:\/\/[^\s/]+(:\d+)?(\/[^\s]*)?$/.test(value)) {
-		return "The address must start with http:// or https:// and name a host.";
+		return t('mainLocalStack.addressScheme');
 	}
 	// Plain http is fine on this machine and on the local network (a phone testing an app), and
 	// nowhere else: sign-in tokens would cross the internet in the clear.
 	const host = /^https?:\/\/([^/:]+)/.exec(value)?.[1] ?? '';
 	const local = /^(localhost|127\.\d+\.\d+\.\d+|10\.\d+\.\d+\.\d+|192\.168\.\d+\.\d+|172\.(1[6-9]|2\d|3[01])\.\d+\.\d+|[a-z0-9-]+\.local)$/i.test(host);
 	if (value.startsWith('http://') && !local) {
-		return "A public address must be https://. Put a TLS proxy (Caddy, nginx) in front of the gateway.";
+		return t('mainLocalStack.publicHttps');
 	}
 	return null;
 }
@@ -750,9 +751,9 @@ export function versionAtLeast(text: string, minimum: string): boolean {
 
 function installLink(platform: NodeJS.Platform): { label: string; url: string } {
 	if (platform === 'linux') {
-		return { label: "Install Docker Engine", url: 'https://docs.docker.com/engine/install/' };
+		return { label: t('mainLocalStack.installEngine'), url: 'https://docs.docker.com/engine/install/' };
 	}
-	return { label: "Get Docker Desktop", url: 'https://www.docker.com/products/docker-desktop/' };
+	return { label: t('mainLocalStack.getDesktop'), url: 'https://www.docker.com/products/docker-desktop/' };
 }
 
 function gib(bytes: number): string {
@@ -769,38 +770,38 @@ export function evaluateRequirements(facts: EngineFacts): LocalRequirements {
 			id: 'docker',
 			label: "Docker",
 			status: 'fail',
-			detail: "The docker command was not found on this computer.",
+			detail: t('mainLocalStack.dockerNotFound'),
 			advice: facts.platform === 'linux'
-				? "Install Docker Engine and the Compose plugin, then check again. Podman works too when its docker command is installed."
-				: "Install Docker Desktop, start it once, then check again. Podman Desktop works too with its Docker compatibility switched on.",
+				? t('mainLocalStack.installEngineAdvice')
+				: t('mainLocalStack.installDesktopAdvice'),
 			link,
 		});
 		return { ready: false, items };
 	}
-	items.push({ id: 'docker', label: "Docker", status: 'ok', detail: `Found at ${facts.dockerPath}.` });
+	items.push({ id: 'docker', label: "Docker", status: 'ok', detail: t('mainLocalStack.dockerFoundAt', { dockerPath: facts.dockerPath }) });
 
 	if (!facts.info) {
 		const denied = /permission denied/i.test(facts.infoError ?? '');
 		items.push({
 			id: 'engine',
-			label: "Engine running",
+			label: t('mainLocalStack.engineRunning'),
 			status: 'fail',
 			detail: denied
-				? "Docker is running, but this account may not use it."
-				: "Docker is installed but not running.",
+				? t('mainLocalStack.dockerNoAccess')
+				: t('mainLocalStack.dockerNotRunning'),
 			advice: denied
-				? "Add yourself to the docker group (\"sudo usermod -aG docker $USER\"), sign out and back in, then check again."
+				? t('mainLocalStack.addToGroup')
 				: facts.desktopInstalled
-					? "Start Docker Desktop and wait until it says it is running, then check again."
+					? t('mainLocalStack.startDesktop')
 					: facts.platform === 'linux'
-						? "Start it (\"sudo systemctl start docker\"), then check again."
-						: "Start your container engine, then check again.",
+						? t('mainLocalStack.startSystemd')
+						: t('mainLocalStack.startEngine'),
 			canStartEngine: !denied && facts.desktopInstalled,
 		});
 	} else {
 		items.push({
 			id: 'engine',
-			label: "Engine running",
+			label: t('mainLocalStack.engineRunning'),
 			status: 'ok',
 			detail: `${facts.info.operatingSystem || "Docker"} ${facts.info.serverVersion}.`.replace(/\s+\./, '.'),
 		});
@@ -811,20 +812,20 @@ export function evaluateRequirements(facts: EngineFacts): LocalRequirements {
 			id: 'compose',
 			label: "Docker Compose",
 			status: 'fail',
-			detail: "The Compose plugin (docker compose) is not installed.",
+			detail: t('mainLocalStack.composeMissing'),
 			advice: facts.platform === 'linux'
-				? "Install the docker-compose-plugin package, then check again."
-				: "Docker Desktop includes it: update Docker Desktop, then check again.",
-			link: { label: "Install Compose", url: 'https://docs.docker.com/compose/install/' },
+				? t('mainLocalStack.installPlugin')
+				: t('mainLocalStack.updateDesktop'),
+			link: { label: t('mainLocalStack.installCompose'), url: 'https://docs.docker.com/compose/install/' },
 		});
 	} else if (!versionAtLeast(facts.composeVersion, MIN_COMPOSE)) {
 		items.push({
 			id: 'compose',
 			label: "Docker Compose",
 			status: 'fail',
-			detail: `Compose ${facts.composeVersion} is installed; the stack needs ${MIN_COMPOSE} or later.`,
-			advice: "Update Docker (or the Compose plugin), then check again.",
-			link: { label: "Install Compose", url: 'https://docs.docker.com/compose/install/' },
+			detail: t('mainLocalStack.composeOld', { composeVersion: facts.composeVersion, MIN_COMPOSE }),
+			advice: t('mainLocalStack.updateDocker'),
+			link: { label: t('mainLocalStack.installCompose'), url: 'https://docs.docker.com/compose/install/' },
 		});
 	} else {
 		items.push({ id: 'compose', label: "Docker Compose", status: 'ok', detail: `Compose ${facts.composeVersion}.` });
@@ -835,22 +836,22 @@ export function evaluateRequirements(facts: EngineFacts): LocalRequirements {
 		items.push(memory > 0 && memory < MIN_ENGINE_MEMORY
 			? {
 				id: 'memory',
-				label: "Memory",
+				label: t('mainLocalStack.memory'),
 				status: 'warn',
-				detail: `The engine has ${gib(memory)} of memory.`,
-				advice: "The stack uses about 170 MB idle and about 360 MB under load, but pulling and starting it is happier with 2 GB or more. Raise it in Docker Desktop's settings (Resources) if setup is slow.",
+				detail: t('mainLocalStack.engineMemory', { memory: gib(memory) }),
+				advice: t('mainLocalStack.memoryAdvice'),
 			}
-			: { id: 'memory', label: "Memory", status: 'ok', detail: memory > 0 ? `The engine has ${gib(memory)}; the stack uses about 170 MB idle and about 360 MB under load.` : "The stack uses about 170 MB idle and about 360 MB under load." });
+			: { id: 'memory', label: t('mainLocalStack.memory'), status: 'ok', detail: memory > 0 ? t('mainLocalStack.engineMemoryOk', { memory: gib(memory) }) : t('mainLocalStack.stackMemory') });
 	}
 
 	items.push(facts.network
-		? { id: 'network', label: "Download", status: 'ok', detail: "The published stack is reachable." }
+		? { id: 'network', label: t('mainLocalStack.download'), status: 'ok', detail: t('mainLocalStack.stackReachable') }
 		: {
 			id: 'network',
-			label: "Download",
+			label: t('mainLocalStack.download'),
 			status: 'fail',
-			detail: `The published stack could not be reached${facts.networkError ? ` (${facts.networkError})` : ''}.`,
-			advice: "Setup downloads the stack's compose file from GitHub and its images (about 670 MB) from ghcr.io. Check the connection or proxy, then check again.",
+			detail: t('mainLocalStack.stackUnreachable', { detail: facts.networkError ? ` (${facts.networkError})` : '' }),
+			advice: t('mainLocalStack.networkAdvice'),
 		});
 
 	return {

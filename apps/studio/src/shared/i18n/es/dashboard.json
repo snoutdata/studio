@@ -1,0 +1,76 @@
+{
+	"ago": {
+		"days": "hace {days} d",
+		"today": "hoy",
+		"yesterday": "ayer"
+	},
+	"errors": {
+		"hosted": "No se pudieron leer tus bases de datos alojadas: {error}",
+		"local": "No se pudieron leer tus proyectos locales: {error}"
+	},
+	"list": {
+		"cold": "en frío: el próximo inicio lo restaura, lo que tarda más",
+		"coldHint": "Sus datos están en el bucket y no en un host",
+		"collapse": "Contraer",
+		"copyToCloud": "Copiar este proyecto a SnoutData Cloud",
+		"copyToLocal": "Copiar este proyecto a este equipo",
+		"dockerHint": "Ejecutar todo el stack de SnoutData en Docker en este equipo",
+		"emptyHint": "Tus proyectos viven aquí: ejecuta uno en Docker en este equipo o en SnoutData Cloud.",
+		"lastConnected": "última conexión: {when}",
+		"newCloud": "Nuevo proyecto en la nube",
+		"newProject": "Nuevo proyecto",
+		"overLimit": "Por encima del límite de almacenamiento de su plan, así que la base de datos rechaza escrituras",
+		"readOnly": "solo lectura",
+		"setUpLocal": "Configurar un proyecto local",
+		"signedIn": "Sesión iniciada como {account}.",
+		"silent": "el servidor no responde",
+		"silentHint": "Su servidor no responde",
+		"silentLong": "su servidor no responde",
+		"starting": "Iniciando…",
+		"stopping": "Deteniendo…",
+		"title": "PANEL"
+	},
+	"menu": {
+		"show": "Mostrar en Conexiones"
+	},
+	"new": {
+		"added": "Se añade a tus conexiones en cuanto se crea.",
+		"cloud": "En SnoutData Cloud",
+		"creating": "Creando…",
+		"local": "Local, en Docker en este equipo",
+		"placeholder": "pedidos, staging, mi proyecto personal",
+		"prodHint": "Un proyecto de producción nunca se pausa, ni si lo pides ni por la política de inactividad. Solo Plus, Pro y Business.",
+		"signIn": "Inicia sesión para crear un proyecto en la nube"
+	},
+	"tile": {
+		"delete": "Eliminar widget",
+		"every": "cada {seconds} s",
+		"loadingChart": "Cargando gráfico…",
+		"nextRefresh": "Segundos hasta la próxima actualización",
+		"noConn": "Sin conexión",
+		"noData": "Sin datos.",
+		"waiting": "Esperando la primera muestra…"
+	},
+	"viz": {
+		"area": "área",
+		"bar": "barras",
+		"line": "línea",
+		"number": "número",
+		"table": "tabla"
+	},
+	"widget": {
+		"add": "Añadir widget",
+		"chooseConn": "Elige una conexión…",
+		"edit": "Editar widget",
+		"keep": "Conservar (minutos)",
+		"placeholder": "Profundidad de la nueva cola",
+		"refresh": "Actualización (segundos)",
+		"save": "Guardar widget",
+		"snapshot": "Instantánea (se reemplaza en cada actualización)",
+		"snapshotHint": "Devuelve un conjunto de resultados: la primera columna es el eje de categorías y el resto se trazan. Volver a ejecutar reemplaza la vista.",
+		"title": "Título",
+		"trend": "Tendencia (muestra en el tiempo)",
+		"trendHint": "Devuelve un número (una métrica escalar) o dos columnas (etiqueta, valor) para una métrica agrupada. Cada sondeo añade un punto en el tiempo.",
+		"viz": "Visualización"
+	}
+}

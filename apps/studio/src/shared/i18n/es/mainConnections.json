@@ -1,0 +1,22 @@
+{
+	"readOnlyVerb": "La conexión \"{label}\" es de solo lectura; {verb} está bloqueado.",
+	"sendsTo": " y los envía a {host}",
+	"awsImported": "\"{label}\" se importó y obtiene sus credenciales de AWS Secrets Manager (secreto \"{secretId}\"){where}. Ábrelo con Editar, comprueba adónde se conecta y guárdalo antes de conectarte.",
+	"tunnelTo": " a {host}:{port}",
+	"sshImported": "\"{label}\" se importó y se conecta por un túnel SSH{where}, con tu propia clave SSH. Ábrelo con Editar, comprueba adónde se conecta y guárdalo antes de conectarte.",
+	"notSnoutSignIn": "Esta conexión no inicia sesión con tu cuenta de SnoutData.",
+	"snoutSignInUnavailable": "Esta conexión inicia sesión con tu cuenta de SnoutData, que aún no está disponible.",
+	"noPipeline": "Esta conexión ejecuta SQL directamente, así que no hay traducción a pipeline.",
+	"readOnlyWrites": "La conexión \"{label}\" es de solo lectura; esta consulta escribe datos y está bloqueada.",
+	"readOnlyLoad": "La conexión \"{label}\" es de solo lectura; cargar un archivo está bloqueado.",
+	"syncGone": "La conexión de origen o destino ya no existe.",
+	"syncAcross": "No se puede sincronizar entre tipos de base de datos (\"{driver}\" → \"{targetDriver}\"). El origen y el destino deben usar el mismo controlador.",
+	"sourceNotConnected": "El origen \"{label}\" no está conectado.",
+	"targetNotConnected": "El destino \"{label}\" no está conectado.",
+	"readOnlySync": "La conexión \"{label}\" es de solo lectura; Schema Sync no puede cambiar su esquema.",
+	"componentConnect": "Esta base de datos necesita descargar un componente una sola vez ({totalLabel}). Haz clic en Conectar para instalarlo.",
+	"notSupportedOs": "Esta base de datos aún no es compatible con tu sistema operativo.",
+	"componentSave": "Esta base de datos necesita descargar un componente una sola vez ({totalLabel}). Guarda la conexión y haz clic en Conectar para instalarlo.",
+	"similarityNeedsEmbed": "La búsqueda por similitud necesita un modelo de embeddings, al que esta versión aún no tiene acceso.",
+	"cloudAccountGone": "La cuenta de nube que usa esta conexión ya no existe. Edita la conexión y elige una, o añádela de nuevo en Configuración."
+}

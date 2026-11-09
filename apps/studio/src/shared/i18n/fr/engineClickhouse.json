@@ -1,0 +1,209 @@
+{
+	"groups": {
+		"queries": "Requêtes",
+		"storage": "Stockage",
+		"objects": "Objets",
+		"cluster": "Cluster",
+		"server": "Serveur"
+	},
+	"views": {
+		"running": {
+			"label": "Requêtes en cours",
+			"blurb": "Ce que le serveur fait maintenant, les plus longues d'abord. Arrêtez-en une qui ne devrait pas tourner.",
+			"empty": "Rien ne tourne sur ce serveur pour le moment.",
+			"stop": "Arrêter"
+		},
+		"failed": {
+			"label": "Requêtes échouées",
+			"blurb": "Les erreurs de la dernière heure, groupées par type, les plus fréquentes d'abord. Ce qui casse, à côté de ce qui est lent. Ouvrez-en une dans le journal du serveur pour voir chaque ligne produite, pas seulement celle du refus.",
+			"empty": "Aucune requête n'a échoué depuis une heure."
+		},
+		"serverlog": {
+			"label": "Journal du serveur",
+			"blurb": "Le journal du serveur, en lignes. Sans filtre, les problèmes de la dernière heure ; mettez un id de requête dans le champ et vous avez chaque ligne qu'elle a produite, toute la réponse à \"pourquoi ça a échoué\" plutôt que la seule ligne envoyée au client.",
+			"empty": "Rien au-dessus d'un avertissement depuis une heure.",
+			"unavailable": "Ce serveur n'écrit pas son journal dans une table. Activez-le avec une section <text_log> dans sa configuration, et il enregistrera son journal en lignes dès le prochain redémarrage.",
+			"filterLabel": "Id de requête ou texte",
+			"filterPlaceholder": "un id de requête, ou un mot du message"
+		},
+		"parts": {
+			"label": "Parts",
+			"blurb": "Chaque INSERT écrit une part et les merges les combinent. Trop de parts dans une partition ralentit les inserts, puis les refuse.",
+			"empty": "Aucune table MergeTree avec des données sur ce serveur."
+		},
+		"merges": {
+			"label": "Merges",
+			"blurb": "Merges en arrière-plan en cours. Une mutation (ALTER UPDATE ou DELETE) s'exécute aussi comme un merge.",
+			"empty": "Aucun merge en cours."
+		},
+		"mutations": {
+			"label": "Mutations",
+			"blurb": "ALTER UPDATE et DELETE non terminés. Une mutation qui échoue sans cesse bloque les suivantes sur la même table.",
+			"empty": "Aucune mutation en attente.",
+			"cancel": "Annuler"
+		},
+		"views": {
+			"label": "Vues matérialisées",
+			"blurb": "Chaque vue matérialisée est un déclencheur d'insertion : ce qu'elle lit, et la table où arrivent ses lignes.",
+			"empty": "Aucune vue matérialisée sur ce serveur."
+		},
+		"refreshes": {
+			"label": "Vues rafraîchissables",
+			"blurb": "Vues matérialisées recalculées à intervalle fixe (REFRESH EVERY) : dernier succès, prochaine exécution et raison de l'échec.",
+			"empty": "Aucune vue matérialisée rafraîchissable.",
+			"unavailable": "Ce serveur est antérieur aux vues matérialisées rafraîchissables.",
+			"now": "Actualiser maintenant"
+		},
+		"dictionaries": {
+			"label": "Dictionnaires",
+			"blurb": "Tables de correspondance en mémoire. Un dictionnaire en échec fait échouer chaque dictGet : sa dernière erreur est affichée en entier.",
+			"empty": "Aucun dictionnaire sur ce serveur.",
+			"reload": "Recharger"
+		},
+		"disks": {
+			"label": "Disques",
+			"blurb": "Espace libre de chaque disque. Les merges ont besoin de place pour écrire la part produite : un disque plein les arrête en premier.",
+			"empty": "Aucun disque signalé."
+		},
+		"detached": {
+			"label": "Parts détachées",
+			"blurb": "Parts mises de côté et plus lues : détachées à la main, ou par le serveur car cassées ou inattendues. Elles occupent toujours le disque.",
+			"empty": "Aucune part détachée."
+		},
+		"columns": {
+			"label": "Tailles des colonnes",
+			"blurb": "Les 200 plus grandes colonnes sur disque, et leur compression. Un mauvais ratio est souvent à un codec ou un LowCardinality d'un gros gain.",
+			"empty": "Aucune colonne ne contient encore de données."
+		},
+		"replication": {
+			"label": "Réplication",
+			"blurb": "Tables répliquées : le retard de chaque réplica, et ce qu'il lui reste à faire.",
+			"empty": "Aucune table répliquée sur ce serveur."
+		},
+		"repqueue": {
+			"label": "File de réplication",
+			"blurb": "Ce que chaque réplica doit encore récupérer ou fusionner, et pourquoi une entrée est bloquée. Une file qui ne fait que grandir est la panne derrière \"la réplica est en retard\".",
+			"empty": "Chaque réplica est à jour : rien n'attend d'être récupéré ou fusionné.",
+			"unavailable": "Ce serveur n'a pas de file de réplication, donc pas de tables répliquées.",
+			"restart": "Redémarrer la réplica"
+		},
+		"distqueue": {
+			"label": "Inserts distribués",
+			"blurb": "Lignes écrites dans une table Distributed qui sont encore sur disque ici, en attente d'envoi au shard qui les possède. Ni perdues, ni encore arrivées.",
+			"empty": "Rien n'attend d'être envoyé : tous les inserts Distributed sont arrivés.",
+			"unavailable": "Ce serveur n'a pas de file de distribution, donc pas de tables Distributed.",
+			"send": "Envoyer maintenant"
+		},
+		"keeper": {
+			"label": "Keeper",
+			"blurb": "Ce sur quoi le cluster s'accorde, lu dans Keeper : le journal de chaque table répliquée, ses réplicas et leurs positions. En lecture seule, et le dernier endroit où regarder quand une file n'a aucun sens.",
+			"empty": "Rien à ce chemin.",
+			"unavailable": "Ce serveur n'a pas de Keeper configuré : aucun arbre de coordination à lire."
+		},
+		"clusters": {
+			"label": "Clusters",
+			"blurb": "Chaque nœud de chaque cluster connu de ce serveur, et le nombre d'échecs pour le joindre. Un nombre d'erreurs qui monte, c'est un nœud qui s'en va.",
+			"empty": "Ce serveur ne fait pas partie d'un cluster."
+		},
+		"ddl": {
+			"label": "File DDL",
+			"blurb": "Instructions ON CLUSTER et leur avancement sur chaque hôte. Un hôte bloqué dans la file est en retard sur le schéma.",
+			"empty": "Chaque instruction ON CLUSTER est terminée sur chaque hôte.",
+			"unavailable": "Ce serveur n'a pas de Keeper configuré : aucune instruction ON CLUSTER à suivre."
+		},
+		"crashes": {
+			"label": "Plantages",
+			"blurb": "Les signaux sur lesquels le serveur est tombé, avec la pile au moment du plantage. Une table qui n'existe pas est le bon résultat.",
+			"empty": "Aucun plantage n'a été enregistré sur ce serveur.",
+			"unavailable": "Aucun plantage jamais enregistré sur ce serveur : ClickHouse crée cette table la première fois qu'il tombe, et elle n'est pas là."
+		},
+		"settings": {
+			"label": "Réglages modifiés",
+			"blurb": "Réglages qui diffèrent des valeurs par défaut de ClickHouse pour cet utilisateur : ce qui fait que ce serveur ne se comporte pas comme la documentation.",
+			"empty": "Cet utilisateur utilise les réglages par défaut de ClickHouse."
+		},
+		"backups": {
+			"label": "Sauvegardes",
+			"blurb": "BACKUP et RESTORE depuis le démarrage du serveur : si chacun s'est terminé, sa taille et la raison d'un échec.",
+			"empty": "Aucun BACKUP ni RESTORE depuis le démarrage de ce serveur."
+		}
+	},
+	"confirm": {
+		"stop": "Arrêter la requête {id} lancée par {user} ? Elle tourne depuis {seconds} s.",
+		"cancelMutation": "Annuler la mutation {id} sur {table} ? Les parts déjà réécrites le restent.",
+		"runNow": "Exécuter {view} maintenant, au lieu d'attendre {next} ?",
+		"reloadDict": "Recharger le dictionnaire {dict} depuis sa source maintenant ?",
+		"restartReplica": "Redémarrer la réplica de {table} sur ce nœud ? Elle relit l'état de la table depuis Keeper et relance sa file. Les lectures et écritures de cette table sont suspendues pendant ce temps.",
+		"sendNow": "Envoyer maintenant les {files} fichier(s) en attente pour {table} ? Attend qu'ils soient partis."
+	},
+	"health": {
+		"cannotRead": "Cet utilisateur ne peut pas lire la table système nécessaire.",
+		"parts": "Parts",
+		"mutations": "Mutations",
+		"replication": "Réplication",
+		"disk": "Disque",
+		"dictionaries": "Dictionnaires",
+		"failed": "Requêtes échouées",
+		"running": "En cours",
+		"noMergeTree": "Pas encore de données MergeTree.",
+		"tooManyParts": "Trop de parts",
+		"tooManyPartsDetail": "{where} a {parts} parts dans une partition. Les inserts y sont refusés (limite {limit}).",
+		"insertsSlowed": "Inserts ralentis",
+		"insertsSlowedDetail": "{where} a {parts} parts dans une partition. Les inserts sont retardés à partir de {delay}, refusés à {limit}.",
+		"partsPiling": "Parts qui s'accumulent",
+		"partsPilingDetail": "{where} a {parts} parts dans une partition, à mi-chemin des {delay} où les inserts ralentissent. Groupez les inserts, ou vérifiez les merges.",
+		"partsOk": "Au plus {parts} parts dans une partition ({where}). Les inserts ralentissent à {delay}.",
+		"mutationsFailing": "Mutations en échec",
+		"mutationsFailingDetail": "{failing} mutations en attente sur {pending} échouent sans cesse, et bloquent les suivantes sur la même table.",
+		"mutationsPending": "Mutations en attente",
+		"mutationsPendingDetail": {
+			"one": "{count} mutation n'est pas encore terminée.",
+			"other": "{count} mutations ne sont pas encore terminées."
+		},
+		"noneWaiting": "Aucune en attente.",
+		"noReplicated": "Aucune table répliquée sur ce serveur.",
+		"replicasReadonly": "Réplicas en lecture seule",
+		"replicasReadonlyDetail": {
+			"one": "{count} table répliquée est en lecture seule, souvent une connexion à Keeper perdue. Les inserts y échouent.",
+			"other": "{count} tables répliquées sont en lecture seule, souvent une connexion à Keeper perdue. Les inserts y échouent."
+		},
+		"replicaLag": "Retard de réplica",
+		"replicaLagDetail": "Une réplica a {seconds} s de retard.",
+		"replicatedInStep": {
+			"one": "{count} table répliquée, à jour.",
+			"other": "{count} tables répliquées, à jour."
+		},
+		"noDisks": "Aucun disque signalé.",
+		"diskNearlyFull": "Disque presque plein",
+		"diskNearlyFullDetail": "Le disque {name} est utilisé à {used} % ({free} libres). Les merges ont besoin de place pour écrire, et s'arrêtent en premier.",
+		"diskFilling": "Disque qui se remplit",
+		"diskFillingDetail": "Le disque {name} est utilisé à {used} % ({free} libres).",
+		"detachedParts": "Parts détachées",
+		"detachedDetail": {
+			"one": "{count} part détachée encore sur disque, plus lue.",
+			"other": "{count} parts détachées encore sur disque, plus lues."
+		},
+		"diskOk": "Le disque {name} est utilisé à {used} %, {free} libres.",
+		"dictFailing": "Dictionnaire en échec",
+		"dictFailingDetail": "{failing} dictionnaires sur {total} n'ont pas pu se charger ; chaque dictGet dessus échoue.",
+		"noDicts": "Aucun dictionnaire.",
+		"dictsLoaded": "{n} chargés sans erreur.",
+		"refreshFailing": "Rafraîchissement en échec",
+		"refreshFailingDetail": {
+			"one": "{failing} vue rafraîchissable sur {count} a échoué à son dernier rafraîchissement et sert des données anciennes.",
+			"other": "{failing} vues rafraîchissables sur {count} ont échoué à leur dernier rafraîchissement et servent des données anciennes."
+		},
+		"refreshableViews": "Vues rafraîchissables",
+		"refreshingSchedule": "{n} rafraîchies selon le calendrier.",
+		"noneLastHour": "Aucune depuis une heure.",
+		"failedDetail": {
+			"one": "{n} depuis une heure, {count} type d'erreur.",
+			"other": "{n} depuis une heure, {count} types d'erreur."
+		},
+		"nothingRunning": "Rien en cours.",
+		"runningDetail": {
+			"one": "{count} requête, la plus longue depuis {seconds} s.",
+			"other": "{count} requêtes, la plus longue depuis {seconds} s."
+		}
+	}
+}

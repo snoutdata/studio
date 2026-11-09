@@ -13,6 +13,7 @@ import { AttachmentChip } from './AttachmentChip';
 import type { RenderBlock } from '../renderBlocks';
 import type { AiToolEvent, DocumentAttachment } from '../../../shared/ai';
 import type { InsertTarget } from '../chatSurface';
+import { useT, type Translate } from '../i18n';
 
 export type { InsertTarget };
 
@@ -46,34 +47,41 @@ export interface ChatRunOutcome {
 export type ChatRunState = { runId: string; status: 'running' } | ChatRunOutcome;
 
 /** Labels for the built-in DB tools in the step strip. Unknown tools show their own name. */
-const TOOL_LABEL: Record<string, string> = {
-	list_tables: 'List tables',
-	describe_table: 'Describe',
-	search_columns: 'Search columns',
-	run_query: 'Run query',
-};
-
-function plural(n: number, word: string): string {
-	return `${n} ${word}${n === 1 ? '' : 's'}`;
+function toolLabel(t: Translate, tool: string): string {
+	switch (tool) {
+		case 'list_tables':
+			return t('results.surface.listTables');
+		case 'describe_table':
+			return t('results.surface.describe');
+		case 'search_columns':
+			return t('results.surface.searchColumns');
+		case 'run_query':
+			return t('results.surface.runQuery');
+		default:
+			return tool;
+	}
 }
 
 /** The one-line answer under a SQL block the user ran: what the database actually did. Written from
  *  the run's own result, so it is exact (and free) rather than a model's account of it. */
-export function runOutcomeLabel(run: ChatRunState): string {
+export function runOutcomeLabel(t: Translate, run: ChatRunState): string {
 	switch (run.status) {
 		case 'running':
-			return "Running…";
+			return t('results.surface.running');
 		case 'ok': {
-			const rows = run.rowCount ?? 0;
-			const what = run.changed ? `${plural(rows, 'row')} changed` : `${plural(rows, 'row')} returned`;
-			return run.durationMs === undefined ? `Ran. ${what}.` : `Ran. ${what} in ${Math.round(run.durationMs)} ms.`;
+			const count = String(run.rowCount ?? 0);
+			if (run.durationMs === undefined) {
+				return run.changed ? t('results.surface.ranChanged', { count }) : t('results.surface.ranReturned', { count });
+			}
+			const ms = String(Math.round(run.durationMs));
+			return run.changed ? t('results.surface.ranChangedMs', { count, ms }) : t('results.surface.ranReturnedMs', { count, ms });
 		}
 		case 'cancelled':
-			return "Cancelled, nothing ran.";
+			return t('results.surface.cancelled');
 		case 'blocked':
-			return run.message ?? "Blocked, nothing ran.";
+			return run.message ?? t('results.surface.blocked');
 		case 'error':
-			return run.message ?? "The query failed.";
+			return run.message ?? t('results.surface.failed');
 	}
 }
 
@@ -124,6 +132,7 @@ export interface RenderSurfaceProps {
 }
 
 export function RenderSurface(props: RenderSurfaceProps): JSX.Element {
+	const t = useT();
 	const {
 		items, insertTargets, connectionLabel, runs, onInsertSql, onInsertSqlNewTab, onInsertPipeline,
 		onRunSql, empty, header, footer, scrollRef, className,
@@ -150,7 +159,7 @@ export function RenderSurface(props: RenderSurfaceProps): JSX.Element {
 										name={step.phase === 'start' ? 'loading' : step.isError ? 'error' : 'check'}
 										className={step.phase === 'start' ? 'codicon-modifier-spin' : ''}
 									/>
-									<span className="chat-step-label">{TOOL_LABEL[step.tool] ?? step.tool}</span>
+									<span className="chat-step-label">{toolLabel(t, step.tool)}</span>
 									<span className="chat-step-summary">{step.summary}</span>
 								</div>
 							))}
@@ -173,20 +182,20 @@ export function RenderSurface(props: RenderSurfaceProps): JSX.Element {
 						return (
 							<div className="sql-block" key={key}>
 								<div className="sql-block-head">
-									<span className="sql-block-title"><Icon name="database" /> {connectionLabel}{isSql ? '' : ' pipeline'}</span>
+									<span className="sql-block-title"><Icon name="database" /> {isSql ? connectionLabel : t('results.surface.pipelineOf', { connection: connectionLabel })}</span>
 									<div className="sql-block-tools">
-										<button type="button" className="icon-btn" aria-label="Copy" onClick={() => void navigator.clipboard.writeText(body)}><Icon name="copy" /></button>
+										<button type="button" className="icon-btn" aria-label={t('results.surface.copy')} onClick={() => void navigator.clipboard.writeText(body)}><Icon name="copy" /></button>
 										{isSql && can('editor') && onInsertSql && (
-											<button type="button" className="icon-btn" aria-label="Insert into editor" onClick={() => onInsertSql(body)}><Icon name="insert" /></button>
+											<button type="button" className="icon-btn" aria-label={t('results.surface.insert')} onClick={() => onInsertSql(body)}><Icon name="insert" /></button>
 										)}
 										{isSql && can('newTab') && onInsertSqlNewTab && (
-											<button type="button" className="icon-btn" aria-label="Insert into new editor" onClick={() => onInsertSqlNewTab(body)}><Icon name="split-horizontal" /></button>
+											<button type="button" className="icon-btn" aria-label={t('results.surface.insertNew')} onClick={() => onInsertSqlNewTab(body)}><Icon name="split-horizontal" /></button>
 										)}
 										{isSql && can('run') && onRunSql && (
-											<button type="button" className="icon-btn" aria-label="Run" onClick={() => onRunSql(body, key)}><Icon name="play" /></button>
+											<button type="button" className="icon-btn" aria-label={t('editor.common.run')} onClick={() => onRunSql(body, key)}><Icon name="play" /></button>
 										)}
 										{!isSql && can('pipeline') && onInsertPipeline && (
-											<button type="button" className="icon-btn" aria-label="Insert into pipeline tab" onClick={() => onInsertPipeline(body)}><Icon name="insert" /></button>
+											<button type="button" className="icon-btn" aria-label={t('results.surface.insertPipeline')} onClick={() => onInsertPipeline(body)}><Icon name="insert" /></button>
 										)}
 									</div>
 								</div>
@@ -197,7 +206,7 @@ export function RenderSurface(props: RenderSurfaceProps): JSX.Element {
 											name={run.status === 'running' ? 'loading' : run.status === 'ok' ? 'check' : run.status === 'cancelled' ? 'circle-slash' : 'error'}
 											className={run.status === 'running' ? 'codicon-modifier-spin' : ''}
 										/>
-										<span>{runOutcomeLabel(run)}</span>
+										<span>{runOutcomeLabel(t, run)}</span>
 									</div>
 								)}
 							</div>

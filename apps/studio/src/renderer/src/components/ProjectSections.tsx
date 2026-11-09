@@ -10,6 +10,7 @@ import { Pager, Status, useLoad, type Said } from './projectUi';
 import { api, bytes, errorText, exec, ilikeNeedle, jsonCell, pgDollar, pgIdent, pgLiteral, platformQuery, query, when } from '../projectSql';
 import { keyHeader, wirePath, type Vocabulary } from '../../../shared/ownLayout';
 import { projectKey, type ProjectTarget } from '../../../shared/projects';
+import { t, useT } from '../i18n';
 
 // A project's sections, local or cloud (shared/projects.ts): the cloud dashboard's, over the same
 // two doors it uses, SQL as the owner and the
@@ -42,14 +43,15 @@ const PAGE = 25;
 
 /** The dashboard's "Work on it" card: a statement, the tables, the settings, for either kind. */
 export function WorkOnIt(props: { onRunSql(): void; onBrowse(): void; onSettings(): void }): JSX.Element {
+	const t = useT();
 	const links: Array<{ icon: string; title: string; hint: string; run(): void }> = [
-		{ icon: 'terminal', title: "Run a statement", hint: "a new SQL editor on this database", run: props.onRunSql },
-		{ icon: 'table', title: "Browse the tables", hint: "the connection, in Connections", run: props.onBrowse },
-		{ icon: 'settings-gear', title: "Settings", hint: "the password, production, exports", run: props.onSettings },
+		{ icon: 'terminal', title: t('projects.workOn.runStatement'), hint: t('projects.workOn.runHint'), run: props.onRunSql },
+		{ icon: 'table', title: t('projects.workOn.browse'), hint: t('projects.workOn.browseHint'), run: props.onBrowse },
+		{ icon: 'settings-gear', title: t('projects.common.settings'), hint: t('projects.workOn.settingsHint'), run: props.onSettings },
 	];
 	return (
 		<fieldset>
-			<legend>Work on it</legend>
+			<legend>{t('projects.workOn.title')}</legend>
 			<div className="local-quick">
 				{links.map((l) => (
 					<button key={l.title} type="button" className="local-quick-link" onClick={l.run}>
@@ -101,6 +103,7 @@ limit ${PAGE + 1} offset ${page * PAGE}
 
 /** The project's users: listed by the owner's SQL, changed through the auth admin API. */
 export function AuthUsers({ project }: SectionProps): JSX.Element {
+	const t = useT();
 	const [needle, setNeedle] = useState('');
 	const [search, setSearch] = useState('');
 	const [page, setPage] = useState(0);
@@ -141,16 +144,16 @@ export function AuthUsers({ project }: SectionProps): JSX.Element {
 			const added = email.trim();
 			setEmail('');
 			setPassword('');
-			return `${added} was added.`;
+			return t('projects.users.added', { name: added });
 		});
 	}
 
 	async function remove(user: AuthUser): Promise<void> {
-		const ok = await confirm({ title: `Delete ${user.email ?? user.phone ?? user.id}?`, body: "The user and their sessions are deleted. Rows of yours that reference them keep whatever your foreign keys say.", confirmLabel: "Delete user", danger: true });
+		const ok = await confirm({ title: `Delete ${user.email ?? user.phone ?? user.id}?`, body: t('projects.users.deleteBody'), confirmLabel: t('projects.users.delete'), danger: true });
 		if (ok) {
 			await act(async () => {
 				await api(project.target, { method: 'DELETE', path: `/v1/identity/operator/people/${encodeURIComponent(user.id)}` });
-				return "The user was deleted.";
+				return t('projects.users.deleted');
 			});
 		}
 	}
@@ -161,31 +164,31 @@ export function AuthUsers({ project }: SectionProps): JSX.Element {
 	return (
 		<>
 			<fieldset>
-				<legend>Users</legend>
+				<legend>{t('projects.common.users')}</legend>
 				{counts.data && (
 					<div className="local-stats">
-						<div className="local-stat"><span className="muted small">Users</span><strong>{counts.data.total}</strong></div>
-						<div className="local-stat"><span className="muted small">Confirmed</span><strong>{counts.data.confirmed}</strong></div>
-						<div className="local-stat"><span className="muted small">Signed in this week</span><strong>{counts.data.active}</strong></div>
+						<div className="local-stat"><span className="muted small">{t('projects.common.users')}</span><strong>{counts.data.total}</strong></div>
+						<div className="local-stat"><span className="muted small">{t('projects.users.confirmedCol')}</span><strong>{counts.data.confirmed}</strong></div>
+						<div className="local-stat"><span className="muted small">{t('projects.users.thisWeek')}</span><strong>{counts.data.active}</strong></div>
 					</div>
 				)}
 				<label>
-					Search
-					<input value={needle} onChange={(e) => setNeedle(e.target.value)} placeholder="Email or phone" />
+					{t('projects.users.search')}
+					<input value={needle} onChange={(e) => setNeedle(e.target.value)} placeholder={t('projects.users.searchHint')} />
 				</label>
 				{users.error && <div className="form-status error">{users.error}</div>}
-				{!users.error && shown.length === 0 && !users.loading && <p className="field-hint">{search ? "Nobody matches." : "No users yet. Add one below, or sign one up from your app."}</p>}
+				{!users.error && shown.length === 0 && !users.loading && <p className="field-hint">{search ? t('projects.users.noMatch') : t('projects.users.none')}</p>}
 				{shown.length > 0 && (
 					<table className="cloud-table">
 						<thead>
-							<tr><th>User</th><th>Provider</th><th>Created</th><th>Last sign-in</th><th /></tr>
+							<tr><th>{t('projects.common.user')}</th><th>{t('projects.users.provider')}</th><th>{t('projects.common.created')}</th><th>{t('projects.users.lastSignIn')}</th><th /></tr>
 						</thead>
 						<tbody>
 							{shown.map((u) => (
 								<tr key={u.id}>
 									<td>
 										<span className="mono local-nowrap">{u.email ?? u.phone ?? u.id}</span>
-										{!u.confirmed && <span className="env warn" title="Has not confirmed their email">unconfirmed</span>}
+										{!u.confirmed && <span className="env warn" title={t('projects.users.unconfirmed')}>unconfirmed</span>}
 										{u.banned && <span className="env prod">banned</span>}
 									</td>
 									<td className="muted">{u.provider}</td>
@@ -194,16 +197,16 @@ export function AuthUsers({ project }: SectionProps): JSX.Element {
 									<td className="cloud-table-action">
 										<span className="local-row-actions">
 											{!u.confirmed && (
-												<button type="button" className="table-action" title="Confirm" aria-label="Confirm" disabled={busy} onClick={() => void act(async () => {
+												<button type="button" className="table-action" title={t('projects.users.confirm')} aria-label={t('projects.users.confirm')} disabled={busy} onClick={() => void act(async () => {
 													await api(project.target, { method: 'PUT', path: `/v1/identity/operator/people/${encodeURIComponent(u.id)}`, body: { email_confirm: true } });
-													return "Confirmed.";
+													return t('projects.users.confirmed');
 												})}><Icon name="check" /></button>
 											)}
-											<button type="button" className="table-action" title={u.banned ? "Unban" : "Ban"} aria-label={u.banned ? "Unban" : "Ban"} disabled={busy} onClick={() => void act(async () => {
+											<button type="button" className="table-action" title={u.banned ? t('projects.users.unban') : t('projects.users.ban')} aria-label={u.banned ? t('projects.users.unban') : t('projects.users.ban')} disabled={busy} onClick={() => void act(async () => {
 												await api(project.target, { method: 'PUT', path: `/v1/identity/operator/people/${encodeURIComponent(u.id)}`, body: { ban_duration: u.banned ? 'none' : '876000h' } });
-												return u.banned ? "The ban was lifted." : "Banned. Their sessions stop working when they next refresh.";
+												return u.banned ? t('projects.users.banLifted') : t('projects.users.banned');
 											})}><Icon name={u.banned ? 'pass' : 'circle-slash'} /></button>
-											<button type="button" className="table-action is-danger" title="Delete" aria-label="Delete" disabled={busy} onClick={() => void remove(u)}><Icon name="trash" /></button>
+											<button type="button" className="table-action is-danger" title={t('projects.common.delete')} aria-label={t('projects.common.delete')} disabled={busy} onClick={() => void remove(u)}><Icon name="trash" /></button>
 										</span>
 									</td>
 								</tr>
@@ -215,20 +218,20 @@ export function AuthUsers({ project }: SectionProps): JSX.Element {
 				<Status said={said} />
 			</fieldset>
 			<fieldset>
-				<legend>Add a user</legend>
+				<legend>{t('projects.users.addTitle')}</legend>
 				<label>
-					Email
+					{t('projects.common.email')}
 					<input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="someone@example.com" autoComplete="off" />
 				</label>
 				<label>
-					Password
+					{t('projects.common.password')}
 					<input type="password" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="new-password" />
 				</label>
 				<label className="check">
-					<input type="checkbox" checked={autoConfirm} onChange={(e) => setAutoConfirm(e.target.checked)} /> Confirmed, without an email
+					<input type="checkbox" checked={autoConfirm} onChange={(e) => setAutoConfirm(e.target.checked)} /> {t('projects.users.confirmedNoEmail')}
 				</label>
 				<div className="cloud-actions">
-					<button type="button" disabled={busy || !email.trim() || password.length < 6} onClick={() => void addUser()}><Icon name="person-add" /> Add user</button>
+					<button type="button" disabled={busy || !email.trim() || password.length < 6} onClick={() => void addUser()}><Icon name="person-add" /> {t('projects.users.add')}</button>
 				</div>
 			</fieldset>
 			{confirmDialog}
@@ -275,6 +278,7 @@ limit ${PAGE + 1} offset ${page * PAGE}
 }
 
 export function StorageBrowser({ project }: SectionProps): JSX.Element {
+	const t = useT();
 	const buckets = useLoad(() => platformQuery<Bucket>(project.target, BUCKETS_SQL), [projectKey(project.target)]);
 	const [chosen, setChosen] = useState<string | null>(null);
 	const [name, setName] = useState('');
@@ -298,7 +302,7 @@ export function StorageBrowser({ project }: SectionProps): JSX.Element {
 			const id = name.trim();
 			await api(project.target, { method: 'POST', path: '/v1/files/space', body: { id, name: id, public: isPublic } });
 			setName('');
-			setSaid({ ok: true, message: `${id} was created.` });
+			setSaid({ ok: true, message: t('projects.storage.created', { id }) });
 			await buckets.reload();
 			setChosen(id);
 		} catch (e) {
@@ -311,27 +315,27 @@ export function StorageBrowser({ project }: SectionProps): JSX.Element {
 	return (
 		<>
 			<fieldset>
-				<legend>Buckets</legend>
+				<legend>{t('projects.storage.buckets')}</legend>
 				{buckets.error && <div className="form-status error">{buckets.error}</div>}
-				{list.length === 0 && !buckets.loading && !buckets.error && <p className="field-hint">No buckets yet. A bucket holds files; its policies (or being public) decide who may read them.</p>}
+				{list.length === 0 && !buckets.loading && !buckets.error && <p className="field-hint">{t('projects.storage.noBuckets')}</p>}
 				<div className="local-services">
 					{list.map((b) => (
 						<button key={b.id} type="button" className={`local-service${b.id === chosen ? ' selected' : ''}`} onClick={() => setChosen(b.id)}>
 							<Icon name={b.public ? 'globe' : 'lock'} />
 							<span className="mono">{b.name}</span>
-							<span className="muted small">{b.public ? "public" : "private"}</span>
+							<span className="muted small">{b.public ? t('projects.storage.publicL') : t('projects.storage.privateL')}</span>
 						</button>
 					))}
 				</div>
 				<div className="local-inline-form">
 					<label>
-						New bucket
+						{t('projects.storage.newBucket')}
 						<input value={name} onChange={(e) => setName(e.target.value)} placeholder="avatars" />
 					</label>
 					<label className="check">
-						<input type="checkbox" checked={isPublic} onChange={(e) => setIsPublic(e.target.checked)} /> Public
+						<input type="checkbox" checked={isPublic} onChange={(e) => setIsPublic(e.target.checked)} /> {t('projects.common.public')}
 					</label>
-					<button type="button" disabled={busy || !/^[a-z0-9][a-z0-9._-]{0,62}$/i.test(name.trim())} onClick={() => void create()}><Icon name="add" /> Create</button>
+					<button type="button" disabled={busy || !/^[a-z0-9][a-z0-9._-]{0,62}$/i.test(name.trim())} onClick={() => void create()}><Icon name="add" /> {t('projects.common.create')}</button>
 				</div>
 				<Status said={said} />
 			</fieldset>
@@ -349,6 +353,7 @@ export function StorageBrowser({ project }: SectionProps): JSX.Element {
 }
 
 function BucketFiles(props: { project: ProjectHandle; bucket: Bucket; onChanged(gone: boolean, message?: string): Promise<void> }): JSX.Element {
+	const t = useT();
 	const { project, bucket } = props;
 	const target = project.target;
 	const [needle, setNeedle] = useState('');
@@ -420,21 +425,21 @@ function BucketFiles(props: { project: ProjectHandle; bucket: Bucket; onChanged(
 	}
 
 	async function removeBucket(): Promise<void> {
-		const ok = await confirm({ title: `Delete ${bucket.name}?`, body: "Storage refuses while it still holds files. Empty it first to delete them too.", confirmLabel: "Delete bucket", danger: true });
+		const ok = await confirm({ title: `Delete ${bucket.name}?`, body: t('projects.storage.removeBody'), confirmLabel: t('projects.storage.deleteBucket'), danger: true });
 		if (ok) {
 			await act(async () => {
 				await api(target, { method: 'DELETE', path: `/v1/files/space/${encodeURIComponent(bucket.id)}` });
-				return `${bucket.name} was deleted.`;
+				return t('projects.storage.deleted', { name: bucket.name });
 			}, true);
 		}
 	}
 
 	async function empty(): Promise<void> {
-		const ok = await confirm({ title: `Empty ${bucket.name}?`, body: "Every file in it is deleted. This cannot be undone.", confirmLabel: "Delete every file", danger: true });
+		const ok = await confirm({ title: `Empty ${bucket.name}?`, body: t('projects.storage.emptyBody'), confirmLabel: t('projects.storage.deleteAll'), danger: true });
 		if (ok) {
 			await act(async () => {
 				await api(target, { method: 'POST', path: `/v1/files/space/${encodeURIComponent(bucket.id)}/empty` });
-				return "Emptied.";
+				return t('projects.storage.emptied');
 			});
 		}
 	}
@@ -457,31 +462,31 @@ function BucketFiles(props: { project: ProjectHandle; bucket: Bucket; onChanged(
 					disabled={busy}
 					onChange={(e) => void act(async () => {
 						await api(target, { method: 'PUT', path: `/v1/files/space/${encodeURIComponent(bucket.id)}`, body: { public: e.target.checked } });
-						return e.target.checked ? "Anyone with a file's URL can read it now." : "Files are read through your policies now.";
+						return e.target.checked ? t('projects.storage.nowPublic') : t('projects.storage.nowPrivate');
 					})}
-				/> Public
+				/> {t('projects.common.public')}
 			</label>
-			<p className="field-hint">Public files are served at {served(project, `/v1/files/file/public/${bucket.name}/`)}&lt;path&gt; without a key. Private ones need a signed URL or a policy that lets the caller read them.</p>
+			<p className="field-hint">{t('projects.storage.servedHint', { url: served(project, `/v1/files/file/public/${bucket.name}/`) })}</p>
 			<div className="local-inline-form">
 				<label>
-					Folder (optional)
+					{t('projects.storage.folder')}
 					<input value={folder} onChange={(e) => setFolder(e.target.value)} placeholder="2026/october" />
 				</label>
 				<label className="check">
-					<input type="checkbox" checked={replace} onChange={(e) => setReplace(e.target.checked)} /> Replace files with the same name
+					<input type="checkbox" checked={replace} onChange={(e) => setReplace(e.target.checked)} /> {t('projects.storage.replace')}
 				</label>
-				<button type="button" disabled={busy} onClick={() => void upload()}><Icon name="cloud-upload" /> Upload…</button>
+				<button type="button" disabled={busy} onClick={() => void upload()}><Icon name="cloud-upload" /> {t('projects.storage.upload')}</button>
 			</div>
-			<p className="field-hint">Or drop files anywhere on this card.</p>
+			<p className="field-hint">{t('projects.storage.drop')}</p>
 			<label>
-				Search
-				<input value={needle} onChange={(e) => setNeedle(e.target.value)} placeholder="File name" />
+				{t('projects.users.search')}
+				<input value={needle} onChange={(e) => setNeedle(e.target.value)} placeholder={t('projects.storage.fileName')} />
 			</label>
 			{objects.error && <div className="form-status error">{objects.error}</div>}
-			{shown.length === 0 && !objects.loading && !objects.error && <p className="field-hint">{search ? "No file matches." : "No files yet."}</p>}
+			{shown.length === 0 && !objects.loading && !objects.error && <p className="field-hint">{search ? t('projects.storage.noMatch') : t('projects.storage.noFiles')}</p>}
 			{shown.length > 0 && (
 				<table className="cloud-table">
-					<thead><tr><th>Name</th><th>Size</th><th>Type</th><th>Updated</th><th /></tr></thead>
+					<thead><tr><th>{t('projects.common.name')}</th><th>{t('projects.common.size')}</th><th>{t('projects.common.type')}</th><th>{t('projects.common.updated')}</th><th /></tr></thead>
 					<tbody>
 						{shown.map((o) => (
 							<tr key={o.id}>
@@ -491,10 +496,10 @@ function BucketFiles(props: { project: ProjectHandle; bucket: Bucket; onChanged(
 								<td className="muted cloud-when">{when(o.updated_at)}</td>
 								<td className="cloud-table-action">
 									<span className="local-row-actions">
-										<button type="button" className="table-action" title="Download" aria-label="Download" disabled={busy} onClick={() => void window.sqlApi.project.download(target, bucket.id, o.name).then((r) => r && setSaid(r))}><Icon name="cloud-download" /></button>
-										<button type="button" className="table-action is-danger" title="Delete" aria-label="Delete" disabled={busy} onClick={() => void act(async () => {
+										<button type="button" className="table-action" title={t('projects.common.download')} aria-label={t('projects.common.download')} disabled={busy} onClick={() => void window.sqlApi.project.download(target, bucket.id, o.name).then((r) => r && setSaid(r))}><Icon name="cloud-download" /></button>
+										<button type="button" className="table-action is-danger" title={t('projects.common.delete')} aria-label={t('projects.common.delete')} disabled={busy} onClick={() => void act(async () => {
 											await api(target, { method: 'DELETE', path: `/v1/files/file/${encodeURIComponent(bucket.id)}`, body: { prefixes: [o.name] } });
-											return `${o.name} was deleted.`;
+											return t('projects.storage.objDeleted', { name: o.name });
 										})}><Icon name="trash" /></button>
 									</span>
 								</td>
@@ -507,8 +512,8 @@ function BucketFiles(props: { project: ProjectHandle; bucket: Bucket; onChanged(
 			<Status said={said} />
 			<div className="cloud-actions">
 				<span className="spacer" />
-				<button type="button" className="secondary" disabled={busy} onClick={() => void empty()}><Icon name="clear-all" /> Empty bucket</button>
-				<button type="button" className="danger" disabled={busy} onClick={() => void removeBucket()}><Icon name="trash" /> Delete bucket</button>
+				<button type="button" className="secondary" disabled={busy} onClick={() => void empty()}><Icon name="clear-all" /> {t('projects.storage.emptyBucket')}</button>
+				<button type="button" className="danger" disabled={busy} onClick={() => void removeBucket()}><Icon name="trash" /> {t('projects.storage.deleteBucket')}</button>
 			</div>
 			{confirmDialog}
 		</fieldset>
@@ -572,6 +577,7 @@ limit 200
 `.trim();
 
 export function RealtimeSection({ project }: SectionProps): JSX.Element {
+	const t = useT();
 	const streamed = useLoad(() => query<TableRef>(project.target, STREAMED_SQL), [projectKey(project.target)]);
 	const candidates = useLoad(() => query<TableRef>(project.target, CANDIDATES_SQL), [projectKey(project.target)]);
 	const subscriptions = useLoad(() => platformQuery<Subscription>(project.target, SUBSCRIPTIONS_SQL), [projectKey(project.target)]);
@@ -599,18 +605,18 @@ export function RealtimeSection({ project }: SectionProps): JSX.Element {
 	return (
 		<>
 			<fieldset>
-				<legend>Tables that stream their changes</legend>
-				<p className="field-hint">A table in the {PUBLICATION} publication sends every insert, update and delete to listeners of changes, filtered by your row-level security. Signals and the roster need no table.</p>
+				<legend>{t('projects.realtime.tables')}</legend>
+				<p className="field-hint">{t('projects.realtime.intro', { publication: PUBLICATION })}</p>
 				{streamed.error && <div className="form-status error">{streamed.error}</div>}
-				{(streamed.data ?? []).length === 0 && !streamed.loading && !streamed.error && <p className="field-hint">No table streams yet.</p>}
+				{(streamed.data ?? []).length === 0 && !streamed.loading && !streamed.error && <p className="field-hint">{t('projects.realtime.none')}</p>}
 				{(streamed.data ?? []).length > 0 && (
 					<table className="cloud-table">
 						<tbody>
-							{(streamed.data ?? []).map((t) => (
-								<tr key={`${t.schema}.${t.table}`}>
-									<td className="mono">{t.schema}.{t.table}</td>
+							{(streamed.data ?? []).map((tb) => (
+								<tr key={`${tb.schema}.${tb.table}`}>
+									<td className="mono">{tb.schema}.{tb.table}</td>
 									<td className="cloud-table-action">
-										<button type="button" className="table-action" disabled={busy} onClick={() => void change(`alter publication ${PUBLICATION} drop table ${pgIdent(t.schema)}.${pgIdent(t.table)}`, `${t.table} stopped streaming.`)}><Icon name="debug-stop" /> Stop streaming</button>
+										<button type="button" className="table-action" disabled={busy} onClick={() => void change(`alter publication ${PUBLICATION} drop table ${pgIdent(tb.schema)}.${pgIdent(tb.table)}`, t('projects.realtime.stopped', { table: tb.table }))}><Icon name="debug-stop" /> {t('projects.realtime.stop')}</button>
 									</td>
 								</tr>
 							))}
@@ -619,10 +625,10 @@ export function RealtimeSection({ project }: SectionProps): JSX.Element {
 				)}
 				<div className="local-inline-form">
 					<label>
-						Add a table
+						{t('projects.realtime.add')}
 						<select value={pick} onChange={(e) => setPick(e.target.value)}>
-							<option value="">Choose a table…</option>
-							{(candidates.data ?? []).map((t) => <option key={`${t.schema}.${t.table}`} value={`${t.schema}.${t.table}`}>{t.schema}.{t.table}</option>)}
+							<option value="">{t('projects.realtime.choose')}</option>
+							{(candidates.data ?? []).map((tb) => <option key={`${tb.schema}.${tb.table}`} value={`${tb.schema}.${tb.table}`}>{tb.schema}.{tb.table}</option>)}
 						</select>
 					</label>
 					<button
@@ -631,21 +637,21 @@ export function RealtimeSection({ project }: SectionProps): JSX.Element {
 						onClick={() => {
 							const [schema, ...rest] = pick.split('.');
 							const table = rest.join('.');
-							void change(`alter publication ${PUBLICATION} add table ${pgIdent(schema)}.${pgIdent(table)}`, `${table} streams its changes now.`);
+							void change(`alter publication ${PUBLICATION} add table ${pgIdent(schema)}.${pgIdent(table)}`, t('projects.realtime.started', { table }));
 						}}
 					>
-						<Icon name="broadcast" /> Stream it
+						<Icon name="broadcast" /> {t('projects.realtime.streamIt')}
 					</button>
 				</div>
 				<Status said={said} />
 			</fieldset>
 			<fieldset>
-				<legend>Subscribed now</legend>
+				<legend>{t('projects.realtime.subscribed')}</legend>
 				{subscriptions.error && <div className="form-status error">{subscriptions.error}</div>}
-				{(subscriptions.data ?? []).length === 0 && !subscriptions.loading && !subscriptions.error && <p className="field-hint">Nobody is subscribed to database changes right now.</p>}
+				{(subscriptions.data ?? []).length === 0 && !subscriptions.loading && !subscriptions.error && <p className="field-hint">{t('projects.realtime.noSubs')}</p>}
 				{(subscriptions.data ?? []).length > 0 && (
 					<table className="cloud-table">
-						<thead><tr><th>Table</th><th>Role</th><th>Subscribers</th><th>Since</th><th>Filters</th></tr></thead>
+						<thead><tr><th>{t('projects.common.table')}</th><th>{t('projects.common.role')}</th><th>{t('projects.realtime.subscribers')}</th><th>{t('projects.realtime.since')}</th><th>{t('projects.realtime.filters')}</th></tr></thead>
 						<tbody>
 							{(subscriptions.data ?? []).map((s) => (
 								<tr key={`${s.table}:${s.role}`}>
@@ -661,14 +667,14 @@ export function RealtimeSection({ project }: SectionProps): JSX.Element {
 				)}
 				<div className="cloud-actions">
 					<span className="spacer" />
-					<button type="button" className="secondary" onClick={() => void subscriptions.reload()}><Icon name="refresh" /> Refresh</button>
+					<button type="button" className="secondary" onClick={() => void subscriptions.reload()}><Icon name="refresh" /> {t('projects.common.refresh')}</button>
 				</div>
 			</fieldset>
 			<fieldset>
-				<legend>Connect</legend>
+				<legend>{t('projects.realtime.connect')}</legend>
 				<div className="cloud-facts">
 					<span className="muted">WebSocket</span><span className="mono">{ws}</span>
-					<span className="muted">Signals over HTTP</span><span className="mono">{project.apiUrl}{served(project, '/v1/live/signal')}</span>
+					<span className="muted">{t('projects.realtime.signals')}</span><span className="mono">{project.apiUrl}{served(project, '/v1/live/signal')}</span>
 				</div>
 				<pre className="local-snippet local-snippet-code">{`client.live.topic('room-1')
   .listen('changes', { event: '*', schema: 'public', table: 'notes' }, (change) => console.log(change))
@@ -700,6 +706,7 @@ limit 50
 `.trim();
 
 export function PostgresStatements({ target }: { target: ProjectTarget }): JSX.Element {
+	const t = useT();
 	const installed = useLoad(() => query<{ on: boolean }>(target, "select exists (select 1 from pg_extension where extname = 'pg_stat_statements') as \"on\"").then((r) => r[0]?.on === true), [projectKey(target)]);
 	const statements = useLoad(() => (installed.data ? query<Statement>(target, STATEMENTS_SQL) : Promise.resolve([])), [projectKey(target), installed.data]);
 	const [said, setSaid] = useState<Said>(null);
@@ -715,17 +722,17 @@ export function PostgresStatements({ target }: { target: ProjectTarget }): JSX.E
 
 	return (
 		<fieldset>
-			<legend>Postgres statements</legend>
-			<p className="field-hint">What the database remembers about the statements it has run (pg_stat_statements), normalised so no literal is in it, heaviest first. Statements other roles ran (auth, the data API) are hidden from this login.</p>
+			<legend>{t('projects.statements.title')}</legend>
+			<p className="field-hint">{t('projects.statements.intro')}</p>
 			{installed.data === false && (
 				<div className="cloud-actions">
-					<button type="button" onClick={() => void switchOn()}><Icon name="zap" /> Switch on pg_stat_statements</button>
+					<button type="button" onClick={() => void switchOn()}><Icon name="zap" /> {t('projects.statements.switchOn')}</button>
 				</div>
 			)}
 			{statements.error && <div className="form-status error">{statements.error}</div>}
 			{(statements.data ?? []).length > 0 && (
 				<table className="cloud-table">
-					<thead><tr><th>Statement</th><th>Calls</th><th>Total ms</th><th>Mean ms</th><th>Rows</th></tr></thead>
+					<thead><tr><th>{t('projects.common.statement')}</th><th>{t('projects.statements.calls')}</th><th>{t('projects.statements.total')}</th><th>{t('projects.statements.mean')}</th><th>{t('projects.common.rows')}</th></tr></thead>
 					<tbody>
 						{(statements.data ?? []).map((s, i) => (
 							<tr key={i}>
@@ -739,10 +746,10 @@ export function PostgresStatements({ target }: { target: ProjectTarget }): JSX.E
 					</tbody>
 				</table>
 			)}
-			{installed.data && (statements.data ?? []).length === 0 && !statements.loading && <p className="field-hint">Nothing recorded yet.</p>}
+			{installed.data && (statements.data ?? []).length === 0 && !statements.loading && <p className="field-hint">{t('projects.statements.none')}</p>}
 			<div className="cloud-actions">
 				<span className="spacer" />
-				<button type="button" className="secondary" onClick={() => void statements.reload()}><Icon name="refresh" /> Refresh</button>
+				<button type="button" className="secondary" onClick={() => void statements.reload()}><Icon name="refresh" /> {t('projects.common.refresh')}</button>
 			</div>
 			<Status said={said} />
 		</fieldset>
@@ -814,27 +821,29 @@ function sample(type: string): string {
  * the `rest` container's compose profile (main/localStack/plan.ts, "the data API switch").
  */
 export function DataApiSection({ project, settings }: SectionProps & { settings: JSX.Element }): JSX.Element {
+	const t = useT();
 	const [tab, setTab] = useState<'settings' | 'docs'>('settings');
 	const running = project.running;
 	return (
 		<>
-			<p className="field-hint">REST at {project.apiUrl}{served(project, '/v1/data')} and GraphQL at {project.apiUrl}{served(project, '/v1/graph')}, both generated from this database's own tables. One switch turns on both.</p>
-			<div className="local-chips local-subtabs" role="tablist" aria-label="Data API">
-				{([['settings', "Settings"], ['docs', "Docs"]] as const).map(([id, label]) => (
+			<p className="field-hint">{t('projects.dataApi.intro', { api: project.apiUrl, rest: served(project, '/v1/data'), graph: served(project, '/v1/graph') })}</p>
+			<div className="local-chips local-subtabs" role="tablist" aria-label={t('projects.common.dataApi')}>
+				{([['settings', t('projects.common.settings')], ['docs', t('projects.common.docs')]] as const).map(([id, label]) => (
 					<button key={id} type="button" role="tab" aria-selected={tab === id} className={`local-chip${tab === id ? ' selected' : ''}`} onClick={() => setTab(id)}>{label}</button>
 				))}
 			</div>
 			{tab === 'settings' && settings}
-			{tab === 'docs' && (running ? <DataApiDocs project={project} /> : <div className="form-status warn">The project is not running. Start it from Overview to read its tables.</div>)}
+			{tab === 'docs' && (running ? <DataApiDocs project={project} /> : <div className="form-status warn">{t('projects.dataApi.notRunning')}</div>)}
 		</>
 	);
 }
 
 function DataApiDocs({ project }: SectionProps): JSX.Element {
+	const t = useT();
 	const tables = useLoad(() => query<ApiTable>(project.target, API_TABLES_SQL), [projectKey(project.target)]);
 	const [chosen, setChosen] = useState<string | null>(null);
 	const list = tables.data ?? [];
-	const table = list.find((t) => t.name === chosen) ?? list[0] ?? null;
+	const table = list.find((tb) => tb.name === chosen) ?? list[0] ?? null;
 	// A gateway still on the earlier names is told so (shared/ownLayout.ts).
 	const options = project.vocabulary === 'old' ? `,\n  { vocabulary: 'old' }` : '';
 	const client = `// npm install @snoutdata/client
@@ -848,19 +857,19 @@ const db = snout(
 	return (
 		<>
 			<fieldset>
-				<legend>Getting started</legend>
-				<p className="field-hint">@snoutdata/client is the client, with no dependencies. The two keys it takes are on Overview: the app key in a browser, where your row-level security decides what it can reach, and the server key on a server, where nothing does.</p>
+				<legend>{t('projects.dataApi.gettingStarted')}</legend>
+				<p className="field-hint">{t('projects.dataApi.clientIntro')}</p>
 				<pre className="local-snippet">{client}</pre>
 			</fieldset>
 			<fieldset>
-				<legend>Your tables</legend>
-				<p className="field-hint">Every table and view in the public schema, at {project.apiUrl}{served(project, '/v1/data/')}&lt;table&gt;.</p>
+				<legend>{t('projects.dataApi.yourTables')}</legend>
+				<p className="field-hint">{t('projects.dataApi.everyTable', { api: project.apiUrl, path: served(project, '/v1/data/') })}</p>
 				{tables.error && <div className="form-status error">{tables.error}</div>}
-				{list.length === 0 && !tables.loading && !tables.error && <p className="field-hint">No tables in public yet. Create one in the SQL editor on this project's connection.</p>}
+				{list.length === 0 && !tables.loading && !tables.error && <p className="field-hint">{t('projects.dataApi.noTables')}</p>}
 				<div className="local-chips">
-					{list.map((t) => (
-						<button key={t.name} type="button" className={`local-chip${table?.name === t.name ? ' selected' : ''}`} onClick={() => setChosen(t.name)}>
-							<Icon name={t.kind === 'table' ? 'table' : 'eye'} /> {t.name}
+					{list.map((tb) => (
+						<button key={tb.name} type="button" className={`local-chip${table?.name === tb.name ? ' selected' : ''}`} onClick={() => setChosen(tb.name)}>
+							<Icon name={tb.kind === 'table' ? 'table' : 'eye'} /> {tb.name}
 						</button>
 					))}
 				</div>
@@ -871,6 +880,7 @@ const db = snout(
 }
 
 function ApiTableDoc({ project, table }: { project: ProjectHandle; table: ApiTable }): JSX.Element {
+	const t = useT();
 	const columns = useLoad(() => query<ApiColumn>(project.target, apiColumnsSql(table.schema, table.name)), [projectKey(project.target), table.name]);
 	const [tried, setTried] = useState<string | null>(null);
 	const [said, setSaid] = useState<Said>(null);
@@ -906,30 +916,30 @@ await db.table('${name}').remove().eq('${key}', 1)`;
 		<fieldset>
 			<legend>{name}</legend>
 			<div className="cloud-facts">
-				<span className="muted">Endpoint</span><span className="mono">{project.apiUrl}{served(project, `/v1/data/${name}`)}</span>
-				<span className="muted">Kind</span><span>{table.kind}, about {table.rows} rows</span>
+				<span className="muted">{t('projects.dataApi.endpoint')}</span><span className="mono">{project.apiUrl}{served(project, `/v1/data/${name}`)}</span>
+				<span className="muted">{t('projects.common.kind')}</span><span>{t('projects.dataApi.about', { kind: table.kind, rows: table.rows })}</span>
 			</div>
 			{cols.length > 0 && (
 				<table className="cloud-table">
-					<thead><tr><th>Column</th><th>Type</th><th /></tr></thead>
+					<thead><tr><th>{t('projects.common.column')}</th><th>{t('projects.common.type')}</th><th /></tr></thead>
 					<tbody>
 						{cols.map((c) => (
 							<tr key={c.name}>
 								<td className="mono">{c.name}</td>
 								<td className="mono muted">{c.type}</td>
-								<td className="muted small">{[c.primary ? "primary key" : '', c.nullable ? "optional" : "required", c.hasDefault ? "has a default" : ''].filter(Boolean).join(', ')}</td>
+								<td className="muted small">{[c.primary ? t('projects.dataApi.pk') : '', c.nullable ? t('projects.dataApi.optional') : t('projects.dataApi.required'), c.hasDefault ? t('projects.dataApi.hasDefault') : ''].filter(Boolean).join(', ')}</td>
 							</tr>
 						))}
 					</tbody>
 				</table>
 			)}
-			<p className="field-hint">With the client above:</p>
+			<p className="field-hint">{t('projects.dataApi.withClient')}</p>
 			<pre className="local-snippet">{js}</pre>
-			<p className="field-hint">HTTP:</p>
+			<p className="field-hint">{t('projects.dataApi.http')}</p>
 			<pre className="local-snippet">{curl}</pre>
 			<div className="cloud-actions">
-				<button type="button" className="secondary" onClick={() => void tryIt()}><Icon name="beaker" /> Try it with the server key</button>
-				<span className="field-hint">The first five rows, read past row-level security.</span>
+				<button type="button" className="secondary" onClick={() => void tryIt()}><Icon name="beaker" /> {t('projects.dataApi.tryIt')}</button>
+				<span className="field-hint">{t('projects.dataApi.firstFive')}</span>
 			</div>
 			{tried && <pre className="local-snippet">{tried}</pre>}
 			<Status said={said} />
@@ -963,6 +973,7 @@ order by (installed_version is null), name
 const EXTENSIONS_PAGE = 10;
 
 export function ExtensionsSection({ project }: SectionProps): JSX.Element {
+	const t = useT();
 	const all = useLoad(() => query<Extension>(project.target, EXTENSIONS_SQL), [projectKey(project.target)]);
 	const [filter, setFilter] = useState('');
 	const [page, setPage] = useState(0);
@@ -984,7 +995,7 @@ export function ExtensionsSection({ project }: SectionProps): JSX.Element {
 
 	async function change(extension: Extension, on: boolean): Promise<void> {
 		if (!on) {
-			const ok = await confirm({ title: `Switch ${extension.name} off?`, body: "This drops the extension and its own objects. Postgres refuses if anything of yours still depends on it, and says what.", confirmLabel: "Switch off", danger: true });
+			const ok = await confirm({ title: `Switch ${extension.name} off?`, body: t('projects.ext.offBody'), confirmLabel: t('projects.ext.switchOff'), danger: true });
 			if (!ok) {
 				return;
 			}
@@ -993,7 +1004,7 @@ export function ExtensionsSection({ project }: SectionProps): JSX.Element {
 		setSaid(null);
 		try {
 			await exec(project.target, on ? `create extension if not exists ${pgIdent(extension.name)}` : `drop extension if exists ${pgIdent(extension.name)}`);
-			setSaid({ ok: true, message: on ? `${extension.name} is on.` : `${extension.name} is off.` });
+			setSaid({ ok: true, message: on ? t('projects.ext.isOn', { name: extension.name }) : t('projects.ext.isOff', { name: extension.name }) });
 			await all.reload();
 		} catch (e) {
 			setSaid({ ok: false, message: errorText(e) });
@@ -1006,10 +1017,10 @@ export function ExtensionsSection({ project }: SectionProps): JSX.Element {
 
 	return (
 		<fieldset>
-			<legend>Extensions</legend>
-			<p className="field-hint">What this database's image carries, read off the database itself. {on} on. The owner may switch on the ones the image delegates to it.</p>
+			<legend>{t('projects.ext.title')}</legend>
+			<p className="field-hint">{t('projects.ext.intro', { count: on })}</p>
 			<label>
-				Search
+				{t('projects.users.search')}
 				<input value={filter} onChange={(e) => setFilter(e.target.value)} placeholder="vector, postgis, cron…" />
 			</label>
 			<Status said={said} />
@@ -1021,11 +1032,11 @@ export function ExtensionsSection({ project }: SectionProps): JSX.Element {
 							<td>
 								<span className="mono">{e.name}</span>
 								<span className="muted small"> {e.installedVersion ?? e.defaultVersion}</span>
-								{e.delegated === false && !e.installedVersion && <span className="env" title="Not in the list the image delegates to the owner; creating it may be refused">not delegated</span>}
+								{e.delegated === false && !e.installedVersion && <span className="env" title={t('projects.ext.notDelegatedHint')}>{t('projects.ext.notDelegated')}</span>}
 								<div className="muted small">{e.comment}</div>
 							</td>
 							<td className="cloud-table-action">
-								<label className="check local-inline-check" title={e.installedVersion ? "Switch off" : "Switch on"}>
+								<label className="check local-inline-check" title={e.installedVersion ? t('projects.ext.switchOff') : t('projects.ext.switchOn')}>
 									<input type="checkbox" checked={!!e.installedVersion} disabled={busy !== null} onChange={(ev) => void change(e, ev.target.checked)} />
 								</label>
 							</td>
@@ -1098,20 +1109,21 @@ limit 25
 }
 
 const PRESETS: ReadonlyArray<{ label: string; schedule: string }> = [
-	{ label: "Every 30 seconds", schedule: '30 seconds' },
-	{ label: "Every 5 minutes", schedule: '*/5 * * * *' },
-	{ label: "Hourly", schedule: '0 * * * *' },
-	{ label: "Daily at 03:00", schedule: '0 3 * * *' },
-	{ label: "Weekly, Sunday 03:00", schedule: '0 3 * * 0' },
+	{ get label() { return t('projects.cron.every30s'); }, schedule: '30 seconds' },
+	{ get label() { return t('projects.cron.every5m'); }, schedule: '*/5 * * * *' },
+	{ get label() { return t('projects.cron.hourly'); }, schedule: '0 * * * *' },
+	{ get label() { return t('projects.cron.daily'); }, schedule: '0 3 * * *' },
+	{ get label() { return t('projects.cron.weekly'); }, schedule: '0 3 * * 0' },
 ];
 
 const TEMPLATES: ReadonlyArray<{ label: string; name: string; schedule: string; command: string }> = [
-	{ label: "Trim the run history", name: 'trim-cron-history', schedule: '0 3 * * *', command: "delete from cron.job_run_details where end_time < now() - interval '7 days'" },
-	{ label: "Refresh a materialized view", name: 'refresh-view', schedule: '0 * * * *', command: 'refresh materialized view concurrently public.my_view' },
-	{ label: "Call a URL (needs pg_net)", name: 'call-webhook', schedule: '*/5 * * * *', command: "select net.http_post(url := 'https://example.com/hook', body := '{}'::jsonb)" },
+	{ get label() { return t('projects.cron.tplTrim'); }, name: 'trim-cron-history', schedule: '0 3 * * *', command: "delete from cron.job_run_details where end_time < now() - interval '7 days'" },
+	{ get label() { return t('projects.cron.tplRefresh'); }, name: 'refresh-view', schedule: '0 * * * *', command: 'refresh materialized view concurrently public.my_view' },
+	{ get label() { return t('projects.cron.tplCall'); }, name: 'call-webhook', schedule: '*/5 * * * *', command: "select net.http_post(url := 'https://example.com/hook', body := '{}'::jsonb)" },
 ];
 
 export function CronSection({ project }: SectionProps): JSX.Element {
+	const t = useT();
 	const state = useLoad(() => query<{ installed: boolean; available: boolean }>(project.target, CRON_STATE_SQL).then((r) => r[0]), [projectKey(project.target)]);
 	const jobs = useLoad(() => (state.data?.installed ? query<Job>(project.target, CRON_JOBS_SQL) : Promise.resolve([])), [projectKey(project.target), state.data?.installed]);
 	const [open, setOpen] = useState<number | null>(null);
@@ -1143,7 +1155,7 @@ export function CronSection({ project }: SectionProps): JSX.Element {
 		const sql = name.trim()
 			? `select cron.schedule(${pgLiteral(name.trim())}, ${pgLiteral(schedule.trim())}, ${pgDollar(command.trim())})`
 			: `select cron.schedule(${pgLiteral(schedule.trim())}, ${pgDollar(command.trim())})`;
-		if (await run(sql, "Scheduled.")) {
+		if (await run(sql, t('projects.cron.scheduled'))) {
 			setName('');
 			setCommand('');
 		}
@@ -1153,16 +1165,16 @@ export function CronSection({ project }: SectionProps): JSX.Element {
 		return <div className="form-status error">{state.error}</div>;
 	}
 	if (!state.data) {
-		return <div className="field-hint">Loading…</div>;
+		return <div className="field-hint">{t('projects.common.loading')}</div>;
 	}
 	if (!state.data.installed) {
 		return (
 			<fieldset>
-				<legend>Scheduled jobs</legend>
-				<p>SQL that runs on a schedule, inside this database, with pg_cron.</p>
+				<legend>{t('projects.cron.title')}</legend>
+				<p>{t('projects.cron.intro')}</p>
 				{state.data.available
-					? <div className="cloud-actions"><button type="button" disabled={busy} onClick={() => void run('create extension if not exists pg_cron', "pg_cron is on.")}><Icon name="zap" /> Switch on pg_cron</button></div>
-					: <p className="field-hint">pg_cron is not in this database's image.</p>}
+					? <div className="cloud-actions"><button type="button" disabled={busy} onClick={() => void run('create extension if not exists pg_cron', t('projects.cron.isOn'))}><Icon name="zap" /> {t('projects.cron.switchOn')}</button></div>
+					: <p className="field-hint">{t('projects.cron.notInImage')}</p>}
 				<Status said={said} />
 			</fieldset>
 		);
@@ -1172,10 +1184,10 @@ export function CronSection({ project }: SectionProps): JSX.Element {
 	return (
 		<>
 			<fieldset>
-				<legend>Scheduled jobs</legend>
-				<p className="field-hint">Each job runs as the owner, while the project is running; a time that passes while it is stopped is not caught up. A job scheduled from SQL anywhere shows up here too.</p>
+				<legend>{t('projects.cron.title')}</legend>
+				<p className="field-hint">{t('projects.cron.runsAsOwner')}</p>
 				{jobs.error && <div className="form-status error">{jobs.error}</div>}
-				{list.length === 0 && !jobs.loading && <p className="field-hint">No jobs yet.</p>}
+				{list.length === 0 && !jobs.loading && <p className="field-hint">{t('projects.cron.none')}</p>}
 				{list.map((job) => (
 					<div key={job.jobId} className="local-job">
 						<div className="local-job-head">
@@ -1183,27 +1195,27 @@ export function CronSection({ project }: SectionProps): JSX.Element {
 							<strong>{job.name ?? `Job ${job.jobId}`}</strong>
 							<span className="mono muted">{job.schedule}</span>
 							<span className="spacer" />
-							<label className="check local-inline-check" title={job.active ? "Pause" : "Resume"}>
-								<input type="checkbox" checked={job.active} disabled={busy} onChange={(e) => void run(`select cron.alter_job(${pgLiteral(job.jobId)}, active := ${pgLiteral(e.target.checked)})`, e.target.checked ? "Resumed." : "Paused.")} />
+							<label className="check local-inline-check" title={job.active ? t('projects.cron.pause') : t('projects.cron.resume')}>
+								<input type="checkbox" checked={job.active} disabled={busy} onChange={(e) => void run(`select cron.alter_job(${pgLiteral(job.jobId)}, active := ${pgLiteral(e.target.checked)})`, e.target.checked ? t('projects.cron.resumed') : t('projects.cron.paused'))} />
 							</label>
-							<button type="button" className="table-action" onClick={() => setOpen(open === job.jobId ? null : job.jobId)}><Icon name="history" /> {open === job.jobId ? "Hide runs" : "Runs"}</button>
+							<button type="button" className="table-action" onClick={() => setOpen(open === job.jobId ? null : job.jobId)}><Icon name="history" /> {open === job.jobId ? t('projects.cron.hideRuns') : t('projects.cron.runs')}</button>
 							<button
 								type="button"
 								className="table-action is-danger"
 								disabled={busy}
 								onClick={async () => {
-									if (await confirm({ title: `Delete ${job.name ?? `job ${job.jobId}`}?`, body: "The job stops and is removed. Its run history stays in cron.job_run_details.", confirmLabel: "Delete job", danger: true })) {
-										await run(`select cron.unschedule(${pgLiteral(job.jobId)})`, "Deleted.");
+									if (await confirm({ title: `Delete ${job.name ?? `job ${job.jobId}`}?`, body: t('projects.cron.deleteBody'), confirmLabel: t('projects.cron.delete'), danger: true })) {
+										await run(`select cron.unschedule(${pgLiteral(job.jobId)})`, t('projects.cron.deleted'));
 									}
 								}}
 							>
-								<Icon name="trash" /> Delete
+								<Icon name="trash" /> {t('projects.common.delete')}
 							</button>
 						</div>
 						<pre className="local-snippet">{job.command}</pre>
 						<div className="muted small">
-							{job.lastStart ? `Last ran ${when(job.lastStart)}: ${job.lastStatus}` : "Has not run yet."}
-							{job.failures > 0 ? ` · ${job.failures} failed in the last day` : ''}
+							{job.lastStart ? t('projects.cron.lastRan', { when: when(job.lastStart), status: String(job.lastStatus) }) : t('projects.cron.notRun')}
+							{job.failures > 0 ? t('projects.cron.failures', { count: job.failures }) : ''}
 							{job.lastStatus === 'failed' && job.lastMessage ? ` · ${job.lastMessage}` : ''}
 						</div>
 						{open === job.jobId && <JobRuns target={project.target} jobId={job.jobId} />}
@@ -1212,39 +1224,39 @@ export function CronSection({ project }: SectionProps): JSX.Element {
 				<Status said={said} />
 			</fieldset>
 			<fieldset>
-				<legend>New job</legend>
+				<legend>{t('projects.cron.newJob')}</legend>
 				<label>
-					Start from
+					{t('projects.cron.startFrom')}
 					<select value="" onChange={(e) => {
-						const t = TEMPLATES.find((x) => x.label === e.target.value);
-						if (t) {
-							setName(t.name);
-							setSchedule(t.schedule);
-							setCommand(t.command);
+						const tmpl = TEMPLATES.find((x) => x.name === e.target.value);
+						if (tmpl) {
+							setName(tmpl.name);
+							setSchedule(tmpl.schedule);
+							setCommand(tmpl.command);
 						}
 					}}>
-						<option value="">A template…</option>
-						{TEMPLATES.map((t) => <option key={t.label} value={t.label}>{t.label}</option>)}
+						<option value="">{t('projects.cron.template')}</option>
+						{TEMPLATES.map((tmpl) => <option key={tmpl.name} value={tmpl.name}>{tmpl.label}</option>)}
 					</select>
 				</label>
 				<label>
-					Name (optional)
+					{t('projects.cron.nameOpt')}
 					<input value={name} onChange={(e) => setName(e.target.value)} placeholder="nightly-cleanup" />
 				</label>
 				<label>
-					Schedule
+					{t('projects.cron.schedule')}
 					<input value={schedule} onChange={(e) => setSchedule(e.target.value)} className="mono" />
 				</label>
 				<div className="local-chips">
 					{PRESETS.map((p) => <button key={p.schedule} type="button" className={`local-chip${schedule === p.schedule ? ' selected' : ''}`} onClick={() => setSchedule(p.schedule)}>{p.label}</button>)}
 				</div>
-				<p className="field-hint">Cron syntax in UTC, or "N seconds" for 1 to 59 seconds.</p>
+				<p className="field-hint">{t('projects.cron.syntax')}</p>
 				<label>
-					SQL to run
+					{t('projects.cron.sqlToRun')}
 					<textarea rows={4} value={command} onChange={(e) => setCommand(e.target.value)} className="mono" />
 				</label>
 				<div className="cloud-actions">
-					<button type="button" disabled={busy || !schedule.trim() || !command.trim()} onClick={() => void create()}><Icon name="calendar" /> Schedule</button>
+					<button type="button" disabled={busy || !schedule.trim() || !command.trim()} onClick={() => void create()}><Icon name="calendar" /> {t('projects.cron.schedule')}</button>
 				</div>
 			</fieldset>
 			{confirmDialog}
@@ -1253,16 +1265,17 @@ export function CronSection({ project }: SectionProps): JSX.Element {
 }
 
 function JobRuns({ target, jobId }: { target: ProjectTarget; jobId: number }): JSX.Element {
+	const t = useT();
 	const runs = useLoad(() => query<Run>(target, runsSql(jobId)), [projectKey(target), jobId]);
 	if (runs.error) {
 		return <div className="form-status error">{runs.error}</div>;
 	}
 	if ((runs.data ?? []).length === 0) {
-		return <p className="field-hint">No runs yet.</p>;
+		return <p className="field-hint">{t('projects.cron.noRuns')}</p>;
 	}
 	return (
 		<table className="cloud-table">
-			<thead><tr><th>Started</th><th>Status</th><th>Took</th><th>Message</th></tr></thead>
+			<thead><tr><th>{t('projects.cron.started')}</th><th>{t('projects.common.status')}</th><th>{t('projects.cron.took')}</th><th>{t('projects.cron.message')}</th></tr></thead>
 			<tbody>
 				{(runs.data ?? []).map((r) => (
 					<tr key={r.runId}>
@@ -1311,6 +1324,7 @@ function str(v: unknown): string {
 }
 
 export function TimeSeriesSection({ project }: SectionProps): JSX.Element {
+	const t = useT();
 	const state = useLoad(() => query<{ installed: boolean; available: boolean; version: string | null }>(project.target, TS_STATE_SQL).then((r) => r[0]), [projectKey(project.target)]);
 	const installed = state.data?.installed === true;
 	const series = useLoad(() => (installed ? query<{ j: unknown }>(project.target, TS_SERIES_SQL).then((r) => r.map((x) => jsonCell<Json>(x.j))) : Promise.resolve([] as Json[])), [projectKey(project.target), installed]);
@@ -1341,16 +1355,16 @@ export function TimeSeriesSection({ project }: SectionProps): JSX.Element {
 		return <div className="form-status error">{state.error}</div>;
 	}
 	if (!state.data) {
-		return <div className="field-hint">Loading…</div>;
+		return <div className="field-hint">{t('projects.common.loading')}</div>;
 	}
 	if (!installed) {
 		return (
 			<fieldset>
-				<legend>Time series</legend>
-				<p>SnoutTime partitions a table by time, seals old partitions into a compressed columnar form, keeps rollups up to date and drops what is past its retention.</p>
+				<legend>{t('projects.ts.title')}</legend>
+				<p>{t('projects.ts.intro')}</p>
 				{state.data.available
-					? <div className="cloud-actions"><button type="button" disabled={busy} onClick={() => void run('create extension if not exists snouttime', "SnoutTime is on.")}><Icon name="zap" /> Switch on SnoutTime</button></div>
-					: <p className="field-hint">SnoutTime is not in this project's database image, so there is nothing to switch on here. It runs on SnoutData Cloud projects; when the self-hosted image carries it, this section offers it.</p>}
+					? <div className="cloud-actions"><button type="button" disabled={busy} onClick={() => void run('create extension if not exists snouttime', t('projects.ts.isOn'))}><Icon name="zap" /> {t('projects.ts.switchOn')}</button></div>
+					: <p className="field-hint">{t('projects.ts.notInImage')}</p>}
 				<Status said={said} />
 			</fieldset>
 		);
@@ -1360,13 +1374,13 @@ export function TimeSeriesSection({ project }: SectionProps): JSX.Element {
 	return (
 		<>
 			<fieldset>
-				<legend>Series</legend>
-				<p className="field-hint">SnoutTime {state.data.version}. Every figure is from the catalog or a planner estimate, never a scan.</p>
+				<legend>{t('projects.ts.series')}</legend>
+				<p className="field-hint">{t('projects.ts.seriesIntro', { version: String(state.data.version) })}</p>
 				{series.error && <div className="form-status error">{series.error}</div>}
-				{list.length === 0 && !series.loading && <p className="field-hint">No series yet. Make one from a table with a time column below.</p>}
+				{list.length === 0 && !series.loading && <p className="field-hint">{t('projects.ts.none')}</p>}
 				{list.length > 0 && (
 					<table className="cloud-table">
-						<thead><tr><th>Series</th><th>Time column</th><th>Partition</th><th>Partitions</th><th>Rows</th><th>Size</th><th>Retention</th></tr></thead>
+						<thead><tr><th>{t('projects.ts.series')}</th><th>{t('projects.ts.timeCol')}</th><th>{t('projects.ts.partition')}</th><th>{t('projects.ts.partitions')}</th><th>{t('projects.common.rows')}</th><th>{t('projects.common.size')}</th><th>{t('projects.ts.retention')}</th></tr></thead>
 						<tbody>
 							{list.map((s) => (
 								<tr key={str(s.oid)}>
@@ -1376,7 +1390,7 @@ export function TimeSeriesSection({ project }: SectionProps): JSX.Element {
 									<td>{str(s.partitions)}</td>
 									<td>~{str(s.estimated_rows)}</td>
 									<td className="muted">{bytes(s.bytes as number | null)}</td>
-									<td className="muted">{str(s.retention) || "kept"}</td>
+									<td className="muted">{str(s.retention) || t('projects.ts.kept')}</td>
 								</tr>
 							))}
 						</tbody>
@@ -1386,12 +1400,12 @@ export function TimeSeriesSection({ project }: SectionProps): JSX.Element {
 			</fieldset>
 			{(rollups.data ?? []).length > 0 && (
 				<fieldset>
-					<legend>Rollups</legend>
+					<legend>{t('projects.ts.rollups')}</legend>
 					<table className="cloud-table">
-						<thead><tr><th>Rollup</th><th>From</th><th>Bucket</th><th>Retention</th></tr></thead>
+						<thead><tr><th>{t('projects.ts.rollup')}</th><th>{t('projects.ts.from')}</th><th>{t('projects.ts.bucket')}</th><th>{t('projects.ts.retention')}</th></tr></thead>
 						<tbody>
 							{(rollups.data ?? []).map((r) => (
-								<tr key={r.name}><td className="mono">{r.name}</td><td className="mono muted">{r.source}</td><td>{r.bucket ?? ''}</td><td className="muted">{r.retention ?? "kept"}</td></tr>
+								<tr key={r.name}><td className="mono">{r.name}</td><td className="mono muted">{r.source}</td><td>{r.bucket ?? ''}</td><td className="muted">{r.retention ?? t('projects.ts.kept')}</td></tr>
 							))}
 						</tbody>
 					</table>
@@ -1399,16 +1413,16 @@ export function TimeSeriesSection({ project }: SectionProps): JSX.Element {
 			)}
 			{(jobs.data ?? []).length > 0 && (
 				<fieldset>
-					<legend>Background jobs</legend>
+					<legend>{t('projects.ts.jobs')}</legend>
 					<table className="cloud-table">
-						<thead><tr><th>Job</th><th>Target</th><th>Next run</th><th>Last run</th></tr></thead>
+						<thead><tr><th>{t('projects.ts.job')}</th><th>{t('projects.ts.target')}</th><th>{t('projects.ts.nextRun')}</th><th>{t('projects.ts.lastRun')}</th></tr></thead>
 						<tbody>
 							{(jobs.data ?? []).map((j, i) => (
 								<tr key={i}>
 									<td>{str(j.kind)}</td>
 									<td className="mono muted">{str(j.target)}</td>
 									<td className="muted cloud-when">{when(j.next_run)}</td>
-									<td className={j.last_ok === false ? 'form-status error' : 'muted'}>{j.last_run ? `${when(j.last_run)}${j.last_ok === false ? `: ${str(j.last_detail)}` : ''}` : "never"}</td>
+									<td className={j.last_ok === false ? 'form-status error' : 'muted'}>{j.last_run ? `${when(j.last_run)}${j.last_ok === false ? `: ${str(j.last_detail)}` : ''}` : t('projects.common.neverL')}</td>
 								</tr>
 							))}
 						</tbody>
@@ -1416,29 +1430,29 @@ export function TimeSeriesSection({ project }: SectionProps): JSX.Element {
 				</fieldset>
 			)}
 			<fieldset>
-				<legend>New series</legend>
+				<legend>{t('projects.ts.newSeries')}</legend>
 				<div className="local-port-grid">
 					<label>
-						Table
+						{t('projects.common.table')}
 						<input value={table} onChange={(e) => setTable(e.target.value)} placeholder="metrics" />
 					</label>
 					<label>
-						Time column
+						{t('projects.ts.timeCol')}
 						<input value={column} onChange={(e) => setColumn(e.target.value)} />
 					</label>
 					<label>
-						Partition every
+						{t('projects.ts.partitionEvery')}
 						<input value={interval} onChange={(e) => setInterval(e.target.value)} />
 					</label>
 				</div>
-				<p className="field-hint">An existing table with a timestamp column. It becomes a partitioned series in place.</p>
+				<p className="field-hint">{t('projects.ts.existingHint')}</p>
 				<div className="cloud-actions">
 					<button
 						type="button"
 						disabled={busy || !table.trim() || !column.trim()}
-						onClick={() => void run(`select snouttime.create_series(${pgLiteral(table.trim())}, ${pgLiteral(column.trim())}, partition_interval => ${pgLiteral(interval.trim())})`, `${table.trim()} is a series now.`)}
+						onClick={() => void run(`select snouttime.create_series(${pgLiteral(table.trim())}, ${pgLiteral(column.trim())}, partition_interval => ${pgLiteral(interval.trim())})`, t('projects.ts.isSeries', { table: table.trim() }))}
 					>
-						<Icon name="graph-line" /> Make it a series
+						<Icon name="graph-line" /> {t('projects.ts.makeSeries')}
 					</button>
 				</div>
 			</fieldset>

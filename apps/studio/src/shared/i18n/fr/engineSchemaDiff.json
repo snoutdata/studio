@@ -1,0 +1,31 @@
+{
+	"change": {
+		"createTable": "Créer la table `{name}`",
+		"dropTable": "Supprimer la table `{name}`",
+		"addColumn": "Ajouter la colonne `{table}`.`{column}`",
+		"alterColumn": "Modifier la colonne `{table}`.`{column}` ({before} → {after})",
+		"dropColumn": "Supprimer la colonne `{table}`.`{column}`",
+		"setPrimaryKey": "Changer la clé primaire de `{table}`",
+		"addIndex": "Ajouter l'index `{name}` sur `{table}`",
+		"dropIndex": "Supprimer l'index `{name}` sur `{table}`",
+		"replaceIndex": "Reconstruire l'index `{name}` sur `{table}`",
+		"addForeignKey": "Ajouter la clé étrangère `{name}` sur `{table}`",
+		"dropForeignKey": "Supprimer la clé étrangère `{name}` sur `{table}`",
+		"replaceForeignKey": "Reconstruire la clé étrangère `{name}` sur `{table}`",
+		"addTrigger": "Ajouter le trigger `{name}` sur `{table}`",
+		"dropTrigger": "Supprimer le trigger `{name}` sur `{table}`",
+		"replaceTrigger": "Remplacer le trigger `{name}` sur `{table}`",
+		"createView": "Créer la vue `{name}`",
+		"dropView": "Supprimer la vue `{name}`",
+		"replaceView": "Remplacer la vue `{name}`"
+	},
+	"emit": {
+		"unsupportedDriver": "La synchronisation de schéma n'est pas prise en charge pour le pilote \"{driver}\".",
+		"clickhousePrimaryKey": "ClickHouse ne peut pas changer la clé primaire de \"{table}\" : c'est l'ordre de stockage des données. Créez une nouvelle table avec le nouvel ORDER BY et copiez-y les lignes.",
+		"sqliteAlterColumn": "SQLite ne peut pas modifier la colonne \"{table}\".\"{column}\" sur place (il faut reconstruire toute la table, ce que la synchronisation de schéma ne génère pas encore pour SQLite).",
+		"sqlitePrimaryKey": "SQLite ne peut pas changer la clé primaire de \"{table}\" sur place (il faut reconstruire toute la table, ce que la synchronisation de schéma ne génère pas encore pour SQLite).",
+		"sqliteAddForeignKey": "SQLite ne peut pas ajouter une clé étrangère à \"{table}\" sur place (il faut reconstruire toute la table, ce que la synchronisation de schéma ne génère pas encore pour SQLite).",
+		"sqliteDropForeignKey": "SQLite ne peut pas supprimer une clé étrangère de \"{table}\" sur place (il faut reconstruire toute la table, ce que la synchronisation de schéma ne génère pas encore pour SQLite).",
+		"sqliteChangeForeignKey": "SQLite ne peut pas changer une clé étrangère de \"{table}\" sur place (il faut reconstruire toute la table, ce que la synchronisation de schéma ne génère pas encore pour SQLite)."
+	}
+}

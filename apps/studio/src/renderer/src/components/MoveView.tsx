@@ -40,59 +40,60 @@ import type { ComponentInfo } from '../../../shared/components';
 import type { ConnectionConfig } from '../../../shared/connection';
 import type { MoveCheck } from '../../../shared/move';
 import { Icon } from './Icon';
+import { t, useT } from '../i18n';
 
 type Step = 'choose' | 'check' | 'review' | 'moving';
 
 const STEPS: readonly { step: Step; chip: string }[] = [
-	{ step: 'choose', chip: "Choose" },
-	{ step: 'check', chip: "Check" },
-	{ step: 'review', chip: "Review" },
-	{ step: 'moving', chip: "Move" }
+	{ step: 'choose', get chip() { return t('move.steps.choose'); } },
+	{ step: 'check', get chip() { return t('move.steps.check'); } },
+	{ step: 'review', get chip() { return t('move.steps.review'); } },
+	{ step: 'moving', get chip() { return t('move.steps.move'); } }
 ];
 
 export const FIX_LABEL: Record<FixId, string> = {
-	continue: "Go ahead anyway",
-	continueWithout: "Go ahead without it",
-	replaceTarget: "Replace what is there",
-	excludeSchema: "Leave this schema out",
-	excludeExtension: "Leave this extension out",
-	removeSchema: "Take it out of the selection",
-	skipOwnership: "Skip owners and grants",
-	keepSource: "Keep the source"
+	get continue() { return t('move.fix.continue'); },
+	get continueWithout() { return t('move.fix.continueWithout'); },
+	get replaceTarget() { return t('move.fix.replaceTarget'); },
+	get excludeSchema() { return t('move.fix.excludeSchema'); },
+	get excludeExtension() { return t('move.fix.excludeExtension'); },
+	get removeSchema() { return t('move.fix.removeSchema'); },
+	get skipOwnership() { return t('move.fix.skipOwnership'); },
+	get keepSource() { return t('move.fix.keepSource'); }
 };
 
 export const SEVERITY: Record<Finding['severity'], { icon: string; chip: string }> = {
-	block: { icon: 'error', chip: "Must change" },
-	decide: { icon: 'question', chip: "Needs a decision" },
-	note: { icon: 'info', chip: "Note" }
+	block: { icon: 'error', get chip() { return t('move.severity.block'); } },
+	decide: { icon: 'question', get chip() { return t('move.severity.decide'); } },
+	note: { icon: 'info', get chip() { return t('move.severity.note'); } }
 };
 
 const CONTENT: readonly { id: MoveContent; icon: string; title: string; what: string }[] = [
-	{ id: 'both', icon: 'database', title: "Schema and data", what: "Tables and their rows, views, functions, types, indexes and row-level security policies." },
-	{ id: 'schema', icon: 'symbol-structure', title: "Schema only", what: "The structure without any rows, for a fresh copy you fill yourself." },
-	{ id: 'data', icon: 'table', title: "Data only", what: "Rows into tables that already exist on the target, with the same shape." }
+	{ id: 'both', icon: 'database', get title() { return t('move.content.bothTitle'); }, get what() { return t('move.content.bothWhat'); } },
+	{ id: 'schema', icon: 'symbol-structure', get title() { return t('move.content.schemaTitle'); }, get what() { return t('move.content.schemaWhat'); } },
+	{ id: 'data', icon: 'table', get title() { return t('move.content.dataTitle'); }, get what() { return t('move.content.dataWhat'); } }
 ];
 
 const AFTER: readonly { id: SourceAfter; icon: string; title: string; what: string }[] = [
-	{ id: 'keep', icon: 'check', title: "Keep it", what: "The source stays exactly as it is, so the move is a copy." },
-	{ id: 'pause', icon: 'debug-pause', title: "Pause it", what: "A SnoutData Cloud project stops once the copy is verified, and wakes when something connects." },
-	{ id: 'delete', icon: 'trash', title: "Delete it", what: "Only after every object restored and every row count matched, and only once you type its name." }
+	{ id: 'keep', icon: 'check', get title() { return t('move.after.keepTitle'); }, get what() { return t('move.after.keepWhat'); } },
+	{ id: 'pause', icon: 'debug-pause', get title() { return t('move.after.pauseTitle'); }, get what() { return t('move.after.pauseWhat'); } },
+	{ id: 'delete', icon: 'trash', get title() { return t('move.after.deleteTitle'); }, get what() { return t('move.after.deleteWhat'); } }
 ];
 
 const PHASE_TITLE: Record<MovePhase, string> = {
-	starting: "Starting",
-	waking: "Waking the project",
-	creating: "Creating the target",
-	saving: "Saving a copy of the target",
-	replacing: "Emptying the target",
-	schema: "Creating the schema",
-	data: "Copying the data",
-	indexes: "Building indexes",
-	verifying: "Comparing row counts",
-	finishing: "Finishing with the source",
-	done: "Moved",
-	failed: "The move failed",
-	cancelled: "Stopped"
+	get starting() { return t('move.phase.starting'); },
+	get waking() { return t('move.phase.waking'); },
+	get creating() { return t('move.phase.creating'); },
+	get saving() { return t('move.phase.saving'); },
+	get replacing() { return t('move.phase.replacing'); },
+	get schema() { return t('move.phase.schema'); },
+	get data() { return t('move.phase.data'); },
+	get indexes() { return t('move.phase.indexes'); },
+	get verifying() { return t('move.phase.verifying'); },
+	get finishing() { return t('move.phase.finishing'); },
+	get done() { return t('move.phase.done'); },
+	get failed() { return t('move.phase.failed'); },
+	get cancelled() { return t('move.phase.cancelled'); }
 };
 
 export interface MoveViewProps {
@@ -129,11 +130,12 @@ const NEW_CLOUD_REGION = 'us-west-2';
 
 function optionLabel(connection: ConnectionConfig): string {
 	const where = connection.cloudProjectRef ? " (SnoutData Cloud)" : '';
-	const prod = connection.environment === 'prod' ? " (production)" : '';
+	const prod = connection.environment === 'prod' ? t('move.prodSuffix') : '';
 	return `${connection.label}${where}${prod}`;
 }
 
 export function MoveView(props: MoveViewProps): JSX.Element {
+	const t = useT();
 	const [step, setStep] = useState<Step>(props.preview && import.meta.env.DEV ? 'moving' : 'choose');
 	const [sourceId, setSourceId] = useState<string>('');
 	const [targetId, setTargetId] = useState<string>('');
@@ -163,7 +165,7 @@ export function MoveView(props: MoveViewProps): JSX.Element {
 	const newCloud = targetId === NEW_CLOUD;
 	const creating = newOn !== undefined || newCloud;
 	const targetEnd: RouteEnd | undefined = creating
-		? { label: newName.trim() || (newCloud ? "New cloud project" : "New database"), icon: newCloud ? 'cloud' : 'database' }
+		? { label: newName.trim() || (newCloud ? t('move.newCloudProject') : t('move.newDatabase')), icon: newCloud ? 'cloud' : 'database' }
 		: endOf(target);
 	const targetChosen = creating ? newName.trim().length > 0 : target !== undefined;
 
@@ -193,7 +195,7 @@ export function MoveView(props: MoveViewProps): JSX.Element {
 	}
 
 	async function runCheck(next: MoveSpec): Promise<void> {
-		setBusy("Checking both databases");
+		setBusy(t('move.checkingBoth'));
 		setError(null);
 		try {
 			const saved = await window.sqlApi.moves.save(next);
@@ -264,17 +266,17 @@ export function MoveView(props: MoveViewProps): JSX.Element {
 
 	async function installTools(): Promise<void> {
 		setError(null);
-		setBusy("Downloading the Postgres tools");
+		setBusy(t('move.downloadingTools'));
 		const off = window.sqlApi.onComponentProgress((progress) => {
 			if (progress.id !== 'pgtools') {
 				return;
 			}
 			if (progress.phase === 'download' && progress.totalBytes) {
-				setBusy(`Downloading the Postgres tools: ${formatBytes(progress.receivedBytes ?? 0)} of ${formatBytes(progress.totalBytes)}`);
+				setBusy(t('move.downloadingToolsProgress', { received: formatBytes(progress.receivedBytes ?? 0), total: formatBytes(progress.totalBytes) }));
 			} else if (progress.phase === 'verify') {
-				setBusy("Checking the download");
+				setBusy(t('move.checkingDownload'));
 			} else if (progress.phase === 'extract') {
-				setBusy("Unpacking the tools");
+				setBusy(t('move.unpackingTools'));
 			}
 		});
 		let outcome;
@@ -295,7 +297,7 @@ export function MoveView(props: MoveViewProps): JSX.Element {
 		if (!spec) {
 			return;
 		}
-		setBusy("Checking both databases once more");
+		setBusy(t('move.checkingOnceMore'));
 		setError(null);
 		setResult(null);
 		try {
@@ -321,10 +323,10 @@ export function MoveView(props: MoveViewProps): JSX.Element {
 	const mustType = useMemo(() => {
 		const names: { key: string; name: string; why: string }[] = [];
 		if (target?.environment === 'prod') {
-			names.push({ key: 'target', name: target.label, why: "The target is a production database." });
+			names.push({ key: 'target', name: target.label, why: t('move.whyProd') });
 		}
 		if (spec?.sourceAfter === 'delete' && source) {
-			names.push({ key: 'source', name: source.label, why: "The source is deleted once the move is verified." });
+			names.push({ key: 'source', name: source.label, why: t('move.whyDelete') });
 		}
 		return names;
 	}, [target, source, spec]);
@@ -337,7 +339,7 @@ export function MoveView(props: MoveViewProps): JSX.Element {
 	return (
 		<div className="flow-wizard move-view">
 			<div className="flow-wizard-head">
-				<span className="flow-wizard-title"><Icon name="arrow-both" /> {spec?.name ?? "Move a database"}</span>
+				<span className="flow-wizard-title"><Icon name="arrow-both" /> {spec?.name ?? t('move.title')}</span>
 				<div className="flow-wizard-steps">
 					{STEPS.map((entry, index) => (
 						<span key={entry.step} className={`flow-wizard-step${entry.step === step ? ' active' : ''}${stepIndex > index ? ' done' : ''}`}>
@@ -346,7 +348,7 @@ export function MoveView(props: MoveViewProps): JSX.Element {
 					))}
 				</div>
 				<div className="flow-wizard-head-spacer" />
-				<button type="button" className="icon-btn" aria-label="Close" onClick={props.onClose}><Icon name="close" /></button>
+				<button type="button" className="icon-btn" aria-label={t('move.close')} onClick={props.onClose}><Icon name="close" /></button>
 			</div>
 
 			<div className="flow-wizard-body">
@@ -355,36 +357,36 @@ export function MoveView(props: MoveViewProps): JSX.Element {
 				{step === 'choose' && (
 					<div className="flow-wizard-pane move-pane">
 						<p className="flow-wizard-lead">
-							Copy a whole Postgres database from one place to another: a SnoutData Cloud project onto this computer, or a database on this computer into the cloud. Nothing is written until you start it on the last step.
+							{t('move.intro')}
 						</p>
 						<MoveRoute source={endOf(source)} target={targetEnd} running={false} />
 						<div className="move-ends">
 							<label className="move-end">
-								<span className="move-end-label"><Icon name="arrow-up" /> From</span>
+								<span className="move-end-label"><Icon name="arrow-up" /> {t('move.from')}</span>
 								<select value={sourceId} onChange={(event) => setSourceId(event.target.value)}>
-									<option value="">Choose the source</option>
+									<option value="">{t('move.chooseSource')}</option>
 									{connections.map((connection) => (
 										<option key={connection.id} value={connection.id} disabled={connection.id === targetId}>{optionLabel(connection)}</option>
 									))}
 								</select>
 							</label>
-							<button type="button" className="icon-btn move-swap" aria-label="Swap source and target" onClick={swap} disabled={(!sourceId && !targetId) || creating}>
+							<button type="button" className="icon-btn move-swap" aria-label={t('move.swap')} onClick={swap} disabled={(!sourceId && !targetId) || creating}>
 								<Icon name="arrow-swap" />
 							</button>
 							<label className="move-end">
-								<span className="move-end-label"><Icon name="arrow-down" /> To</span>
+								<span className="move-end-label"><Icon name="arrow-down" /> {t('move.to')}</span>
 								<select value={targetId} onChange={(event) => setTargetId(event.target.value)}>
-									<option value="">Choose the target</option>
-									<optgroup label="Existing databases">
+									<option value="">{t('move.chooseTarget')}</option>
+									<optgroup label={t('move.existingDatabases')}>
 										{connections.map((connection) => (
 											<option key={connection.id} value={connection.id} disabled={connection.id === sourceId}>{optionLabel(connection)}</option>
 										))}
 									</optgroup>
 									{/* Most moves go somewhere that does not exist yet. */}
-									<optgroup label="Create a new database">
-										<option value={NEW_CLOUD}>New SnoutData Cloud project</option>
+									<optgroup label={t('move.createNewDatabase')}>
+										<option value={NEW_CLOUD}>{t('move.newCloudOption')}</option>
 										{connections.filter((connection) => connection.driver === 'postgres' && !connection.cloudProjectRef).map((connection) => (
-											<option key={`new-${connection.id}`} value={`${NEW_ON}${connection.id}`}>{`New database on the server of ${connection.label}`}</option>
+											<option key={`new-${connection.id}`} value={`${NEW_ON}${connection.id}`}>{t('move.newOnServer', { label: connection.label })}</option>
 										))}
 									</optgroup>
 								</select>
@@ -393,21 +395,21 @@ export function MoveView(props: MoveViewProps): JSX.Element {
 										<input
 											className="move-new-name"
 											value={newName}
-											placeholder={newCloud ? "Project name" : "Database name"}
-											aria-label={newCloud ? "New project name" : "New database name"}
+											placeholder={newCloud ? t('move.projectName') : t('move.databaseName')}
+											aria-label={newCloud ? t('move.newProjectName') : t('move.newDatabaseName')}
 											maxLength={newCloud ? 60 : 63}
 											spellCheck={false}
 											onChange={(event) => setNewName(event.target.value)}
 										/>
 										<span className="move-end-hint">
-											{newCloud ? `Created in ${NEW_CLOUD_REGION} when the move starts.` : "Created on that server when the move starts."}
+											{newCloud ? t('move.createdInRegion', { region: NEW_CLOUD_REGION }) : t('move.createdOnServer')}
 										</span>
 									</>
 								)}
 							</label>
 						</div>
 
-						<h3 className="move-heading">What to move</h3>
+						<h3 className="move-heading">{t('move.whatToMove')}</h3>
 						<div className="flow-wizard-methods">
 							{CONTENT.map((choice) => (
 								<button key={choice.id} type="button" className={`flow-wizard-method${content === choice.id ? ' chosen' : ''}`} aria-pressed={content === choice.id} onClick={() => setContent(choice.id)}>
@@ -417,7 +419,7 @@ export function MoveView(props: MoveViewProps): JSX.Element {
 							))}
 						</div>
 
-						<h3 className="move-heading">Afterwards, the source</h3>
+						<h3 className="move-heading">{t('move.afterHeading')}</h3>
 						<div className="flow-wizard-methods">
 							{AFTER.map((choice) => {
 								const unavailable = choice.id !== 'keep' && !source?.cloudProjectRef;
@@ -428,7 +430,7 @@ export function MoveView(props: MoveViewProps): JSX.Element {
 										className={`flow-wizard-method${sourceAfter === choice.id ? ' chosen' : ''}`}
 										aria-pressed={sourceAfter === choice.id}
 										disabled={unavailable}
-										title={unavailable ? "Only a SnoutData Cloud project can be paused or deleted after a move" : undefined}
+										title={unavailable ? t('move.onlyCloudPause') : undefined}
 										onClick={() => setSourceAfter(choice.id)}
 									>
 										<span className="flow-wizard-method-head"><Icon name={choice.icon} /><strong>{choice.title}</strong></span>
@@ -450,18 +452,18 @@ export function MoveView(props: MoveViewProps): JSX.Element {
 						{check.error ? (
 							<div className="flow-wizard-error"><Icon name="error" /> {check.error}</div>
 						) : check.findings.length === 0 ? (
-							<div className="move-clear"><Icon name="pass" /> Nothing stands in the way. Review what will happen next.</div>
+							<div className="move-clear"><Icon name="pass" /> {t('move.clear')}</div>
 						) : (
 							<>
 								<p className="flow-wizard-lead">
-									{check.ready ? "Everything that needed a decision has one." : "Each card says what was found. Choose how to deal with the ones that need it."}
+									{check.ready ? t('move.decidedAll') : t('move.cardsExplain')}
 								</p>
 								<ul className="move-findings">
 									{check.findings.map((finding) => (
 										<li key={finding.key} className={`move-finding ${finding.severity}${finding.resolvedBy ? ' resolved' : ''}`}>
 											<span className="move-finding-head">
 												<Icon name={finding.resolvedBy ? 'pass' : SEVERITY[finding.severity].icon} />
-												<span className="move-finding-chip">{finding.resolvedBy ? `Decided: ${FIX_LABEL[finding.resolvedBy]}` : SEVERITY[finding.severity].chip}</span>
+												<span className="move-finding-chip">{finding.resolvedBy ? t('move.decided', { fix: FIX_LABEL[finding.resolvedBy] }) : SEVERITY[finding.severity].chip}</span>
 											</span>
 											<span className="move-finding-sentence">{finding.sentence}</span>
 											{finding.fixes.length > 0 && !finding.resolvedBy && (
@@ -477,10 +479,10 @@ export function MoveView(props: MoveViewProps): JSX.Element {
 												<span className="move-finding-fixes">
 													{tools.supported && tools.published ? (
 														<button type="button" disabled={busy !== null} onClick={() => void installTools()}>
-															<Icon name="cloud-download" /> {`Download them (${formatBytes(tools.downloadBytes ?? 0)})`}
+															<Icon name="cloud-download" /> {t('move.downloadThem', { size: formatBytes(tools.downloadBytes ?? 0) })}
 														</button>
 													) : (
-														<span className="flow-wizard-dim">There is no download of the tools for this computer yet.</span>
+														<span className="flow-wizard-dim">{t('move.noToolsDownload')}</span>
 													)}
 												</span>
 											)}
@@ -494,29 +496,29 @@ export function MoveView(props: MoveViewProps): JSX.Element {
 
 				{step === 'review' && spec && check && (
 					<div className="flow-wizard-pane move-pane">
-						<p className="flow-wizard-lead">Nothing has run yet. This is exactly what will happen.</p>
+						<p className="flow-wizard-lead">{t('move.nothingYet')}</p>
 						<MoveRoute source={endOf(source)} target={targetEnd} running={false} />
 						<div className="flow-wizard-summary">
 							<span><Icon name="database" /> {CONTENT.find((choice) => choice.id === spec.content)?.title}</span>
-							<span><Icon name="organization" /> Owners and grants {spec.ownership === 'skip' ? "skipped" : "kept"}</span>
-							<span><Icon name={AFTER.find((choice) => choice.id === spec.sourceAfter)?.icon ?? 'check'} /> Source: {AFTER.find((choice) => choice.id === spec.sourceAfter)?.title.toLowerCase()}</span>
+							<span><Icon name="organization" /> {spec.ownership === 'skip' ? t('move.ownersSkipped') : t('move.ownersKept')}</span>
+							<span><Icon name={AFTER.find((choice) => choice.id === spec.sourceAfter)?.icon ?? 'check'} /> {t('move.sourceAfter', { after: AFTER.find((choice) => choice.id === spec.sourceAfter)?.title.toLowerCase() ?? '' })}</span>
 						</div>
 						{spec.targetMode === 'replace' && (
 							<>
 								{target?.cloudProjectRef && (
-									<div className="flow-wizard-notes"><span className="flow-wizard-note"><strong>First:</strong>a copy of what is in the target now is saved as a cloud export, and the move does not start if that copy fails.</span></div>
+									<div className="flow-wizard-notes"><span className="flow-wizard-note"><strong>{t('move.first')}</strong>{t('move.firstSaved')}</span></div>
 								)}
-								<h3 className="move-heading">Dropped from the target before the copy</h3>
+								<h3 className="move-heading">{t('move.droppedBefore')}</h3>
 								{check.drops.length > 0 ? (
 									<pre className="flow-wizard-sql">{check.drops.join('\n')}</pre>
 								) : (
-									<p className="flow-wizard-dim">Nothing: the target holds none of what the move writes.</p>
+									<p className="flow-wizard-dim">{t('move.nothingDropped')}</p>
 								)}
 							</>
 						)}
 						{mustType.map((entry) => (
 							<label key={entry.key} className="move-confirm">
-								<span>{entry.why} Type <strong>{entry.name}</strong> to confirm.</span>
+								<span>{entry.why} {t('move.typeBefore')} <strong>{entry.name}</strong> {t('move.typeAfter')}</span>
 								<input value={typed[entry.key] ?? ''} onChange={(event) => setTyped((current) => ({ ...current, [entry.key]: event.target.value }))} spellCheck={false} />
 							</label>
 						))}
@@ -537,37 +539,37 @@ export function MoveView(props: MoveViewProps): JSX.Element {
 			<div className="flow-wizard-foot">
 				{step !== 'choose' && step !== 'moving' && (
 					<button type="button" className="secondary" disabled={busy !== null} onClick={() => setStep(step === 'review' ? 'check' : 'choose')}>
-						<Icon name="arrow-left" /> Back
+						<Icon name="arrow-left" /> {t('move.back')}
 					</button>
 				)}
 				<div className="flow-wizard-head-spacer" />
 				{step === 'choose' && (
 					<button type="button" disabled={!source || !targetChosen || busy !== null} onClick={() => { const next = draft(); if (next) { void runCheck(next); } }}>
-						Check both databases <Icon name="arrow-right" />
+						{t('move.checkBoth')} <Icon name="arrow-right" />
 					</button>
 				)}
 				{step === 'check' && (
 					<>
 						<button type="button" className="secondary" disabled={busy !== null || !spec} onClick={() => { if (spec) { void runCheck(spec); } }}>
-							<Icon name="refresh" /> Check again
+							<Icon name="refresh" /> {t('move.checkAgain')}
 						</button>
 						<button type="button" disabled={!check?.ready || busy !== null} onClick={() => setStep('review')}>
-							Review <Icon name="arrow-right" />
+							{t('move.review')} <Icon name="arrow-right" />
 						</button>
 					</>
 				)}
 				{step === 'review' && (
 					<button type="button" disabled={!confirmed || busy !== null} onClick={() => void start()}>
-						<Icon name="play" /> {confirmed ? "Start the move" : "Type the names above to start"}
+						<Icon name="play" /> {confirmed ? t('move.startMove') : t('move.typeNamesToStart')}
 					</button>
 				)}
 				{step === 'moving' && runId && !result && (
 					<button type="button" className="secondary" onClick={() => void window.sqlApi.moves.cancel(runId)}>
-						<Icon name="debug-stop" /> Stop the move
+						<Icon name="debug-stop" /> {t('move.stopMove')}
 					</button>
 				)}
 				{step === 'moving' && (result || (!runId && progress && !isActivePhase(progress.phase))) && (
-					<button type="button" onClick={props.onClose}><Icon name="close" /> Close</button>
+					<button type="button" onClick={props.onClose}><Icon name="close" /> {t('move.close')}</button>
 				)}
 			</div>
 		</div>
@@ -576,21 +578,22 @@ export function MoveView(props: MoveViewProps): JSX.Element {
 
 /** The source → copy → target route, in the house pipeline pulse: staged CSS keyframes coloured by theme tokens. */
 export function MoveRoute(props: { source: RouteEnd | undefined; target: RouteEnd | undefined; running: boolean }): JSX.Element {
+	const t = useT();
 	return (
 		<div className={`move-route${props.running ? ' running' : ''}`} aria-hidden="true">
 			<span className="move-route-stage start">
 				<span className="move-route-node"><Icon name={props.source?.icon ?? 'database'} /></span>
-				<span className="move-route-label">{props.source?.label ?? "Source"}</span>
+				<span className="move-route-label">{props.source?.label ?? t('move.sourceFallback')}</span>
 			</span>
 			<span className="move-route-track" />
 			<span className="move-route-stage">
 				<span className="move-route-node two"><Icon name="arrow-both" /></span>
-				<span className="move-route-label">Copy</span>
+				<span className="move-route-label">{t('move.copyStage')}</span>
 			</span>
 			<span className="move-route-track two" />
 			<span className="move-route-stage end">
 				<span className="move-route-node three"><Icon name={props.target?.icon ?? 'database'} /></span>
-				<span className="move-route-label">{props.target?.label ?? "Target"}</span>
+				<span className="move-route-label">{props.target?.label ?? t('move.targetFallback')}</span>
 			</span>
 		</div>
 	);
@@ -604,6 +607,7 @@ const TABLE_ICON: Record<'waiting' | 'copying' | 'done' | 'failed', string> = {
 };
 
 export function MoveProgressPanel(props: { progress: MoveProgress; source: RouteEnd | undefined; target: RouteEnd | undefined }): JSX.Element {
+	const t = useT();
 	const { progress } = props;
 	const fraction = overallFraction(progress);
 	const eta = etaSeconds(progress);
@@ -625,10 +629,10 @@ export function MoveProgressPanel(props: { progress: MoveProgress; source: Route
 				<div className="progress-fill" style={fraction === null && active ? undefined : { width: `${Math.round((fraction ?? 0) * 100)}%` }} />
 			</div>
 			<div className="flow-wizard-summary">
-				<span><Icon name="database" /> {formatBytes(progress.bytesDone)}{progress.bytesTotal ? ` of about ${formatBytes(progress.bytesTotal)}` : ''}</span>
+				<span><Icon name="database" /> {progress.bytesTotal ? t('move.bytesOfAbout', { done: formatBytes(progress.bytesDone), total: formatBytes(progress.bytesTotal) }) : formatBytes(progress.bytesDone)}</span>
 				{progress.bytesPerSecond ? <span><Icon name="dashboard" /> {formatBytes(progress.bytesPerSecond)}/s</span> : null}
-				{eta !== null && <span><Icon name="clock" /> {formatDuration(eta)} left</span>}
-				{progress.objectsFailed > 0 && <span className="move-failed"><Icon name="error" /> {progress.objectsFailed} did not restore</span>}
+				{eta !== null && <span><Icon name="clock" /> {t('move.etaLeft', { eta: formatDuration(eta) })}</span>}
+				{progress.objectsFailed > 0 && <span className="move-failed"><Icon name="error" /> {t('move.notRestored', { n: progress.objectsFailed })}</span>}
 			</div>
 			<ul className="move-tables">
 				{progress.tables.map((table) => {
@@ -641,7 +645,7 @@ export function MoveProgressPanel(props: { progress: MoveProgress; source: Route
 								<span className="progress-fill" style={part === null && table.state === 'copying' ? undefined : { width: `${Math.round((part ?? 0) * 100)}%` }} />
 							</span>
 							<span className="move-table-count">
-								{table.rowsDone.toLocaleString()}{table.rowsEstimate ? ` / ${table.rowsEstimate.toLocaleString()}` : ''} rows
+								{table.rowsEstimate ? t('move.rowsOf', { done: table.rowsDone, total: table.rowsEstimate }) : t('move.rowsDone', { done: table.rowsDone })}
 							</span>
 						</li>
 					);
@@ -660,6 +664,7 @@ const RESULT_ICON: Record<MoveRunResult['status'], string> = {
 
 /** The report: one sentence, then only what did not match or did not restore, by name. */
 function MoveResultPanel(props: { result: MoveRunResult }): JSX.Element {
+	const t = useT();
 	const { result } = props;
 	const tables = result.tables.filter((table) => !table.matches);
 	const sequences = result.sequences.filter((sequence) => !sequence.matches);
@@ -672,19 +677,19 @@ function MoveResultPanel(props: { result: MoveRunResult }): JSX.Element {
 			</div>
 			{backupUrl && (
 				<p className="flow-wizard-dim">
-					The copy of the target saved before replacing it can be{' '}
-					<a href="#" onClick={(event) => { event.preventDefault(); void window.sqlApi.openExternal(backupUrl); }}>downloaded</a> for a few hours.
+					{t('move.backupBefore')}{' '}
+					<a href="#" onClick={(event) => { event.preventDefault(); void window.sqlApi.openExternal(backupUrl); }}>{t('move.backupLink')}</a> {t('move.backupAfter')}
 				</p>
 			)}
 			{tables.length > 0 && (
 				<>
-					<h3 className="move-heading">Tables that do not match</h3>
+					<h3 className="move-heading">{t('move.tablesMismatch')}</h3>
 					<ul className="move-result-list">
 						{tables.map((table) => (
 							<li key={`${table.schema}.${table.table}`}>
 								<span className="move-table-name">{table.schema}.{table.table}</span>
 								<span className="move-table-count">
-									{table.targetRows === null ? "not on the target" : `${table.targetRows.toLocaleString()} of ${(table.sourceRows ?? 0).toLocaleString()} rows`}
+									{table.targetRows === null ? t('move.notOnTarget') : t('move.rowsOfSource', { target: table.targetRows, source: table.sourceRows ?? 0 })}
 								</span>
 							</li>
 						))}
@@ -693,12 +698,12 @@ function MoveResultPanel(props: { result: MoveRunResult }): JSX.Element {
 			)}
 			{sequences.length > 0 && (
 				<>
-					<h3 className="move-heading">Sequences that do not match</h3>
+					<h3 className="move-heading">{t('move.sequencesMismatch')}</h3>
 					<ul className="move-result-list">
 						{sequences.map((sequence) => (
 							<li key={`${sequence.schema}.${sequence.name}`}>
 								<span className="move-table-name">{sequence.schema}.{sequence.name}</span>
-								<span className="move-table-count">{`${sequence.target ?? "missing"} on the target, ${sequence.source ?? "never used"} on the source`}</span>
+								<span className="move-table-count">{t('move.sequenceValues', { target: String(sequence.target ?? t('move.missing')), source: String(sequence.source ?? t('move.neverUsed')) })}</span>
 							</li>
 						))}
 					</ul>
@@ -706,10 +711,10 @@ function MoveResultPanel(props: { result: MoveRunResult }): JSX.Element {
 			)}
 			{result.failures.length > 0 && (
 				<>
-					<h3 className="move-heading">Did not restore</h3>
+					<h3 className="move-heading">{t('move.didNotRestore')}</h3>
 					{result.failures.map((failure, index) => (
 						<details key={index} className="move-result-failure">
-							<summary>{failure.object ?? "An object"}: {failure.message.split('\n')[0]}</summary>
+							<summary>{failure.object ?? t('move.anObject')}: {failure.message.split('\n')[0]}</summary>
 							{failure.command && <pre className="flow-wizard-sql">{failure.command}</pre>}
 						</details>
 					))}

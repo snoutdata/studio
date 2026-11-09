@@ -22,11 +22,12 @@ import { dialectFor } from '../../index';
 import type { ColumnInfo, ForeignKeyInfo, IndexInfo, TableInfo } from '../../../../schema';
 import type { DdlEmitter } from './index';
 import type { SchemaChange } from '../types';
+import { t } from '../../../../i18n/core';
 
 const q = dialectFor('sqlite').quoteIdent;
 
-function unsupported(what: string): never {
-	throw new Error(`SQLite can't ${what} in place (it requires a full table rebuild, which schema sync does not yet generate for SQLite).`);
+function unsupported(message: string): never {
+	throw new Error(message);
 }
 
 function columnDef(column: ColumnInfo): string {
@@ -84,16 +85,16 @@ export class SqliteEmitter implements DdlEmitter {
 			case 'dropColumn':
 				return [`ALTER TABLE ${q(change.table)} DROP COLUMN ${q(change.column.name)}`];
 			case 'alterColumn':
-				return unsupported(`alter column "${change.table}"."${change.after.name}"`);
+				return unsupported(t('engineSchemaDiff.emit.sqliteAlterColumn', { table: change.table, column: change.after.name }));
 			case 'setPrimaryKey':
-				return unsupported(`change the primary key of "${change.table}"`);
+				return unsupported(t('engineSchemaDiff.emit.sqlitePrimaryKey', { table: change.table }));
 			case 'addForeignKey':
 				// Inline on a table this plan just created; otherwise SQLite can't add it in place.
-				return this.newTables.has(change.table) ? [] : unsupported(`add a foreign key to "${change.table}"`);
+				return this.newTables.has(change.table) ? [] : unsupported(t('engineSchemaDiff.emit.sqliteAddForeignKey', { table: change.table }));
 			case 'dropForeignKey':
-				return unsupported(`drop a foreign key from "${change.table}"`);
+				return unsupported(t('engineSchemaDiff.emit.sqliteDropForeignKey', { table: change.table }));
 			case 'replaceForeignKey':
-				return unsupported(`change a foreign key on "${change.table}"`);
+				return unsupported(t('engineSchemaDiff.emit.sqliteChangeForeignKey', { table: change.table }));
 			case 'addIndex':
 				return [createIndex(change.table, change.index)];
 			case 'dropIndex':

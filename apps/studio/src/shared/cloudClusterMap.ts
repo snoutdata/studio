@@ -18,6 +18,7 @@
 // - Each node is drawn by its data when the advisor has measured it.
 
 import { joinWords, jobFinished, nodePods, replicaPods, type ShardJob, type ShardsStatus } from './cloudShards';
+import { t } from './i18n/core';
 
 export type ClusterMarkTone = 'ok' | 'quiet' | 'warn' | 'error';
 
@@ -60,10 +61,10 @@ export type NodeSizes = ReadonlyMap<number, number>;
 
 function stopping(failover: string | null | undefined): { words: string; tone: ClusterMarkTone } | null {
 	if (failover === 'fence' || failover === 'promote' || failover === 'swap') {
-		return { words: "Its replica is taking its place", tone: 'warn' };
+		return { words: t('engineCluster.replicaTaking'), tone: 'warn' };
 	}
 	if (failover === 'held' || failover === 'failed') {
-		return { words: "Its replica could not take its place", tone: 'error' };
+		return { words: t('engineCluster.replicaFailed'), tone: 'error' };
 	}
 	return null;
 }
@@ -84,13 +85,13 @@ export function clusterMapModel(status: ShardsStatus, sizes?: NodeSizes, jobs?: 
 	};
 
 	const router = status.routerError || status.router === 'unreachable'
-		? { words: "Not answering", tone: 'error' as const }
+		? { words: t('engineCluster.routerDown'), tone: 'error' as const }
 		: status.router === 'starting'
-			? { words: "Starting", tone: 'quiet' as const }
+			? { words: t('engineCluster.routerStarting'), tone: 'quiet' as const }
 			: status.router === 'paused'
-				? { words: "Paused, wakes on the next connection", tone: 'quiet' as const }
-				: { words: "Sends every query", tone: 'ok' as const };
-	marks.push({ id: 'router', role: 'router', label: "Router", ...router, pending: false, catalogId: null, bytes: null, scale: 1, row: 0, column: 0 });
+				? { words: t('engineCluster.routerPaused'), tone: 'quiet' as const }
+				: { words: t('engineCluster.routerOk'), tone: 'ok' as const };
+	marks.push({ id: 'router', role: 'router', label: t('engineCluster.router'), ...router, pending: false, catalogId: null, bytes: null, scale: 1, row: 0, column: 0 });
 
 	// The home first, then the nodes in the catalog's order, then pods the catalog has not got yet.
 	const ordered = [...catalog.filter((n) => n.home), ...catalog.filter((n) => !n.home).sort((a, b) => a.id - b.id)];
@@ -99,32 +100,32 @@ export function clusterMapModel(status: ShardsStatus, sizes?: NodeSizes, jobs?: 
 	for (const node of ordered) {
 		const pod = node.home ? undefined : pods.find((p) => p.ref === node.name);
 		const id = node.home ? 'home' : `node:${node.id}`;
-		let words = "Serves its share";
+		let words = t('engineCluster.serves');
 		let tone: ClusterMarkTone = 'ok';
 		let pending = false;
 		const failing = stopping(node.home ? status.home?.failover : pod?.failover);
 		if (failing) {
 			({ words, tone } = failing);
 		} else if (pod && pod.state !== 'ready') {
-			words = "Its server is starting";
+			words = t('engineCluster.serverStarting');
 			tone = 'quiet';
 		} else if (node.state === 'joining') {
-			words = pod?.joining === 'failed' ? "Its join stopped" : capital(joinWords(pod?.joining ?? 'joining'));
+			words = pod?.joining === 'failed' ? t('engineCluster.joinStopped') : capital(joinWords(pod?.joining ?? 'joining'));
 			tone = pod?.joining === 'failed' ? 'error' : 'quiet';
 			pending = true;
 		} else if (node.state === 'draining') {
-			words = "Moving its data out";
+			words = t('engineCluster.draining');
 			tone = 'quiet';
 		} else if (node.state !== 'active') {
 			words = capital(node.state);
 			tone = 'quiet';
 		} else if (node.home) {
-			words = "Holds tables not spread";
+			words = t('engineCluster.holdsHome');
 		}
 		marks.push({
 			id,
 			role: node.home ? 'home' : 'node',
-			label: node.home ? "Home" : `Node ${node.id}`,
+			label: node.home ? t('engineCluster.home') : t('engineCluster.node', { id: String(node.id) }),
 			words,
 			tone,
 			pending,
@@ -137,7 +138,7 @@ export function clusterMapModel(status: ShardsStatus, sizes?: NodeSizes, jobs?: 
 		columnOf.set(node.home ? status.ref : node.name, column);
 		columnOf.set(node.name, column);
 		if ((node.state === 'active' || node.state === 'draining') && (!pod || pod.state === 'ready')) {
-			lines.push({ from: 'router', to: id, kind: 'queries', ...(column === 0 ? { words: "queries" } : {}) });
+			lines.push({ from: 'router', to: id, kind: 'queries', ...(column === 0 ? { words: t('engineCluster.queries') } : {}) });
 		}
 		column += 1;
 	}
@@ -146,8 +147,8 @@ export function clusterMapModel(status: ShardsStatus, sizes?: NodeSizes, jobs?: 
 		marks.push({
 			id: `pod:${pod.ref}`,
 			role: 'node',
-			label: "New node",
-			words: failed ? "Its join stopped" : capital(joinWords(pod.joining ?? null)),
+			label: t('engineCluster.newNode'),
+			words: failed ? t('engineCluster.joinStopped') : capital(joinWords(pod.joining ?? null)),
 			tone: failed ? 'error' : 'quiet',
 			pending: true,
 			catalogId: null,
@@ -168,8 +169,8 @@ export function clusterMapModel(status: ShardsStatus, sizes?: NodeSizes, jobs?: 
 		marks.push({
 			id: `replica:${key}`,
 			role: 'replica',
-			label: "Replica",
-			words: following ? "Follows it, takes its place if it is lost" : "Being made from its backup",
+			label: t('engineCluster.replica'),
+			words: following ? t('engineCluster.follows') : t('engineCluster.fromBackup'),
 			tone: 'quiet',
 			pending: !following,
 			catalogId: null,
@@ -180,7 +181,7 @@ export function clusterMapModel(status: ShardsStatus, sizes?: NodeSizes, jobs?: 
 		});
 		placed.add(of);
 		if (ofId) {
-			lines.push({ from: ofId, to: `replica:${key}`, kind: 'follows', words: "replica" });
+			lines.push({ from: ofId, to: `replica:${key}`, kind: 'follows', words: t('engineCluster.replicaLine') });
 		}
 	};
 	for (const pod of replicas) {
@@ -202,17 +203,19 @@ export function clusterMapModel(status: ShardsStatus, sizes?: NodeSizes, jobs?: 
 function mapSentence(status: ShardsStatus, marks: readonly ClusterMark[], lines: readonly ClusterLine[], jobs: readonly ShardJob[] | null): string {
 	const running = (jobs ?? []).find((j) => !jobFinished(j.state));
 	if (running) {
-		return `Job ${running.id} (${running.op}) is ${running.state === 'pending' ? 'waiting to start' : running.state}: ${running.steps_done} of ${running.steps} steps. Writes to a range pause for a moment when it moves.`;
+		return running.state === 'pending'
+			? t('engineCluster.jobWaiting', { id: String(running.id), op: running.op, done: running.steps_done, steps: running.steps })
+			: t('engineCluster.jobState', { id: String(running.id), op: running.op, state: running.state, done: running.steps_done, steps: running.steps });
 	}
 	if (status.routerError || status.router === 'unreachable') {
-		return "The router is not answering, so queries are not reaching the cluster nodes.";
+		return t('engineCluster.sentenceRouterDown');
 	}
 	if (marks.some((m) => m.pending && m.role === 'node')) {
-		return "A node is joining. It starts as a copy of the home node and takes its share of the data once it has joined.";
+		return t('engineCluster.sentenceJoining');
 	}
 	// The nodes the router sends to: a draining node still holds rows until they have moved.
 	const serving = lines.filter((l) => l.kind === 'queries' && l.to !== 'home').length;
 	return serving === 0
-		? "Every row is on the home node. Spread a table to put its rows on the cluster nodes."
-		: `The router sends each query to the home node or to the ${serving === 1 ? 'node' : `${serving} nodes`} holding its rows.`;
+		? t('engineCluster.sentenceHomeOnly')
+		: t('engineCluster.sentenceServing', { count: serving });
 }

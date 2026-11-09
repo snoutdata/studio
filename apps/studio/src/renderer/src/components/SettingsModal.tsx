@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { useEffect, useState, type InputHTMLAttributes } from 'react';
-import { HIDE_SETTING_HINT, LIBY_AVAILABLE } from '@snout/liby/studio';
+import { hideSettingHint, LIBY_AVAILABLE } from '@snout/liby/studio';
 import { PRO_AVAILABLE } from '@snout/studio-pro/renderer';
 import { ASSISTANT_INTRO, ASSISTANT_NAME } from '../../../shared/assistant';
 import { Icon } from './Icon';
@@ -18,7 +18,7 @@ import { AccountSection } from './AccountSection';
 import type { ConnectionConfig } from '../../../shared/connection';
 import { GLOBAL_CONNECTION, type KnowledgeNote, type KnowledgeScope } from '../../../shared/knowledge';
 import { BYOK_PROVIDER_DEFAULTS, DEFAULT_AI_SETTINGS } from '../../../shared/ai';
-import { DATA_ACCESS_INFO, DATA_ACCESS_LEVELS, effectiveDataAccess, type DataAccessLevel } from '../../../shared/engine';
+import { DATA_ACCESS_LEVELS, dataAccessText, effectiveDataAccess, type DataAccessLevel } from '../../../shared/engine';
 import type { AiAuditEntry, AiAuditKind, AiBudgetStatus, AiProviderId, AiProviderStatus, AiSettings, AiSettingsFormValues, ByokProviderId, InlineCompletionMode } from '../../../shared/ai';
 import type { AuthProviderId, AuthState, Entitlements } from '../../../shared/auth';
 import { MCP_SERVER_NAME, mcpConfigSnippet, mcpProblemNotice, type McpProblem, type McpStatus } from '../../../shared/mcp';
@@ -33,7 +33,9 @@ import { OFFICIAL_BUILD } from '../../../shared/officialBuild';
 import { CloudAccountsSection } from './CloudAccountSettings';
 import { DataGenerationSection, ExtractionModelSection, PRO_SETTING_ENTRIES } from '@snout/studio-pro/settings';
 import type { ProEnginePage } from '../proSeam';
-import { secretsPlace, useSecretsWeak } from '../secretsPlace';
+import { useSecretsWeak } from '../secretsPlace';
+import { formatLocale, LOCALES, rich, useI18n, useT, type LanguagePreference, type Translate } from '../i18n';
+import { translate } from '../../../shared/i18n/core';
 
 export type SettingsTab = 'account' | 'appearance' | 'editor' | 'ai' | 'datagen' | 'extractmodel' | 'audit' | 'agent' | 'knowledge' | 'snoutbot' | 'connections' | 'cloud' | 'network' | 'privacy' | 'shortcuts' | 'reset';
 
@@ -104,43 +106,46 @@ interface SettingsModalProps {
 
 /** Nav entries grouped into sections (a blank line is drawn between groups, VSCode-style).
  *  Each carries a Codicon for a quick visual anchor. */
-const TAB_GROUPS: Array<Array<{ id: SettingsTab; label: string; icon: string }>> = [
+const TAB_GROUPS: Array<Array<{ id: SettingsTab; labelKey: string; icon: string }>> = [
 	[
-		{ id: 'account', label: 'Account', icon: 'account' },
-		{ id: 'appearance', label: 'Appearance', icon: 'symbol-color' },
-		{ id: 'editor', label: 'Editor & Query', icon: 'edit' },
+		{ id: 'account', labelKey: 'settings.tabs.account', icon: 'account' },
+		{ id: 'appearance', labelKey: 'settings.tabs.appearance', icon: 'symbol-color' },
+		{ id: 'editor', labelKey: 'settings.tabs.editor', icon: 'edit' },
 	],
 	[
-		{ id: 'ai', label: 'AI Settings', icon: 'sparkle' },
-		{ id: 'datagen', label: 'Data Generation', icon: 'beaker' },
-		{ id: 'extractmodel', label: 'Extraction Model', icon: 'circuit-board' },
-		{ id: 'audit', label: 'AI Audit', icon: 'history' },
-		{ id: 'agent', label: 'Agent access', icon: 'remote' },
-		{ id: 'knowledge', label: 'Knowledge', icon: 'lightbulb' },
-		{ id: 'snoutbot', label: 'Snoutbot (PR review)', icon: 'git-pull-request' },
+		{ id: 'ai', labelKey: 'settings.tabs.ai', icon: 'sparkle' },
+		{ id: 'datagen', labelKey: 'settings.tabs.datagen', icon: 'beaker' },
+		{ id: 'extractmodel', labelKey: 'settings.tabs.extractmodel', icon: 'circuit-board' },
+		{ id: 'audit', labelKey: 'settings.tabs.audit', icon: 'history' },
+		{ id: 'agent', labelKey: 'settings.tabs.agent', icon: 'remote' },
+		{ id: 'knowledge', labelKey: 'settings.tabs.knowledge', icon: 'lightbulb' },
+		{ id: 'snoutbot', labelKey: 'settings.tabs.snoutbot', icon: 'git-pull-request' },
 	],
 	[
-		{ id: 'connections', label: 'Connections', icon: 'database' },
-		{ id: 'cloud', label: 'Cloud accounts', icon: 'cloud' },
-		{ id: 'network', label: 'Network', icon: 'globe' },
+		{ id: 'connections', labelKey: 'settings.tabs.connections', icon: 'database' },
+		{ id: 'cloud', labelKey: 'settings.tabs.cloud', icon: 'cloud' },
+		{ id: 'network', labelKey: 'settings.tabs.network', icon: 'globe' },
 	],
 	[
-		{ id: 'privacy', label: 'Privacy', icon: 'shield' },
+		{ id: 'privacy', labelKey: 'settings.tabs.privacy', icon: 'shield' },
 	],
 	[
-		{ id: 'shortcuts', label: 'Shortcuts', icon: 'keyboard' },
-		{ id: 'reset', label: 'Reset', icon: 'discard' },
+		{ id: 'shortcuts', labelKey: 'settings.tabs.shortcuts', icon: 'keyboard' },
+		{ id: 'reset', labelKey: 'settings.tabs.reset', icon: 'discard' },
 	],
 ];
 
 const TABS = TAB_GROUPS.flat();
 
-/** One searchable setting inside a tab. `label` must be a substring of the control's rendered
- *  text (that's how the reveal below finds it in the DOM); `keywords` adds the words people
- *  actually type but that don't appear in the label ("gpu", "telemetry", "fk"). */
+/** One searchable setting inside a tab. `labelKey` is the catalog key of the control's own text,
+ *  so its translation is by construction a substring of what the control renders (that's how the
+ *  reveal below finds it in the DOM, in any language); `label` is plain text for the entries Data
+ *  Flows brings. `keywords` stays English: the words people actually type but that don't appear in
+ *  the label ("gpu", "telemetry", "fk"). */
 interface SettingEntry {
 	tab: SettingsTab;
-	label: string;
+	labelKey?: string;
+	label?: string;
 	keywords?: string;
 }
 
@@ -156,96 +161,106 @@ function tabShown(id: SettingsTab): boolean {
  *  the rendered label text to scroll to it. The Shortcuts entries are derived, so they never rot.
  *  Data Flows' pages bring their own entries (none in a build without it). */
 const SETTING_INDEX: SettingEntry[] = [
-	{ tab: 'appearance', label: 'Theme', keywords: 'dark light color scheme' },
-	{ tab: 'appearance', label: 'Activity bar position', keywords: 'sidebar top side' },
-	{ tab: 'appearance', label: 'Reset panel layout', keywords: 'panels move dock left right bottom position sidebar assistant console default' },
-	{ tab: 'appearance', label: 'Editor font size', keywords: 'text size zoom' },
-	{ tab: 'appearance', label: 'Terminal font size', keywords: 'agent console terminal text size zoom claude code codex opencode' },
-	{ tab: 'appearance', label: 'Word wrap' },
-	{ tab: 'appearance', label: 'Show minimap' },
-	{ tab: 'appearance', label: 'Disable onboarding tips', keywords: 'tour checklist getting started welcome' },
-	{ tab: 'appearance', label: 'Show release notes after an update', keywords: "what's new changelog" },
-	{ tab: 'appearance', label: 'Use hardware acceleration when available', keywords: 'gpu graphics rendering crash blank flicker' },
+	{ tab: 'appearance', labelKey: 'settings.language.label', keywords: 'idioma langue lengua translation locale' },
+	{ tab: 'appearance', labelKey: 'settings.appearance.theme', keywords: 'dark light color scheme' },
+	{ tab: 'appearance', labelKey: 'settings.appearance.activityBarPosition', keywords: 'sidebar top side' },
+	{ tab: 'appearance', labelKey: 'settings.appearance.resetPanelLayout', keywords: 'panels move dock left right bottom position sidebar assistant console default' },
+	{ tab: 'appearance', labelKey: 'settings.appearance.editorFontSize', keywords: 'text size zoom' },
+	{ tab: 'appearance', labelKey: 'settings.appearance.terminalFontSize', keywords: 'agent console terminal text size zoom claude code codex opencode' },
+	{ tab: 'appearance', labelKey: 'settings.appearance.wordWrap' },
+	{ tab: 'appearance', labelKey: 'settings.appearance.showMinimap' },
+	{ tab: 'appearance', labelKey: 'settings.appearance.disableOnboarding', keywords: 'tour checklist getting started welcome' },
+	{ tab: 'appearance', labelKey: 'settings.appearance.showReleaseNotes', keywords: "what's new changelog" },
+	{ tab: 'appearance', labelKey: 'settings.appearance.gpuToggle', keywords: 'gpu graphics rendering crash blank flicker' },
 
-	{ tab: 'editor', label: 'Auto-show completions as you type', keywords: 'autocomplete intellisense suggest' },
-	{ tab: 'editor', label: 'SQL keyword case', keywords: 'uppercase lowercase select' },
-	{ tab: 'editor', label: 'Auto-append LIMIT to a bare SELECT' },
-	{ tab: 'editor', label: 'Default LIMIT', keywords: 'rows' },
-	{ tab: 'editor', label: `Auto-translate unsupported SQL to a MongoDB pipeline with ${ASSISTANT_NAME}`, keywords: 'mongo document transcribe' },
-	{ tab: 'editor', label: 'Confirm destructive statements on prod connections', keywords: 'guard safety drop delete production' },
-	{ tab: 'editor', label: 'Allow results-grid actions', keywords: 'edit value copy row prod production grid' },
-	{ tab: 'editor', label: 'Resolve foreign-key ids to inline labels in the grid', keywords: 'fk lookup peek' },
-	{ tab: 'editor', label: 'Connect automatically when picking a connection from a dropdown' },
-	{ tab: 'editor', label: 'Warn before a query the planner expects to scan a huge number of rows', keywords: 'preflight explain scan large dataset' },
-	{ tab: 'editor', label: 'Warn above (rows)', keywords: 'preflight threshold' },
-	{ tab: 'editor', label: 'Warn a running query is slow after (ms)', keywords: 'slow long running timeout' },
-	{ tab: 'editor', label: 'Advise on index/scans after a query takes (ms)', keywords: 'index advice slow' },
-	{ tab: 'editor', label: 'Default connection on launch', keywords: 'startup' },
-	{ tab: 'editor', label: 'Auto-disconnect idle connections after', keywords: 'idle timeout' },
-	{ tab: 'editor', label: 'Reopen connections that were open last launch', keywords: 'reconnect restore startup' },
+	{ tab: 'editor', labelKey: 'settings.editor.autoCompletion', keywords: 'autocomplete intellisense suggest' },
+	{ tab: 'editor', labelKey: 'settings.editor.keywordCase', keywords: 'uppercase lowercase select' },
+	{ tab: 'editor', labelKey: 'settings.editor.autoLimit' },
+	{ tab: 'editor', labelKey: 'settings.editor.defaultLimit', keywords: 'rows' },
+	{ tab: 'editor', labelKey: 'settings.editor.transcribe', keywords: 'mongo document transcribe' },
+	{ tab: 'editor', labelKey: 'settings.editor.confirmOnProd', keywords: 'guard safety drop delete production' },
+	{ tab: 'editor', labelKey: 'settings.editor.allowGridActions', keywords: 'edit value copy row prod production grid' },
+	{ tab: 'editor', labelKey: 'settings.editor.resolveFk', keywords: 'fk lookup peek' },
+	{ tab: 'editor', labelKey: 'settings.editor.autoConnect' },
+	{ tab: 'editor', labelKey: 'settings.editor.preflightScan', keywords: 'preflight explain scan large dataset' },
+	{ tab: 'editor', labelKey: 'settings.editor.warnAbove', keywords: 'preflight threshold' },
+	{ tab: 'editor', labelKey: 'settings.editor.warnSlow', keywords: 'slow long running timeout' },
+	{ tab: 'editor', labelKey: 'settings.editor.adviseAfter', keywords: 'index advice slow' },
+	{ tab: 'editor', labelKey: 'settings.editor.defaultConnection', keywords: 'startup' },
+	{ tab: 'editor', labelKey: 'settings.editor.idleDisconnect', keywords: 'idle timeout' },
+	{ tab: 'editor', labelKey: 'settings.editor.reconnect', keywords: 'reconnect restore startup' },
 
-	{ tab: 'ai', label: 'Provider', keywords: 'model source cloud byok openai anthropic openrouter' },
-	{ tab: 'ai', label: 'API key', keywords: 'token byok credentials' },
-	{ tab: 'ai', label: 'Add a model', keywords: 'byok catalogue' },
-	{ tab: 'ai', label: 'Base URL (optional)', keywords: 'byok endpoint gateway' },
-	{ tab: 'ai', label: 'Extra instructions', keywords: 'tone conventions system prompt' },
-	{ tab: 'ai', label: 'Top tables to fully describe', keywords: 'schema linking prompt context' },
-	{ tab: 'ai', label: 'Max schema characters', keywords: 'prompt budget context' },
-	{ tab: 'ai', label: 'Auto-insert proposed SQL into the editor' },
-	{ tab: 'ai', label: 'Assistant tools', keywords: 'tools agent agentic inspect database' },
-	{ tab: 'ai', label: 'List tables', keywords: 'tool agentic' },
-	{ tab: 'ai', label: 'Describe a table', keywords: 'tool agentic columns keys indexes' },
-	{ tab: 'ai', label: 'Search columns by name', keywords: 'tool agentic' },
-	{ tab: 'ai', label: 'Run read-only queries', keywords: 'tool agentic approve' },
-	{ tab: 'ai', label: 'Max tool steps per reply', keywords: 'agentic' },
-	{ tab: 'ai', label: 'Max rows per query', keywords: 'agentic tool' },
-	{ tab: 'ai', label: 'Enable AI completion', keywords: 'ghost text inline fim tab autocomplete' },
-	{ tab: 'ai', label: 'Trigger', keywords: 'inline completion manual automatic' },
-	{ tab: 'ai', label: 'Completion model', keywords: 'fim snout complete inline' },
+	{ tab: 'ai', labelKey: 'settingsAi.provider', keywords: 'model source cloud byok openai anthropic openrouter' },
+	{ tab: 'ai', labelKey: 'settingsAi.apiKey', keywords: 'token byok credentials' },
+	{ tab: 'ai', labelKey: 'settingsAi.addModel', keywords: 'byok catalogue' },
+	{ tab: 'ai', labelKey: 'settingsAi.baseUrl', keywords: 'byok endpoint gateway' },
+	{ tab: 'ai', labelKey: 'settingsAi.extraInstructions', keywords: 'tone conventions system prompt' },
+	{ tab: 'ai', labelKey: 'settingsAi.topTables', keywords: 'schema linking prompt context' },
+	{ tab: 'ai', labelKey: 'settingsAi.maxSchemaChars', keywords: 'prompt budget context' },
+	{ tab: 'ai', labelKey: 'settingsAi.autoInsertSql' },
+	{ tab: 'ai', labelKey: 'settings.search.assistantTools', keywords: 'tools agent agentic inspect database' },
+	{ tab: 'ai', labelKey: 'settingsAi.listTables', keywords: 'tool agentic' },
+	{ tab: 'ai', labelKey: 'settingsAi.describeTable', keywords: 'tool agentic columns keys indexes' },
+	{ tab: 'ai', labelKey: 'settingsAi.searchColumns', keywords: 'tool agentic' },
+	{ tab: 'ai', labelKey: 'settingsAi.runQueries', keywords: 'tool agentic approve' },
+	{ tab: 'ai', labelKey: 'settingsAi.maxSteps', keywords: 'agentic' },
+	{ tab: 'ai', labelKey: 'settingsAi.maxRows', keywords: 'agentic tool' },
+	{ tab: 'ai', labelKey: 'settingsAi.enableCompletion', keywords: 'ghost text inline fim tab autocomplete' },
+	{ tab: 'ai', labelKey: 'settingsAi.trigger', keywords: 'inline completion manual automatic' },
+	{ tab: 'ai', labelKey: 'settingsAi.completionModel', keywords: 'fim snout complete inline' },
 
 	...PRO_SETTING_ENTRIES,
 
-	{ tab: 'audit', label: `Record chats with ${ASSISTANT_NAME} and the actions they take`, keywords: 'audit log history actions tools capabilities' },
-	{ tab: 'audit', label: 'Record auto-completion and inline edits', keywords: 'audit log fim' },
+	{ tab: 'audit', labelKey: 'settings.search.recordChats', keywords: 'audit log history actions tools capabilities' },
+	{ tab: 'audit', labelKey: 'settings.audit.recordCompletion', keywords: 'audit log fim' },
 
-	{ tab: 'agent', label: 'Allow agent access', keywords: 'mcp claude code local server' },
-	{ tab: 'agent', label: 'Let a program here use my account', keywords: 'cli snoutdata sign in token handoff terminal command line' },
-	{ tab: 'agent', label: 'Connections the agent may use', keywords: 'mcp expose allowlist' },
-	{ tab: 'agent', label: 'Allow writes', keywords: 'mcp insert update delete ddl' },
-	{ tab: 'agent', label: 'Let an agent change the app', keywords: 'capabilities app actions mutating approve open tab setting' },
-	{ tab: 'agent', label: 'Coding agents', keywords: 'claude code codex opencode console terminal agent' },
+	{ tab: 'agent', labelKey: 'settingsAgent.allowAccess', keywords: 'mcp claude code local server' },
+	{ tab: 'agent', labelKey: 'settingsAgent.letProgramUse', keywords: 'cli snoutdata sign in token handoff terminal command line' },
+	{ tab: 'agent', labelKey: 'settingsAgent.connectionsLegend', keywords: 'mcp expose allowlist' },
+	{ tab: 'agent', labelKey: 'settingsAgent.allowWrites', keywords: 'mcp insert update delete ddl' },
+	{ tab: 'agent', labelKey: 'settingsAgent.letChangeApp', keywords: 'capabilities app actions mutating approve open tab setting' },
+	{ tab: 'agent', labelKey: 'settingsAgent.agentsLegend', keywords: 'claude code codex opencode console terminal agent' },
 
-	{ tab: 'knowledge', label: 'Applies to', keywords: 'connection scope notes' },
-	{ tab: 'knowledge', label: 'Scope', keywords: 'database table column note' },
+	{ tab: 'knowledge', labelKey: 'settings.knowledge.appliesTo', keywords: 'connection scope notes' },
+	{ tab: 'knowledge', labelKey: 'settings.knowledge.scope', keywords: 'database table column note' },
 
-	{ tab: 'connections', label: 'Add connection', keywords: 'new database server' },
-	{ tab: 'cloud', label: 'Add a cloud account', keywords: 'aws amazon azure google gcp s3 bucket cloudwatch logs object storage r2 minio backblaze wasabi data flow source credential' },
-	{ tab: 'cloud', label: 'Access key ID', keywords: 'aws s3 cloudwatch credentials bucket secret key' },
-	{ tab: 'cloud', label: 'Import a profile', keywords: 'aws cli profile sso named credential adopt' },
-	{ tab: 'cloud', label: 'Endpoint', keywords: 's3 compatible r2 minio backblaze wasabi ceph bucket' },
-	{ tab: 'cloud', label: 'Region', keywords: 'aws s3 bucket cloudwatch log group' },
+	{ tab: 'connections', labelKey: 'settings.search.addConnection', keywords: 'new database server' },
+	{ tab: 'cloud', labelKey: 'settings.search.addCloudAccount', keywords: 'aws amazon azure google gcp s3 bucket cloudwatch logs object storage r2 minio backblaze wasabi data flow source credential' },
+	{ tab: 'cloud', labelKey: 'settings.search.accessKeyId', keywords: 'aws s3 cloudwatch credentials bucket secret key' },
+	{ tab: 'cloud', labelKey: 'settings.search.importProfile', keywords: 'aws cli profile sso named credential adopt' },
+	{ tab: 'cloud', labelKey: 'cloudAccounts.endpoint', keywords: 's3 compatible r2 minio backblaze wasabi ceph bucket' },
+	{ tab: 'cloud', labelKey: 'cloudAccounts.region', keywords: 'aws s3 bucket cloudwatch log group' },
 
-	{ tab: 'network', label: 'Proxy', keywords: 'corporate zscaler network system' },
-	{ tab: 'network', label: 'PAC URL', keywords: 'proxy auto-config script wpad' },
-	{ tab: 'network', label: 'Proxy server', keywords: 'manual host port' },
-	{ tab: 'network', label: 'Bypass for these hosts', keywords: 'proxy no_proxy localhost' },
-	{ tab: 'network', label: 'Proxy sign-in', keywords: 'username password credentials kerberos' },
+	{ tab: 'network', labelKey: 'settings.network.proxyLegend', keywords: 'corporate zscaler network system' },
+	{ tab: 'network', labelKey: 'settings.network.pacUrl', keywords: 'proxy auto-config script wpad' },
+	{ tab: 'network', labelKey: 'settings.network.proxyServer', keywords: 'manual host port' },
+	{ tab: 'network', labelKey: 'settings.network.bypass', keywords: 'proxy no_proxy localhost' },
+	{ tab: 'network', labelKey: 'settings.network.signIn', keywords: 'username password credentials kerberos' },
 
-	{ tab: 'privacy', label: 'Send crash and error reports', keywords: 'telemetry sentry analytics usage activity install id heartbeat account opt out' },
-	{ tab: 'privacy', label: 'Sync my settings to my account', keywords: 'settings sync cloud account' },
+	{ tab: 'privacy', labelKey: 'settings.privacy.sendReports', keywords: 'telemetry sentry analytics usage activity install id heartbeat account opt out' },
+	{ tab: 'privacy', labelKey: 'settings.privacy.syncToggle', keywords: 'settings sync cloud account' },
 
-	{ tab: 'reset', label: 'Window & pane sizing', keywords: 'reset layout' },
-	{ tab: 'reset', label: 'Editor & appearance preferences', keywords: 'reset defaults' },
-	{ tab: 'reset', label: 'Connections & saved credentials', keywords: 'reset delete' },
-	{ tab: 'reset', label: 'Query history & saved queries', keywords: 'reset clear' },
-	{ tab: 'reset', label: `${ASSISTANT_NAME} conversations`, keywords: 'reset clear ai chat history' },
-	{ tab: 'reset', label: 'AI audit log', keywords: 'reset clear' },
+	{ tab: 'reset', labelKey: 'settings.reset.items.layout', keywords: 'reset layout' },
+	{ tab: 'reset', labelKey: 'settings.reset.items.preferences', keywords: 'reset defaults' },
+	{ tab: 'reset', labelKey: 'settings.reset.items.connections', keywords: 'reset delete' },
+	{ tab: 'reset', labelKey: 'settings.reset.items.queries', keywords: 'reset clear' },
+	{ tab: 'reset', labelKey: 'settings.reset.items.chats', keywords: 'reset clear ai chat history' },
+	{ tab: 'reset', labelKey: 'settings.reset.items.audit', keywords: 'reset clear' },
 
-	...KEYBINDINGS.map((k): SettingEntry => ({ tab: 'shortcuts', label: k.label, keywords: 'keybinding shortcut key' })),
+	...KEYBINDINGS.map((k): SettingEntry => ({ tab: 'shortcuts', labelKey: `settings.shortcuts.commands.${k.id}`, keywords: 'keybinding shortcut key' })),
 ];
 
-function settingMatches(entry: SettingEntry, query: string): boolean {
-	return entry.label.toLowerCase().includes(query) || (entry.keywords?.includes(query) ?? false);
+/** The entry's label in the current language: the text the control renders, so the reveal finds it. */
+function entryLabel(entry: SettingEntry, translator: Translate): string {
+	return entry.labelKey ? translator(entry.labelKey, { assistant: ASSISTANT_NAME }) : entry.label ?? '';
+}
+
+/** A search hits the translated label, the English label, or the English keywords, so an English
+ *  word still finds a setting in every language. */
+function settingMatches(entry: SettingEntry, label: string, query: string): boolean {
+	return label.toLowerCase().includes(query)
+		|| (entry.labelKey !== undefined && translate('en', entry.labelKey, { assistant: ASSISTANT_NAME }).toLowerCase().includes(query))
+		|| (entry.keywords?.includes(query) ?? false);
 }
 
 /** The elements a setting's label can live on, for the scroll-to-and-flash reveal. */
@@ -253,35 +268,38 @@ const REVEAL_SELECTOR = 'label, legend, h4, .shortcut-row, .settings-conn-row';
 
 // Only the gateway is user-selectable for now. Local Ollama is intentionally omitted
 // (kept in the model, not offered in the picker).
-const PROVIDER_LABELS: Partial<Record<AiProviderId, string>> = {
-	'positron-cloud': 'SnoutData Cloud',
-	'byok-openai': `${BYOK_PROVIDER_DEFAULTS['byok-openai'].label} (your key)`,
-	'byok-openrouter': `${BYOK_PROVIDER_DEFAULTS['byok-openrouter'].label} (your key)`,
-	'byok-anthropic': `${BYOK_PROVIDER_DEFAULTS['byok-anthropic'].label} (your key)`,
-};
+function providerLabels(translator: Translate): Partial<Record<AiProviderId, string>> {
+	const byok = (id: ByokProviderId): string => translator('settingsAi.byokProviderLabel', { name: BYOK_PROVIDER_DEFAULTS[id].label });
+	return {
+		'positron-cloud': 'SnoutData Cloud',
+		'byok-openai': byok('byok-openai'),
+		'byok-openrouter': byok('byok-openrouter'),
+		'byok-anthropic': byok('byok-anthropic'),
+	};
+}
 
 /** The BYOK providers, in display order. */
 const BYOK_IDS: ByokProviderId[] = ['byok-openai', 'byok-openrouter', 'byok-anthropic'];
 
-/** The Connections page's line on a machine with no password vault. */
-const WEAK_SECRETS_LINE = "This computer has no password vault (keyring), so passwords are saved in a file only your user account can read. Install one, such as GNOME Keyring, and restart Studio to keep them in a vault.";
 
 export function SettingsModal(props: SettingsModalProps): JSX.Element {
+	const { t, preference, setPreference } = useI18n();
 	const [tab, setTab] = useState<SettingsTab>(props.initialTab ?? 'appearance');
 	const [navFilter, setNavFilter] = useState('');
 	// The setting to scroll to and flash once its tab has rendered. The nonce lets the same
 	// setting be revealed again on a second click.
-	const [reveal, setReveal] = useState<{ label: string; nonce: number } | null>(null);
+	const [reveal, setReveal] = useState<{ label: string; labelKey?: string; nonce: number } | null>(null);
 	const { appSettings, onAppSettingsChange, onClose } = props;
 	// A Linux desktop with no password vault saves passwords in a file instead (main/secretStorageMode.ts);
 	// the Connections page says so, since its own sentence would otherwise promise a keychain.
 	const secretsWeak = useSecretsWeak();
 
+	const activeTabLabel = t(TABS.find((entry) => entry.id === tab)?.labelKey ?? 'settings.tabs.appearance');
 	const navQuery = navFilter.trim().toLowerCase();
 	const hits = new Map<SettingsTab, SettingEntry[]>();
 	if (navQuery) {
 		for (const entry of SETTING_INDEX) {
-			if (tabShown(entry.tab) && settingMatches(entry, navQuery)) {
+			if (tabShown(entry.tab) && settingMatches(entry, entryLabel(entry, t), navQuery)) {
 				const list = hits.get(entry.tab);
 				if (list) {
 					list.push(entry);
@@ -292,12 +310,12 @@ export function SettingsModal(props: SettingsModalProps): JSX.Element {
 		}
 	}
 	const groups = TAB_GROUPS
-		.map((group) => group.filter((t) => tabShown(t.id) && (!navQuery || t.label.toLowerCase().includes(navQuery) || hits.has(t.id))))
+		.map((group) => group.filter((entry) => tabShown(entry.id) && (!navQuery || t(entry.labelKey).toLowerCase().includes(navQuery) || translate('en', entry.labelKey).toLowerCase().includes(navQuery) || hits.has(entry.id))))
 		.filter((group) => group.length > 0);
 
-	function openSetting(target: SettingsTab, label: string): void {
+	function openSetting(target: SettingsTab, entry: SettingEntry): void {
 		setTab(target);
-		setReveal((prev) => ({ label, nonce: (prev?.nonce ?? 0) + 1 }));
+		setReveal((prev) => ({ label: entryLabel(entry, t), labelKey: entry.labelKey, nonce: (prev?.nonce ?? 0) + 1 }));
 	}
 
 	// Scroll the revealed setting into view and flash it. Matching on the rendered text keeps
@@ -352,9 +370,9 @@ export function SettingsModal(props: SettingsModalProps): JSX.Element {
 	return (
 		<div className="settings-page">
 			<div className="settings-titlebar">
-				<h2><PageMark art="settings" text="Settings" /></h2>
+				<h2><PageMark art="settings" text={t('settings.title')} /></h2>
 				<span className="spacer" />
-				<button className="icon-btn" aria-label="Close (Esc)" onClick={onClose}><Icon name="close" /></button>
+				<button className="icon-btn" aria-label={t('settings.nav.closeEsc')} onClick={onClose}><Icon name="close" /></button>
 			</div>
 			<div className="settings-main">
 				<nav className="settings-nav">
@@ -362,30 +380,30 @@ export function SettingsModal(props: SettingsModalProps): JSX.Element {
 						<Icon name="search" />
 						<input
 							type="text"
-							placeholder="Search settings"
+							placeholder={t('settings.nav.search')}
 							value={navFilter}
 							onChange={(e) => setNavFilter(e.target.value)}
 						/>
-						{navFilter && <button className="icon-btn" aria-label="Clear" onClick={() => setNavFilter('')}><Icon name="close" /></button>}
+						{navFilter && <button className="icon-btn" aria-label={t('settings.nav.clear')} onClick={() => setNavFilter('')}><Icon name="close" /></button>}
 					</div>
-					{groups.length === 0 && <div className="muted small settings-nav-empty">No matches</div>}
+					{groups.length === 0 && <div className="muted small settings-nav-empty">{t('settings.nav.noMatches')}</div>}
 					{groups.map((group, gi) => (
 						<div className="settings-nav-group" key={gi}>
-							{group.map((t) => {
-								const matched = hits.get(t.id) ?? [];
+							{group.map((entry) => {
+								const matched = hits.get(entry.id) ?? [];
 								return (
-									<div key={t.id}>
+									<div key={entry.id}>
 										<button
-											className={`settings-nav-item${tab === t.id ? ' active' : ''}`}
-											onClick={() => matched.length > 0 ? openSetting(t.id, matched[0].label) : setTab(t.id)}
+											className={`settings-nav-item${tab === entry.id ? ' active' : ''}`}
+											onClick={() => matched.length > 0 ? openSetting(entry.id, matched[0]) : setTab(entry.id)}
 										>
-											<Icon name={t.icon} className="settings-nav-icon" />
-											<span>{t.label}</span>
+											<Icon name={entry.icon} className="settings-nav-icon" />
+											<span>{t(entry.labelKey)}</span>
 											{matched.length > 0 && <span className="settings-nav-count">{matched.length}</span>}
 										</button>
 										{matched.map((s) => (
-											<button key={s.label} className="settings-nav-subitem" title={s.label} onClick={() => openSetting(t.id, s.label)}>
-												{s.label}
+											<button key={s.labelKey ?? s.label} className="settings-nav-subitem" title={entryLabel(s, t)} onClick={() => openSetting(entry.id, s)}>
+												{entryLabel(s, t)}
 											</button>
 										))}
 									</div>
@@ -399,8 +417,8 @@ export function SettingsModal(props: SettingsModalProps): JSX.Element {
 						{/* The pages with no spot drawing of their own get the website's page mark instead.
 						    Account only once signed in: signed out, it already opens on a drawing. */}
 						{hasPageMark(tab) && (tab !== 'account' || props.auth.user !== null)
-							? <PageMark art={tab} text={TABS.find((t) => t.id === tab)?.label ?? ''} />
-							: TABS.find((t) => t.id === tab)?.label}
+							? <PageMark art={tab} text={activeTabLabel} />
+							: activeTabLabel}
 					</h3>
 					{tab === 'account' && (
 						<AccountSection
@@ -417,62 +435,61 @@ export function SettingsModal(props: SettingsModalProps): JSX.Element {
 						   eye nothing to sort "how the app looks" from "what happens on launch". */
 						<>
 							<fieldset>
-								<legend>Appearance</legend>
-								<label>Theme
-									<select value={props.theme} onChange={(e) => props.onSelectTheme(e.target.value)}>
-										{THEMES.map((t) => <option key={t.id} value={t.id}>{t.label}</option>)}
+								<legend>{t('settings.appearance.legend')}</legend>
+								<label>{t('settings.language.label')}
+									<select value={preference} data-test="settings-language" onChange={(e) => setPreference(e.target.value as LanguagePreference)}>
+										<option value="system">{t('settings.language.system')}</option>
+										{LOCALES.map((entry) => <option key={entry.code} value={entry.code}>{entry.native}</option>)}
 									</select>
 								</label>
-								<label>Activity bar position
+								<label>{t('settings.appearance.theme')}
+									<select value={props.theme} onChange={(e) => props.onSelectTheme(e.target.value)}>
+										{THEMES.map((theme) => <option key={theme.id} value={theme.id}>{theme.label}</option>)}
+									</select>
+								</label>
+								<label>{t('settings.appearance.activityBarPosition')}
 									<select value={appSettings.activityBarPosition} onChange={(e) => patch({ activityBarPosition: e.target.value as ActivityBarPosition })}>
-										<option value="side">Side (left)</option>
-										<option value="top">Top</option>
+										<option value="side">{t('settings.appearance.sideLeft')}</option>
+										<option value="top">{t('settings.appearance.top')}</option>
 									</select>
 								</label>
 							</fieldset>
 							<fieldset>
-								<legend>Panels</legend>
-								<div className="muted">
-									Drag a panel by its header, or right-click its header or its icon, to move it to the
-									left, the right or the bottom. Where you put things is remembered on this computer.
-								</div>
+								<legend>{t('settings.appearance.panelsLegend')}</legend>
+								<div className="muted">{t('settings.appearance.panelsHelp')}</div>
 								<div className="settings-row-action">
 									<button type="button" disabled={!props.panelsMoved} onClick={props.onResetPanels}>
-										<Icon name="discard" /> Reset panel layout
+										<Icon name="discard" /> {t('settings.appearance.resetPanelLayout')}
 									</button>
-									{!props.panelsMoved && <span className="muted">Everything is already where it starts.</span>}
+									{!props.panelsMoved && <span className="muted">{t('settings.appearance.alreadyDefault')}</span>}
 								</div>
 							</fieldset>
 							<fieldset>
-								<legend>Editor</legend>
-								<label>Editor font size
+								<legend>{t('settings.appearance.editorLegend')}</legend>
+								<label>{t('settings.appearance.editorFontSize')}
 									<NumberField min={9} max={28} fallback={13} value={appSettings.fontSize} onCommit={(n) => patch({ fontSize: n })} />
 								</label>
-								<label className="check"><input type="checkbox" checked={appSettings.wordWrap} onChange={(e) => patch({ wordWrap: e.target.checked })} /> Word wrap</label>
-								<label className="check"><input type="checkbox" checked={appSettings.minimap} onChange={(e) => patch({ minimap: e.target.checked })} /> Show minimap</label>
+								<label className="check"><input type="checkbox" checked={appSettings.wordWrap} onChange={(e) => patch({ wordWrap: e.target.checked })} /> {t('settings.appearance.wordWrap')}</label>
+								<label className="check"><input type="checkbox" checked={appSettings.minimap} onChange={(e) => patch({ minimap: e.target.checked })} /> {t('settings.appearance.showMinimap')}</label>
 							</fieldset>
 							<fieldset>
-								<legend>Terminal</legend>
-								<label>Terminal font size
+								<legend>{t('settings.appearance.terminalLegend')}</legend>
+								<label>{t('settings.appearance.terminalFontSize')}
 									<NumberField min={TERMINAL_FONT_MIN} max={TERMINAL_FONT_MAX} fallback={13} value={appSettings.terminalFontSize} onCommit={(n) => patch({ terminalFontSize: n })} />
 								</label>
-								<div className="muted">
-									The type size in a coding agent's console. You can also change it from the console's
-									own header, with Ctrl+plus / Ctrl+minus / Ctrl+0, or by holding Ctrl and scrolling
-									over the terminal.
-								</div>
+								<div className="muted">{t('settings.appearance.terminalHelp')}</div>
 							</fieldset>
 							<fieldset>
-								<legend>Startup</legend>
-								<label className="check"><input type="checkbox" checked={appSettings.disableOnboarding} onChange={(e) => patch({ disableOnboarding: e.target.checked })} /> Disable onboarding tips (the tour and getting-started checklist)</label>
-								<div className="muted">You can still launch the tour or checklist anytime from the Help menu or the command palette.</div>
+								<legend>{t('settings.appearance.startupLegend')}</legend>
+								<label className="check"><input type="checkbox" checked={appSettings.disableOnboarding} onChange={(e) => patch({ disableOnboarding: e.target.checked })} /> {t('settings.appearance.disableOnboarding')} {t('settings.appearance.disableOnboardingHint')}</label>
+								<div className="muted">{t('settings.appearance.tourHelp')}</div>
 								{LIBY_AVAILABLE && (
-									<label className="check"><input type="checkbox" checked={appSettings.disableMascot} onChange={(e) => patch({ disableMascot: e.target.checked })} /> Hide {ASSISTANT_NAME} ({HIDE_SETTING_HINT})</label>
+									<label className="check"><input type="checkbox" checked={appSettings.disableMascot} onChange={(e) => patch({ disableMascot: e.target.checked })} /> {t('settings.appearance.hideHelper', { assistant: ASSISTANT_NAME, hint: hideSettingHint() })}</label>
 								)}
-								<label className="check"><input type="checkbox" checked={appSettings.showReleaseNotesAfterUpdate} onChange={(e) => patch({ showReleaseNotesAfterUpdate: e.target.checked })} /> Show release notes after an update</label>
+								<label className="check"><input type="checkbox" checked={appSettings.showReleaseNotesAfterUpdate} onChange={(e) => patch({ showReleaseNotesAfterUpdate: e.target.checked })} /> {t('settings.appearance.showReleaseNotes')}</label>
 							</fieldset>
 							<fieldset>
-								<legend>Graphics</legend>
+								<legend>{t('settings.appearance.graphicsLegend')}</legend>
 								<HardwareAccelerationSetting />
 							</fieldset>
 						</>
@@ -484,68 +501,68 @@ export function SettingsModal(props: SettingsModalProps): JSX.Element {
 						<div className="settings-grid">
 							<div className="settings-col">
 								<fieldset>
-									<legend>Editing</legend>
-									<label className="check"><input type="checkbox" checked={appSettings.autoCompletion} onChange={(e) => patch({ autoCompletion: e.target.checked })} /> Auto-show completions as you type (otherwise only on {formatShortcut('Ctrl+Space')})</label>
-									<label>SQL keyword case
+									<legend>{t('settings.editor.editingLegend')}</legend>
+									<label className="check"><input type="checkbox" checked={appSettings.autoCompletion} onChange={(e) => patch({ autoCompletion: e.target.checked })} /> {t('settings.editor.autoCompletion')} {t('settings.editor.autoCompletionHint', { shortcut: formatShortcut('Ctrl+Space') })}</label>
+									<label>{t('settings.editor.keywordCase')}
 										<select value={appSettings.keywordCase} onChange={(e) => patch({ keywordCase: e.target.value as KeywordCase })}>
-											<option value="preserve">Match what I type</option>
-											<option value="upper">UPPERCASE</option>
-											<option value="lower">lowercase</option>
+											<option value="preserve">{t('settings.editor.matchWhatIType')}</option>
+											<option value="upper">{t('settings.editor.upper')}</option>
+											<option value="lower">{t('settings.editor.lower')}</option>
 										</select>
 									</label>
 								</fieldset>
 
 								<fieldset>
-									<legend>Running queries</legend>
-									<label className="check"><input type="checkbox" checked={appSettings.autoLimit} onChange={(e) => patch({ autoLimit: e.target.checked })} /> Auto-append LIMIT to a bare SELECT</label>
-									<label>Default LIMIT
+									<legend>{t('settings.editor.runningLegend')}</legend>
+									<label className="check"><input type="checkbox" checked={appSettings.autoLimit} onChange={(e) => patch({ autoLimit: e.target.checked })} /> {t('settings.editor.autoLimit')}</label>
+									<label>{t('settings.editor.defaultLimit')}
 										<NumberField min={1} max={100000} fallback={100} value={appSettings.defaultLimit} onCommit={(n) => patch({ defaultLimit: n })} />
 									</label>
-									<label className="check"><input type="checkbox" checked={appSettings.aiAutoTranscribe} onChange={(e) => patch({ aiAutoTranscribe: e.target.checked })} /> Auto-translate unsupported SQL to a MongoDB pipeline with {ASSISTANT_NAME}</label>
-									<div className="muted">On document connections (MongoDB), when a query is too complex for the built-in translator, use AI without asking each time. Every AI call uses your budget. Off by default, so the first such query asks first. Or write native pipelines in the Pipeline tab.</div>
+									<label className="check"><input type="checkbox" checked={appSettings.aiAutoTranscribe} onChange={(e) => patch({ aiAutoTranscribe: e.target.checked })} /> {t('settings.editor.transcribe', { assistant: ASSISTANT_NAME })}</label>
+									<div className="muted">{t('settings.editor.transcribeHelp')}</div>
 								</fieldset>
 
 								<fieldset>
-									<legend>Results, and prod</legend>
-									<label className="check"><input type="checkbox" checked={appSettings.confirmOnProd} onChange={(e) => patch({ confirmOnProd: e.target.checked })} /> Confirm destructive statements on prod connections</label>
-									<label className="check"><input type="checkbox" checked={appSettings.allowProdGridActions} onChange={(e) => patch({ allowProdGridActions: e.target.checked })} /> Allow results-grid actions (edit value, copy, copy row) on prod connections</label>
-									<label className="check"><input type="checkbox" checked={appSettings.resolveFkLabels} onChange={(e) => patch({ resolveFkLabels: e.target.checked })} /> Resolve foreign-key ids to inline labels in the grid</label>
-									<div className="muted">Fires a small lookup per FK column over the visible rows. The hover/right-click peek card stays available either way.</div>
+									<legend>{t('settings.editor.resultsLegend')}</legend>
+									<label className="check"><input type="checkbox" checked={appSettings.confirmOnProd} onChange={(e) => patch({ confirmOnProd: e.target.checked })} /> {t('settings.editor.confirmOnProd')}</label>
+									<label className="check"><input type="checkbox" checked={appSettings.allowProdGridActions} onChange={(e) => patch({ allowProdGridActions: e.target.checked })} /> {t('settings.editor.allowGridActions')} {t('settings.editor.allowGridActionsHint')}</label>
+									<label className="check"><input type="checkbox" checked={appSettings.resolveFkLabels} onChange={(e) => patch({ resolveFkLabels: e.target.checked })} /> {t('settings.editor.resolveFk')}</label>
+									<div className="muted">{t('settings.editor.resolveFkHelp')}</div>
 								</fieldset>
 							</div>
 
 							<div className="settings-col">
 								<fieldset>
-									<legend>Large datasets</legend>
-									<label className="check"><input type="checkbox" checked={appSettings.preflightScan} onChange={(e) => patch({ preflightScan: e.target.checked })} /> Warn before a query the planner expects to scan a huge number of rows</label>
-									<div className="muted">Runs one cheap EXPLAIN before a SELECT (on prod/tunnelled connections too, where a runaway scan hurts most). The same plan powers the index/scan advice, so there's no second round-trip.</div>
-									<label>Warn above (rows)
+									<legend>{t('settings.editor.largeLegend')}</legend>
+									<label className="check"><input type="checkbox" checked={appSettings.preflightScan} onChange={(e) => patch({ preflightScan: e.target.checked })} /> {t('settings.editor.preflightScan')}</label>
+									<div className="muted">{t('settings.editor.preflightHelp')}</div>
+									<label>{t('settings.editor.warnAbove')}
 										<NumberField min={1000} max={1000000000} fallback={1000000} value={appSettings.preflightWarnRows} onCommit={(n) => patch({ preflightWarnRows: n })} />
 									</label>
-									<label>Warn a running query is slow after (ms)
+									<label>{t('settings.editor.warnSlow')}
 										<NumberField min={0} max={600000} fallback={5000} value={appSettings.slowQueryWarnMs} onCommit={(n) => patch({ slowQueryWarnMs: n })} />
 									</label>
-									<label>Advise on index/scans after a query takes (ms)
+									<label>{t('settings.editor.adviseAfter')}
 										<NumberField min={0} max={600000} fallback={2000} value={appSettings.slowQueryAdviseMs} onCommit={(n) => patch({ slowQueryAdviseMs: n })} />
 									</label>
-									<div className="muted">Set the two thresholds to 0 to turn off the long-running warning or the post-run index advice.</div>
+									<div className="muted">{t('settings.editor.thresholdsHelp')}</div>
 								</fieldset>
 
 								<fieldset>
-									<legend>Connections</legend>
-									<label className="check"><input type="checkbox" checked={appSettings.autoConnectOnSelect} onChange={(e) => patch({ autoConnectOnSelect: e.target.checked })} /> Connect automatically when picking a connection from a dropdown</label>
-									<div className="muted">When off, the dropdowns only select; connect from the sidebar.</div>
-									<label>Default connection on launch
+									<legend>{t('settings.editor.connectionsLegend')}</legend>
+									<label className="check"><input type="checkbox" checked={appSettings.autoConnectOnSelect} onChange={(e) => patch({ autoConnectOnSelect: e.target.checked })} /> {t('settings.editor.autoConnect')}</label>
+									<div className="muted">{t('settings.editor.autoConnectHelp')}</div>
+									<label>{t('settings.editor.defaultConnection')}
 										<select value={appSettings.defaultConnectionId ?? ''} onChange={(e) => patch({ defaultConnectionId: e.target.value || null })}>
-											<option value="">None</option>
+											<option value="">{t('settings.common.none')}</option>
 											{props.connections.map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}
 										</select>
 									</label>
-									<label>Auto-disconnect idle connections after (minutes, 0 = never)
+									<label>{t('settings.editor.idleDisconnect')} {t('settings.editor.idleDisconnectHint')}
 										<NumberField min={0} max={1440} fallback={240} value={appSettings.idleDisconnectMinutes} onCommit={(n) => patch({ idleDisconnectMinutes: n })} />
 									</label>
-									<label className="check"><input type="checkbox" checked={appSettings.reconnectOnLaunch} onChange={(e) => patch({ reconnectOnLaunch: e.target.checked })} /> Reopen connections that were open last launch</label>
-									<div className="muted">Only non-prod connections reopen; prod always needs a manual connect.</div>
+									<label className="check"><input type="checkbox" checked={appSettings.reconnectOnLaunch} onChange={(e) => patch({ reconnectOnLaunch: e.target.checked })} /> {t('settings.editor.reconnect')}</label>
+									<div className="muted">{t('settings.editor.reconnectHelp')}</div>
 								</fieldset>
 							</div>
 						</div>
@@ -586,16 +603,16 @@ export function SettingsModal(props: SettingsModalProps): JSX.Element {
 						<div className="settings-conns">
 							{props.connections.length > 0 && (
 								<SettingsIntro art={ConnectArt}>
-									<p>Every database this app can reach, the same list as the sidebar's. Connect, edit or remove one here; the passwords stay {secretsWeak ? "on this computer" : "in this computer's keychain"}.</p>
-									{secretsWeak && <p className="muted">{WEAK_SECRETS_LINE}</p>}
+									<p>{t(secretsWeak ? 'settings.connections.introWeak' : 'settings.connections.intro')}</p>
+									{secretsWeak && <p className="muted">{t('settings.connections.weakSecrets')}</p>}
 								</SettingsIntro>
 							)}
 							{props.connections.length === 0 && (
 								<div className="settings-empty">
 									<ConnectArt className="settings-empty-art" />
-									<p>No connections yet. Add one to browse its tables and query it.</p>
-									{secretsWeak && <p className="field-hint">{WEAK_SECRETS_LINE}</p>}
-									<button type="button" onClick={props.onAddConnection}><Icon name="add" /> Add connection…</button>
+									<p>{t('settings.connections.empty')}</p>
+									{secretsWeak && <p className="field-hint">{t('settings.connections.weakSecrets')}</p>}
+									<button type="button" onClick={props.onAddConnection}><Icon name="add" /> {t('settings.connections.add')}</button>
 								</div>
 							)}
 							{props.connections.map((c) => {
@@ -607,16 +624,16 @@ export function SettingsModal(props: SettingsModalProps): JSX.Element {
 										{c.environment && <span className={`env${c.environment === 'prod' ? ' prod' : ''}`}>{c.environment}</span>}
 										<span className="spacer" />
 										{connected
-											? <button className="icon-btn" aria-label="Disconnect" onClick={() => props.onDisconnect(c.id)}><Icon name="debug-disconnect" /></button>
-											: <button className="icon-btn" aria-label="Connect" onClick={() => props.onConnect(c.id)}><Icon name="plug" /></button>}
-										<button className="icon-btn" aria-label="Edit" onClick={() => props.onEditConnection(c)}><Icon name="edit" /></button>
-										<button className="icon-btn" aria-label="Delete" onClick={() => props.onDeleteConnection(c)}><Icon name="trash" /></button>
+											? <button className="icon-btn" aria-label={t('settings.connections.disconnect')} onClick={() => props.onDisconnect(c.id)}><Icon name="debug-disconnect" /></button>
+											: <button className="icon-btn" aria-label={t('settings.connections.connect')} onClick={() => props.onConnect(c.id)}><Icon name="plug" /></button>}
+										<button className="icon-btn" aria-label={t('settings.common.edit')} onClick={() => props.onEditConnection(c)}><Icon name="edit" /></button>
+										<button className="icon-btn" aria-label={t('settings.common.delete')} onClick={() => props.onDeleteConnection(c)}><Icon name="trash" /></button>
 									</div>
 								);
 							})}
 							{props.connections.length > 0 && (
 								<div className="modal-actions">
-									<button type="button" className="secondary" onClick={props.onAddConnection}><Icon name="add" /> Add connection…</button>
+									<button type="button" className="secondary" onClick={props.onAddConnection}><Icon name="add" /> {t('settings.connections.add')}</button>
 								</div>
 							)}
 						</div>
@@ -693,7 +710,9 @@ function NumberField(props: {
 /** Provider/model + behavior. Self-contained: loads and saves via the AI IPC, exactly
  *  like the former standalone AI settings modal, plus the behavior knobs. */
 function AiSection({ onAiSaved, byokAllowed }: { onAiSaved?: () => void; byokAllowed: boolean }): JSX.Element | null {
-	const keyPlace = secretsPlace(useSecretsWeak());
+	const t = useT();
+	const keyPlace = t(useSecretsWeak() ? 'settings.secretsPlace.file' : 'settings.secretsPlace.keychain');
+	const PROVIDER_LABELS = providerLabels(t);
 	const [loaded, setLoaded] = useState<AiSettings | null>(null);
 	const [provider, setProvider] = useState<AiProviderId>('positron-cloud');
 	// Ollama state is kept (not offered in the picker) so its saved config round-trips through save().
@@ -769,10 +788,10 @@ function AiSection({ onAiSaved, byokAllowed }: { onAiSaved?: () => void; byokAll
 		return (
 			<span style={{ display: 'flex', gap: 6 }}>
 				<select style={{ flex: 1, minWidth: 0 }} value={value} onChange={(e) => onChange(e.target.value)}>
-					{!value && <option value="">{refreshing ? 'Loading…' : ollamaModels.length ? 'Select a model…' : 'No models found. Check the endpoint, then Refresh'}</option>}
+					{!value && <option value="">{refreshing ? t('settings.common.loading') : ollamaModels.length ? t('settingsAi.selectModel') : t('settingsAi.noModelsEndpoint')}</option>}
 					{options.map((m) => <option key={m} value={m}>{m}</option>)}
 				</select>
-				<button type="button" className="secondary" disabled={refreshing} title="Refresh model list from Ollama" onClick={() => void refreshOllama(ollamaEndpoint)}><Icon name="refresh" /> {refreshing ? '…' : 'Refresh'}</button>
+				<button type="button" className="secondary" disabled={refreshing} title={t('settingsAi.refreshOllama')} onClick={() => void refreshOllama(ollamaEndpoint)}><Icon name="refresh" /> {refreshing ? '…' : t('settings.common.refresh')}</button>
 			</span>
 		);
 	}
@@ -784,7 +803,7 @@ function AiSection({ onAiSaved, byokAllowed }: { onAiSaved?: () => void; byokAll
 		const models = (statuses.find((s) => s.provider === p)?.completionModels ?? []).map((m) => m.model);
 		return (
 			<select value={value} onChange={(e) => onChange(e.target.value)}>
-				{models.length === 0 && <option value="">No completion models available</option>}
+				{models.length === 0 && <option value="">{t('settingsAi.noCompletionModels')}</option>}
 				{models.map((m) => <option key={m} value={m}>{m}</option>)}
 			</select>
 		);
@@ -881,13 +900,13 @@ function AiSection({ onAiSaved, byokAllowed }: { onAiSaved?: () => void; byokAll
 		// Let the app re-read AI settings now, so toggling inline completion takes effect
 		// immediately instead of only when the modal is closed (or after a restart).
 		onAiSaved?.();
-		setStatus({ ok: true, message: 'Saved.' });
+		setStatus({ ok: true, message: t('settings.common.saved') });
 		setBusy(false);
 	}
 
 	async function test(): Promise<void> {
 		setBusy(true);
-		setStatus({ ok: true, message: 'Testing…' });
+		setStatus({ ok: true, message: t('settings.common.testing') });
 		await window.sqlApi.saveAiSettings(collect());
 		setStatus(await window.sqlApi.aiTest());
 		setBusy(false);
@@ -906,16 +925,16 @@ function AiSection({ onAiSaved, byokAllowed }: { onAiSaved?: () => void; byokAll
 		const options = model && !models.includes(model) ? [model, ...models] : models;
 		return (
 			<>
-				<label>Model
+				<label>{t('settingsAi.model')}
 					<span style={{ display: 'flex', gap: 6 }}>
 						<select style={{ flex: 1, minWidth: 0 }} value={model} onChange={(e) => setModel(e.target.value)}>
-							{!model && <option value="">{models.length ? 'Select a model…' : 'No models available. Sign in, then Refresh'}</option>}
+							{!model && <option value="">{models.length ? t('settingsAi.selectModel') : t('settingsAi.noModelsSignIn')}</option>}
 							{options.map((m) => <option key={m} value={m}>{m}</option>)}
 						</select>
-						<button type="button" className="secondary" title="Refresh model list from the gateway" onClick={() => void loadStatuses()}><Icon name="refresh" /> Refresh</button>
+						<button type="button" className="secondary" title={t('settingsAi.refreshGateway')} onClick={() => void loadStatuses()}><Icon name="refresh" /> {t('settings.common.refresh')}</button>
 					</span>
 				</label>
-				<div className="muted">Uses your SnoutData account: there is no key to enter. Use “Test” to check it.</div>
+				<div className="muted">{t('settingsAi.cloudNote')}</div>
 			</>
 		);
 	}
@@ -935,17 +954,17 @@ function AiSection({ onAiSaved, byokAllowed }: { onAiSaved?: () => void; byokAll
 	async function loadByokModels(p: ByokProviderId): Promise<void> {
 		const def = BYOK_PROVIDER_DEFAULTS[p];
 		setBusy(true);
-		setStatus({ ok: true, message: `Loading ${def.label} models…` });
+		setStatus({ ok: true, message: t('settingsAi.loadingModels', { provider: def.label }) });
 		try {
 			await window.sqlApi.saveAiSettings(collect());
 			const list = await window.sqlApi.aiByokModels(p);
 			setByokOptions({ ...byokOptions, [p]: list });
 			setStatus(list.length
-				? { ok: true, message: `Found ${list.length} ${def.label} model${list.length === 1 ? '' : 's'}. Add the ones you want.` }
-				: { ok: false, message: `No models found. Check your ${def.label} key.` });
+				? { ok: true, message: t('settingsAi.foundModels', { count: list.length, provider: def.label }) }
+				: { ok: false, message: t('settingsAi.noModelsKey', { provider: def.label }) });
 		} catch (err) {
 			setByokOptions({ ...byokOptions, [p]: [] });
-			setStatus({ ok: false, message: err instanceof Error ? err.message : `Could not load ${def.label} models.` });
+			setStatus({ ok: false, message: err instanceof Error ? err.message : t('settingsAi.loadFailed', { provider: def.label }) });
 		} finally {
 			setBusy(false);
 		}
@@ -980,22 +999,22 @@ function AiSection({ onAiSaved, byokAllowed }: { onAiSaved?: () => void; byokAll
 		const options = (byokOptions[p] ?? []).filter((m) => !curated.includes(m));
 		return (
 			<>
-				<label>API key
+				<label>{t('settingsAi.apiKey')}
 					<span style={{ display: 'flex', gap: 6 }}>
-						<input style={{ flex: 1, minWidth: 0 }} type="password" value={byokKey[p]} placeholder={stored ? 'leave blank to keep current' : `paste your ${def.label} API key`} onChange={(e) => setByokKey({ ...byokKey, [p]: e.target.value })} />
-						<button type="button" className="secondary" title={`Save the key and load ${def.label}'s models`} disabled={busy} onClick={() => void loadByokModels(p)}><Icon name="cloud-download" /> Load models</button>
+						<input style={{ flex: 1, minWidth: 0 }} type="password" value={byokKey[p]} placeholder={stored ? t('settingsAi.keepKey') : t('settingsAi.pasteKey', { provider: def.label })} onChange={(e) => setByokKey({ ...byokKey, [p]: e.target.value })} />
+						<button type="button" className="secondary" title={t('settingsAi.saveLoadTitle', { provider: def.label })} disabled={busy} onClick={() => void loadByokModels(p)}><Icon name="cloud-download" /> {t('settingsAi.loadModels')}</button>
 					</span>
 				</label>
-				<label>Add a model
+				<label>{t('settingsAi.addModel')}
 					<span style={{ display: 'flex', gap: 6 }}>
 						{options.length > 0 && (
 							<select value="" style={{ flex: 1, minWidth: 0 }} onChange={(e) => { if (e.target.value) { setByokPick({ ...byokPick, [p]: e.target.value }); } }}>
-								<option value="">{`Pick from ${options.length} ${def.label} model${options.length === 1 ? '' : 's'}…`}</option>
+								<option value="">{t('settingsAi.pickFrom', { count: options.length, provider: def.label })}</option>
 								{options.map((m) => <option key={m} value={m}>{m}</option>)}
 							</select>
 						)}
-						<input style={{ flex: 1, minWidth: 0 }} value={byokPick[p]} placeholder={options.length ? 'or type a model id' : 'type a model id'} onChange={(e) => setByokPick({ ...byokPick, [p]: e.target.value })} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addByokModel(p); } }} />
-						<button type="button" className="secondary" disabled={!byokPick[p].trim()} onClick={() => addByokModel(p)}><Icon name="add" /> Add</button>
+						<input style={{ flex: 1, minWidth: 0 }} value={byokPick[p]} placeholder={options.length ? t('settingsAi.orTypeModelId') : t('settingsAi.typeModelId')} onChange={(e) => setByokPick({ ...byokPick, [p]: e.target.value })} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addByokModel(p); } }} />
+						<button type="button" className="secondary" disabled={!byokPick[p].trim()} onClick={() => addByokModel(p)}><Icon name="add" /> {t('settingsAi.add')}</button>
 					</span>
 				</label>
 				{curated.length > 0 ? (
@@ -1005,16 +1024,16 @@ function AiSection({ onAiSaved, byokAllowed }: { onAiSaved?: () => void; byokAll
 								<Icon name="check" />
 								<span className="tree-label">{m}</span>
 								<span className="spacer" />
-								<button type="button" className="icon-btn" aria-label="Remove from the picker" onClick={() => removeByokModel(p, m)}><Icon name="close" /></button>
+								<button type="button" className="icon-btn" aria-label={t('settingsAi.removeFromPicker')} onClick={() => removeByokModel(p, m)}><Icon name="close" /></button>
 							</div>
 						))}
-						<div className="muted small">These show in the assistant's model menu after you Save.</div>
+						<div className="muted small">{t('settingsAi.addedHelp')}</div>
 					</div>
 				) : (
-					<div className="muted small">No models added yet. Paste your key, click "Load models", then add the ones you want.</div>
+					<div className="muted small">{t('settingsAi.noneAdded')}</div>
 				)}
-				<label>Base URL (optional)<input value={byokBaseUrl[p]} placeholder={def.baseUrl} onChange={(e) => setByokBaseUrl({ ...byokBaseUrl, [p]: e.target.value })} /></label>
-				<div className="muted">The assistant's chat and edits go straight to {def.label}, bypassing SnoutData's servers, so your key and those prompts never touch our gateway. AI completion needs a fill-in-the-middle model, which your provider may not offer, so if you switch it on it uses SnoutData's completion model through our gateway. The key is kept {keyPlace}. Use “Test” to verify it.</div>
+				<label>{t('settingsAi.baseUrl')}<input value={byokBaseUrl[p]} placeholder={def.baseUrl} onChange={(e) => setByokBaseUrl({ ...byokBaseUrl, [p]: e.target.value })} /></label>
+				<div className="muted">{t('settingsAi.byokNote', { provider: def.label, place: keyPlace })}</div>
 			</>
 		);
 	}
@@ -1022,22 +1041,22 @@ function AiSection({ onAiSaved, byokAllowed }: { onAiSaved?: () => void; byokAll
 	return (
 		<>
 			<div className="tabs">
-				<button type="button" className={aiTab === 'chat' ? 'tab active' : 'tab'} onClick={() => setAiTab('chat')}>Chat</button>
-				<button type="button" className={aiTab === 'completion' ? 'tab active' : 'tab'} onClick={() => setAiTab('completion')}>Auto-completion</button>
+				<button type="button" className={aiTab === 'chat' ? 'tab active' : 'tab'} onClick={() => setAiTab('chat')}>{t('settingsAi.chatTab')}</button>
+				<button type="button" className={aiTab === 'completion' ? 'tab active' : 'tab'} onClick={() => setAiTab('completion')}>{t('settingsAi.completionTab')}</button>
 			</div>
 
 			{aiTab === 'chat' && (
 				<div className="tabs subtabs">
-					<button type="button" className={chatTab === 'models' ? 'tab active' : 'tab'} onClick={() => setChatTab('models')}>Models</button>
-					<button type="button" className={chatTab === 'settings' ? 'tab active' : 'tab'} onClick={() => setChatTab('settings')}>Settings</button>
+					<button type="button" className={chatTab === 'models' ? 'tab active' : 'tab'} onClick={() => setChatTab('models')}>{t('settingsAi.modelsTab')}</button>
+					<button type="button" className={chatTab === 'settings' ? 'tab active' : 'tab'} onClick={() => setChatTab('settings')}>{t('settingsAi.settingsTab')}</button>
 				</div>
 			)}
 
 			{aiTab === 'chat' && chatTab === 'models' && (
 				<>
 					<fieldset>
-						<legend>Models in the picker</legend>
-						<div className="muted">These models can be chosen in the assistant's model menu. Toggle which ones show. Add a provider under "Active provider" below to get more.</div>
+						<legend>{t('settingsAi.modelsLegend')}</legend>
+						<div className="muted">{t('settingsAi.modelsHelp')}</div>
 						{/* Only list providers that actually have models: an unconfigured BYOK provider has
 						    none, so it would otherwise show as a confusing empty "No models" row here. */}
 						{statuses.filter((s) => s.models.length > 0).map((s) => (
@@ -1047,7 +1066,7 @@ function AiSection({ onAiSaved, byokAllowed }: { onAiSaved?: () => void; byokAll
 									<span className="tree-label">{PROVIDER_LABELS[s.provider]}</span>
 									{s.detail && <span className="muted small">{s.detail}</span>}
 									<span className="spacer" />
-									{s.provider === 'ollama' && <button type="button" className="icon-btn" aria-label="Refresh models" onClick={() => void loadStatuses()}><Icon name="refresh" /></button>}
+									{s.provider === 'ollama' && <button type="button" className="icon-btn" aria-label={t('settingsAi.refreshModels')} onClick={() => void loadStatuses()}><Icon name="refresh" /></button>}
 								</div>
 								{s.models.map((m) => (
 									<label className="ai-model-row" key={m.model} title={m.description ?? undefined}>
@@ -1062,32 +1081,32 @@ function AiSection({ onAiSaved, byokAllowed }: { onAiSaved?: () => void; byokAll
 										    instead, sharing a floor width so the toggles line up. */}
 										<span className="ai-model-tags">
 											{m.label && <span className="model-picker-label">{m.label}</span>}
-											{m.recommended && <span className="model-picker-tag">Recommended</span>}
-											{m.reasoning && <span className="reason-badge" title="Reasoning (thinking) model">✦ reasoning</span>}
+											{m.recommended && <span className="model-picker-tag">{t('settingsAi.recommended')}</span>}
+											{m.reasoning && <span className="reason-badge" title={t('settingsAi.reasoningTitle')}>{t('settingsAi.reasoningBadge')}</span>}
 										</span>
 										<span className="switch"><input type="checkbox" checked={m.enabled} onChange={(e) => void toggleModel(`${m.provider}:${m.model}`, e.target.checked)} /><span className="slider" /></span>
 									</label>
 								))}
 							</div>
 						))}
-						{statuses.every((s) => s.models.length === 0) && <div className="muted small ai-model-row">No models yet. Choose a provider below to get started.</div>}
+						{statuses.every((s) => s.models.length === 0) && <div className="muted small ai-model-row">{t('settingsAi.noModelsYet')}</div>}
 					</fieldset>
 					<fieldset>
-						<legend>Active provider</legend>
-						<div className="muted">Where the assistant's models come from. Use the managed SnoutData Cloud models{byokAllowed ? ", or bring your own key (OpenAI, OpenRouter, Anthropic) and the assistant's chat and edits go straight to that provider, never through our servers. AI completion needs a fill-in-the-middle model, so if you switch it on it uses SnoutData's completion model through our gateway." : "."}</div>
-						<label>Provider
+						<legend>{t('settingsAi.activeLegend')}</legend>
+						<div className="muted">{t(byokAllowed ? 'settingsAi.activeHelpByok' : 'settingsAi.activeHelp')}</div>
+						<label>{t('settingsAi.provider')}
 							<select value={provider} onChange={(e) => setProvider(e.target.value as AiProviderId)}>
 								{/* BYOK providers are Plus, Pro and Business; only offer them when the tier allows it. */}
 								{(Object.keys(PROVIDER_LABELS) as AiProviderId[]).filter((p) => byokAllowed || !BYOK_IDS.includes(p as ByokProviderId)).map((p) => <option key={p} value={p}>{PROVIDER_LABELS[p]}</option>)}
 								{/* A project's model is chosen in the assistant's model picker; shown here so the choice reads true. */}
-								{loaded?.project && <option value="snout-project">{`${loaded.project.name ?? loaded.project.ref} (project's AI)`}</option>}
+								{loaded?.project && <option value="snout-project">{t('settingsAi.projectAi', { name: loaded.project.name ?? loaded.project.ref })}</option>}
 							</select>
 						</label>
 						{/* Local Ollama is not offered here. Add 'ollama' back to PROVIDER_LABELS to surface it. */}
 						{provider === 'ollama' && (
 							<>
-								<label>Endpoint<input value={ollamaEndpoint} onChange={(e) => setOllamaEndpoint(e.target.value)} placeholder="http://localhost:11434" /></label>
-								<label>Model{ollamaModelField(ollamaModel, setOllamaModel)}</label>
+								<label>{t('settingsAi.endpoint')}<input value={ollamaEndpoint} onChange={(e) => setOllamaEndpoint(e.target.value)} placeholder="http://localhost:11434" /></label>
+								<label>{t('settingsAi.model')}{ollamaModelField(ollamaModel, setOllamaModel)}</label>
 							</>
 						)}
 						{provider === 'positron-cloud' && cloudFields('positron-cloud', gatewayModel, setGatewayModel)}
@@ -1096,8 +1115,8 @@ function AiSection({ onAiSaved, byokAllowed }: { onAiSaved?: () => void; byokAll
 					{/* Discovery for Free users: BYOK exists but is a paid feature; show it disabled. */}
 					{!byokAllowed && (
 						<fieldset className="byok-plan-hint" disabled>
-							<legend>Bring your own key</legend>
-							<div className="muted">Point the assistant at your own OpenAI, OpenRouter, or Anthropic key. Your key stays on your machine: the assistant's chat and edits go straight to the provider, never through SnoutData's servers (AI completion needs a fill-in-the-middle model, so if you switch it on it uses SnoutData's). Part of Plus, Pro and Business.</div>
+							<legend>{t('settingsAi.byokLegend')}</legend>
+							<div className="muted">{t('settingsAi.byokPitch')}</div>
 						</fieldset>
 					)}
 				</>
@@ -1106,69 +1125,69 @@ function AiSection({ onAiSaved, byokAllowed }: { onAiSaved?: () => void; byokAll
 			{aiTab === 'chat' && chatTab === 'settings' && (
 				<>
 					<fieldset>
-						<legend>Grounding & behavior</legend>
+						<legend>{t('settingsAi.groundingLegend')}</legend>
 						{/* First in the card, not loose above it: what the AI may see IS its grounding,
 						    and a lone field between the tabs and the first card had no group to sit in. */}
-						<label>What the AI may see of your data
+						<label>{t('settingsAi.dataAccess')}
 							<select value={effectiveDataAccess(dataAccess)} onChange={(e) => setDataAccess(e.target.value as DataAccessLevel)}>
-								{DATA_ACCESS_LEVELS.map((level) => <option key={level} value={level}>{DATA_ACCESS_INFO[level].label}</option>)}
+								{DATA_ACCESS_LEVELS.map((level) => <option key={level} value={level}>{dataAccessText(level).label}</option>)}
 							</select>
 						</label>
 						<p className="field-hint">
-							{DATA_ACCESS_INFO[effectiveDataAccess(dataAccess)].detail} Applies to the assistant and to coding agents connected to SnoutData. A connection can set its own level in its settings.
-							{dataAccess === undefined && ' Not chosen yet, so this is the default.'}
+							{dataAccessText(effectiveDataAccess(dataAccess)).detail} {t('settingsAi.dataAccessScope')}
+							{dataAccess === undefined && ` ${t('settingsAi.dataAccessDefault')}`}
 						</p>
-						<label>Extra instructions (tone, conventions)
-							<textarea value={instructions} onChange={(e) => setInstructions(e.target.value)} placeholder="e.g. prefer CTEs; explain briefly" rows={6} />
+						<label>{t('settingsAi.extraInstructions')} {t('settingsAi.extraInstructionsHint')}
+							<textarea value={instructions} onChange={(e) => setInstructions(e.target.value)} placeholder={t('settingsAi.instructionsPlaceholder')} rows={6} />
 						</label>
-						<label>Top tables to fully describe
+						<label>{t('settingsAi.topTables')}
 							<NumberField min={1} max={100} fallback={8} value={topTables} onCommit={setTopTables} />
 						</label>
-						<div className="muted">The top-N relevance-ranked tables for each question are described with full columns; the rest appear as name + column count. Smaller N keeps the prompt focused for local models.</div>
-						<label>Max schema characters (upper bound)
+						<div className="muted">{t('settingsAi.topTablesHelp')}</div>
+						<label>{t('settingsAi.maxSchemaChars')} {t('settingsAi.maxSchemaCharsHint')}
 							<NumberField min={1000} max={200000} fallback={24000} value={maxSchemaChars} onCommit={setMaxSchemaChars} />
 						</label>
-						<label className="check"><input type="checkbox" checked={autoInsertSql} onChange={(e) => setAutoInsertSql(e.target.checked)} /> Auto-insert proposed SQL into the editor</label>
+						<label className="check"><input type="checkbox" checked={autoInsertSql} onChange={(e) => setAutoInsertSql(e.target.checked)} /> {t('settingsAi.autoInsertSql')}</label>
 						{/* A build from source has no inexpensive observer model, so suggesting facts to
 						    remember is a second model call per turn: off until a model is named here. */}
 						{!OFFICIAL_BUILD && (
 							<>
-								<label>Model for "Remember this?" suggestions
-									<input type="text" value={observerModel} onChange={(e) => setObserverModel(e.target.value)} placeholder="Off" spellCheck={false} />
+								<label>{t('settingsAi.observerModel')}
+									<input type="text" value={observerModel} onChange={(e) => setObserverModel(e.target.value)} placeholder={t('settingsAi.observerPlaceholder')} spellCheck={false} />
 								</label>
-								<p className="field-hint">After a reply that proposes SQL, a model can read the exchange and suggest one fact to remember about the database. That is a second model call, on the assistant's provider, for every such reply, so it is off until you name a model here. A small, inexpensive one is enough. Leave it empty to keep it off.</p>
+								<p className="field-hint">{t('settingsAi.observerHelp')}</p>
 							</>
 						)}
 					</fieldset>
 					<fieldset>
-						<legend>Tools</legend>
-							<div className="muted">Choose what the assistant may do. Database tools need a connected database.</div>
-							<label className="check"><input type="checkbox" checked={toolListTables} onChange={(e) => setToolListTables(e.target.checked)} /> List tables</label>
-							<label className="check"><input type="checkbox" checked={toolDescribeTable} onChange={(e) => setToolDescribeTable(e.target.checked)} /> Describe a table (columns, keys, indexes)</label>
-							<label className="check"><input type="checkbox" checked={toolSearchColumns} onChange={(e) => setToolSearchColumns(e.target.checked)} /> Search columns by name</label>
-							<label className="check"><input type="checkbox" checked={toolRunQuery} onChange={(e) => setToolRunQuery(e.target.checked)} /> Run read-only queries <span className="muted">(you approve each query; writes are always refused)</span></label>
+						<legend>{t('settingsAi.toolsLegend')}</legend>
+							<div className="muted">{t('settingsAi.toolsHelp')}</div>
+							<label className="check"><input type="checkbox" checked={toolListTables} onChange={(e) => setToolListTables(e.target.checked)} /> {t('settingsAi.listTables')}</label>
+							<label className="check"><input type="checkbox" checked={toolDescribeTable} onChange={(e) => setToolDescribeTable(e.target.checked)} /> {t('settingsAi.describeTable')} {t('settingsAi.describeTableHint')}</label>
+							<label className="check"><input type="checkbox" checked={toolSearchColumns} onChange={(e) => setToolSearchColumns(e.target.checked)} /> {t('settingsAi.searchColumns')}</label>
+							<label className="check"><input type="checkbox" checked={toolRunQuery} onChange={(e) => setToolRunQuery(e.target.checked)} /> {t('settingsAi.runQueries')} <span className="muted">{t('settingsAi.runQueriesHint')}</span></label>
 							{toolRunQuery && effectiveDataAccess(dataAccess) !== 'queries' && (
-								<p className="field-hint">Switched off by "What the AI may see of your data" above, which does not include read-only queries.</p>
+								<p className="field-hint">{t('settingsAi.runQueriesOff')}</p>
 							)}
 							{toolRunQuery && (
 								<div className="auto-approve">
-									<div className="muted small">Auto-approved connections. Queries run without asking (set via “Always allow” on the approval prompt):</div>
+									<div className="muted small">{t('settingsAi.autoApproved')}</div>
 									{autoApprove.length === 0
-										? <div className="muted small">None. You'll be asked before each query.</div>
+										? <div className="muted small">{t('settingsAi.noneAsked')}</div>
 										: autoApprove.map((id) => (
 											<div className="auto-approve-row" key={id}>
 												<Icon name="database" />
 												<span className="tree-label">{connList.find((c) => c.id === id)?.label ?? id}</span>
 												<span className="spacer" />
-												<button type="button" className="secondary small" title="Ask again before running queries here" onClick={() => void revokeAutoApprove(id)}><Icon name="close" /> Revoke</button>
+												<button type="button" className="secondary small" title={t('settingsAi.askAgainTitle')} onClick={() => void revokeAutoApprove(id)}><Icon name="close" /> {t('settingsAi.revoke')}</button>
 											</div>
 										))}
 								</div>
 							)}
-							<label>Max tool steps per reply
+							<label>{t('settingsAi.maxSteps')}
 								<NumberField min={1} max={20} fallback={15} value={agentMaxSteps} onCommit={setAgentMaxSteps} />
 							</label>
-							<label>Max rows per query
+							<label>{t('settingsAi.maxRows')}
 								<NumberField min={1} max={5000} fallback={200} value={agentMaxRows} onCommit={setAgentMaxRows} />
 							</label>
 					</fieldset>
@@ -1177,35 +1196,35 @@ function AiSection({ onAiSaved, byokAllowed }: { onAiSaved?: () => void; byokAll
 
 			{aiTab === 'completion' && (
 				<>
-					<label className="check"><input type="checkbox" checked={inlineCompletion} onChange={(e) => setInlineCompletion(e.target.checked)} /> Enable AI completion (ghost text in the editor)</label>
+					<label className="check"><input type="checkbox" checked={inlineCompletion} onChange={(e) => setInlineCompletion(e.target.checked)} /> {t('settingsAi.enableCompletion')} {t('settingsAi.enableCompletionHint')}</label>
 					{BYOK_IDS.includes(provider as ByokProviderId) && (
-						<div className="muted" data-testid="completion-byok-note">Your own key covers the assistant's chat and edits only. AI completion needs a fill-in-the-middle model, which your provider may not offer, so it always uses SnoutData's completion model through our gateway. When it is on, the text around your cursor, the relevant schema and some of your earlier queries on that connection are sent to SnoutData's servers.</div>
+						<div className="muted" data-testid="completion-byok-note">{t('settingsAi.byokCompletionNote')}</div>
 					)}
 					{inlineCompletion ? (
 						<>
-							<label>Trigger
+							<label>{t('settingsAi.trigger')}
 								<select value={inlineCompletionMode} onChange={(e) => setInlineCompletionMode(e.target.value as InlineCompletionMode)}>
-									<option value="manual">Manual ({formatShortcut('Alt+\\')})</option>
-									<option value="auto">Automatic, as you type (best with a fast local model)</option>
+									<option value="manual">{t('settingsAi.triggerManual', { shortcut: formatShortcut('Alt+\\') })}</option>
+									<option value="auto">{t('settingsAi.triggerAuto')}</option>
 								</select>
 							</label>
-							<label>Completion model
+							<label>{t('settingsAi.completionModel')}
 								{provider === 'ollama'
 									? ollamaModelField(completionModel, setCompletionModel)
 									: cloudCompletionField('positron-cloud', completionModel, setCompletionModel)}
 							</label>
-							<div className="muted">Completion uses its own dedicated model (these are separate from the chat list). It wants speed + SQL fill-in-the-middle, not raw intelligence, so a small FIM code model beats a big chat model here.</div>
+							<div className="muted">{t('settingsAi.completionHelp')}</div>
 						</>
 					) : (
-						<div className="muted">Off. The editor still has deterministic, local schema completion ({formatShortcut('Ctrl+Space')}). Turn this on to add model-generated ghost text.</div>
+						<div className="muted">{t('settingsAi.completionOff', { shortcut: formatShortcut('Ctrl+Space') })}</div>
 					)}
 				</>
 			)}
 
 			<div className="modal-actions">
-				<button type="button" className="secondary" onClick={() => void test()} disabled={busy}><Icon name="beaker" /> Test</button>
+				<button type="button" className="secondary" onClick={() => void test()} disabled={busy}><Icon name="beaker" /> {t('settingsAi.test')}</button>
 				<span className="spacer" />
-				<button type="button" onClick={() => void save()} disabled={busy}><Icon name="save" /> Save</button>
+				<button type="button" onClick={() => void save()} disabled={busy}><Icon name="save" /> {t('settings.common.save')}</button>
 			</div>
 			{status && <div className={`form-status ${status.ok ? 'ok' : 'error'}`}>{status.message}</div>}
 		</>
@@ -1236,11 +1255,9 @@ function codexAddCommand(status: McpStatus): string {
 /** Per-client setup presets shown under the universal JSON. Each renders a copyable snippet plus a
  *  one-line "where this goes" note; the universal `mcpServers` JSON above already covers the many
  *  clients that read that shape (Cursor, Cline, Windsurf, Claude Desktop, …). */
-const MCP_CLIENT_PRESETS: Array<{ id: string; label: string; note: string; build(status: McpStatus): string }> = [
-	{ id: 'claude', label: 'Claude Code', note: 'Run once in a terminal. Registers it for every project, nothing to paste into a file:', build: claudeAddCommand },
-	{ id: 'codex', label: 'Codex', note: isWindows()
-		? 'Run in a terminal. setx stores the token for new terminals (reopen yours), then Codex registers the server:'
-		: 'Run in a terminal (Codex reads the token from an env var; add the export to your shell profile to persist it):', build: codexAddCommand },
+const MCP_CLIENT_PRESETS: Array<{ id: string; label: string; noteKey: string; build(status: McpStatus): string }> = [
+	{ id: 'claude', label: 'Claude Code', noteKey: 'settingsAgent.claudeNote', build: claudeAddCommand },
+	{ id: 'codex', label: 'Codex', noteKey: isWindows() ? 'settingsAgent.codexNoteWin' : 'settingsAgent.codexNote', build: codexAddCommand },
 ];
 
 /*
@@ -1252,39 +1269,40 @@ const MCP_CLIENT_PRESETS: Array<{ id: string; label: string; note: string; build
  * switch that lives on one of four tabs is a switch three quarters of this screen cannot find.
  */
 const AGENT_TABS = [
-	{ id: 'databases', label: 'Databases' },
-	{ id: 'agents', label: 'Coding agents' },
-	{ id: 'actions', label: 'App actions' },
-	{ id: 'connect', label: 'Outside agents' },
+	{ id: 'databases', labelKey: 'settingsAgent.tabs.databases' },
+	{ id: 'agents', labelKey: 'settingsAgent.tabs.agents' },
+	{ id: 'actions', labelKey: 'settingsAgent.tabs.actions' },
+	{ id: 'connect', labelKey: 'settingsAgent.tabs.connect' },
 ] as const;
 
 type AgentTab = typeof AGENT_TABS[number]['id'];
 
 /* Which tab holds a setting the Settings search jumped to. Without this the search still selects
    the Agent access page and then flashes a control that is on a panel the user cannot see, which
-   is worse than not finding it. Keyed by the labels in SEARCH_INDEX, lowercased. */
+   is worse than not finding it. Keyed by the label keys in SETTING_INDEX. */
 const AGENT_TAB_FOR_SETTING: Record<string, AgentTab> = {
-	'connections the agent may use': 'databases',
-	'allow writes': 'databases',
-	'coding agents': 'agents',
-	'let an agent change the app': 'actions',
-	'let a program here use my account': 'connect',
+	'settingsAgent.connectionsLegend': 'databases',
+	'settingsAgent.allowWrites': 'databases',
+	'settingsAgent.agentsLegend': 'agents',
+	'settingsAgent.letChangeApp': 'actions',
+	'settingsAgent.letProgramUse': 'connect',
 };
 
 /** Agent access (MCP): let an external agent (e.g. Claude Code) query the user's databases
  *  THROUGH the app, so credentials never leave the keychain. Read-only, opt-in per connection,
  *  gated by a bearer token. Drives the mcp:* IPC; each call returns the full status so this
  *  re-renders from one source of truth. */
-const PROXY_MODES: Array<{ id: ProxyMode; label: string; hint: string }> = [
-	{ id: 'system', label: 'Use system proxy', hint: 'Resolve the OS proxy (PAC/WPAD/manual) the same way your browser does. Recommended.' },
-	{ id: 'direct', label: 'No proxy (direct)', hint: 'Connect straight out, ignoring any system proxy.' },
-	{ id: 'manual', label: 'Manual configuration', hint: 'Point the app at a specific PAC file or proxy server.' },
+const PROXY_MODES: Array<{ id: ProxyMode; labelKey: string; hintKey: string }> = [
+	{ id: 'system', labelKey: 'settings.network.modeSystem', hintKey: 'settings.network.modeSystemHint' },
+	{ id: 'direct', labelKey: 'settings.network.modeDirect', hintKey: 'settings.network.modeDirectHint' },
+	{ id: 'manual', labelKey: 'settings.network.modeManual', hintKey: 'settings.network.modeManualHint' },
 ];
 
 // Settings → Shortcuts: live keyboard-shortcut rebinding. The bindings are the resolved set from
 // main (shared/keybindings.ts is the source of truth); clicking a row captures the next keystroke
 // and persists it, which broadcasts back so the editor + global dispatchers update without a restart.
 function ShortcutsSection(): JSX.Element {
+	const t = useT();
 	const [bindings, setBindings] = useState<ResolvedKeybinding[]>([]);
 	const [capturingId, setCapturingId] = useState<string | null>(null);
 
@@ -1322,45 +1340,47 @@ function ShortcutsSection(): JSX.Element {
 	return (
 		<div className="shortcuts">
 			<SettingsIntro art={KeysArt}>
-				<p>Click a shortcut, then press the new key combination. Esc to cancel, Backspace to reset.</p>
+				<p>{t('settings.shortcuts.intro')}</p>
 			</SettingsIntro>
 			{bindings.map((b) => {
+				const bindingLabel = (id: string): string => t(`settings.shortcuts.commands.${id}`, { assistant: ASSISTANT_NAME });
 				const conflictLabels = conflictingIds(bindings, b.id, b.combo, b.scope)
-					.map((cid) => bindings.find((x) => x.id === cid)?.label ?? cid);
+					.map((cid) => (bindings.some((x) => x.id === cid) ? bindingLabel(cid) : cid));
 				const reserved = reservedHint(b.combo);
 				const isDefault = defaults.get(b.id) === b.combo;
 				const capturing = capturingId === b.id;
 				return (
 					<div className="shortcut-row" key={b.id}>
-						<span>{b.label}</span>
+						<span>{bindingLabel(b.id)}</span>
 						<span className="spacer" />
 						{conflictLabels.length > 0 && (
-							<span className="shortcut-conflict" title={`Same keys as: ${conflictLabels.join(', ')}`}><Icon name="warning" /> conflict</span>
+							<span className="shortcut-conflict" title={t('settings.shortcuts.sameKeys', { names: conflictLabels.join(', ') })}><Icon name="warning" /> {t('settings.shortcuts.conflict')}</span>
 						)}
 						{conflictLabels.length === 0 && reserved && (
-							<span className="shortcut-conflict" title={`These keys also trigger a built-in: ${reserved}. Your binding wins, but disables it.`}><Icon name="warning" /> overrides {reserved}</span>
+							<span className="shortcut-conflict" title={t('settings.shortcuts.overridesTitle', { name: reserved })}><Icon name="warning" /> {t('settings.shortcuts.overrides', { name: reserved })}</span>
 						)}
 						{!isDefault && !capturing && (
-							<button className="icon-btn" aria-label="Reset to default" onClick={() => void window.sqlApi.keybindings.reset(b.id).then(setBindings)}><Icon name="discard" /></button>
+							<button className="icon-btn" aria-label={t('settings.shortcuts.resetToDefault')} onClick={() => void window.sqlApi.keybindings.reset(b.id).then(setBindings)}><Icon name="discard" /></button>
 						)}
 						<button
 							className={`shortcut-key${capturing ? ' capturing' : ''}`}
 							onClick={() => setCapturingId(b.id)}
 							onKeyDown={capturing ? (e) => capture(b.id, e) : undefined}
 						>
-							{capturing ? 'Press keys…' : <kbd>{formatShortcut(b.combo)}</kbd>}
+							{capturing ? t('settings.shortcuts.pressKeys') : <kbd>{formatShortcut(b.combo)}</kbd>}
 						</button>
 					</div>
 				);
 			})}
 			<div style={{ marginTop: 12 }}>
-				<button type="button" className="secondary" onClick={() => void window.sqlApi.keybindings.reset().then(setBindings)}><Icon name="discard" /> Reset all to defaults</button>
+				<button type="button" className="secondary" onClick={() => void window.sqlApi.keybindings.reset().then(setBindings)}><Icon name="discard" /> {t('settings.shortcuts.resetAll')}</button>
 			</div>
 		</div>
 	);
 }
 
 function NetworkSection(): JSX.Element {
+	const t = useT();
 	const secretsWeak = useSecretsWeak();
 	const [config, setConfig] = useState<ProxyConfig>(DEFAULT_PROXY_CONFIG);
 	const [password, setPassword] = useState<string>('');
@@ -1414,106 +1434,102 @@ function NetworkSection(): JSX.Element {
 	}
 
 	if (!loaded) {
-		return <div className="muted">Loading…</div>;
+		return <div className="muted">{t('settings.common.loading')}</div>;
 	}
 
 	return (
 		<>
 			<SettingsIntro art={NetworkArt}>
-				<p>
-					How SnoutData Studio connects to the internet for sign-in, AI, and updates. The default follows your
-					system proxy, like your browser. Change this only if you're on a company network that needs a
-					specific proxy or proxy sign-in (for example Zscaler or a corporate firewall).
-				</p>
+				<p>{t('settings.network.intro')}</p>
 			</SettingsIntro>
 
 			<fieldset>
-				<legend>Proxy</legend>
+				<legend>{t('settings.network.proxyLegend')}</legend>
 				{PROXY_MODES.map((m) => (
 					<div key={m.id}>
 						<label className="check">
 							<input type="radio" name="proxy-mode" checked={config.mode === m.id} disabled={busy} onChange={() => patch({ mode: m.id })} />
-							{m.label}
+							{t(m.labelKey)}
 						</label>
-						<div className="muted small" style={{ marginLeft: 22 }}>{m.hint}</div>
+						<div className="muted small" style={{ marginLeft: 22 }}>{t(m.hintKey)}</div>
 					</div>
 				))}
 			</fieldset>
 
 			{config.mode === 'manual' && (
 				<fieldset>
-					<legend>Manual proxy</legend>
+					<legend>{t('settings.network.manualLegend')}</legend>
 					<label>
-						<span>PAC URL (auto-config script)</span>
+						<span>{t('settings.network.pacUrl')} {t('settings.network.pacUrlHint')}</span>
 						<input type="text" placeholder="http://wpad/wpad.dat" value={config.pacUrl} disabled={busy} onChange={(e) => patch({ pacUrl: e.target.value })} />
 					</label>
-					<div className="muted small">If you have a PAC URL, use it. Otherwise leave it blank and set a proxy server below.</div>
+					<div className="muted small">{t('settings.network.pacHelp')}</div>
 					<label>
-						<span>Proxy server</span>
+						<span>{t('settings.network.proxyServer')}</span>
 						<input type="text" placeholder="proxy.corp.com:8080" value={config.server} disabled={busy || config.pacUrl.trim() !== ''} onChange={(e) => patch({ server: e.target.value })} />
 					</label>
 					<label>
-						<span>Bypass for these hosts</span>
+						<span>{t('settings.network.bypass')}</span>
 						<input type="text" placeholder="localhost,127.0.0.1,*.internal" value={config.bypass} disabled={busy || config.pacUrl.trim() !== ''} onChange={(e) => patch({ bypass: e.target.value })} />
 					</label>
 				</fieldset>
 			)}
 
 			<fieldset>
-				<legend>Proxy sign-in (optional)</legend>
-				<div className="muted small">Only if your proxy asks for a username and password. Windows/Kerberos single sign-on is handled automatically and needs nothing here. Kept {secretsPlace(secretsWeak)}.</div>
+				<legend>{t('settings.network.signIn')} {t('settings.network.optional')}</legend>
+				<div className="muted small">{t('settings.network.signInHelp', { place: t(secretsWeak ? 'settings.secretsPlace.file' : 'settings.secretsPlace.keychain') })}</div>
 				<label>
-					<span>Username</span>
+					<span>{t('settings.network.username')}</span>
 					<input type="text" autoComplete="off" value={config.username} disabled={busy} onChange={(e) => patch({ username: e.target.value })} />
 				</label>
 				<label>
-					<span>Password</span>
+					<span>{t('settings.network.password')}</span>
 					<input
 						type="password"
 						autoComplete="off"
-						placeholder={config.hasPassword && !pwTouched ? '•••••••• (saved)' : ''}
+						placeholder={config.hasPassword && !pwTouched ? t('settings.network.passwordSaved') : ''}
 						value={password}
 						disabled={busy}
 						onChange={(e) => { setPassword(e.target.value); setPwTouched(true); setSaved(false); }}
 					/>
 				</label>
-				{config.hasPassword && <div className="muted small">A password is saved. Leave blank to keep it, or clear the field and save to remove it.</div>}
+				{config.hasPassword && <div className="muted small">{t('settings.network.passwordHelp')}</div>}
 			</fieldset>
 
 			<fieldset>
-				<legend>Windows sign-in to servers (advanced)</legend>
-				<div className="muted small">Your proxy can always use your Windows/Kerberos sign-in. Other servers can only if they are listed here, and nothing receives your Kerberos ticket unless it is listed under delegation. Leave both blank unless your IT team asks. Changes apply the next time SnoutData Studio starts.</div>
+				<legend>{t('settings.network.windowsLegend')}</legend>
+				<div className="muted small">{t('settings.network.windowsHelp')}</div>
 				<label>
-					<span>Servers allowed to use your Windows sign-in</span>
+					<span>{t('settings.network.authServers')}</span>
 					<input type="text" autoComplete="off" placeholder="*.corp.example, auth.gateway.example" value={config.authServers} disabled={busy} onChange={(e) => patch({ authServers: e.target.value })} />
 				</label>
 				<label>
-					<span>Servers your Kerberos ticket may be delegated to</span>
-					<input type="text" autoComplete="off" placeholder="None" value={config.delegateServers} disabled={busy} onChange={(e) => patch({ delegateServers: e.target.value })} />
+					<span>{t('settings.network.delegateServers')}</span>
+					<input type="text" autoComplete="off" placeholder={t('settings.network.noneLabel')} value={config.delegateServers} disabled={busy} onChange={(e) => patch({ delegateServers: e.target.value })} />
 				</label>
-				<p className="field-hint">Comma separated host names. A leading <code>*.</code> covers a domain; a bare <code>*</code> is not accepted.</p>
+				<p className="field-hint">{rich(t('settings.network.hostsHelp'))}</p>
 			</fieldset>
 
 			{/* Same shape as every other settings pane: the secondary action on the left, the commit on
 			    the right edge of the panel. This row had them the other way round, so Save sat under
 			    the card's left corner here and under its right corner one tab over. */}
 			<div className="modal-actions">
-				<button type="button" className="secondary" onClick={() => void runTest()} disabled={busy || testing}><Icon name="pulse" /> {testing ? 'Testing…' : 'Test connection'}</button>
-				{resolved && <span className="muted small" title="What Chromium resolves for a sample request">Resolved: {resolved}</span>}
+				<button type="button" className="secondary" onClick={() => void runTest()} disabled={busy || testing}><Icon name="pulse" /> {testing ? t('settings.common.testing') : t('settings.network.testConnection')}</button>
+				{resolved && <span className="muted small" title={t('settings.network.resolvedTitle')}>{t('settings.network.resolved', { value: resolved })}</span>}
 				<span className="spacer" />
-				{saved && <span className="form-status ok">Saved.</span>}
-				<button type="button" onClick={() => void save()} disabled={busy}><Icon name="save" /> {busy ? 'Saving…' : 'Save & apply'}</button>
+				{saved && <span className="form-status ok">{t('settings.common.saved')}</span>}
+				<button type="button" onClick={() => void save()} disabled={busy}><Icon name="save" /> {busy ? t('settings.network.saving') : t('settings.network.saveApply')}</button>
 			</div>
 
 			{test && (
 				<fieldset>
-					<legend>Test result</legend>
-					{test.targets.map((t) => (
-						<div className={`form-status ${t.ok ? 'ok' : 'error'}`} key={t.host}>
-							{t.ok ? '✓' : '✗'} {t.label}{!t.ok && t.detail ? `: ${t.detail}` : ''}
+					<legend>{t('settings.network.testResult')}</legend>
+					{test.targets.map((target) => (
+						<div className={`form-status ${target.ok ? 'ok' : 'error'}`} key={target.host}>
+							{target.ok ? '✓' : '✗'} {target.label}{!target.ok && target.detail ? `: ${target.detail}` : ''}
 						</div>
 					))}
-					<div className="muted small" style={{ marginTop: 6 }}>"Reachable" means the app got a response from the host. A failure here with a code like <code>net::ERR_PROXY_CONNECTION_FAILED</code> tells you (or your IT team) what to fix.</div>
+					<div className="muted small" style={{ marginTop: 6 }}>{rich(t('settings.network.reachableHelp'))}</div>
 				</fieldset>
 			)}
 		</>
@@ -1526,6 +1542,7 @@ function NetworkSection(): JSX.Element {
  * (never done by itself either).
  */
 function McpProblemPanel({ problem, busy, onMove, onReplaceToken }: { problem: McpProblem; busy: boolean; onMove: (port: number) => void; onReplaceToken: () => void }): JSX.Element {
+	const t = useT();
 	const notice = mcpProblemNotice(problem);
 	const [port, setPort] = useState<string>(problem.kind === 'port-in-use' && problem.suggestedPort ? String(problem.suggestedPort) : '');
 	const chosen = Number(port);
@@ -1537,16 +1554,16 @@ function McpProblemPanel({ problem, busy, onMove, onReplaceToken }: { problem: M
 			{problem.kind === 'port-in-use' ? (
 				<>
 					<label>
-						Another port
+						{t('settingsAgent.anotherPort')}
 						<input type="number" min={1024} max={65535} value={port} disabled={busy} onChange={(e) => setPort(e.target.value)} />
 					</label>
 					<div className="mcp-actions">
-						<button type="button" disabled={busy || !valid} onClick={() => onMove(chosen)}>Move to this port and replace the token</button>
+						<button type="button" disabled={busy || !valid} onClick={() => onMove(chosen)}>{t('settingsAgent.moveReplace')}</button>
 					</div>
 				</>
 			) : (
 				<div className="mcp-actions">
-					<button type="button" className="secondary" disabled={busy} onClick={onReplaceToken}><Icon name="refresh" /> Replace the token</button>
+					<button type="button" className="secondary" disabled={busy} onClick={onReplaceToken}><Icon name="refresh" /> {t('settingsAgent.replaceToken')}</button>
 				</div>
 			)}
 		</div>
@@ -1557,29 +1574,29 @@ type GrantableCapability = { name: string; title: string; description: string; d
 
 /** What each capability domain is called as a heading in the App actions list. A domain missing
  *  here still gets a heading, its own name capitalised. */
-const GRANT_DOMAIN_LABELS: Record<string, string> = {
-	app: "App",
-	canvas: "Canvas",
-	cloud: "Cloud projects",
-	connections: "Connections",
-	editor: "Editor",
-	flows: "Data Flows",
-	knowledge: "Knowledge",
-	logs: "Logs",
-	monitors: "Monitors",
-	notifications: "Notifications",
-	orbit: "Orbit",
-	results: "Results",
-	schema: "Schema",
-	security: "Users and privileges",
-	settings: "Settings",
-	tunnels: "SSH tunnels",
-	workspace: "Workspace",
+const GRANT_DOMAIN_LABEL_KEYS: Record<string, string> = {
+	app: 'settingsAgent.domains.app',
+	canvas: 'settingsAgent.domains.canvas',
+	cloud: 'settingsAgent.domains.cloud',
+	connections: 'settingsAgent.domains.connections',
+	editor: 'settingsAgent.domains.editor',
+	flows: 'settingsAgent.domains.flows',
+	knowledge: 'settingsAgent.domains.knowledge',
+	logs: 'settingsAgent.domains.logs',
+	monitors: 'settingsAgent.domains.monitors',
+	notifications: 'settingsAgent.domains.notifications',
+	orbit: 'settingsAgent.domains.orbit',
+	results: 'settingsAgent.domains.results',
+	schema: 'settingsAgent.domains.schema',
+	security: 'settingsAgent.domains.security',
+	settings: 'settingsAgent.domains.settings',
+	tunnels: 'settingsAgent.domains.tunnels',
+	workspace: 'settingsAgent.domains.workspace',
 };
 
 /** The grantable actions grouped by domain, in the order the app published them, so a list of
  *  thirty-odd reads as a handful of headed groups rather than one long column. */
-function grantGroups(caps: GrantableCapability[]): Array<{ domain: string; label: string; caps: GrantableCapability[] }> {
+function grantGroups(caps: GrantableCapability[], translator: Translate): Array<{ domain: string; label: string; caps: GrantableCapability[] }> {
 	const groups = new Map<string, GrantableCapability[]>();
 	for (const cap of caps) {
 		const list = groups.get(cap.domain);
@@ -1591,12 +1608,13 @@ function grantGroups(caps: GrantableCapability[]): Array<{ domain: string; label
 	}
 	return [...groups].map(([domain, list]) => ({
 		domain,
-		label: GRANT_DOMAIN_LABELS[domain] ?? domain.charAt(0).toUpperCase() + domain.slice(1),
+		label: GRANT_DOMAIN_LABEL_KEYS[domain] ? translator(GRANT_DOMAIN_LABEL_KEYS[domain]) : domain.charAt(0).toUpperCase() + domain.slice(1),
 		caps: list,
 	}));
 }
 
-function AgentAccessSection({ reveal }: { reveal?: { label: string; nonce: number } }): JSX.Element {
+function AgentAccessSection({ reveal }: { reveal?: { label: string; labelKey?: string; nonce: number } }): JSX.Element {
+	const t = useT();
 	const [status, setStatus] = useState<McpStatus | null>(null);
 	// The agent console's own settings, which is where "may an agent change the app" lives.
 	const [agentConfig, setAgentConfig] = useState<AgentConsoleConfig | null>(null);
@@ -1615,9 +1633,9 @@ function AgentAccessSection({ reveal }: { reveal?: { label: string; nonce: numbe
 
 	async function regenerate(): Promise<void> {
 		const ok = await confirm({
-			title: 'Regenerate the token?',
-			body: 'This mints a new token and immediately invalidates the current one. A config you pasted into an agent (Claude Code, Codex, Cline, …) stops working until you paste the new one. The coding agents this app starts get the new token on their next start.',
-			confirmLabel: 'Regenerate token',
+			title: t('settingsAgent.regenerateTitle'),
+			body: t('settingsAgent.regenerateBody'),
+			confirmLabel: t('settingsAgent.regenerateToken'),
 			danger: true,
 		});
 		if (!ok) {
@@ -1629,7 +1647,7 @@ function AgentAccessSection({ reveal }: { reveal?: { label: string; nonce: numbe
 	// Follow the search to the tab the setting is actually on. Runs before the page's own reveal
 	// pass paints, so the control it flashes is on screen by the time it looks for it.
 	useEffect(() => {
-		const target = reveal && AGENT_TAB_FOR_SETTING[reveal.label.toLowerCase()];
+		const target = reveal?.labelKey && AGENT_TAB_FOR_SETTING[reveal.labelKey];
 		if (target) {
 			setAgentTab(target);
 		}
@@ -1670,7 +1688,7 @@ function AgentAccessSection({ reveal }: { reveal?: { label: string; nonce: numbe
 	}
 
 	if (!status) {
-		return <div className="muted">Loading…</div>;
+		return <div className="muted">{t('settings.common.loading')}</div>;
 	}
 
 	const exposed = status.connections.filter((c) => c.allowed).length;
@@ -1681,17 +1699,12 @@ function AgentAccessSection({ reveal }: { reveal?: { label: string; nonce: numbe
 	return (
 		<>
 			<SettingsIntro art={AgentAccessArt}>
-				<p>
-					Let an external agent like Claude Code query your databases through SnoutData Studio. The agent
-					connects to a local server here and asks it to run queries; your connection passwords and
-					keys never leave this computer, and never touch the agent or a repo. Access is read-only by
-					default and you choose exactly which connections are reachable.
-				</p>
+				<p>{t('settingsAgent.intro')}</p>
 			</SettingsIntro>
 
 			<label className="check">
 				<input type="checkbox" checked={status.enabled} disabled={busy} onChange={(e) => void run(() => window.sqlApi.mcp.setEnabled(e.target.checked))} />
-				Allow agent access (run a local server on this computer)
+				{t('settingsAgent.allowAccess')} {t('settingsAgent.allowAccessHint')}
 			</label>
 
 			{status.enabled && (
@@ -1700,19 +1713,19 @@ function AgentAccessSection({ reveal }: { reveal?: { label: string; nonce: numbe
 						<McpProblemPanel problem={status.problem} busy={busy} onMove={(port) => void run(() => window.sqlApi.mcp.changePort(port))} onReplaceToken={() => void regenerate()} />
 					) : (
 						<div className={`form-status ${status.running ? 'ok' : 'error'}`}>
-							{status.running ? `Listening on ${status.url}` : "Not running. Toggle off and on to retry."}
+							{status.running ? t('settingsAgent.listening', { url: status.url }) : t('settingsAgent.notRunning')}
 						</div>
 					)}
 
 					<div className="tabs agent-section-tabs">
-						{AGENT_TABS.map((t) => (
+						{AGENT_TABS.map((entry) => (
 							<button
 								type="button"
-								key={t.id}
-								className={agentTab === t.id ? 'tab active' : 'tab'}
-								onClick={() => setAgentTab(t.id)}
+								key={entry.id}
+								className={agentTab === entry.id ? 'tab active' : 'tab'}
+								onClick={() => setAgentTab(entry.id)}
 							>
-								{t.label}
+								{t(entry.labelKey)}
 							</button>
 						))}
 					</div>
@@ -1720,46 +1733,42 @@ function AgentAccessSection({ reveal }: { reveal?: { label: string; nonce: numbe
 					{agentTab === 'databases' && (
 					<>
 					<fieldset>
-						<legend>Connections the agent may use</legend>
-						<div className="muted small">Off by default. Only the connections you select here are visible to agents; everything else stays private. Queries run read-only unless you also allow writes for a connection; under each connection is what its database itself enforces for a read.</div>
-						{status.connections.length === 0 && <div className="muted small">No connections yet. Add one first, then expose it here.</div>}
+						<legend>{t('settingsAgent.connectionsLegend')}</legend>
+						<div className="muted small">{t('settingsAgent.connectionsHelp')}</div>
+						{status.connections.length === 0 && <div className="muted small">{t('settingsAgent.noConnections')}</div>}
 						{status.connections.map((c) => (
 							<div className="mcp-conn" key={c.id}>
 								<label className="check">
 									<input type="checkbox" checked={c.allowed} disabled={busy} onChange={(e) => void run(() => window.sqlApi.mcp.setAllowed(c.id, e.target.checked))} />
 									{c.label}
 									{c.environment && <span className={`env${c.environment === 'prod' ? ' prod' : ''}`} style={{ marginLeft: 6 }}>{c.environment}</span>}
-									{c.readOnly && <span className="model-picker-label" style={{ marginLeft: 6 }}>read-only</span>}
+									{c.readOnly && <span className="model-picker-label" style={{ marginLeft: 6 }}>{t('settingsAgent.readOnly')}</span>}
 								</label>
 								{c.allowed && !c.readOnly && (
 									<label className="check mcp-writes">
 										<input type="checkbox" checked={c.writes} disabled={busy} onChange={(e) => void run(() => window.sqlApi.mcp.setWrites(c.id, e.target.checked))} />
-										Allow writes (INSERT/UPDATE/DELETE/DDL) <span className="muted">(off by default)</span>
+										{t('settingsAgent.allowWrites')} (INSERT/UPDATE/DELETE/DDL) <span className="muted">{t('settingsAgent.offByDefault')}</span>
 									</label>
 								)}
 								{c.allowed && c.readOnly && (
-									<div className="muted small mcp-writes">This connection is read-only, so writes stay blocked. Remove read-only on the connection to allow them.</div>
+									<div className="muted small mcp-writes">{t('settingsAgent.readOnlyNote')}</div>
 								)}
 								{c.allowed && (c.readOnly || !c.writes) && (
 									<div className="muted small mcp-writes">{c.readOnlyBy}</div>
 								)}
 							</div>
 						))}
-						{anyWrites && <div className="form-status error" style={{ marginTop: 6 }}>Writes are enabled for one or more connections. An agent can change or delete data there.</div>}
+						{anyWrites && <div className="form-status error" style={{ marginTop: 6 }}>{t('settingsAgent.writesEnabled')}</div>}
 					</fieldset>
-					<div className="muted small mcp-footnote">Queries the agent runs are recorded in your query history. By default only read-only statements run (SELECT/WITH/SHOW/DESCRIBE/EXPLAIN): each is checked before it runs, and the database is also asked to refuse writes where its engine can (the line under each connection says how). Writes and DDL are refused unless you allow writes for that connection.</div>
+					<div className="muted small mcp-footnote">{t('settingsAgent.footnote')}</div>
 					</>
 					)}
 
 					{agentTab === 'agents' && (
 					<>
 					<fieldset>
-						<legend>Coding agents</legend>
-						<div className="muted small">
-							Run your own coding agent inside SnoutData Studio, in your workspace folder. We look for
-							these on this computer; the ones you have are switched on the first time we find
-							them. Turn one off and it stays off, even if you reinstall it.
-						</div>
+						<legend>{t('settingsAgent.agentsLegend')}</legend>
+						<div className="muted small">{t('settingsAgent.agentsHelp')}</div>
 						{AGENT_KINDS.map((kind) => {
 							const descriptor = agentDescriptor(kind);
 							const found = agents.find((a) => a.kind === kind);
@@ -1777,39 +1786,31 @@ function AgentAccessSection({ reveal }: { reveal?: { label: string; nonce: numbe
 									</label>
 									<div className="muted small agent-pick-state">
 										{installed
-											? <>Found{found?.install.version ? `: ${found.install.version}` : ''}{descriptor.handoff === 'manual' ? '. Connecting it to your databases is the one-time command below.' : '. It gets your databases automatically.'}</>
+											? <>{found?.install.version ? t('settingsAgent.foundVersion', { version: found.install.version }) : t('settingsAgent.found')}. {t(descriptor.handoff === 'manual' ? 'settingsAgent.manualHandoff' : 'settingsAgent.autoHandoff')}</>
 											: found?.install.pinned
-												? <>The program you chose is not there any more. <button type="button" className="link-btn" onClick={() => { void window.sqlApi.agentConsole.setPath(kind).then(setAgents); }}>Choose it again</button></>
-												: <>Not installed. <button type="button" className="link-btn" onClick={() => void window.sqlApi.openExternal(descriptor.installUrl)}>How to install it</button></>}
+												? <>{t('settingsAgent.gone')} <button type="button" className="link-btn" onClick={() => { void window.sqlApi.agentConsole.setPath(kind).then(setAgents); }}>{t('settingsAgent.chooseAgain')}</button></>
+												: <>{t('settingsAgent.notInstalled')} <button type="button" className="link-btn" onClick={() => void window.sqlApi.openExternal(descriptor.installUrl)}>{t('settingsAgent.howToInstall')}</button></>}
 									</div>
 									{/* The failsafe behind discovery: we look on your PATH, and if we cannot find an
 									    agent you know you have, you point us at it. */}
 									<div className="muted small agent-pick-path">
 										{found?.install.path
-											? <>{found.install.pinned ? "You chose" : "At"} <code>{found.install.path}</code>{' '}
-												<button type="button" className="link-btn" onClick={() => { void window.sqlApi.agentConsole.setPath(kind).then(setAgents); }}>Choose a different one</button>
-												{found.install.pinned && <> &middot; <button type="button" className="link-btn" onClick={() => { void window.sqlApi.agentConsole.setPath(kind, null).then(setAgents); }}>Look on my PATH instead</button></>}</>
-											: !found?.install.pinned && <button type="button" className="link-btn" onClick={() => { void window.sqlApi.agentConsole.setPath(kind).then(setAgents); }}>I have it, let me point you at it</button>}
+											? <>{found.install.pinned ? t('settingsAgent.youChose') : t('settingsAgent.at')} <code>{found.install.path}</code>{' '}
+												<button type="button" className="link-btn" onClick={() => { void window.sqlApi.agentConsole.setPath(kind).then(setAgents); }}>{t('settingsAgent.chooseDifferent')}</button>
+												{found.install.pinned && <> &middot; <button type="button" className="link-btn" onClick={() => { void window.sqlApi.agentConsole.setPath(kind, null).then(setAgents); }}>{t('settingsAgent.lookOnPath')}</button></>}</>
+											: !found?.install.pinned && <button type="button" className="link-btn" onClick={() => { void window.sqlApi.agentConsole.setPath(kind).then(setAgents); }}>{t('settingsAgent.pointAtIt')}</button>}
 									</div>
 								</div>
 							);
 						})}
 						<button type="button" className="secondary" disabled={probing} onClick={() => { setProbing(true); void window.sqlApi.agentConsole.discoverAll().then(setAgents).finally(() => setProbing(false)); }}>
-							<Icon name="search" /> {probing ? 'Looking...' : 'Look again'}
+							<Icon name="search" /> {probing ? t('settingsAgent.looking') : t('settingsAgent.lookAgain')}
 						</button>
 					</fieldset>
 
 					<fieldset>
-						<legend>Inside SnoutData Studio</legend>
-						<div className="muted small">
-							An agent started here runs as part of the app: Studio's tools are its only route
-							to a database, its other MCP servers are left out of this session, and results are
-							shown in its own panel here instead of scrolling past in the terminal. That is what keeps
-							your passwords in the keychain and every query on the agent log. Claude Code also
-							has the local database clients (psql, mysql, mongosh and the rest) refused
-							outright, which is its own permission system doing the refusing. Switch this off
-							to run your agent exactly as it comes, with your own setup and no rules from us.
-						</div>
+						<legend>{t('settingsAgent.insideLegend')}</legend>
+						<div className="muted small">{t('settingsAgent.insideHelp')}</div>
 						<label className="check">
 							<input
 								type="checkbox"
@@ -1817,12 +1818,12 @@ function AgentAccessSection({ reveal }: { reveal?: { label: string; nonce: numbe
 								disabled={busy || !agentConfig}
 								onChange={(e) => { void window.sqlApi.agentConsole.setRouteDatabase(e.target.checked).then(setAgentConfig); }}
 							/>
-							Database work goes through SnoutData Studio
+							{t('settingsAgent.routeThroughApp')}
 						</label>
-						<div className="muted small">Applies the next time the agent starts.</div>
+						<div className="muted small">{t('settingsAgent.nextStart')}</div>
 						{agentConfig?.routeDatabaseThroughApp !== false && (
 							<details className="agent-house-rules">
-								<summary>What the agent is told</summary>
+								<summary>{t('settingsAgent.whatToldSummary')}</summary>
 								<pre>{agentHouseRules({ serverName: MCP_SERVER_NAME, canDraw: true })}</pre>
 							</details>
 						)}
@@ -1833,14 +1834,8 @@ function AgentAccessSection({ reveal }: { reveal?: { label: string; nonce: numbe
 					{agentTab === 'actions' && (
 					<>
 					<fieldset>
-						<legend>App actions</legend>
-						<div className="muted small">
-							Beyond querying, an agent can drive the app itself: open a tab, put a query in the
-							grid, change a setting. Reading what is on screen is always allowed. Changing
-							anything needs your answer, every time, until you tell it not to for a particular
-							action. With the setting below off, an agent that needs one of these asks you to
-							turn it on rather than being refused quietly, and saying no stops it asking again.
-						</div>
+						<legend>{t('settingsAgent.actionsLegend')}</legend>
+						<div className="muted small">{t('settingsAgent.actionsHelp')}</div>
 						<label className="check">
 							<input
 								type="checkbox"
@@ -1848,16 +1843,13 @@ function AgentAccessSection({ reveal }: { reveal?: { label: string; nonce: numbe
 								disabled={busy || !agentConfig}
 								onChange={(e) => { void window.sqlApi.agentConsole.setAllowMutating(e.target.checked).then(setAgentConfig); }}
 							/>
-							Let an agent change the app
+							{t('settingsAgent.letChangeApp')}
 						</label>
 						{agentConfig?.allowMutatingCapabilities && (
 							<>
-								<div className="muted small">
-									Selected actions run without asking. Everything else raises the prompt, where
-									"Always allow this" selects it here. Switching the setting above off forgets the lot.
-								</div>
+								<div className="muted small">{t('settingsAgent.autoHelp')}</div>
 								{mutating.length === 0
-									? <div className="muted small">Nothing to list yet: the app publishes what an agent can do once the window is up.</div>
+									? <div className="muted small">{t('settingsAgent.nothingYet')}</div>
 									: (
 										<>
 										{/* One click for the whole list. Each is disabled once it would do nothing,
@@ -1871,7 +1863,7 @@ function AgentAccessSection({ reveal }: { reveal?: { label: string; nonce: numbe
 												disabled={busy || granted.length === mutating.length}
 												onClick={() => { void window.sqlApi.agentConsole.setAutoApproveAll(mutating.map((cap) => cap.name), true).then(setAgentConfig); }}
 											>
-												Select all
+												{t('settingsAgent.selectAll')}
 											</button>
 											<button
 												type="button"
@@ -1879,11 +1871,11 @@ function AgentAccessSection({ reveal }: { reveal?: { label: string; nonce: numbe
 												disabled={busy || granted.length === 0}
 												onClick={() => { void window.sqlApi.agentConsole.clearAutoApprove().then(setAgentConfig); }}
 											>
-												Unselect all
+												{t('settingsAgent.unselectAll')}
 											</button>
 										</div>
 										<div className="agent-grant-list">
-											{grantGroups(mutating).map((group) => (
+											{grantGroups(mutating, t).map((group) => (
 												<section className="agent-grant-group" key={group.domain}>
 													<h4 className="agent-grant-group-title">{group.label}</h4>
 													{group.caps.map((cap) => (
@@ -1914,43 +1906,36 @@ function AgentAccessSection({ reveal }: { reveal?: { label: string; nonce: numbe
 					{agentTab === 'connect' && (
 					<>
 					<fieldset>
-						<legend>Connect your agent</legend>
-						<div className="muted small">This is the standard MCP config any client accepts (Claude Code, Codex, Cline, …). Add it under your client's MCP servers, for example a <code>.mcp.json</code> in your project. The token authorizes the agent; keep it private. After repeated requests with a wrong token, the app refuses their sender for a while and tells you; it never replaces the token by itself.</div>
+						<legend>{t('settingsAgent.connectLegend')}</legend>
+						<div className="muted small">{rich(t('settingsAgent.connectHelp'))}</div>
 						<pre className="mcp-snippet">{mcpConfigSnippet(status)}</pre>
 						<div className="modal-actions">
-							<button type="button" className="secondary" onClick={() => void copy(mcpConfigSnippet(status), 'json')}><Icon name="copy" /> {copiedKey === 'json' ? 'Copied' : 'Copy config'}</button>
+							<button type="button" className="secondary" onClick={() => void copy(mcpConfigSnippet(status), 'json')}><Icon name="copy" /> {copiedKey === 'json' ? t('settings.common.copied') : t('settingsAgent.copyConfig')}</button>
 							<span className="spacer" />
-							<button type="button" className="secondary" disabled={busy} title="Mint a new token; the old config stops working" onClick={() => void regenerate()}><Icon name="refresh" /> Regenerate token</button>
+							<button type="button" className="secondary" disabled={busy} title={t('settingsAgent.regenerateHint')} onClick={() => void regenerate()}><Icon name="refresh" /> {t('settingsAgent.regenerateToken')}</button>
 						</div>
 						</fieldset>
 						<fieldset>
-							<legend>Command</legend>
+							<legend>{t('settingsAgent.commandLegend')}</legend>
 							<div className="mcp-client-row">
-							<span className="muted small">Set up a specific client:</span>
+							<span className="muted small">{t('settingsAgent.specificClient')}</span>
 							<select value={client} onChange={(e) => setClient(e.target.value)}>
 								{MCP_CLIENT_PRESETS.map((p) => <option key={p.id} value={p.id}>{p.label}</option>)}
 							</select>
 						</div>
-						<div className="muted small">{clientPreset.note}</div>
+						<div className="muted small">{t(clientPreset.noteKey)}</div>
 						<pre className="mcp-snippet">{clientText}</pre>
 						<div className="modal-actions">
-							<button type="button" className="secondary" onClick={() => void copy(clientText, 'client')}><Icon name="copy" /> {copiedKey === 'client' ? 'Copied' : 'Copy'}</button>
+							<button type="button" className="secondary" onClick={() => void copy(clientText, 'client')}><Icon name="copy" /> {copiedKey === 'client' ? t('settings.common.copied') : t('settings.common.copy')}</button>
 						</div>
-						{exposed === 0 && <div className="muted small">Tip: select at least one connection on the Databases tab, or the agent will have nothing to query.</div>}
+						{exposed === 0 && <div className="muted small">{t('settingsAgent.tipSelect')}</div>}
 					</fieldset>
 					{/* The sign-in handoff. It sits on this tab because it is the same question as
 					    the block above it, asked by a command line instead of an agent: how does
 					    something else on this computer get in. */}
 					<fieldset>
-						<legend>Your SnoutData account</legend>
-						<div className="muted small">
-							The <code>snoutdata</code> command line, and anything else running here, can ask to use
-							the account you are signed in with, so you do not have to open a browser in the middle
-							of what you are doing. We ask you first, every time. What you approve is a new access
-							token of its own, named for this computer: your sign-in is not handed over, and you can
-							revoke the token from <code>snoutdata tokens list</code> or the dashboard whenever you
-							like.
-						</div>
+						<legend>{t('settingsAgent.accountLegend')}</legend>
+						<div className="muted small">{rich(t('settingsAgent.accountHelp'))}</div>
 						<label className="check">
 							<input
 								type="checkbox"
@@ -1958,15 +1943,11 @@ function AgentAccessSection({ reveal }: { reveal?: { label: string; nonce: numbe
 								disabled={busy}
 								onChange={(e) => void run(() => window.sqlApi.mcp.setSignInHandoff(e.target.checked))}
 							/>
-							Let a program here use my account (asks you each time)
+							{t('settingsAgent.letProgramUse')} {t('settingsAgent.letProgramUseHint')}
 						</label>
 						{/* Said once and said honestly. Asking prevents surprise, not attack: a program
 						    running as you already has whatever you have. Never "nothing could take it". */}
-						<div className="muted small">
-							Switch this off and the request is refused outright. Worth knowing either way: asking
-							is a courtesy, not a lock. Any program running as you on this computer can already
-							read what SnoutData Studio keeps here, the same as it can read anything else of yours.
-						</div>
+						<div className="muted small">{t('settingsAgent.courtesyHelp')}</div>
 					</fieldset>
 					</>
 					)}
@@ -1994,6 +1975,7 @@ function formatWalletShare(usd: number, maxBudget: number | undefined): string |
 /** The AI audit log: every recorded LLM interaction (chat, completion, edit), newest
  *  first, each expandable to its full conversation. Read-only apart from Clear. */
 function AuditSection(props: { connections: ConnectionConfig[]; chatEnabled: boolean; completionEnabled: boolean; onToggleChat(v: boolean): void; onToggleCompletion(v: boolean): void }): JSX.Element {
+	const t = useT();
 	const PAGE_SIZE = 25;
 	const [entries, setEntries] = useState<AiAuditEntry[] | null>(null);
 	const [expanded, setExpanded] = useState<string | null>(null);
@@ -2019,7 +2001,7 @@ function AuditSection(props: { connections: ConnectionConfig[]; chatEnabled: boo
 	useEffect(() => { setPage(0); }, [kindFilter, query]);
 
 	async function clear(): Promise<void> {
-		if (!(await confirm({ title: 'Clear the AI audit log?', body: 'Every recorded language-model interaction will be deleted. This cannot be undone.', confirmLabel: 'Clear log', danger: true }))) {
+		if (!(await confirm({ title: t('settings.audit.clearTitle'), body: t('settings.audit.clearBody'), confirmLabel: t('settings.audit.clearLog'), danger: true }))) {
 			return;
 		}
 		await window.sqlApi.clearAiAuditLog();
@@ -2034,7 +2016,7 @@ function AuditSection(props: { connections: ConnectionConfig[]; chatEnabled: boo
 	}
 
 	if (!entries) {
-		return <div className="muted">Loading…</div>;
+		return <div className="muted">{t('settings.common.loading')}</div>;
 	}
 
 	const q = query.trim().toLowerCase();
@@ -2065,44 +2047,44 @@ function AuditSection(props: { connections: ConnectionConfig[]; chatEnabled: boo
 			    which includes a data flow's AI extraction stage running on a schedule with nobody
 			    watching. Naming only chat left people who never open the assistant assuming it did
 			    not apply to them. */}
-			<label className="check"><input type="checkbox" checked={props.chatEnabled} onChange={(e) => props.onToggleChat(e.target.checked)} /> Record chats with {ASSISTANT_NAME}, and every action taken on your behalf (data flows, agents)</label>
-			<label className="check"><input type="checkbox" checked={props.completionEnabled} onChange={(e) => props.onToggleCompletion(e.target.checked)} /> Record auto-completion and inline edits</label>
-			<div className="muted">Each enabled kind of language-model interaction is recorded here: when it ran, which model served it, and the full exchange. Off by default; existing entries are kept until cleared. Newest first; the most recent 500 are kept.</div>
+			<label className="check"><input type="checkbox" checked={props.chatEnabled} onChange={(e) => props.onToggleChat(e.target.checked)} /> {t('settings.audit.recordChats', { assistant: ASSISTANT_NAME })}</label>
+			<label className="check"><input type="checkbox" checked={props.completionEnabled} onChange={(e) => props.onToggleCompletion(e.target.checked)} /> {t('settings.audit.recordCompletion')}</label>
+			<div className="muted">{t('settings.audit.help')}</div>
 			{budget?.metered && budget.percentUsed !== undefined && (
-				<div className="muted small audit-meta" title="Your live gateway wallet (percent of the period's budget used), with the recorded turns' share to weigh against it">
+				<div className="muted small audit-meta" title={t('settings.audit.walletTitle')}>
 					<Icon name="credit-card" />
-					<span>Wallet: {budget.percentUsed}% used this period</span>
-					{recordedShare && <span className="muted">recorded turns here ≈ {recordedShare} of the wallet</span>}
+					<span>{t('settings.audit.wallet', { percent: budget.percentUsed })}</span>
+					{recordedShare && <span className="muted">{t('settings.audit.recordedShare', { share: recordedShare })}</span>}
 				</div>
 			)}
 			<div className="modal-actions">
-				<button type="button" className="secondary" onClick={() => void load()}><Icon name="refresh" /> Refresh</button>
+				<button type="button" className="secondary" onClick={() => void load()}><Icon name="refresh" /> {t('settings.common.refresh')}</button>
 				<span className="spacer" />
-				<button type="button" className="secondary" disabled={entries.length === 0} onClick={() => void clear()}><Icon name="trash" /> Clear log</button>
+				<button type="button" className="secondary" disabled={entries.length === 0} onClick={() => void clear()}><Icon name="trash" /> {t('settings.audit.clearLog')}</button>
 			</div>
 			{entries.length === 0 && (
 				<div className="settings-empty">
 					<HistoryArt className="settings-empty-art" />
-					<p>No interactions recorded yet. Switch recording on above and every exchange with a model lands here.</p>
+					<p>{t('settings.audit.empty')}</p>
 				</div>
 			)}
 			{entries.length > 0 && (
 				<div className="audit-filter">
 					<select value={kindFilter} onChange={(e) => setKindFilter(e.target.value as 'all' | AiAuditKind)}>
-						<option value="all">All kinds</option>
-						<option value="chat">Chat</option>
-						<option value="completion">Completion</option>
-						<option value="edit">Edit</option>
+						<option value="all">{t('settings.audit.allKinds')}</option>
+						<option value="chat">{t('settings.audit.kinds.chat')}</option>
+						<option value="completion">{t('settings.audit.kinds.completion')}</option>
+						<option value="edit">{t('settings.audit.kinds.edit')}</option>
 						{/* A data flow's model calls are actions, and for a user who only runs flows they
 						    are the ONLY entries in the log. Without this, every specific filter hid them. */}
-						<option value="action">Action</option>
+						<option value="action">{t('settings.audit.kinds.action')}</option>
 					</select>
-					<input className="audit-search" value={query} placeholder="Search provider, model, or text…" onChange={(e) => setQuery(e.target.value)} />
+					<input className="audit-search" value={query} placeholder={t('settings.audit.searchPlaceholder')} onChange={(e) => setQuery(e.target.value)} />
 					<span className="spacer" />
-					{filterActive && <span className="muted small">{filtered.length} match{filtered.length === 1 ? '' : 'es'}</span>}
+					{filterActive && <span className="muted small">{t('settings.audit.matches', { count: filtered.length })}</span>}
 				</div>
 			)}
-			{entries.length > 0 && filtered.length === 0 && <div className="muted">No interactions match the filter.</div>}
+			{entries.length > 0 && filtered.length === 0 && <div className="muted">{t('settings.audit.noMatch')}</div>}
 			<div className="audit-list">
 				{pageEntries.map((e) => {
 					const open = expanded === e.id;
@@ -2111,20 +2093,20 @@ function AuditSection(props: { connections: ConnectionConfig[]; chatEnabled: boo
 						<div className={`audit-entry${e.ok ? '' : ' failed'}`} key={e.id}>
 							<button type="button" className="audit-head" onClick={() => setExpanded(open ? null : e.id)}>
 								<Icon name={open ? 'chevron-down' : 'chevron-right'} />
-								<span className={`audit-kind ${e.kind}`}>{e.kind}</span>
+								<span className={`audit-kind ${e.kind}`}>{t(AUDIT_KIND_KEYS[e.kind])}</span>
 								<span className="tree-label">{e.provider}{e.projectRef ? ` ${e.projectRef}` : ''} · {e.model}</span>
-								{!e.ok && <span className="audit-badge error" title={e.error}>failed</span>}
+								{!e.ok && <span className="audit-badge error" title={e.error}>{t('settings.audit.failed')}</span>}
 								<span className="spacer" />
-								<span className="muted small">{new Date(e.timestamp).toLocaleString()}</span>
+								<span className="muted small">{new Date(e.timestamp).toLocaleString(formatLocale())}</span>
 							</button>
 							{open && (
 								<div className="audit-body">
 									<div className="muted small audit-meta">
 										{conn && <span>{conn}</span>}
 										<span>{e.durationMs} ms</span>
-										{e.usage && <span>{e.usage.totalTokens} tokens ({e.usage.promptTokens}+{e.usage.completionTokens})</span>}
+										{e.usage && <span>{t('settings.audit.tokens', { total: e.usage.totalTokens, prompt: e.usage.promptTokens, completion: e.usage.completionTokens })}</span>}
 										{e.costUsd !== undefined && budget?.metered && formatWalletShare(e.costUsd, budget.maxBudget) && (
-											<span title="Share of your wallet this turn used (prompt + completion)">≈ {formatWalletShare(e.costUsd, budget.maxBudget)} of wallet</span>
+											<span title={t('settings.audit.shareTitle')}>{t('settings.audit.shareOfWallet', { share: formatWalletShare(e.costUsd, budget.maxBudget) ?? '' })}</span>
 										)}
 									</div>
 									{e.error && <div className="form-status error">{e.error}</div>}
@@ -2133,7 +2115,7 @@ function AuditSection(props: { connections: ConnectionConfig[]; chatEnabled: boo
 											{/* An action's system prompt is the stage's own instructions, not the schema
 											    grounding a chat turn gets; calling it "schema" would misdescribe the
 											    only entries a flows-only user ever sees. */}
-											<div className="audit-role">{e.kind === 'action' ? 'instructions sent to the model' : "context sent to the model (schema + what you're looking at)"} · {e.systemPrompt.length.toLocaleString()} chars · ~{Math.round(e.systemPrompt.length / 4).toLocaleString()} tokens</div>
+											<div className="audit-role">{e.kind === 'action' ? t('settings.audit.instructionsSent') : t('settings.audit.contextSent')} · {t('settings.audit.chars', { chars: e.systemPrompt.length, tokens: Math.round(e.systemPrompt.length / 4) })}</div>
 											<pre>{e.systemPrompt}</pre>
 										</div>
 									)}
@@ -2144,8 +2126,8 @@ function AuditSection(props: { connections: ConnectionConfig[]; chatEnabled: boo
 										</div>
 									))}
 									<div className="audit-msg reply">
-										<div className="audit-role">reply</div>
-										<pre>{e.response || '(empty)'}</pre>
+										<div className="audit-role">{t('settings.audit.reply')}</div>
+										<pre>{e.response || t('settings.audit.empty2')}</pre>
 									</div>
 								</div>
 							)}
@@ -2155,9 +2137,9 @@ function AuditSection(props: { connections: ConnectionConfig[]; chatEnabled: boo
 			</div>
 			{pageCount > 1 && (
 				<div className="audit-pager">
-					<button type="button" className="secondary small" disabled={clampedPage === 0} onClick={() => setPage(clampedPage - 1)}><Icon name="chevron-left" /> Prev</button>
-					<span className="muted small">{rangeStart}-{rangeEnd} of {filtered.length}</span>
-					<button type="button" className="secondary small" disabled={clampedPage >= pageCount - 1} onClick={() => setPage(clampedPage + 1)}>Next <Icon name="chevron-right" /></button>
+					<button type="button" className="secondary small" disabled={clampedPage === 0} onClick={() => setPage(clampedPage - 1)}><Icon name="chevron-left" /> {t('settings.audit.prev')}</button>
+					<span className="muted small">{t('settings.audit.range', { start: rangeStart, end: rangeEnd, total: filtered.length })}</span>
+					<button type="button" className="secondary small" disabled={clampedPage >= pageCount - 1} onClick={() => setPage(clampedPage + 1)}>{t('settings.audit.next')} <Icon name="chevron-right" /></button>
 				</div>
 			)}
 			{confirmDialog}
@@ -2165,12 +2147,13 @@ function AuditSection(props: { connections: ConnectionConfig[]; chatEnabled: boo
 	);
 }
 
-const SCOPE_LABEL: Record<KnowledgeScope, string> = { glossary: 'Glossary', table: 'Table', column: 'Column' };
+const SCOPE_LABEL: Record<KnowledgeScope, string> = { glossary: 'settings.knowledge.scopes.glossary', table: 'settings.knowledge.scopes.table', column: 'settings.knowledge.scopes.column' };
 
 /** Per-connection knowledge base management: the reviewable list that makes inline capture safe.
  *  Pick a connection, then view/toggle/edit/delete its notes or add one manually. Glossary notes
  *  are always injected; table/column notes ride schema linking. */
 function KnowledgeSection(props: { connections: ConnectionConfig[]; activeConnectionId?: string }): JSX.Element {
+	const t = useT();
 	// "General" (all databases) is a first-class scope alongside each connection, so app-wide rules
 	// have a home even with no connection selected. Default to the active DB, else General.
 	const [connId, setConnId] = useState<string>(props.activeConnectionId ?? props.connections[0]?.id ?? GLOBAL_CONNECTION);
@@ -2196,7 +2179,7 @@ function KnowledgeSection(props: { connections: ConnectionConfig[]; activeConnec
 	}
 
 	async function remove(note: KnowledgeNote): Promise<void> {
-		if (!(await confirm({ title: 'Delete this note?', body: note.text, confirmLabel: 'Delete', danger: true }))) {
+		if (!(await confirm({ title: t('settings.knowledge.deleteNoteTitle'), body: note.text, confirmLabel: t('settings.common.delete'), danger: true }))) {
 			return;
 		}
 		await window.sqlApi.deleteKnowledgeNote(note.id);
@@ -2216,32 +2199,32 @@ function KnowledgeSection(props: { connections: ConnectionConfig[]; activeConnec
 	return (
 		<>
 			<SettingsIntro art={KnowledgeArt}>
-				<p>Durable facts you teach the assistant so it stops getting the same domain quirks wrong. <strong>General</strong> rules apply to every database (e.g. “always use CTEs”); pick a specific database for facts about its tables. These notes are sent to {ASSISTANT_NAME} with your prompts, just like your schema is.</p>
+				<p>{rich(t('settings.knowledge.intro', { assistant: ASSISTANT_NAME }))}</p>
 			</SettingsIntro>
-			<label>Applies to
+			<label>{t('settings.knowledge.appliesTo')}
 				<select value={connId} onChange={(e) => { setConnId(e.target.value); setEditing(null); setAdding(false); }}>
-					<option value={GLOBAL_CONNECTION}>General (all databases)</option>
+					<option value={GLOBAL_CONNECTION}>{t('settings.knowledge.general')}</option>
 					{props.connections.map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}
 				</select>
 			</label>
 			{notes === null
-				? <div className="muted">Loading…</div>
+				? <div className="muted">{t('settings.common.loading')}</div>
 				: (
 					<>
 						{notes.length === 0 && !adding && <div className="muted knowledge-empty">{isGeneral
-							? <>No general rules yet. Add one like “always use CTEs” or “explain your SQL” that should apply to every database.</>
-							: <>Nothing taught yet. Add a fact like “sales lives in <code>customer_order</code>, use <code>fulfilled_date</code>” so the assistant gets it right without you repeating it. The assistant also proposes facts as you work, which show up here to Remember.</>}</div>}
+							? t('settings.knowledge.emptyGeneral')
+							: rich(t('settings.knowledge.emptyTaught'))}</div>}
 						{notes.some((n) => n.status === 'suggested') && (
 							<div className="knowledge-list">
-								<div className="muted small">Suggested from your chats. Remember the ones worth keeping:</div>
+								<div className="muted small">{t('settings.knowledge.suggested')}</div>
 								{notes.filter((n) => n.status === 'suggested').map((note) => (
 									<div className="knowledge-item suggested" key={note.id}>
 										<div className="knowledge-item-body">
 											<div className="knowledge-item-text">{note.text}</div>
 										</div>
 										<div className="knowledge-item-actions">
-											<button type="button" title="Remember this" onClick={() => void approve(note)}><Icon name="check" /> Remember</button>
-											<button type="button" className="icon-btn" aria-label="Dismiss" onClick={() => void dismiss(note)}><Icon name="close" /></button>
+											<button type="button" title={t('settings.knowledge.rememberTitle')} onClick={() => void approve(note)}><Icon name="check" /> {t('settings.knowledge.remember')}</button>
+											<button type="button" className="icon-btn" aria-label={t('settings.common.dismiss')} onClick={() => void dismiss(note)}><Icon name="close" /></button>
 										</div>
 									</div>
 								))}
@@ -2252,27 +2235,27 @@ function KnowledgeSection(props: { connections: ConnectionConfig[]; activeConnec
 								? <KnowledgeEditor key={note.id} connId={connId} globalOnly={isGeneral} note={note} onDone={() => { setEditing(null); void load(); }} onCancel={() => setEditing(null)} />
 								: (
 									<div className={`knowledge-item${note.enabled ? '' : ' disabled'}`} key={note.id}>
-										<label className="knowledge-item-toggle" title={note.enabled ? 'Enabled, sent to the assistant' : 'Disabled, kept but not sent'}>
+										<label className="knowledge-item-toggle" title={note.enabled ? t('settings.knowledge.enabledTitle') : t('settings.knowledge.disabledTitle')}>
 											<input type="checkbox" checked={note.enabled} onChange={() => void toggle(note)} />
 										</label>
 										<div className="knowledge-item-body">
 											<div className="knowledge-item-text">{note.text}</div>
 											<div className="knowledge-item-meta muted small">
-												<span className="knowledge-badge">{SCOPE_LABEL[note.scope]}</span>
+												<span className="knowledge-badge">{t(SCOPE_LABEL[note.scope])}</span>
 												{note.target && <code>{note.target}</code>}
-												{note.pinned && <span className="knowledge-badge" title="This table's columns are always included in the assistant's schema view">pinned</span>}
+												{note.pinned && <span className="knowledge-badge" title={t('settings.knowledge.pinnedTitle')}>{t('settings.knowledge.pinned')}</span>}
 											</div>
 										</div>
 										<div className="knowledge-item-actions">
-											<button type="button" className="icon-btn" aria-label="Edit" onClick={() => { setAdding(false); setEditing(note); }}><Icon name="edit" /></button>
-											<button type="button" className="icon-btn" aria-label="Delete" onClick={() => void remove(note)}><Icon name="trash" /></button>
+											<button type="button" className="icon-btn" aria-label={t('settings.common.edit')} onClick={() => { setAdding(false); setEditing(note); }}><Icon name="edit" /></button>
+											<button type="button" className="icon-btn" aria-label={t('settings.common.delete')} onClick={() => void remove(note)}><Icon name="trash" /></button>
 										</div>
 									</div>
 								))}
 						</div>
 						{adding
 							? <KnowledgeEditor connId={connId} globalOnly={isGeneral} onDone={() => { setAdding(false); void load(); }} onCancel={() => setAdding(false)} />
-							: <button type="button" className="secondary knowledge-add" disabled={!connId} onClick={() => { setEditing(null); setAdding(true); }}><Icon name="add" /> Add a note</button>}
+							: <button type="button" className="secondary knowledge-add" disabled={!connId} onClick={() => { setEditing(null); setAdding(true); }}><Icon name="add" /> {t('settings.knowledge.addNote')}</button>}
 					</>
 				)}
 			{confirmDialog}
@@ -2283,6 +2266,7 @@ function KnowledgeSection(props: { connections: ConnectionConfig[]; activeConnec
 /** The add/edit form for a single knowledge note. Reused for a fresh add (no `note`) and an
  *  in-place edit. Saves through the store (upsert by id); glossary notes carry no target. */
 function KnowledgeEditor(props: { connId: string; globalOnly?: boolean; note?: KnowledgeNote; onDone(): void; onCancel(): void }): JSX.Element {
+	const t = useT();
 	const [text, setText] = useState(props.note?.text ?? '');
 	// General (all-databases) rules are always glossary — table/column scopes are schema-specific.
 	const [scope, setScope] = useState<KnowledgeScope>(props.globalOnly ? 'glossary' : props.note?.scope ?? 'glossary');
@@ -2317,46 +2301,53 @@ function KnowledgeEditor(props: { connId: string; globalOnly?: boolean; note?: K
 				className="knowledge-capture-text"
 				value={text}
 				rows={3}
-				placeholder="e.g. There is no sales table; sales data lives in customer_order, fulfilled_date is the sale date."
+				placeholder={t('settings.knowledge.placeholder')}
 				onChange={(e) => setText(e.target.value)}
 			/>
 			<div className="knowledge-capture-row">
 				{!props.globalOnly && (
-				<label>Scope
+				<label>{t('settings.knowledge.scope')}
 					<select value={scope} onChange={(e) => setScope(e.target.value as KnowledgeScope)}>
-						<option value="glossary">Glossary (always used)</option>
-						<option value="table">Table</option>
-						<option value="column">Column</option>
+						<option value="glossary">{t('settings.knowledge.scopeGlossary')}</option>
+						<option value="table">{t('settings.knowledge.scopes.table')}</option>
+						<option value="column">{t('settings.knowledge.scopes.column')}</option>
 					</select>
 				</label>
 				)}
 				{scope !== 'glossary' && (
-					<label>{scope === 'column' ? 'table.column' : 'Table'}
+					<label>{scope === 'column' ? 'table.column' : t('settings.knowledge.scopes.table')}
 						<input type="text" value={target} placeholder={scope === 'column' ? 'customer_order.fulfilled_date' : 'customer_order'} onChange={(e) => setTarget(e.target.value)} />
 					</label>
 				)}
 				{scope !== 'glossary' && (
-					<label className="knowledge-capture-pin" title="Always include this table's columns in the assistant's schema view, even when the question doesn't mention it">
-						<input type="checkbox" checked={pinned} onChange={(e) => setPinned(e.target.checked)} /> Pin table
+					<label className="knowledge-capture-pin" title={t('settings.knowledge.pinTableTitle')}>
+						<input type="checkbox" checked={pinned} onChange={(e) => setPinned(e.target.checked)} /> {t('settings.knowledge.pinTable')}
 					</label>
 				)}
 			</div>
 			<div className="chat-approval-actions">
-				<button type="button" disabled={!text.trim() || (scope !== 'glossary' && !target.trim())} onClick={() => void save()}><Icon name="save" /> Save</button>
-				<button type="button" className="secondary" onClick={props.onCancel}><Icon name="close" /> Cancel</button>
+				<button type="button" disabled={!text.trim() || (scope !== 'glossary' && !target.trim())} onClick={() => void save()}><Icon name="save" /> {t('settings.common.save')}</button>
+				<button type="button" className="secondary" onClick={props.onCancel}><Icon name="close" /> {t('settings.common.cancel')}</button>
 			</div>
 		</div>
 	);
 }
 
-const RESET_ITEMS: Array<{ key: keyof ResetOptions; label: string; detail: string }> = [
-	{ key: 'layout', label: 'Window & pane sizing', detail: 'Sidebar, results, and chat panel widths and collapsed state.' },
-	{ key: 'preferences', label: 'Editor & appearance preferences', detail: 'Font size, theme, keyword case, auto-LIMIT, and the other Appearance/Editor options.' },
-	{ key: 'connections', label: 'Connections & saved credentials', detail: 'Deletes every saved connection along with its stored passwords and SSH keys.' },
-	{ key: 'queries', label: 'Query history & saved queries', detail: 'The run history and any named saved queries.' },
-	{ key: 'chats', label: `${ASSISTANT_NAME} conversations`, detail: `All saved conversations with ${ASSISTANT_INTRO}.` },
-	{ key: 'audit', label: 'AI audit log', detail: 'Every recorded language-model interaction.' },
+const RESET_ITEMS: Array<{ key: keyof ResetOptions; labelKey: string; detailKey: string }> = [
+	{ key: 'layout', labelKey: 'settings.reset.items.layout', detailKey: 'settings.reset.items.layoutDetail' },
+	{ key: 'preferences', labelKey: 'settings.reset.items.preferences', detailKey: 'settings.reset.items.preferencesDetail' },
+	{ key: 'connections', labelKey: 'settings.reset.items.connections', detailKey: 'settings.reset.items.connectionsDetail' },
+	{ key: 'queries', labelKey: 'settings.reset.items.queries', detailKey: 'settings.reset.items.queriesDetail' },
+	{ key: 'chats', labelKey: 'settings.reset.items.chats', detailKey: 'settings.reset.items.chatsDetail' },
+	{ key: 'audit', labelKey: 'settings.reset.items.audit', detailKey: 'settings.reset.items.auditDetail' },
 ];
+
+const AUDIT_KIND_KEYS: Record<AiAuditKind, string> = {
+	chat: 'settings.audit.kinds.chat',
+	completion: 'settings.audit.kinds.completion',
+	edit: 'settings.audit.kinds.edit',
+	action: 'settings.audit.kinds.action',
+};
 
 const NO_RESET: ResetOptions = { layout: false, preferences: false, connections: false, queries: false, chats: false, audit: false };
 
@@ -2368,6 +2359,7 @@ const NO_RESET: ResetOptions = { layout: false, preferences: false, connections:
  *  the escape hatch is for users whose graphics driver makes Chromium abort the app. Applies on the
  *  next launch, which the copy has to say plainly or the toggle looks broken. */
 function HardwareAccelerationSetting(): JSX.Element | null {
+	const t = useT();
 	const [state, setState] = useState<{ enabled: boolean; autoDisabled: boolean } | null>(null);
 	const [busy, setBusy] = useState(false);
 	// Only shown after a change: the restart requirement is noise until it's true.
@@ -2396,20 +2388,13 @@ function HardwareAccelerationSetting(): JSX.Element | null {
 	return (
 		<>
 			<label className="check">
-				<input type="checkbox" checked={state.enabled} disabled={busy} onChange={(e) => void toggle(e.target.checked)} /> Use hardware acceleration when available
+				<input type="checkbox" checked={state.enabled} disabled={busy} onChange={(e) => void toggle(e.target.checked)} /> {t('settings.appearance.gpuToggle')}
 			</label>
-			<div className="muted">
-				Draws the app using your graphics card, which is faster and is the right choice for almost everyone.
-				Turn this off only if the app crashes on startup, shows blank or corrupted panels, or flickers. Those
-				are usually signs of a graphics driver problem, and software rendering avoids it at some cost in speed.
-			</div>
+			<div className="muted">{t('settings.appearance.gpuHelp')}</div>
 			{state.autoDisabled && (
-				<div className="muted small">
-					SnoutData Studio turned this off for you because your graphics card kept crashing, which was making the app
-					close unexpectedly. Updating your graphics driver usually fixes it. You can turn it back on here.
-				</div>
+				<div className="muted small">{t('settings.appearance.gpuAutoDisabled')}</div>
 			)}
-			{restartNeeded && <div className="muted small">Restart SnoutData Studio for this to take effect.</div>}
+			{restartNeeded && <div className="muted small">{t('settings.appearance.gpuRestart')}</div>}
 		</>
 	);
 }
@@ -2417,6 +2402,7 @@ function HardwareAccelerationSetting(): JSX.Element | null {
 /** Crash/error reporting opt-out. State lives in main (userData/telemetry.json); this reads and
  *  writes it over IPC. `available` is false when no DSN ships, in which case the toggle is inert. */
 function PrivacySection({ signedIn }: { signedIn: boolean }): JSX.Element {
+	const t = useT();
 	const [state, setState] = useState<{ enabled: boolean; available: boolean } | null>(null);
 	const [syncOn, setSyncOn] = useState<boolean>(() => syncEnabled());
 	const [syncBusy, setSyncBusy] = useState(false);
@@ -2431,14 +2417,14 @@ function PrivacySection({ signedIn }: { signedIn: boolean }): JSX.Element {
 	function toggleSync(on: boolean): void {
 		setSyncEnabled(on);
 		setSyncOn(on);
-		setSyncStatus(on ? "Your settings will sync to your account." : "Sync is paused on this computer.");
+		setSyncStatus(on ? t('settings.privacy.syncOn') : t('settings.privacy.syncPaused'));
 	}
 
 	async function deleteSynced(): Promise<void> {
 		const ok = await confirm({
-			title: "Delete synced settings?",
-			body: "This removes the copy of your preferences stored in your account. Your settings on this computer are kept, and they sync again the next time you change one.",
-			confirmLabel: "Delete",
+			title: t('settings.privacy.deleteTitle'),
+			body: t('settings.privacy.deleteBody'),
+			confirmLabel: t('settings.common.delete'),
 			danger: true,
 		});
 		if (!ok) {
@@ -2447,9 +2433,9 @@ function PrivacySection({ signedIn }: { signedIn: boolean }): JSX.Element {
 		setSyncBusy(true);
 		try {
 			await window.sqlApi.settingsSync.wipe();
-			setSyncStatus("Your synced settings were deleted from your account.");
+			setSyncStatus(t('settings.privacy.deleted'));
 		} catch {
-			setSyncStatus("Could not delete your synced settings. Please try again.");
+			setSyncStatus(t('settings.privacy.deleteFailed'));
 		} finally {
 			setSyncBusy(false);
 		}
@@ -2466,50 +2452,36 @@ function PrivacySection({ signedIn }: { signedIn: boolean }): JSX.Element {
 	}
 
 	if (!state) {
-		return <div className="muted">Loading…</div>;
+		return <div className="muted">{t('settings.common.loading')}</div>;
 	}
 
 	return (
 		<>
 			<SettingsIntro art={PrivacyArt}>
-				<p>What the app sends us, and the switch for each. None of it carries your SQL, your results or your connection details.</p>
+				<p>{t('settings.privacy.intro')}</p>
 			</SettingsIntro>
 			<label className="check">
-				<input type="checkbox" checked={state.enabled} disabled={busy || !state.available} onChange={(e) => void toggle(e.target.checked)} /> Send crash and error reports
+				<input type="checkbox" checked={state.enabled} disabled={busy || !state.available} onChange={(e) => void toggle(e.target.checked)} /> {t('settings.privacy.sendReports')}
 			</label>
 			{/* The install heartbeat and the daily activity ping ride on this same switch, and only the
 			    official build sends them (main/installHeartbeat.ts), so only it may say so. */}
 			{OFFICIAL_BUILD ? (
-				<div className="muted">
-					This sends three things. When something goes wrong, a report (the error and a stack trace), scrubbed before
-					it leaves your computer. When the app starts, an install id with its version, platform and locale. And once a
-					day, a mark that the app was used. Once you sign in, these are linked to your account, so we can count
-					installs and see when an account last used the app. None of it carries your SQL, query results, connection
-					details or keys. Turning this off stops all of it.
-				</div>
+				<div className="muted">{t('settings.privacy.official')}</div>
 			) : (
-				<div className="muted">
-					When something goes wrong, a report (the error and a stack trace) is sent to help us fix it. Reports are
-					scrubbed before they leave your computer: your SQL, query results, connection details and keys are never
-					included. A build from source sends no install or usage pings.
-				</div>
+				<div className="muted">{t('settings.privacy.openBuild')}</div>
 			)}
-			{!state.available && <div className="muted small">Reporting is not configured in this build, so this setting has no effect.</div>}
+			{!state.available && <div className="muted small">{t('settings.privacy.notConfigured')}</div>}
 			<fieldset>
-				<legend>Settings sync</legend>
+				<legend>{t('settings.privacy.syncLegend')}</legend>
 				<label className="check">
-					<input type="checkbox" checked={syncOn} disabled={!signedIn} onChange={(e) => toggleSync(e.target.checked)} /> Sync my settings to my account
+					<input type="checkbox" checked={syncOn} disabled={!signedIn} onChange={(e) => toggleSync(e.target.checked)} /> {t('settings.privacy.syncToggle')}
 				</label>
-				<div className="muted">
-					Your appearance, editor, and query preferences (theme, pane layout, and options) are saved to your
-					account, so a new computer starts set up the way you like. Passwords, keys, and connection details are
-					never synced; they stay encrypted on this computer.
-				</div>
-				{!signedIn && <div className="muted small">Sign in to sync your settings across computers.</div>}
+				<div className="muted">{t('settings.privacy.syncHelp')}</div>
+				{!signedIn && <div className="muted small">{t('settings.privacy.signInToSync')}</div>}
 				{signedIn && (
 					<div className="modal-actions">
 						<span className="spacer" />
-						<button type="button" className="danger" disabled={syncBusy} onClick={() => void deleteSynced()}><Icon name="trash" /> {syncBusy ? "Deleting…" : "Delete my synced settings"}</button>
+						<button type="button" className="danger" disabled={syncBusy} onClick={() => void deleteSynced()}><Icon name="trash" /> {syncBusy ? t('settings.privacy.deleting') : t('settings.privacy.deleteSynced')}</button>
 					</div>
 				)}
 				{syncStatus && <div className="form-status ok">{syncStatus}</div>}
@@ -2520,6 +2492,9 @@ function PrivacySection({ signedIn }: { signedIn: boolean }): JSX.Element {
 }
 
 function ResetSection(props: { onReset(options: ResetOptions): Promise<void> }): JSX.Element {
+	const t = useT();
+	// "Liby, the AI assistant" in the official build, "the AI assistant" in the open one.
+	const intro = ASSISTANT_INTRO.startsWith(ASSISTANT_NAME) ? t('settings.assistantIntro.named', { assistant: ASSISTANT_NAME }) : t('settings.assistantIntro.unnamed');
 	const [selected, setSelected] = useState<ResetOptions>(NO_RESET);
 	const [busy, setBusy] = useState(false);
 	const [status, setStatus] = useState<string | null>(null);
@@ -2533,19 +2508,19 @@ function ResetSection(props: { onReset(options: ResetOptions): Promise<void> }):
 	}
 
 	async function run(): Promise<void> {
-		const chosen = RESET_ITEMS.filter((i) => selected[i.key]).map((i) => i.label);
+		const chosen = RESET_ITEMS.filter((i) => selected[i.key]).map((i) => t(i.labelKey, { assistant: ASSISTANT_NAME }));
 		if (chosen.length === 0) {
 			return;
 		}
 		const ok = await confirm({
-			title: 'Reset these settings?',
+			title: t('settings.reset.confirmTitle'),
 			body: (
 				<>
-					<div>The following will be cleared. This cannot be undone.</div>
+					<div>{t('settings.reset.confirmBody')}</div>
 					<ul className="confirm-list">{chosen.map((c) => <li key={c}>{c}</li>)}</ul>
 				</>
 			),
-			confirmLabel: 'Reset',
+			confirmLabel: t('settings.reset.confirmLabel'),
 			danger: true,
 		});
 		if (!ok) {
@@ -2555,9 +2530,9 @@ function ResetSection(props: { onReset(options: ResetOptions): Promise<void> }):
 		try {
 			await props.onReset(selected);
 			setSelected(NO_RESET);
-			setStatus('Done. Selected settings were reset.');
+			setStatus(t('settings.reset.done'));
 		} catch {
-			setStatus('Something went wrong while resetting.');
+			setStatus(t('settings.reset.failed'));
 		} finally {
 			setBusy(false);
 		}
@@ -2566,23 +2541,23 @@ function ResetSection(props: { onReset(options: ResetOptions): Promise<void> }):
 	return (
 		<>
 			<SettingsIntro art={ResetArt}>
-				<p>Choose what to clear, then Reset. Each box is independent. This cannot be undone.</p>
+				<p>{t('settings.reset.intro')}</p>
 			</SettingsIntro>
 			<fieldset>
-				<legend>Clear</legend>
+				<legend>{t('settings.reset.clearLegend')}</legend>
 				{RESET_ITEMS.map((item) => (
 					<label className="reset-item" key={item.key}>
 						<input type="checkbox" className="reset-check" checked={selected[item.key]} onChange={(e) => toggle(item.key, e.target.checked)} />
 						<span className="reset-item-text">
-							<span className="reset-item-label">{item.label}</span>
-							<span className="muted small reset-item-detail">{item.detail}</span>
+							<span className="reset-item-label">{t(item.labelKey, { assistant: ASSISTANT_NAME })}</span>
+							<span className="muted small reset-item-detail">{t(item.detailKey, { intro })}</span>
 						</span>
 					</label>
 				))}
 			</fieldset>
 			<div className="modal-actions">
 				<span className="spacer" />
-				<button type="button" className="danger" disabled={busy || !anySelected} onClick={() => void run()}><Icon name="trash" /> {busy ? 'Resetting…' : 'Reset selected'}</button>
+				<button type="button" className="danger" disabled={busy || !anySelected} onClick={() => void run()}><Icon name="trash" /> {busy ? t('settings.reset.resetting') : t('settings.reset.resetSelected')}</button>
 			</div>
 			{status && <div className="form-status ok">{status}</div>}
 			{confirmDialog}

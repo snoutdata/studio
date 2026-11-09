@@ -1,0 +1,254 @@
+{
+	"cell": {
+		"copyPath": "Copy the path that reads this",
+		"editValue": "Edit value: {column}",
+		"expand": "Expand",
+		"formatJson": "Format JSON",
+		"items": {
+			"one": "{count} item",
+			"other": "{count} items"
+		},
+		"keys": {
+			"one": "{count} key",
+			"other": "{count} keys"
+		},
+		"prettyJson": "Try to pretty-print the value as JSON",
+		"reformat": "Reformat the value",
+		"text": "Text",
+		"tree": "Tree",
+		"viewValue": "View value: {column}"
+	},
+	"doc": {
+		"clickToEdit": "Click to edit",
+		"emptyArray": "empty array",
+		"emptyObject": "empty object",
+		"fieldsEdited": {
+			"one": "{count} field edited",
+			"other": "{count} fields edited"
+		},
+		"noFields": "This document has no fields.",
+		"saveEllipsis": "Save…"
+	},
+	"edit": {
+		"addNewRow": "Add a new row",
+		"addRow": "Add row",
+		"hint": "Double-click a cell to edit · click the # to mark a row for deletion",
+		"logEvents": "Log events cannot be edited: a cloud log service is read-only.",
+		"mongoNote": "These changes are applied one at a time, not as a single transaction. If one fails, the earlier changes will already be saved.",
+		"nothingToSave": "Nothing to save. Fill in a new row or change a cell first.",
+		"saveFailed": "Failed to save changes.",
+		"unsaved": "Unsaved changes"
+	},
+	"explain": {
+		"againTitle": "Explain again",
+		"condition": "Condition",
+		"copy": "Copy",
+		"copyTitle": "Copy this answer",
+		"explaining": "Explaining…",
+		"fromProjection": "Answered from projection {target}",
+		"granules": "Granules",
+		"index": "Index",
+		"keys": "Keys",
+		"marks": "Marks",
+		"narrowed": "{selected} of {initial} ({pct}%)",
+		"noTable": "This statement reads no table, so there is nothing to estimate.",
+		"notAPlan": "The server answered, but not with a plan this can read.",
+		"notExplained": "This server would not explain that statement.",
+		"ofTable": "Of the table",
+		"parts": "Parts",
+		"partsTail": ", {parts} parts",
+		"readFull": "{what}: all {count} granules, none skipped.",
+		"readPartial": "{what}: {granules} granules{parts}.",
+		"reads": "Reads {target}",
+		"rowCountUnknown": "The row count for this table is not loaded.",
+		"rows": "Rows",
+		"rowsInTable": "{rows} rows in the table",
+		"table": "Table",
+		"wouldRead": {
+			"one": "Would read about {rows} rows from 1 table, before running it.",
+			"other": "Would read about {rows} rows from {count} tables, before running it."
+		}
+	},
+	"export": {
+		"anySize": "- any size",
+		"clipboard": "Copy to clipboard",
+		"export": "Export",
+		"fromServer": "Straight from the server",
+		"fullData": "Full data",
+		"gridData": "Data in grid",
+		"noLimit": "- no limit",
+		"title": "Export results"
+	},
+	"filter": {
+		"clear": "Clear filter",
+		"contains": "contains {value}"
+	},
+	"fk": {
+		"notFound": "No referenced row found.",
+		"open": "Open in new tab"
+	},
+	"footer": {
+		"bytesRead": "{bytes} read",
+		"bytesTitle": "Bytes the database read to answer this. On a columnar engine it is what a query costs, whatever the number of rows it returns.",
+		"counting": "Counting…",
+		"countTotal": "Count total",
+		"cutShort": "cut short",
+		"cutShortTitle": "A cap stopped the read before the end of the range, so this is a prefix of the answer and not all of it. Narrow the range or add a filter.",
+		"editingProd": "Editing prod",
+		"editingProdTitle": "Editing is allowed on this production connection until the app restarts. Click to lock it again.",
+		"eventsRead": "{scanned} events were read to answer this.",
+		"eventsReadMatched": "{scanned} events were read to answer this, of which {matched} matched.",
+		"limitMore": "Auto-LIMIT {limit} was appended. Next past the last row fetches another {limit}. Change the size in Settings → Editor & Query.",
+		"limitNote": "Auto-LIMIT {limit} was appended. Change it in Settings → Editor & Query.",
+		"ofTotal": "of {count} total",
+		"readOnly": "Read-only",
+		"rows": {
+			"one": "{count} row",
+			"other": "{count} rows"
+		},
+		"rowsRead": "{scanned} rows were read to answer this.",
+		"rowsReadMatched": "{scanned} rows were read to answer this, of which {matched} matched.",
+		"scanned": "{scanned} scanned",
+		"trueTotalTitle": "True total, ignoring the fetch limit"
+	},
+	"grid": {
+		"columnDefault": "Column default: leave blank to use \"{value}\"",
+		"deleteHint": "Click to mark this row for deletion",
+		"inside": "{count} inside",
+		"lockedTitle": "This is a production connection, so editing is locked. Choose \"Allow editing\" to unlock it for this session.",
+		"openAsTree": "Open this value as a tree",
+		"peek": "Peek referenced row",
+		"resize": "Drag to resize column",
+		"sort": "Click to sort",
+		"viewDocument": "View document"
+	},
+	"lines": {
+		"closeAll": "Every line is open. Click to close them all.",
+		"openAll": "Open every line (payloads pretty-printed)"
+	},
+	"log": {
+		"changeReruns": "Changing this re-runs the statement.",
+		"changeWrites": "Changing this writes the range into the statement and runs it.",
+		"days": "{n} d",
+		"fromSql": "from SQL",
+		"fromSqlTitle": "This range came from the statement, so the control above does not apply to it. Remove the time bound from the WHERE to use it.",
+		"last15m": "Last 15 minutes",
+		"last1h": "Last hour",
+		"last24h": "Last 24 hours",
+		"last30d": "Last 30 days",
+		"last6h": "Last 6 hours",
+		"last7d": "Last 7 days",
+		"noEvents": "No events {window}.",
+		"noRangeAdd": "The statement named no time range, so that is what ran. Look further back, or add a bound of your own with `WHERE ts >= ago('24h')`.",
+		"noRangeEdits": "The statement named no time range, so that is what ran. Looking further back writes the range into your SQL, as `WHERE ts >= ago('24h')`.",
+		"searched": "Searched {start} to {end}.",
+		"windowRange": "{start} to {end}",
+		"windowSpan": "{span} to {end}"
+	},
+	"menu": {
+		"allowEditing": "Allow editing (this session)",
+		"copy": "Copy",
+		"copyAbove": "Copy from row above",
+		"copyBelow": "Copy from row below",
+		"copyRow": "Copy row",
+		"deleteRow": "Delete row",
+		"duplicateRow": "Duplicate row",
+		"editCell": "Edit cell",
+		"editValue": "Edit value…",
+		"exclude": "Exclude this value",
+		"filterSort": "Filter & sort",
+		"filterTo": "Filter to this value",
+		"foreignKey": "Foreign key",
+		"generateSql": "Generate SQL",
+		"openReferenced": "Open referenced row",
+		"orderAsc": "Order ascending",
+		"orderDesc": "Order descending",
+		"paste": "Paste",
+		"removeRow": "Remove row",
+		"setNull": "Set to NULL",
+		"undoDelete": "Undo delete",
+		"viewValue": "View value…"
+	},
+	"mode": {
+		"grid": "Grid view",
+		"json": "JSON view (active row)",
+		"log": "Log reader (one line per event, expandable)",
+		"record": "Record view (one row at a time)",
+		"tree": "Document tree (active row, expandable)"
+	},
+	"paging": {
+		"all": "All",
+		"fetchMore": "Fetch more rows",
+		"fetchNext": "Fetch the next {count} rows",
+		"first": "First page",
+		"lastLoaded": "Last loaded page",
+		"next": "Next page",
+		"perPage": "Rows per page",
+		"previous": "Previous page",
+		"range": "{range} of {total}"
+	},
+	"record": {
+		"next": "Next record",
+		"position": "row {row} of {total}",
+		"previous": "Previous record"
+	},
+	"search": {
+		"clear": "Clear search",
+		"columnsLabel": "Search all columns",
+		"columnsTitle": "Search all columns of the rows loaded in the grid",
+		"linesLabel": "Search the loaded lines",
+		"linesTitle": "Search the lines loaded in the reader. Matches anywhere in an event, including inside a folded-away payload.",
+		"placeholder": "Search"
+	},
+	"surface": {
+		"blocked": "Blocked, nothing ran.",
+		"cancelled": "Cancelled, nothing ran.",
+		"copy": "Copy",
+		"describe": "Describe",
+		"failed": "The query failed.",
+		"insert": "Insert into editor",
+		"insertNew": "Insert into new editor",
+		"insertPipeline": "Insert into pipeline tab",
+		"listTables": "List tables",
+		"pipelineOf": "{connection} pipeline",
+		"ranChanged": {
+			"one": "Ran. {count} row changed.",
+			"other": "Ran. {count} rows changed."
+		},
+		"ranChangedMs": {
+			"one": "Ran. {count} row changed in {ms} ms.",
+			"other": "Ran. {count} rows changed in {ms} ms."
+		},
+		"ranReturned": {
+			"one": "Ran. {count} row returned.",
+			"other": "Ran. {count} rows returned."
+		},
+		"ranReturnedMs": {
+			"one": "Ran. {count} row returned in {ms} ms.",
+			"other": "Ran. {count} rows returned in {ms} ms."
+		},
+		"running": "Running…",
+		"runQuery": "Run query",
+		"searchColumns": "Search columns"
+	},
+	"view": {
+		"connecting": "Connecting to the database…",
+		"noWritePath": "This backend has no write path: an ingested log event cannot be changed.",
+		"prodLocked": "This is a production connection, so editing is locked. Click to allow editing for this session.",
+		"reconnect": "Reconnect & retry",
+		"rowsAffected": {
+			"one": "{count} row affected",
+			"other": "{count} rows affected"
+		},
+		"runKeys": "runs the statement under the cursor, or the selection.",
+		"runPrompt": "Run a query to see its results here.",
+		"writeFailed": "The write failed."
+	},
+	"wrap": {
+		"full": "Rows expanded to fit their whole value. Click for single-line rows.",
+		"lines": "Wrapping over {lines} lines. Click to expand every row to fit its whole value.",
+		"off": "Wrap long text over {lines} lines (click again to expand every row to fit)",
+		"tooMany": "Too many rows on this page to expand each one, so they stay {lines} lines. Click for single-line rows."
+	},
+	"zeroOfZero": "0 of 0"
+}

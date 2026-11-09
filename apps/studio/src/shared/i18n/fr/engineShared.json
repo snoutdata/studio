@@ -1,0 +1,180 @@
+{
+	"agent": {
+		"notInstalled": "{agent} n'est pas installé sur cet ordinateur. Installez-le, puis rouvrez ce panneau.",
+		"docs": "Documentation de {agent}",
+		"openSettings": "Ouvrir le dossier de paramètres de {agent}",
+		"configTitle": "{agent} n'a pas démarré à cause de ses propres paramètres.",
+		"configDetail": "Son message est ci-dessus. Ces paramètres sont hors de SnoutData Studio : c'est à vous et à {agent} de les régler.",
+		"launcherTitle": "{agent} est sur cet ordinateur mais n'a pas pu s'exécuter.",
+		"launcherDetail": "Son message est ci-dessus. L'installation et la mise à jour de {agent} se font hors de SnoutData Studio.",
+		"deniedTitle": "{agent} n'a pas été autorisé à démarrer.",
+		"deniedDetail": "Son message est ci-dessus. Le système lui a refusé quelque chose dont il avait besoin."
+	},
+	"ai": {
+		"projectVendorKey": "{project} : la clé {vendor} du projet",
+		"projectKeys": "{project} : les clés du projet",
+		"yourKey": "Votre clé {provider}",
+		"ollamaLocal": "Ollama sur votre ordinateur",
+		"usesBalance": "Utilise votre solde",
+		"projectKeysBilled": "Les clés de votre projet, facturées par {vendors}",
+		"yourProjectKeys": "Les clés de votre projet",
+		"yourKeys": "Vos clés",
+		"runsLocal": "S'exécute sur votre ordinateur",
+		"billedBy": "Facturé par {vendors}",
+		"gatewayOff": "La passerelle IA de {project} est désactivée. Activez-la dans le tableau de bord du projet, ou choisissez un autre modèle.",
+		"gatewayForbidden": "Vous ne pouvez pas utiliser l'IA de {project}. Choisissez un autre modèle, ou demandez l'accès au propriétaire du projet.",
+		"gatewaySignIn": "SnoutData Cloud n'a pas accepté votre connexion pour {project}. Reconnectez-vous, puis réessayez.",
+		"gatewayRefused": "La passerelle IA de {project} a refusé la demande : {detail}",
+		"gatewayRefusedStatus": "La passerelle IA de {project} a refusé la demande : statut {status}"
+	},
+	"cell": {
+		"items": {
+			"one": "{count} élément",
+			"other": "{count} éléments"
+		},
+		"keys": {
+			"one": "{count} clé",
+			"other": "{count} clés"
+		}
+	},
+	"chart": {
+		"notJson": "La spécification du graphique n'est pas du JSON valide.",
+		"notObject": "La spécification du graphique doit être un objet JSON.",
+		"badType": "Le \"type\" du graphique doit être l'un de : {types}.",
+		"noX": "Le \"x\" du graphique (la clé de catégorie) est obligatoire.",
+		"noSeries": "Le \"series\" du graphique doit être un tableau non vide.",
+		"seriesKey": "Chaque série du graphique doit avoir un \"key\" non vide.",
+		"noData": "Le \"data\" du graphique doit être un tableau de lignes non vide.",
+		"rowNotObject": "Chaque ligne de données du graphique doit être un objet."
+	},
+	"chEngine": {
+		"mergeTree": "Garde toutes les lignes. Le bon choix, sauf si l'un des autres décrit vos données.",
+		"replacing": "Garde la dernière ligne de chaque clé de tri. Cela se fait pendant les fusions : un SELECT peut donc encore voir les deux jusque-là, ou utiliser FINAL.",
+		"versionColumn": "Colonne de version",
+		"versionHint": "La ligne gagnante : la plus grande valeur de cette colonne. Laissé vide, c'est la dernière insérée qui gagne.",
+		"summing": "Fusionne les lignes de même clé de tri en additionnant leurs colonnes numériques.",
+		"sumColumns": "Colonnes à additionner",
+		"sumHint": "Laissez vide pour additionner toutes les colonnes numériques hors de la clé de tri.",
+		"aggregating": "Fusionne les lignes de même clé de tri en combinant leurs colonnes AggregateFunction. Souvent la cible d'une vue matérialisée.",
+		"collapsing": "Une ligne s'annule en la réécrivant avec sign = -1 : c'est ainsi qu'on supprime une ligne sans mutation.",
+		"signColumn": "Colonne de signe",
+		"signHint": "Une colonne Int8 qui vaut 1 pour une ligne et -1 pour la ligne qui l'annule.",
+		"versioned": "Un CollapsingMergeTree qui gère aussi une ligne d'annulation arrivée avant celle qu'elle annule.",
+		"signVersionColumns": "Colonnes de signe et de version",
+		"signVersionHint": "La colonne de signe Int8 et la colonne dont la valeur augmente à chaque état de la ligne.",
+		"unknownEngine": "{engine} n'est pas un moteur que l'on peut créer ici.",
+		"needsParameter": "{engine} requiert ce champ ({parameter}) : {hint}",
+		"noSortKey": "{engine} sans clé de tri traite toutes les lignes comme une seule : toute la table fusionne en une ligne. Cochez les colonnes clés dans Colonnes.",
+		"needsCluster": "Créer sur chaque réplica nécessite le nom du cluster cible.",
+		"ttlNoPartition": "Un TTL sans PARTITION BY supprime les lignes expirées en réécrivant des parts entières. Partitionner sur la colonne du TTL permet de supprimer une partition entière à la place."
+	},
+	"chTable": {
+		"merge": "Fusionner maintenant",
+		"mergeConfirm": "Fusionner maintenant la partition {partition} de {table} en une seule part ? Elle contient {parts} parts et {rows} lignes, et la fusion lit et réécrit les {mb} Mo. ClickHouse le ferait de lui-même à terme.",
+		"detach": "Détacher",
+		"detachConfirm": "Détacher la partition {partition} de {table} ? Ses {rows} lignes quittent la table aussitôt. Les fichiers restent sur le disque dans detached/, et ATTACH PARTITION les remet en place.",
+		"drop": "Supprimer",
+		"dropConfirm": "Supprimer la partition {partition} de {table} ? Cela efface {rows} lignes et {mb} Mo, sans retour possible."
+	},
+	"container": {
+		"badName": "\"{name}\" n'est pas un nom de conteneur : lettres minuscules, chiffres, tirets et underscores, 32 caractères au maximum, en commençant par une lettre ou un chiffre.",
+		"badPort": "{port} n'est pas un port : de 1 à 65535."
+	},
+	"gateway": {
+		"busy": "SnoutData AI est trop sollicité pour le moment. Réessayez dans un instant.",
+		"busyIn": "SnoutData AI est trop sollicité pour le moment. Réessayez dans {time}.",
+		"rate": "C'est plus de demandes par minute que votre offre n'en permet. Réessayez dans un instant.",
+		"rateIn": "C'est plus de demandes par minute que votre offre n'en permet. Réessayez dans {time}.",
+		"projectLimit": "SnoutData AI a atteint sa limite du jour, la nôtre et pas la vôtre : votre budget est intact. Réessayez plus tard.",
+		"teamBudget": "Le budget IA partagé de votre équipe est épuisé pour cette période de facturation. Il repart à la prochaine période, ou le propriétaire de l'équipe peut l'augmenter sur snoutdata.com.",
+		"userBudget": "Vous avez épuisé votre budget IA pour cette période. Changez ou gérez votre offre sur snoutdata.com pour continuer à utiliser l'assistant, ou attendez sa réinitialisation."
+	},
+	"orbit": {
+		"foldIndexes": "Les index sont repliés dans leurs tables, ce qui explique que certaines étoiles soient plus grosses que leur nombre de lignes.",
+		"capped": "Ce schéma dépasse ce qu'Orbit dessine en entier. Les index sont repliés dans leurs tables et les objets les moins connectés sont omis. Isolez une table pour voir exactement son voisinage.",
+		"ceiling": "Ce schéma est trop grand pour qu'Orbit le dessine. Connectez-vous à un seul schéma, ou désactivez les index à l'introspection, puis rouvrez-le.",
+		"mysqlFallback": "Ce serveur n'enregistre pas les instructions dans performance_schema : Pulse lit donc information_schema.processlist. Les durées y sont en secondes entières.",
+		"reasonSqlite": "SQLite s'exécute dans cette application et non sur un serveur : il ne garde aucune liste de ce que font les autres sessions. Pulse montre quand même ce que cette application a exécuté.",
+		"reasonDuckdb": "DuckDB s'exécute dans cette application et non sur un serveur : il ne garde aucune liste de ce que font les autres sessions. Pulse montre quand même ce que cette application a exécuté.",
+		"reasonMongo": "MongoDB expose ses opérations en cours via currentOp, que SnoutData ne lit pas encore : il n'y a donc aucune activité globale à dessiner ici.",
+		"reasonPinecone": "Pinecone est un index vectoriel hébergé sans activité de session à lire : il n'y a donc rien de global à dessiner ici.",
+		"reasonSnowflake": "Snowflake expose les requêtes en cours via son propre historique, que SnoutData n'échantillonne pas encore : il n'y a donc aucune activité en direct à dessiner ici.",
+		"reasonDb2": "Db2 expose les instructions en cours via MON_GET_ACTIVITY, que SnoutData ne lit pas encore : il n'y a donc aucune activité en direct à dessiner ici.",
+		"reasonHana": "SAP HANA expose les instructions en cours via M_ACTIVE_STATEMENTS, que SnoutData ne lit pas encore : il n'y a donc aucune activité en direct à dessiner ici.",
+		"reasonLogs": "Un service de logs n'a pas de sessions de base de données à échantillonner. Ici, vous interrogez le log lui-même.",
+		"reasonUnknown": "SnoutData ne sait pas lire l'activité en direct de cette base de données : Pulse ne peut montrer que ce que cette application a exécuté.",
+		"maskedRows": {
+			"one": "{count} session est masquée pour cette connexion : ses instructions ne peuvent pas être affichées. Sur Postgres, accordez pg_read_all_stats à ce rôle (ou connectez-vous en superutilisateur) pour les voir.",
+			"other": "{count} sessions sont masquées pour cette connexion : leurs instructions ne peuvent pas être affichées. Sur Postgres, accordez pg_read_all_stats à ce rôle (ou connectez-vous en superutilisateur) pour les voir."
+		}
+	},
+	"copy": {
+		"partUsers": "Utilisateurs",
+		"partDatabase": "Base de données",
+		"partFiles": "Fichiers",
+		"partFunctions": "Fonctions",
+		"partSecrets": "Secrets des fonctions",
+		"betweenOnly": "Une copie se fait entre cet ordinateur et SnoutData Cloud.",
+		"noFunctions": "SnoutData Cloud ne restitue pas le code source d'une fonction. Placez vos fonctions dans le dossier functions du projet local à partir de votre propre copie.",
+		"noSecrets": "SnoutData Cloud n'affiche jamais la valeur d'un secret : il n'y a donc rien à copier. Définissez-les dans la section Fonctions du projet local.",
+		"notKeys": "Les clés API et le mot de passe de la base de données : chaque projet a les siens. Pointez votre application vers l'URL et la clé d'application du nouveau projet.",
+		"notSignIn": "Les paramètres de connexion (Google, GitHub, le serveur de mail, les adresses de redirection, les modèles d'e-mail). Définissez-les sur le nouveau projet.",
+		"notFunctions": "Les fonctions et leurs secrets : SnoutData Cloud ne les restitue pas."
+	},
+	"series": {
+		"chooseColumn": "Choisissez la colonne de partitionnement de la table : un timestamp, une date ou un entier.",
+		"badType": "{column} est de type {type} ; une série se partitionne sur une colonne timestamp, date ou entière.",
+		"notNull": "{column} ne doit pas accepter NULL : chaque ligne a besoin d'un temps pour trouver sa partition.",
+		"keyIncludes": "La clé primaire doit inclure {column} : Postgres ne vérifie l'unicité qu'au sein d'une partition.",
+		"sizeInteger": "La taille de partition doit être un nombre entier comme 100000.",
+		"sizeInterval": "La taille de partition doit être un intervalle comme 1 day.",
+		"keepInteger": "La durée de conservation doit être un nombre entier comme 100000, ou vide pour tout garder.",
+		"keepInterval": "La durée de conservation doit être un intervalle comme 1 day, ou vide pour tout garder.",
+		"sealInteger": "Sceller après doit être un nombre entier, ou vide pour ne jamais sceller.",
+		"sealInterval": "Sceller après doit être un intervalle comme 1 day, ou vide pour ne jamais sceller."
+	},
+	"update": {
+		"offline": "Impossible de vérifier les mises à jour : cet ordinateur est hors ligne. Nouvel essai plus tard.",
+		"feedUnavailable": "Impossible de vérifier les mises à jour : GitHub ne répond pas. Votre installation n'a aucun problème, et un nouvel essai aura lieu plus tard.",
+		"rateLimited": "Impossible de vérifier les mises à jour : GitHub limite le débit de ce réseau. Nouvel essai plus tard.",
+		"noRelease": "Impossible de vérifier les mises à jour : aucune version publiée n'a été trouvée.",
+		"signature": "Une mise à jour a été téléchargée puis refusée : sa signature n'était pas la bonne. Rien n'a été installé.",
+		"disk": "La mise à jour n'a pas pu être enregistrée : espace disque insuffisant.",
+		"unknown": "Impossible de vérifier les mises à jour.",
+		"noteMinute": "cela peut prendre une minute",
+		"noteBackground": "toujours en cours, en arrière-plan",
+		"noteKeepWorking": "vous pouvez continuer à travailler"
+	},
+	"approval": {
+		"editConnection": "modifier la connexion \"{name}\"{list}{moves}{safety}",
+		"editTunnel": "modifier le tunnel \"{name}\"{list}{moves}",
+		"safetyNote": "Cela change la prudence avec laquelle l'application traite cette base de données (production ou lecture seule) : la question est donc posée à chaque fois.",
+		"destinationNote": "Cela change la destination de la connexion ou l'identité utilisée : son mot de passe enregistré est retiré et doit être ressaisi dans le formulaire de connexion.",
+		"tunnelMoveNote": "Cela dirige le tunnel vers un autre serveur ou utilisateur SSH : son mot de passe SSH et sa phrase secrète enregistrés, ainsi que le mot de passe de base de données de chaque connexion qui l'utilise, sont retirés et doivent être ressaisis. La clé d'hôte du nouveau serveur sera approuvée à la première connexion : vérifiez donc l'adresse.",
+		"testFileNote": "Cela ouvre ce fichier sur cet ordinateur, en lecture seule, s'il existe. Un test ne crée jamais de fichier.",
+		"testAddressNote": "Cela se connecte à une adresse qui ne fait pas partie de vos connexions enregistrées et lui envoie le nom d'utilisateur et le mot de passe ci-dessus. Autorisez-le seulement si vous reconnaissez l'adresse."
+	},
+	"project": {
+		"overview": "Aperçu",
+		"database": "Base de données",
+		"extensions": "Extensions",
+		"cron": "Cron",
+		"timeSeries": "Séries temporelles",
+		"shards": "Cluster",
+		"auth": "Auth",
+		"storage": "Stockage",
+		"dataApi": "API de données",
+		"functions": "Fonctions",
+		"containers": "Conteneurs",
+		"realtime": "Realtime",
+		"push": "Push",
+		"logs": "Logs",
+		"domains": "Domaines",
+		"settings": "Paramètres"
+	},
+	"projectGroup": {
+		"database": "Base de données",
+		"services": "Services",
+		"manage": "Gérer"
+	}
+}

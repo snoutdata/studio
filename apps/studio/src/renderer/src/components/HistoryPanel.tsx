@@ -8,6 +8,7 @@ import { Icon } from './Icon';
 import { useConfirm } from './ConfirmDialog';
 import type { QueryHistoryEntry, SavedQuery } from '../../../shared/queries';
 import { HistoryArt, SavedArt } from '../art/Illustrations';
+import { useT, type Translate } from '../i18n';
 
 interface HistoryPanelProps {
 	/** Load the chosen SQL into the editor. */
@@ -15,20 +16,20 @@ interface HistoryPanelProps {
 	onCollapse(): void;
 }
 
-function relativeTime(ts: number): string {
+function relativeTime(t: Translate, ts: number): string {
 	const seconds = Math.round((Date.now() - ts) / 1000);
 	if (seconds < 60) {
-		return `${seconds}s ago`;
+		return t('editor.history.secondsAgo', { n: String(seconds) });
 	}
 	const minutes = Math.round(seconds / 60);
 	if (minutes < 60) {
-		return `${minutes}m ago`;
+		return t('editor.history.minutesAgo', { n: String(minutes) });
 	}
 	const hours = Math.round(minutes / 60);
 	if (hours < 24) {
-		return `${hours}h ago`;
+		return t('editor.history.hoursAgo', { n: String(hours) });
 	}
-	return `${Math.round(hours / 24)}d ago`;
+	return t('editor.history.daysAgo', { n: String(Math.round(hours / 24)) });
 }
 
 function preview(sql: string): string {
@@ -37,13 +38,14 @@ function preview(sql: string): string {
 
 /** Left-side-bar view for query history + saved queries (selected from the activity bar). */
 export function HistoryPanel(props: HistoryPanelProps): JSX.Element {
+	const t = useT();
 	const [tab, setTab] = useState<'recent' | 'saved'>('recent');
 	const [history, setHistory] = useState<QueryHistoryEntry[]>([]);
 	const [saved, setSaved] = useState<SavedQuery[]>([]);
 	const [confirm, confirmDialog] = useConfirm();
 
 	async function clearHistory(): Promise<void> {
-		if (!(await confirm({ title: "Clear query history?", body: "Every recorded query in your history will be removed. This cannot be undone.", confirmLabel: "Clear history", danger: true }))) {
+		if (!(await confirm({ title: t('editor.history.clearTitle'), body: t('editor.history.clearBody'), confirmLabel: t('editor.history.clear'), danger: true }))) {
 			return;
 		}
 		await window.sqlApi.clearHistory();
@@ -62,23 +64,23 @@ export function HistoryPanel(props: HistoryPanelProps): JSX.Element {
 	return (
 		<div className="sidebar">
 			<div className="sidebar-header">
-				<span>HISTORY</span>
+				<span>{t('editor.history.heading')}</span>
 				<span className="spacer" />
-				<button className="icon-btn" aria-label="Refresh" onClick={() => void refresh()}><Icon name="refresh" /></button>
+				<button className="icon-btn" aria-label={t('editor.common.refresh')} onClick={() => void refresh()}><Icon name="refresh" /></button>
 				{tab === 'recent' && history.length > 0 && (
-					<button className="icon-btn" aria-label="Clear history" onClick={() => void clearHistory()}><Icon name="clear-all" /></button>
+					<button className="icon-btn" aria-label={t('editor.history.clear')} onClick={() => void clearHistory()}><Icon name="clear-all" /></button>
 				)}
-				<button className="icon-btn" aria-label="Collapse" onClick={props.onCollapse}><Icon name="chevron-left" /></button>
+				<button className="icon-btn" aria-label={t('editor.common.collapse')} onClick={props.onCollapse}><Icon name="chevron-left" /></button>
 			</div>
 			<div className="tabs">
-				<button type="button" className={tab === 'recent' ? 'tab active' : 'tab'} onClick={() => setTab('recent')}>Recent</button>
-				<button type="button" className={tab === 'saved' ? 'tab active' : 'tab'} onClick={() => setTab('saved')}>Saved</button>
+				<button type="button" className={tab === 'recent' ? 'tab active' : 'tab'} onClick={() => setTab('recent')}>{t('editor.history.recent')}</button>
+				<button type="button" className={tab === 'saved' ? 'tab active' : 'tab'} onClick={() => setTab('saved')}>{t('editor.history.saved')}</button>
 			</div>
 			<div className="queries-list">
 				{tab === 'recent' && history.length === 0 && (
 					<div className="queries-empty">
 						<HistoryArt className="queries-empty-art" />
-						<p>No history yet. The queries you run show up here.</p>
+						<p>{t('editor.history.emptyRecent')}</p>
 					</div>
 				)}
 				{tab === 'recent' && history.map((entry, i) => (
@@ -87,9 +89,9 @@ export function HistoryPanel(props: HistoryPanelProps): JSX.Element {
 						<div className="query-meta">
 							<span>{entry.connectionLabel}</span>
 							{entry.environment && <span className={`env${entry.environment === 'prod' ? ' prod' : ''}`}>{entry.environment}</span>}
-							<span className="muted">{relativeTime(entry.timestamp)}</span>
+							<span className="muted">{relativeTime(t, entry.timestamp)}</span>
 							<span className={entry.outcome.ok ? 'ok' : 'error'}>
-								{entry.outcome.ok ? `${entry.outcome.rowCount} rows · ${entry.outcome.durationMs} ms` : 'error'}
+								{entry.outcome.ok ? t('editor.history.rowsMs', { count: String(entry.outcome.rowCount), ms: String(entry.outcome.durationMs) }) : t('editor.history.error')}
 							</span>
 						</div>
 					</div>
@@ -97,7 +99,7 @@ export function HistoryPanel(props: HistoryPanelProps): JSX.Element {
 				{tab === 'saved' && saved.length === 0 && (
 					<div className="queries-empty">
 						<SavedArt className="queries-empty-art" />
-						<p>No saved queries. Save one from the editor and it is kept here.</p>
+						<p>{t('editor.history.emptySaved')}</p>
 					</div>
 				)}
 				{tab === 'saved' && saved.map((query) => (
@@ -108,7 +110,7 @@ export function HistoryPanel(props: HistoryPanelProps): JSX.Element {
 							<button
 								type="button"
 								className="icon-btn"
-								aria-label="Delete"
+								aria-label={t('editor.common.delete')}
 								onClick={async (e) => { e.stopPropagation(); await window.sqlApi.deleteQuery(query.name); void refresh(); }}
 							><Icon name="trash" /></button>
 						</div>

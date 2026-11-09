@@ -11,6 +11,7 @@
  *  now — vector (Pinecone) would plug in alongside.
  *--------------------------------------------------------------------------------------------*/
 
+import { t } from '../../shared/i18n/core';
 import type { DatabaseSchema } from '../../shared/schema';
 import { referencedTables, type NativeQuery } from '../../shared/engine';
 
@@ -109,7 +110,7 @@ export function parseMongoPipeline(reply: string, sql: string): NativeQuery {
 	try {
 		parsed = JSON.parse(unwrapJson(reply));
 	} catch {
-		throw new AiTranscribeError('The AI translation could not be parsed as a MongoDB pipeline. Try rephrasing, or author a native aggregation pipeline.');
+		throw new AiTranscribeError(t('mainAi.aiNotParsed'));
 	}
 	let collection: string | undefined;
 	let pipeline: unknown;
@@ -120,17 +121,17 @@ export function parseMongoPipeline(reply: string, sql: string): NativeQuery {
 		collection = typeof obj.collection === 'string' && obj.collection.trim() ? obj.collection.trim() : undefined;
 		pipeline = obj.pipeline;
 	} else {
-		throw new AiTranscribeError('The AI translation was not a MongoDB pipeline object. Try rephrasing, or author a native aggregation pipeline.');
+		throw new AiTranscribeError(t('mainAi.aiNotObject'));
 	}
 	if (!collection) {
 		// Fall back to the SQL's first FROM table when the model omitted the collection.
 		collection = referencedTables(sql)[0];
 	}
 	if (!collection) {
-		throw new AiTranscribeError('Could not determine which collection to query from the AI translation. Author a native aggregation pipeline instead.');
+		throw new AiTranscribeError(t('mainAi.aiNoCollection'));
 	}
 	if (!Array.isArray(pipeline) || !pipeline.every(isStage)) {
-		throw new AiTranscribeError('The AI translation did not contain a valid aggregation pipeline (an array of stages). Author a native aggregation pipeline instead.');
+		throw new AiTranscribeError(t('mainAi.aiNoPipeline'));
 	}
 	return { lang: 'mongo', collection, pipeline: pipeline as object[] };
 }

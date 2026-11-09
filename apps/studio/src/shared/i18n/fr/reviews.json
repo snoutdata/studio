@@ -1,0 +1,107 @@
+{
+	"title": "Revues Snoutbot",
+	"settings": "Paramètres…",
+	"close": "Fermer",
+	"waiting": "En attente",
+	"commentFailed": "Le commentaire n'a pas pu être publié.",
+	"rerunFailed": "Cette revue n'a pas pu être relancée. Vérifiez la connexion à l'hôte dans Paramètres.",
+	"poll": {
+		"noRepos": "Aucun dépôt surveillé. Ajoutez-en un dans Paramètres.",
+		"busy": "Vérification déjà en cours.",
+		"errors": "Impossible de vérifier {errors}",
+		"repos": {
+			"one": "1 dépôt",
+			"other": "{count} dépôts"
+		},
+		"found": {
+			"zero": "rien de nouveau à vérifier",
+			"one": "1 pull request vérifiée",
+			"other": "{count} pull requests vérifiées"
+		},
+		"checked": "{where} vérifié(s) à {time} : {found}."
+	},
+	"methods": {
+		"deterministic": "Règles seules",
+		"localEngine": "Expliqué sur cet ordinateur",
+		"snoutAi": "Expliqué par SnoutData AI",
+		"byok": "Expliqué par votre propre modèle"
+	},
+	"hints": {
+		"deterministic": "Sans modèle. Les mots des règles.",
+		"localEngine": "Rien ne quitte cet ordinateur.",
+		"snoutAi": "Rédigé sur nos serveurs.",
+		"byok": "Votre propre clé ou serveur Ollama."
+	},
+	"check": {
+		"tooltip": "Demander dès maintenant à GitHub les nouvelles pull requests et mentions",
+		"tooltipOff": "Activez d'abord Snoutbot dans Paramètres",
+		"checking": "Vérification…",
+		"now": "Vérifier"
+	},
+	"detail": {
+		"shaTitle": "Le commit concerné par cette revue. Une revue porte toujours sur un sha, jamais sur une pull request.",
+		"openOnGithub": "Ouvrir sur GitHub",
+		"localErrors": "Ce qu'a dit la base de données ({count}), affiché seulement ici",
+		"notPostedAs": "Rien n'est encore publié. Ce sera publié sur la {pullRequest} en tant que **{login}**.",
+		"notPostedYou": "Rien n'est encore publié. Ce sera publié sur la {pullRequest} en votre nom.",
+		"discard": "Abandonner",
+		"posting": "Publication…",
+		"post": "Publier sur {name}",
+		"postedAs": "Publié sur la {pullRequest} en tant que {login}.",
+		"posted": "Publié sur la {pullRequest}.",
+		"remove": "Retirer de cette liste",
+		"again": "Relancer la revue de ce commit avec",
+		"wroteThisTitle": "C'est ce qui a rédigé la revue que vous lisez",
+		"wroteThis": "A rédigé cette revue"
+	},
+	"empty": {
+		"title": "Aucune revue pour l'instant",
+		"connect": "Connectez un compte GitHub ou GitLab et Snoutbot pourra surveiller vos dépôts.",
+		"addRepo": "Ajoutez un dépôt à surveiller et associez-le à l'une de vos connexions.",
+		"off": "La surveillance est désactivée. Activez-la et Snoutbot vérifiera les pull requests qui touchent au SQL.",
+		"nothing": "Rien n'a encore été vérifié. Les revues s'affichent ici au fil de l'eau et restent pendant cette session.",
+		"openSettings": "Ouvrir les paramètres de Snoutbot",
+		"note": "Les revues restent en mémoire pendant que l'application tourne, sans être enregistrées sur disque. Une revue porte sur un commit, et une revue périmée est pire que rien."
+	},
+	"summary": {
+		"blockers": {
+			"one": "{count} bloquant",
+			"other": "{count} bloquants"
+		},
+		"warnings": {
+			"one": "{count} avertissement",
+			"other": "{count} avertissements"
+		},
+		"notes": {
+			"one": "{count} note",
+			"other": "{count} notes"
+		},
+		"nothing": "rien à signaler"
+	},
+	"depth": {
+		"connected": "Mesuré sur {on}",
+		"connectedBound": "Mesuré sur la base de données associée",
+		"schema": "A lu le schéma de {on}, sans exécuter de requête",
+		"schemaBound": "A lu le schéma, sans exécuter de requête",
+		"static": "N'a lu que le diff, la base de données n'a pas été consultée"
+	},
+	"notice": {
+		"failed": "Snoutbot n'a pas pu vérifier {what}",
+		"awaiting": "Snoutbot a une revue de {what} à vous faire lire",
+		"awaitingDetail": "{summary}. Rien n'est publié sur GitHub sans votre accord.",
+		"blockers": {
+			"one": "Snoutbot a trouvé {count} bloquant dans {what}",
+			"other": "Snoutbot a trouvé {count} bloquants dans {what}"
+		},
+		"postedDetail": "{summary}. Le commentaire a été publié.",
+		"reviewed": "Snoutbot a vérifié {what}"
+	},
+	"toast": {
+		"running": "Snoutbot examine ce changement",
+		"readIt": "La lire",
+		"open": "Ouvrir",
+		"dismiss": "Ignorer",
+		"awaiting": "{summary}, en attente de votre publication",
+		"posted": "{summary}, publié"
+	}
+}

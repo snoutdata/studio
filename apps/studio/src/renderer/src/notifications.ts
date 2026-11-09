@@ -6,6 +6,7 @@
 import { useSyncExternalStore } from 'react';
 import { logEvent } from './capabilities/logBuffer';
 import { recordError } from './capabilities/lastError';
+import { translate, type Vars } from '../../shared/i18n/core';
 
 /**
  * A persistent, app-wide notifications store: the durable home for errors and notable events
@@ -17,13 +18,37 @@ import { recordError } from './capabilities/lastError';
 
 export type NotificationSeverity = 'error' | 'warn' | 'info';
 
+/**
+ * A title or detail written in the catalog, not in the moment. The entry keeps its English (the log
+ * and the assistant read those, and they stay English) and shows this key to the reader, so it also
+ * follows a language switch. Made with `notifyText.t(key)`, so the test sees the key is real.
+ */
+export interface NotificationText {
+	key: string;
+	vars?: Vars;
+}
+
+export const notifyText = {
+	t(key: string, vars?: Vars): NotificationText {
+		return { key, vars };
+	},
+};
+
+function englishOf(text: string | NotificationText): string {
+	return typeof text === 'string' ? text : translate('en', text.key, text.vars);
+}
+
 export interface AppNotification {
 	id: string;
 	ts: number;
 	severity: NotificationSeverity;
+	/** English when the text came from the catalog: see titleText. */
 	title: string;
 	/** The full message (e.g. the raw driver error). Shown expanded in the center. */
 	detail?: string;
+	/** What to show the reader instead of `title` / `detail`, when they came from the catalog. */
+	titleText?: NotificationText;
+	detailText?: NotificationText;
 	/** Where it came from, for grouping/labelling, e.g. 'connection', 'query', 'export'. */
 	source?: string;
 	/** Who wrote it, when a MODEL did (an agent, or the app's assistant): shown on the toast and in
@@ -73,8 +98,8 @@ function emit(): void {
 
 export interface NotifyInput {
 	severity?: NotificationSeverity;
-	title: string;
-	detail?: string;
+	title: string | NotificationText;
+	detail?: string | NotificationText;
 	source?: string;
 	/** See {@link AppNotification.from}. */
 	from?: string;
@@ -102,12 +127,16 @@ export function lastErrorFor(connectionId: string, source: string, withinMs: num
 
 /** Record a user-facing notification (an error by default). Returns the new entry's id. */
 export function notify(input: NotifyInput): string {
+	const title = englishOf(input.title);
+	const detail = input.detail === undefined ? undefined : englishOf(input.detail);
 	const entry: AppNotification = {
 		id: crypto.randomUUID(),
 		ts: Date.now(),
 		severity: input.severity ?? 'error',
-		title: input.title,
-		detail: input.detail,
+		title,
+		detail,
+		titleText: typeof input.title === 'string' ? undefined : input.title,
+		detailText: typeof input.detail === 'object' ? input.detail : undefined,
 		source: input.source,
 		from: input.from,
 		connectionId: input.connectionId,
@@ -118,7 +147,7 @@ export function notify(input: NotifyInput): string {
 	// Mirror into the log ring buffer so the assistant's get_recent_logs capability sees it too,
 	// naming the connection it involved so the assistant knows which one to fix.
 	const where = input.connectionLabel ? ` [${input.connectionLabel}]` : '';
-	logEvent(input.detail ? `${input.title}${where}: ${input.detail}` : `${input.title}${where}`, entry.severity, entry.connectionId);
+	logEvent(detail ? `${title}${where}: ${detail}` : `${title}${where}`, entry.severity, entry.connectionId);
 	// Keep the latest error on hand for the get_last_error capability ("fix it for me").
 	if (entry.severity === 'error') {
 		recordError({ ts: entry.ts, title: entry.title, detail: entry.detail, source: entry.source, connectionId: entry.connectionId, connectionLabel: input.connectionLabel, sql: entry.sql });
@@ -131,8 +160,18 @@ export function notify(input: NotifyInput): string {
 }
 
 /** Convenience for the common case: a new error entry. */
-export function notifyError(title: string, detail?: string, extra?: Omit<NotifyInput, 'title' | 'detail' | 'severity'>): string {
+export function notifyError(title: string | NotificationText, detail?: string | NotificationText, extra?: Omit<NotifyInput, 'title' | 'detail' | 'severity'>): string {
 	return notify({ severity: 'error', title, detail, ...extra });
+}
+
+type Translator = (key: string, vars?: Vars) => string;
+
+/** What the reader sees as a notification's title and detail, in their language where it came from the catalog. */
+export function shownNotification(entry: AppNotification, tx: Translator): { title: string; detail?: string } {
+	return {
+		title: entry.titleText ? tx(entry.titleText.key, entry.titleText.vars) : entry.title,
+		detail: entry.detailText ? tx(entry.detailText.key, entry.detailText.vars) : entry.detail,
+	};
 }
 
 export function dismiss(id: string): void {

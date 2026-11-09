@@ -1,0 +1,23 @@
+{
+	"setDefault": "Set to default ({value})",
+	"setCurrentTime": "Set to current time",
+	"setNull": "Set to NULL",
+	"noPrimaryKey": "This table has no primary key in the result, so edits and deletes can't be saved safely. Add rows only, or use the SQL editor.",
+	"refuseView": "A view has no rows of its own to change. Edit the tables underneath it.",
+	"refuseLog": "Log events cannot be changed: the provider has no write path for them.",
+	"refuseDictionary": "A dictionary holds a copy of what its SOURCE returns. Change the source, then reload the dictionary.",
+	"refuseReadOnly": "This connection is marked read-only, so nothing here can be written. Change it on the connection.",
+	"refuseProduction": "This connection is marked production, so the grid is look-only.",
+	"refuseNoKey": "This table has no primary key, so there is no safe way to say which row an edit belongs to. Add one, or write the INSERT yourself in the editor.",
+	"mongoNoId": "This document has no _id, so nested field edits can't be saved. Use the pipeline editor instead.",
+	"mongoNoChanges": "No changes to save.",
+	"mongoNoIdColumn": "This result has no _id column, so edits and deletes can't be saved safely. Add documents only, or use the pipeline editor.",
+	"pipelineEmpty": "The pipeline is empty. Add at least one stage, e.g. [ { \"$match\": {} } ].",
+	"invalidJson": "Invalid JSON: {message}",
+	"pipelineNotArray": "A pipeline must be a JSON array of stages, e.g. [ { \"$match\": {} } ].",
+	"stageNotObject": "Stage {stage} must be an object like { \"$match\": { … } }.",
+	"filterInvalid": "Filter is not valid JSON: {message}",
+	"filterNotObject": "Filter must be a JSON object, e.g. { \"status\": \"active\" }.",
+	"stageNoOperator": "Stage {stage} has no operator (e.g. $match).",
+	"stageBodyInvalid": "Stage {stage} ({operator}) body is not valid JSON: {message}"
+}

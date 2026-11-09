@@ -1,0 +1,127 @@
+{
+	"platformReason": "Part of the project's platform. Users and files are copied as parts of their own.",
+	"noLongerListed": "SnoutData Cloud does not list that project any more.",
+	"betweenOnly": "A copy goes between this computer and SnoutData Cloud.",
+	"nameNew": "Give the new project a name.",
+	"notReadable": "Not readable",
+	"sourceNoConn": "\"{sourceLabel}\" has no saved connection for its database. Open its Database section to add one.",
+	"notWritable": "Not writable",
+	"targetNoConn": "\"{targetLabel}\" has no saved connection for its database. Open its Database section to add one.",
+	"notChecked": "Could not be checked",
+	"yourData": "Your schemas, tables and data",
+	"toDecideBelow": {
+		"one": "{count} to decide below",
+		"other": "{count} to decide below"
+	},
+	"findingsToDecide": "The database has findings to decide below.",
+	"noSignIn": "None: sign-in is off on the source",
+	"usersUnreadable": "Users could not be read: {error}",
+	"userExists": "A user whose email is already on the target is left as it is.",
+	"usersNoEmail": {
+		"one": "{count} user without an email (anonymous, phone or deleted) stay behind.",
+		"other": "{count} users without an email (anonymous, phone or deleted) stay behind."
+	},
+	"passwordsAcross": "Passwords come across as they are stored, so people sign in with the ones they have.",
+	"signInOn": "Sign-in is switched on for \"{targetLabel}\".",
+	"noUsers": "No users to copy",
+	"noStorage": "None: storage is off on the source",
+	"filesNotListed": "Files could not be listed: {error}",
+	"noAnswer": "no answer",
+	"bucketExists": "A bucket or a file already on the target is left as it is.",
+	"storageOn": "Storage is switched on for \"{targetLabel}\".",
+	"noRoom": "The files are {size} and \"{targetLabel}\" has room for {room} on its plan.",
+	"noBuckets": "No buckets",
+	"replaces": "Replaces {list} on the target with this computer's version.",
+	"notSent": "{name} is not sent: {problem}",
+	"noFunctions": "No functions",
+	"secretReplaced": "A secret with the same name on the target is replaced. Values go from this computer to SnoutData Cloud and are never shown.",
+	"noSecrets": "No secrets",
+	"alreadyRunning": "This copy is already running.",
+	"chooseOnePart": "Choose at least one part to copy.",
+	"toolsMissing": "The Postgres tools the database copy runs are not installed yet.",
+	"typeToConfirm": "The target is a production project. Type \"{confirmName}\" to start the copy.",
+	"waiting": "Waiting",
+	"stopped": "Stopped",
+	"notReached": "Not reached",
+	"creatingProject": "Creating the SnoutData Cloud project \"{name}\"",
+	"switchingSignIn": "Switching sign-in on for \"{targetLabel}\"",
+	"switchingStorage": "Switching storage on for \"{targetLabel}\"",
+	"starting": "Starting",
+	"stoppedKept": "Stopped. What was copied before that stays on the target.",
+	"serviceSilent": "The target's {what} did not answer: {detail}",
+	"statusN": "status {status}",
+	"waitingFor": "Waiting for the target's {what} to start",
+	"whatSignIn": "sign-in",
+	"whatStorage": "storage",
+	"copyingUsers": {
+		"one": "Copying users: {count} created",
+		"other": "Copying users: {count} createds"
+	},
+	"usersCopied": {
+		"one": "{count} user copied",
+		"other": "{count} users copied"
+	},
+	"alreadyThere": {
+		"one": "{count} already there",
+		"other": "{count} already there"
+	},
+	"leftBehind": {
+		"one": "{count} without an email left behind",
+		"other": "{count} without an email left behind"
+	},
+	"refused": {
+		"one": "{count} refused",
+		"other": "{count} refused"
+	},
+	"notChecked2": "The database was not checked.",
+	"needsDecision": "it needs a decision",
+	"madeNeedsLook": "The new project was made, but its database needs a look before anything is copied into it: {first} Open the copy again to decide.",
+	"startingCopy": "Starting the copy",
+	"rowsMismatch": "{schema}.{table}: {here} rows here, {there} there",
+	"none": "none",
+	"tablesCopied": {
+		"one": "{count} table copied, row counts match.",
+		"other": "{count} tables copied, row counts match."
+	},
+	"copiedBut": {
+		"one": "Copied, but {count} thing did not come across as it was. The details are below.",
+		"other": "Copied, but {count} things did not come across as it was. The details are below."
+	},
+	"dbCopyFailed": "The database copy failed.",
+	"noBucketsToCopy": "No buckets to copy.",
+	"filesCopied": "{buckets}, {files} copied{size}",
+	"notCopied": "Not copied.",
+	"fnsDeployed": {
+		"one": "{count} function deployed{rest}.",
+		"other": "{count} functions deployed{rest}."
+	},
+	"fnsNotDeployed": ", {count} not",
+	"secretsSet": {
+		"one": "{count} secret set{rest}.",
+		"other": "{count} secrets set{rest}."
+	},
+	"noun_finding": {
+		"one": "{count} finding",
+		"other": "{count} findings"
+	},
+	"noun_user": {
+		"one": "{count} user",
+		"other": "{count} users"
+	},
+	"noun_bucket": {
+		"one": "{count} bucket",
+		"other": "{count} buckets"
+	},
+	"noun_file": {
+		"one": "{count} file",
+		"other": "{count} files"
+	},
+	"noun_function": {
+		"one": "{count} function",
+		"other": "{count} functions"
+	},
+	"noun_secret": {
+		"one": "{count} secret",
+		"other": "{count} secrets"
+	}
+}

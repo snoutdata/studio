@@ -6,6 +6,7 @@
 import { ASSISTANT_NAME } from '../../../shared/assistant';
 import { useState } from 'react';
 import { Icon } from './Icon';
+import { useT } from '../i18n';
 import { type Advisory } from '../../../shared/engine';
 
 interface AdvisoryStripProps {
@@ -24,7 +25,8 @@ interface AdvisoryStripProps {
  * still render underneath; this only surfaces advice.
  */
 export function AdvisoryStrip(props: AdvisoryStripProps): JSX.Element | null {
-	const [expanded, setExpanded] = useState<number | null>(null);
+	const t = useT();
+const [expanded, setExpanded] = useState<number | null>(null);
 	if (props.advisories.length === 0) {
 		return null;
 	}
@@ -34,13 +36,13 @@ export function AdvisoryStrip(props: AdvisoryStripProps): JSX.Element | null {
 			<div className="advisory-head">
 				<Icon name="warning" />
 				<span className="advisory-title">
-					{warns > 0 ? "Performance advice" : "Query notes"} ({props.advisories.length})
+					{warns > 0 ? t('monitors.advisory.performance') : t('monitors.advisory.notes')} ({props.advisories.length})
 				</span>
 				<span className="spacer" />
-				<button type="button" className="advisory-ai" onClick={props.onAskAi} title={`Ask ${ASSISTANT_NAME} to suggest an index or rewrite`}>
-					<Icon name="sparkle" /> Ask {ASSISTANT_NAME} to fix
+				<button type="button" className="advisory-ai" onClick={props.onAskAi} title={t('monitors.advisory.askTitle', { assistant: ASSISTANT_NAME })}>
+					<Icon name="sparkle" /> {t('monitors.advisory.askFix', { assistant: ASSISTANT_NAME })}
 				</button>
-				<button type="button" className="advisory-dismiss" onClick={props.onDismiss} title="Dismiss">
+				<button type="button" className="advisory-dismiss" onClick={props.onDismiss} title={t('monitors.advisory.dismiss')}>
 					<Icon name="close" />
 				</button>
 			</div>

@@ -11,6 +11,7 @@ import type { LocalActionOutcome, LocalProjectRow, LocalProjectsView } from '../
 import { PROJECT_SECTION_GROUPS, PROJECT_SECTIONS, type ProjectSection, type ProjectTarget } from '../../../shared/projects';
 import { localStateLabel, localTone } from '../localProjects';
 import { ProjectsArt } from '../art/Illustrations';
+import { t, useT } from '../i18n';
 
 /**
  * Projects, as a docked tool window: two groups, LOCAL (the SnoutData stack in the user's own
@@ -63,7 +64,7 @@ const CLOUD_SETTLE_POLL_MS = 3000;
 
 function bytes(n: number | null): string {
 	if (n === null) {
-		return "not measured yet";
+		return t('projects.common.notMeasured');
 	}
 	const units = ['B', 'KB', 'MB', 'GB', 'TB'];
 	let value = n;
@@ -77,13 +78,13 @@ function bytes(n: number | null): string {
 
 function ago(iso: string | null): string {
 	if (!iso) {
-		return "never";
+		return t('projects.common.neverL');
 	}
 	const days = Math.floor((Date.now() - new Date(iso).getTime()) / 86400000);
 	if (days <= 0) {
-		return "today";
+		return t('dashboard.ago.today');
 	}
-	return days === 1 ? "yesterday" : `${days}d ago`;
+	return days === 1 ? t('dashboard.ago.yesterday') : t('dashboard.ago.days', { days });
 }
 
 /** What the dot beside a project means. A paused project is not unhealthy. */
@@ -98,6 +99,7 @@ function stateTone(row: CloudProjectRow): string {
 }
 
 export function DashboardPanel(props: DashboardPanelProps): JSX.Element {
+	const t = useT();
 	const [view, setView] = useState<CloudProjectsView | null>(null);
 	const [local, setLocal] = useState<LocalProjectsView | null>(null);
 	const [busy, setBusy] = useState(false);
@@ -128,7 +130,7 @@ export function DashboardPanel(props: DashboardPanelProps): JSX.Element {
 			setView({
 				account: null,
 				projects: [],
-				unavailable: `Could not read your hosted databases: ${error instanceof Error ? error.message : String(error)}`,
+				unavailable: t('dashboard.errors.hosted', { error: error instanceof Error ? error.message : String(error) }),
 			});
 		} finally {
 			if (!quiet) {
@@ -181,7 +183,7 @@ export function DashboardPanel(props: DashboardPanelProps): JSX.Element {
 		try {
 			setLocal(await window.sqlApi.local.list());
 		} catch (error) {
-			setLocal({ projects: [], unavailable: `Could not read your local projects: ${error instanceof Error ? error.message : String(error)}` });
+			setLocal({ projects: [], unavailable: t('dashboard.errors.local', { error: error instanceof Error ? error.message : String(error) }) });
 		}
 	}, []);
 
@@ -244,15 +246,15 @@ export function DashboardPanel(props: DashboardPanelProps): JSX.Element {
 
 	async function localAction(action: 'start' | 'stop', row: LocalProjectRow): Promise<void> {
 		if (action === 'stop' && row.production && !(await confirm({
-			title: "Stop a production project?",
-			body: "It is marked production. Everything connected to it loses it until it is started again.",
-			confirmLabel: "Stop it",
+			title: t('localProjects.prod.stopTitle'),
+			body: t('localProjects.prod.stopBody'),
+			confirmLabel: t('localProjects.prod.stopIt'),
 			danger: true,
 		}))) {
 			return;
 		}
 		setLocalBusy((prev) => new Set(prev).add(row.id));
-		setSaid((prev) => ({ ...prev, [row.id]: { ok: true, message: action === 'start' ? "Starting…" : "Stopping…" } }));
+		setSaid((prev) => ({ ...prev, [row.id]: { ok: true, message: action === 'start' ? t('dashboard.list.starting') : t('dashboard.list.stopping') } }));
 		void refreshLocal();
 		try {
 			const outcome = action === 'start' ? await window.sqlApi.local.start(row.id) : await window.sqlApi.local.stop(row.id);
@@ -312,11 +314,11 @@ export function DashboardPanel(props: DashboardPanelProps): JSX.Element {
 	return (
 		<div className="sidebar">
 			<div className="sidebar-header">
-				<span>DASHBOARD</span>
+				<span>{t('dashboard.list.title')}</span>
 				<span className="spacer" />
 				<button
 					className="icon-btn"
-					aria-label="New project"
+					aria-label={t('dashboard.list.newProject')}
 					onClick={(e) => {
 						const box = e.currentTarget.getBoundingClientRect();
 						setNewMenu({ x: box.left, y: box.bottom + 4 });
@@ -324,8 +326,8 @@ export function DashboardPanel(props: DashboardPanelProps): JSX.Element {
 				>
 					<Icon name="add" />
 				</button>
-				<button className="icon-btn" aria-label="Refresh" onClick={() => { void refresh(); void refreshLocal(); }} disabled={busy}><Icon name="refresh" /></button>
-				<button className="icon-btn" aria-label="Collapse" onClick={props.onCollapse}><Icon name="chevron-left" /></button>
+				<button className="icon-btn" aria-label={t('projects.common.refresh')} onClick={() => { void refresh(); void refreshLocal(); }} disabled={busy}><Icon name="refresh" /></button>
+				<button className="icon-btn" aria-label={t('dashboard.list.collapse')} onClick={props.onCollapse}><Icon name="chevron-left" /></button>
 			</div>
 
 			{newMenu && (
@@ -345,18 +347,18 @@ export function DashboardPanel(props: DashboardPanelProps): JSX.Element {
 					<span className="tree-icon"><Icon name="device-desktop" /></span>
 					<span className="tree-label">Local</span>
 					<span className="row-actions" onClick={(e) => e.stopPropagation()}>
-						<button className="icon-btn" aria-label="Set up a local project" onClick={props.onSetupLocal}><Icon name="add" /></button>
+						<button className="icon-btn" aria-label={t('dashboard.list.setUpLocal')} onClick={props.onSetupLocal}><Icon name="add" /></button>
 					</span>
 				</div>
 				{localOpen && (
 					<>
-						{!local && <div className="muted small projects-note">Loading…</div>}
+						{!local && <div className="muted small projects-note">{t('projects.common.loading')}</div>}
 						{local?.unavailable && locals.length > 0 && <div className="muted small projects-note">{local.unavailable}</div>}
 						{local && locals.length === 0 && (
-							<div className="tree-row depth-1" onClick={props.onSetupLocal} title="Run the whole SnoutData stack in Docker on this computer">
+							<div className="tree-row depth-1" onClick={props.onSetupLocal} title={t('dashboard.list.dockerHint')}>
 								<span className="twisty" />
 								<span className="tree-icon"><Icon name="add" /></span>
-								<span className="tree-label">Set up a local project</span>
+								<span className="tree-label">{t('dashboard.list.setUpLocal')}</span>
 							</div>
 						)}
 						{locals.map((row) => {
@@ -377,16 +379,16 @@ export function DashboardPanel(props: DashboardPanelProps): JSX.Element {
 											<ProjectMenu
 												actions={(
 													<>
-														<button type="button" disabled={working || row.state === 'running' || row.state === 'missing'} onClick={() => void localAction('start', row)}><Icon name="play" /> Start</button>
-														<button type="button" disabled={working || row.state === 'stopped' || row.state === 'missing' || row.state === 'unknown'} onClick={() => void localAction('stop', row)}><Icon name="debug-stop" /> Stop</button>
-														<button type="button" className="secondary" title="Copy this project to SnoutData Cloud" onClick={() => props.onCopyProject({ kind: 'local', id: row.id }, row.name)}><Icon name="cloud-upload" /> Copy</button>
+														<button type="button" disabled={working || row.state === 'running' || row.state === 'missing'} onClick={() => void localAction('start', row)}><Icon name="play" /> {t('localProjects.common.start')}</button>
+														<button type="button" disabled={working || row.state === 'stopped' || row.state === 'missing' || row.state === 'unknown'} onClick={() => void localAction('stop', row)}><Icon name="debug-stop" /> {t('localProjects.common.stop')}</button>
+														<button type="button" className="secondary" title={t('dashboard.list.copyToCloud')} onClick={() => props.onCopyProject({ kind: 'local', id: row.id }, row.name)}><Icon name="cloud-upload" /> {t('projects.common.copy')}</button>
 													</>
 												)}
 												overviewOpen={overviewOpen}
 												onToggleOverview={() => toggle(`${key}:overview`)}
 												overview={(
 													<div className="small muted cloud-detail depth-detail-2">
-														<div>{working ? "working" : localStateLabel(row.state)}</div>
+														<div>{working ? t('localProjects.running.working') : localStateLabel(row.state)}</div>
 														<div className="mono" title={row.apiUrl}>{row.apiUrl}</div>
 														<div className="mono" title={row.folder}>{row.folder}</div>
 														{statusLine(row.id)}
@@ -410,13 +412,13 @@ export function DashboardPanel(props: DashboardPanelProps): JSX.Element {
 					<span className="tree-label">Cloud</span>
 					{view?.account && (
 						<span className="row-actions" onClick={(e) => e.stopPropagation()}>
-							<button className="icon-btn" aria-label="New cloud project" onClick={() => setCreating(true)}><Icon name="add" /></button>
+							<button className="icon-btn" aria-label={t('dashboard.list.newCloud')} onClick={() => setCreating(true)}><Icon name="add" /></button>
 						</span>
 					)}
 				</div>
 				{cloudOpen && (
 					<>
-						{!view && <div className="muted small projects-note">Loading…</div>}
+						{!view && <div className="muted small projects-note">{t('projects.common.loading')}</div>}
 
 						{/* A sentence, not an empty list: "you have no databases" and "you are not
 						    signed in" are different answers and only one is the user's to fix. */}
@@ -432,7 +434,7 @@ export function DashboardPanel(props: DashboardPanelProps): JSX.Element {
 							<div className="tree-row depth-1" onClick={() => setCreating(true)}>
 								<span className="twisty" />
 								<span className="tree-icon"><Icon name="add" /></span>
-								<span className="tree-label">New cloud project</span>
+								<span className="tree-label">{t('dashboard.list.newCloud')}</span>
 							</div>
 						)}
 
@@ -446,8 +448,8 @@ export function DashboardPanel(props: DashboardPanelProps): JSX.Element {
 										<span className={`cloud-dot ${stateTone(row)}`} aria-hidden="true" title={row.state} />
 										<span className="tree-label" title={row.ref}>{row.name}</span>
 										{row.production && <span className="env prod">prod</span>}
-										{row.readOnly && <span className="env" title="Over its plan's storage limit, so the database is refusing writes">read-only</span>}
-										{row.serverSilent && <span className="env" title="Its server is not answering">server not answering</span>}
+										{row.readOnly && <span className="env" title={t('dashboard.list.overLimit')}>{t('dashboard.list.readOnly')}</span>}
+										{row.serverSilent && <span className="env" title={t('dashboard.list.silentHint')}>{t('dashboard.list.silent')}</span>}
 									</div>
 
 									{isOpen && (
@@ -455,11 +457,11 @@ export function DashboardPanel(props: DashboardPanelProps): JSX.Element {
 											<ProjectMenu
 												actions={(
 													<>
-														<button type="button" disabled={!row.canResume || busy} onClick={() => void ask('resume', row.ref)}><Icon name="play" /> Start</button>
+														<button type="button" disabled={!row.canResume || busy} onClick={() => void ask('resume', row.ref)}><Icon name="play" /> {t('localProjects.common.start')}</button>
 														{/* The one refusal worth stating BEFORE it happens, because it is a property the
 														    user set rather than a passing state. */}
-														<button type="button" disabled={!row.canPause || busy} title={row.pauseRefusal} onClick={() => void ask('pause', row.ref)}><Icon name="debug-stop" /> Stop</button>
-														<button type="button" className="secondary" title="Copy this project to this computer" onClick={() => props.onCopyProject({ kind: 'cloud', ref: row.ref }, row.name)}><Icon name="cloud-download" /> Copy</button>
+														<button type="button" disabled={!row.canPause || busy} title={row.pauseRefusal} onClick={() => void ask('pause', row.ref)}><Icon name="debug-stop" /> {t('localProjects.common.stop')}</button>
+														<button type="button" className="secondary" title={t('dashboard.list.copyToLocal')} onClick={() => props.onCopyProject({ kind: 'cloud', ref: row.ref }, row.name)}><Icon name="cloud-download" /> {t('projects.common.copy')}</button>
 													</>
 												)}
 												overviewOpen={overviewOpen}
@@ -472,12 +474,12 @@ export function DashboardPanel(props: DashboardPanelProps): JSX.Element {
 															{row.state}{row.desiredState ? ` → ${row.desiredState}` : ''}
 															{row.busy ? ' · working' : ''}
 														</div>
-														{row.serverSilent && <div>its server is not answering</div>}
+														{row.serverSilent && <div>{t('dashboard.list.silentLong')}</div>}
 														<div>{bytes(row.sizeBytes)} · {row.region}</div>
-														<div>last connected {ago(row.lastConnectionAt)}</div>
+														<div>{t('dashboard.list.lastConnected', { when: ago(row.lastConnectionAt) })}</div>
 														{!row.wakesInstantly && (
-															<div title="Its data is in the bucket rather than on a host">
-																cold: the next start restores it, which takes longer
+															<div title={t('dashboard.list.coldHint')}>
+																{t('dashboard.list.cold')}
 															</div>
 														)}
 														<div className="mono" title={`${row.user}@${row.host}/${row.database}`}>{row.host}</div>
@@ -501,7 +503,7 @@ export function DashboardPanel(props: DashboardPanelProps): JSX.Element {
 				{local && view && locals.length === 0 && projects.length === 0 && (
 					<div className="projects-empty">
 						<ProjectsArt className="projects-empty-art" />
-						<p>Your projects live here: run one in Docker on this computer, or in SnoutData Cloud.</p>
+						<p>{t('dashboard.list.emptyHint')}</p>
 					</div>
 				)}
 			</div>
@@ -509,7 +511,7 @@ export function DashboardPanel(props: DashboardPanelProps): JSX.Element {
 			{/* The panel's footer, outside the scrolling tree, so it stays at the bottom by the
 			    status bar however long or short the list is. */}
 			{view?.account && projects.length > 0 && (
-				<div className="muted small cloud-account">Signed in as {view.account}.</div>
+				<div className="muted small cloud-account">{t('dashboard.list.signedIn', { account: view.account })}</div>
 			)}
 
 			{creating && (
@@ -533,6 +535,7 @@ export function DashboardPanel(props: DashboardPanelProps): JSX.Element {
 
 /** The header's +: which kind of project. A cloud one needs an account; a local one needs Docker, which the wizard checks. */
 function NewProjectMenu(props: { at: { x: number; y: number }; cloudAllowed: boolean; onLocal(): void; onCloud(): void; onClose(): void }): JSX.Element {
+	const t = useT();
 	const ref = useRef<HTMLDivElement | null>(null);
 	const { onClose } = props;
 	useEffect(() => {
@@ -556,19 +559,19 @@ function NewProjectMenu(props: { at: { x: number; y: number }; cloudAllowed: boo
 	const left = Math.min(props.at.x, Math.max(8, window.innerWidth - 248));
 	return (
 		<div className="panel-menu" ref={ref} style={{ left, top: props.at.y }} role="menu">
-			<div className="panel-menu-title">New project</div>
+			<div className="panel-menu-title">{t('dashboard.list.newProject')}</div>
 			<button type="button" role="menuitem" className="panel-menu-item" onClick={props.onLocal}>
-				<Icon name="device-desktop" /> Local, in Docker on this computer
+				<Icon name="device-desktop" /> {t('dashboard.new.local')}
 			</button>
 			<button
 				type="button"
 				role="menuitem"
 				className="panel-menu-item"
 				disabled={!props.cloudAllowed}
-				title={props.cloudAllowed ? undefined : "Sign in to create a cloud project"}
+				title={props.cloudAllowed ? undefined : t('dashboard.new.signIn')}
 				onClick={props.onCloud}
 			>
-				<Icon name="cloud" /> In SnoutData Cloud
+				<Icon name="cloud" /> {t('dashboard.new.cloud')}
 			</button>
 		</div>
 	);
@@ -580,6 +583,7 @@ function NewProjectMenu(props: { at: { x: number; y: number }; cloudAllowed: boo
  * control plane's to say, and a refusal is shown in its words and keeps the form open.
  */
 function NewCloudProject(props: { onClose(): void; onCreated(outcome: CloudCreateOutcome): void }): JSX.Element {
+	const t = useT();
 	const [name, setName] = useState('');
 	const [region, setRegion] = useState(CLOUD_REGIONS[0].id);
 	const [production, setProduction] = useState(false);
@@ -613,27 +617,27 @@ function NewCloudProject(props: { onClose(): void; onCreated(outcome: CloudCreat
 					void submit();
 				}}
 			>
-				<h2>New project</h2>
+				<h2>{t('dashboard.list.newProject')}</h2>
 				<label>
-					Name
-					<input value={name} onChange={(e) => setName(e.target.value)} placeholder="orders, staging, my side project" maxLength={60} autoFocus />
+					{t('projects.common.name')}
+					<input value={name} onChange={(e) => setName(e.target.value)} placeholder={t('dashboard.new.placeholder')} maxLength={60} autoFocus />
 				</label>
 				<label>
-					Region
+					{t('cloudProjects.status.region')}
 					<select value={region} onChange={(e) => setRegion(e.target.value)}>
 						{CLOUD_REGIONS.map((r) => <option key={r.id} value={r.id}>{r.label}</option>)}
 					</select>
 				</label>
 				<label className="check">
-					<input type="checkbox" checked={production} onChange={(e) => setProduction(e.target.checked)} /> Treat this as production
+					<input type="checkbox" checked={production} onChange={(e) => setProduction(e.target.checked)} /> {t('projects.common.treatProd')}
 				</label>
-				<p className="field-hint">A production project is never paused, whether you ask or the idle policy does. Plus, Pro and Business only.</p>
-				<p className="field-hint">It is added to your connections as soon as it is created.</p>
+				<p className="field-hint">{t('dashboard.new.prodHint')}</p>
+				<p className="field-hint">{t('dashboard.new.added')}</p>
 				{error && <div className={error.refused ? 'form-status warn' : 'form-status error'}>{error.message}</div>}
 				<div className="modal-actions">
 					<span className="spacer" />
-					<button type="button" className="secondary" onClick={props.onClose} disabled={busy}><Icon name="close" /> Cancel</button>
-					<button type="submit" disabled={busy || name.trim() === ''}><Icon name="add" /> {busy ? "Creating…" : "Create"}</button>
+					<button type="button" className="secondary" onClick={props.onClose} disabled={busy}><Icon name="close" /> {t('projects.common.cancel')}</button>
+					<button type="submit" disabled={busy || name.trim() === ''}><Icon name="add" /> {busy ? t('dashboard.new.creating') : t('projects.common.create')}</button>
 				</div>
 			</form>
 		</div>
@@ -655,6 +659,7 @@ function ProjectMenu(props: {
 	onOpenDatabase(): void;
 	onOpen(section: ProjectSection): void;
 }): JSX.Element {
+	const t = useT();
 	return (
 		<>
 			<div className="project-actions" onClick={(e) => e.stopPropagation()}>{props.actions}</div>
@@ -662,7 +667,7 @@ function ProjectMenu(props: {
 				<div key={group.id}>
 					<div className="tree-row depth-2 projects-subgroup" aria-hidden="true">
 						<span className="twisty" />
-						<span className="tree-label">{group.label}</span>
+						<span className="tree-label">{t(`projects.sectionGroup.${group.id}`)}</span>
 					</div>
 					{PROJECT_SECTIONS.filter((section) => section.group === group.id && !section.gated).map((section) => {
 						if (section.id === 'overview') {
@@ -671,7 +676,7 @@ function ProjectMenu(props: {
 									<div className="tree-row depth-2" onClick={props.onToggleOverview}>
 										<span className="twisty"><Icon name={props.overviewOpen ? 'chevron-down' : 'chevron-right'} /></span>
 										<span className="tree-icon"><Icon name={section.icon} /></span>
-										<span className="tree-label">{section.label}</span>
+										<span className="tree-label">{t(`projects.section.${section.id}`)}</span>
 									</div>
 									{props.overviewOpen && props.overview}
 								</div>
@@ -681,15 +686,15 @@ function ProjectMenu(props: {
 							<div key={section.id} className="tree-row depth-2" onClick={() => props.onOpen(section.id)}>
 								<span className="twisty" />
 								<span className="tree-icon"><Icon name={section.icon} /></span>
-								<span className="tree-label">{section.label}</span>
+								<span className="tree-label">{t(`projects.section.${section.id}`)}</span>
 								{/* The database is also a connection: the plug jumps to it in Connections, and
 								    the row itself opens the section like every other row. */}
 								{section.id === 'database' && (
 									<button
 										type="button"
 										className="icon-btn table-stats-btn projects-jump"
-										title="Show in Connections"
-										aria-label="Show in Connections"
+										title={t('dashboard.menu.show')}
+										aria-label={t('dashboard.menu.show')}
 										onClick={(e) => { e.stopPropagation(); props.onOpenDatabase(); }}
 									>
 										<Icon name="plug" />

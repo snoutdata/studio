@@ -1,0 +1,107 @@
+{
+	"title": "Revisiones de Snoutbot",
+	"settings": "Configuración…",
+	"close": "Cerrar",
+	"waiting": "En espera",
+	"commentFailed": "No se pudo publicar el comentario.",
+	"rerunFailed": "No se pudo volver a ejecutar esa revisión. Revisa la conexión con el host en Configuración.",
+	"poll": {
+		"noRepos": "No se vigila ningún repositorio. Agrega uno en Configuración.",
+		"busy": "Ya se está comprobando.",
+		"errors": "No se pudo comprobar {errors}",
+		"repos": {
+			"one": "1 repositorio",
+			"other": "{count} repositorios"
+		},
+		"found": {
+			"zero": "nada nuevo que revisar",
+			"one": "1 pull request revisada",
+			"other": "{count} pull requests revisadas"
+		},
+		"checked": "Se comprobó {where} a las {time}: {found}."
+	},
+	"methods": {
+		"deterministic": "Solo reglas",
+		"localEngine": "Explicado en este equipo",
+		"snoutAi": "Explicado por SnoutData AI",
+		"byok": "Explicado por tu propio modelo"
+	},
+	"hints": {
+		"deterministic": "Sin modelo. Las palabras de las reglas.",
+		"localEngine": "Nada sale de este equipo.",
+		"snoutAi": "Redactado en nuestros servidores.",
+		"byok": "Tu propia clave o servidor Ollama."
+	},
+	"check": {
+		"tooltip": "Pedir ahora a GitHub nuevas pull requests y menciones",
+		"tooltipOff": "Activa primero Snoutbot en Configuración",
+		"checking": "Comprobando…",
+		"now": "Comprobar ahora"
+	},
+	"detail": {
+		"shaTitle": "El commit de esta revisión. Una revisión es siempre de un sha, nunca de una pull request.",
+		"openOnGithub": "Abrir en GitHub",
+		"localErrors": "Lo que dijo la base de datos ({count}), solo se muestra aquí",
+		"notPostedAs": "Aún no se ha publicado nada. Irá en la {pullRequest} como **{login}**.",
+		"notPostedYou": "Aún no se ha publicado nada. Irá en la {pullRequest} a tu nombre.",
+		"discard": "Descartar",
+		"posting": "Publicando…",
+		"post": "Publicar en {name}",
+		"postedAs": "Publicado en la {pullRequest} como {login}.",
+		"posted": "Publicado en la {pullRequest}.",
+		"remove": "Quitar de esta lista",
+		"again": "Volver a revisar este commit con",
+		"wroteThisTitle": "Esto es lo que escribió la revisión que estás leyendo",
+		"wroteThis": "Escribió esta revisión"
+	},
+	"empty": {
+		"title": "Aún no hay revisiones",
+		"connect": "Conecta una cuenta de GitHub o GitLab y Snoutbot podrá vigilar tus repositorios.",
+		"addRepo": "Agrega un repositorio para vigilar y vincúlalo a una de tus conexiones.",
+		"off": "La vigilancia está desactivada. Actívala y Snoutbot buscará pull requests que toquen SQL.",
+		"nothing": "Aún no se ha revisado nada. Las revisiones aparecen aquí al ejecutarse y se quedan durante esta sesión.",
+		"openSettings": "Abrir configuración de Snoutbot",
+		"note": "Las revisiones se guardan en memoria mientras la aplicación está abierta, no en disco. Una revisión trata de un commit, y una obsoleta es peor que ninguna."
+	},
+	"summary": {
+		"blockers": {
+			"one": "{count} bloqueante",
+			"other": "{count} bloqueantes"
+		},
+		"warnings": {
+			"one": "{count} advertencia",
+			"other": "{count} advertencias"
+		},
+		"notes": {
+			"one": "{count} nota",
+			"other": "{count} notas"
+		},
+		"nothing": "nada que señalar"
+	},
+	"depth": {
+		"connected": "Medido en {on}",
+		"connectedBound": "Medido en la base de datos vinculada",
+		"schema": "Leyó el esquema de {on}, sin ejecutar consultas",
+		"schemaBound": "Leyó el esquema, sin ejecutar consultas",
+		"static": "Solo leyó el diff, no se consultó la base de datos"
+	},
+	"notice": {
+		"failed": "Snoutbot no pudo revisar {what}",
+		"awaiting": "Snoutbot tiene una revisión de {what} para que la leas",
+		"awaitingDetail": "{summary}. No se publica nada en GitHub hasta que lo digas.",
+		"blockers": {
+			"one": "Snoutbot encontró {count} bloqueante en {what}",
+			"other": "Snoutbot encontró {count} bloqueantes en {what}"
+		},
+		"postedDetail": "{summary}. El comentario se ha publicado.",
+		"reviewed": "Snoutbot revisó {what}"
+	},
+	"toast": {
+		"running": "Snoutbot está revisando este cambio",
+		"readIt": "Leerla",
+		"open": "Abrir",
+		"dismiss": "Descartar",
+		"awaiting": "{summary}, esperando a que la publiques",
+		"posted": "{summary}, publicado"
+	}
+}

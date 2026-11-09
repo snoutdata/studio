@@ -6,6 +6,7 @@
 import { ASSISTANT_NAME } from '../../../shared/assistant';
 import { useEffect, useState } from 'react';
 import { Icon } from './Icon';
+import { useT } from '../i18n';
 
 interface AiTranslateConfirmProps {
 	/** Confirm the AI translation. `always` ⇒ also turn on the "always translate" setting. */
@@ -20,6 +21,7 @@ interface AiTranslateConfirmProps {
  * who never want native pipelines stop being asked.
  */
 export function AiTranslateConfirm({ onConfirm, onCancel }: AiTranslateConfirmProps): JSX.Element {
+	const t = useT();
 	const [always, setAlways] = useState(false);
 	useEffect(() => {
 		function onKey(e: KeyboardEvent): void {
@@ -36,18 +38,18 @@ export function AiTranslateConfirm({ onConfirm, onCancel }: AiTranslateConfirmPr
 	return (
 		<div className="modal-backdrop" onClick={onCancel}>
 			<div className="modal confirm" onClick={(e) => e.stopPropagation()}>
-				<h2><Icon name="sparkle" /> Translate with {ASSISTANT_NAME}?</h2>
+				<h2><Icon name="sparkle" /> {t('chat.aiTranslate.title', { assistant: ASSISTANT_NAME })}</h2>
 				<p className="confirm-detail">
-					{ASSISTANT_NAME} can turn this query into a MongoDB pipeline, which uses your AI budget. Or write it directly in the Pipeline tab.
+					{t('chat.aiTranslate.detail', { assistant: ASSISTANT_NAME })}
 				</p>
 				<label className="confirm-always">
 					<input type="checkbox" checked={always} onChange={(e) => setAlways(e.target.checked)} />
-					Always translate with {ASSISTANT_NAME} (don't ask again)
+					{t('chat.aiTranslate.always', { assistant: ASSISTANT_NAME })}
 				</label>
 				<div className="modal-actions">
 					<span className="spacer" />
-					<button type="button" className="secondary" onClick={onCancel} autoFocus><Icon name="close" /> Cancel</button>
-					<button type="button" onClick={() => onConfirm(always)}><Icon name="sparkle" /> Translate with {ASSISTANT_NAME}</button>
+					<button type="button" className="secondary" onClick={onCancel} autoFocus><Icon name="close" /> {t('chat.aiTranslate.cancel')}</button>
+					<button type="button" onClick={() => onConfirm(always)}><Icon name="sparkle" /> {t('chat.aiTranslate.confirm', { assistant: ASSISTANT_NAME })}</button>
 				</div>
 			</div>
 		</div>

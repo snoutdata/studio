@@ -11,6 +11,7 @@
  */
 
 import { csvField } from './export';
+import { t } from './i18n/core';
 
 export type ChartType = 'bar' | 'line' | 'area' | 'pie' | 'scatter';
 
@@ -52,36 +53,36 @@ export function parseChartSpec(text: string): ParsedChart {
 	try {
 		raw = JSON.parse(text);
 	} catch {
-		return { error: "Chart spec is not valid JSON." };
+		return { error: t('engineShared.chart.notJson') };
 	}
 	if (!isRecord(raw)) {
-		return { error: "Chart spec must be a JSON object." };
+		return { error: t('engineShared.chart.notObject') };
 	}
 	const type = raw.type;
 	if (typeof type !== 'string' || !CHART_TYPES.includes(type as ChartType)) {
-		return { error: `Chart "type" must be one of: ${CHART_TYPES.join(', ')}.` };
+		return { error: t('engineShared.chart.badType', { types: CHART_TYPES.join(', ') }) };
 	}
 	const x = raw.x;
 	if (typeof x !== 'string' || x.length === 0) {
-		return { error: 'Chart "x" (the category key) is required.' };
+		return { error: t('engineShared.chart.noX') };
 	}
 	if (!Array.isArray(raw.series) || raw.series.length === 0) {
-		return { error: 'Chart "series" must be a non-empty array.' };
+		return { error: t('engineShared.chart.noSeries') };
 	}
 	const series: ChartSeries[] = [];
 	for (const s of raw.series) {
 		if (!isRecord(s) || typeof s.key !== 'string' || s.key.length === 0) {
-			return { error: 'Each chart series needs a non-empty "key".' };
+			return { error: t('engineShared.chart.seriesKey') };
 		}
 		series.push({ key: s.key, name: typeof s.name === 'string' ? s.name : undefined });
 	}
 	if (!Array.isArray(raw.data) || raw.data.length === 0) {
-		return { error: 'Chart "data" must be a non-empty array of rows.' };
+		return { error: t('engineShared.chart.noData') };
 	}
 	const data: Record<string, string | number | null>[] = [];
 	for (const row of raw.data) {
 		if (!isRecord(row)) {
-			return { error: 'Each chart data row must be an object.' };
+			return { error: t('engineShared.chart.rowNotObject') };
 		}
 		const clean: Record<string, string | number | null> = {};
 		for (const [k, v] of Object.entries(row)) {

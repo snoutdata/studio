@@ -3,6 +3,7 @@
  *  Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { t } from '../../shared/i18n/core';
 import type { ConnectionManager } from '../connectionManager';
 import { readConnections } from '../configStore';
 import type { SecretStore } from '../secretStore';
@@ -150,8 +151,8 @@ export class ReviewService {
 		if (!token) {
 			throw new Error(
 				forge === 'gitlab'
-					? 'No GitLab token is stored. Connect GitLab in Settings first.'
-					: 'No GitHub token is stored. Connect GitHub in Settings first.',
+					? t('mainReview.noGitlabToken')
+					: t('mainReview.noGithubToken'),
 			);
 		}
 		return forge === 'gitlab'
@@ -175,7 +176,7 @@ export class ReviewService {
 		const { appId, installationId } = this.store.githubApp();
 		const privateKeyPem = await this.deps.secrets.get(GITHUB_APP_KEY_SECRET_ID, 'githubAppKey');
 		if (!appId || !privateKeyPem) {
-			throw new Error("Snoutbot's GitHub App is not set up. Add its App ID and private key in Settings.");
+			throw new Error(t('mainReview.appNotSetUp'));
 		}
 		this.appAuth = new GithubAppAuth({ appId, privateKeyPem }, GITHUB_API, installationId);
 		return this.appAuth;
@@ -195,7 +196,7 @@ export class ReviewService {
 	 */
 	async setGithubApp(appId: string, privateKeyPem: string): Promise<ReviewAppCheck> {
 		if (!looksLikePrivateKey(privateKeyPem)) {
-			return { ok: false, error: "That does not look like a private key. Choose the .pem GitHub generated for the App." };
+			return { ok: false, error: t('mainReview.notAPrivateKey') };
 		}
 		try {
 			const auth = new GithubAppAuth({ appId: appId.trim(), privateKeyPem }, GITHUB_API);
@@ -314,7 +315,7 @@ export class ReviewService {
 			this.scopes[forge] = [];
 			this.http.clear();
 			this.deps.onChanged?.();
-			return { ok: false, error: 'No token given.' };
+			return { ok: false, error: t('mainReview.noToken') };
 		}
 		try {
 			// Built directly rather than through `forgeClient`, which reads the stored token — the
@@ -428,7 +429,7 @@ export class ReviewService {
 				}
 			}
 			if (connected === 0) {
-				return { ok: false, error: 'Connect a GitHub or GitLab account first.' };
+				return { ok: false, error: t('mainReview.connectForge') };
 			}
 			// Every host failed: that is an error, not an empty list, and the two say very
 			// different things to somebody looking at this screen.
@@ -449,7 +450,7 @@ export class ReviewService {
 	addRepo(ref: string, forge: ForgeKind = 'github'): { ok: true; id: string } | { ok: false; error: string } {
 		const parsed = parseRepoRef(ref);
 		if (!parsed) {
-			return { ok: false, error: 'That is not a repository. Try `owner/name` or the repository URL.' };
+			return { ok: false, error: t('mainReview.notARepo') };
 		}
 		const repo = this.store.upsertRepo({ ...parsed, forge });
 		this.deps.onChanged?.();
@@ -573,7 +574,7 @@ export class ReviewService {
 		const run = this.runs.find((r) => r.id === runId);
 		const repo = run ? this.store.repo(run.repoId) : undefined;
 		if (!run || !repo) {
-			return { ok: false, error: 'That review is no longer available.' };
+			return { ok: false, error: t('mainReview.reviewGone') };
 		}
 		try {
 			// The commit has read `pending` since the review ran, because with approval on nothing

@@ -6,6 +6,7 @@
 import { Fragment } from 'react';
 
 import { Icon } from './Icon';
+import { useT } from '../i18n';
 import { DOCK_AREAS, areaLabel, toolLabel, type DockArea, type DockRect, type ToolId } from '../docking';
 
 /*
@@ -73,6 +74,7 @@ function hairlineStyle(area: DockArea, rect: DockRect): React.CSSProperties {
 }
 
 export function DockDropZones({ tool, rect, x, y, over }: DockDropZonesProps): JSX.Element {
+	const t = useT();
 	return (
 		<div className="dock-drop-layer" aria-hidden="true">
 			{DOCK_AREAS.map((area) => (
@@ -93,7 +95,7 @@ export function DockDropZones({ tool, rect, x, y, over }: DockDropZonesProps): J
 						{areaLabel(over)}
 					</span>
 				) : (
-					<span className="dock-drag-hint">Drop at an edge</span>
+					<span className="dock-drag-hint">{t('shell.dock.dropAtEdge')}</span>
 				)}
 			</div>
 		</div>

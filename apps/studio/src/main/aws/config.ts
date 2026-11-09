@@ -3,6 +3,7 @@
  *  Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { t } from '../../shared/i18n/core';
 import { existsSync, readFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
@@ -138,14 +139,18 @@ function credentialKind(fields: Record<string, string>): AwsCredentialKind {
  * What each kind means when nobody is at the computer to sign in again, said plainly: the half a
  * user cannot see for themselves. An SSO profile is perfect at a desk and expires overnight.
  */
-const KIND_NOTE: Record<AwsCredentialKind, string | undefined> = {
-	key: undefined,
-	sso: 'Signed in through SSO. It works while your session lasts, and a scheduled flow stops when it expires until you sign in again.',
-	role: 'Assumes a role. It works wherever the profile it is based on does.',
-	process: 'Runs a command of yours to fetch credentials. It works here as long as that command does.',
-	webIdentity: 'Uses a web identity token file.',
-	unknown: 'This profile names no credentials of its own, so it may rely on something else on this computer.',
-};
+function kindNote(kind: AwsCredentialKind): string | undefined {
+	const keys: Record<AwsCredentialKind, string | undefined> = {
+		key: undefined,
+		sso: 'mainCloud.awsSso',
+		role: 'mainCloud.awsAssume',
+		process: 'mainCloud.awsCommand',
+		webIdentity: 'mainCloud.awsWebIdentity',
+		unknown: 'mainCloud.awsNoCreds',
+	};
+	const key = keys[kind];
+	return key ? t(key) : undefined;
+}
 
 /**
  * Every profile the AWS CLI knows about on this computer.
@@ -190,7 +195,7 @@ export function discoverAwsProfiles(env: NodeJS.ProcessEnv = process.env, home: 
 				name,
 				region: fields.region || undefined,
 				kind,
-				note: KIND_NOTE[kind],
+				note: kindNote(kind),
 			} satisfies AwsCliProfile;
 		})
 		// `default` first, then alphabetical: it is the one most people mean.

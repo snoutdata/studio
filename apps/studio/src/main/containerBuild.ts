@@ -3,6 +3,7 @@
  *  Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { t } from '../shared/i18n/core';
 import { CloudRequestError, detailFrom, type CloudApi } from './cloudApi';
 import { containerListing } from './cloudProjectOps';
 import { containerNameProblem, withoutCloudInternals, type CloudContainers, type ContainerBuildForm } from '../shared/cloudContainers';
@@ -77,27 +78,27 @@ export function buildArgs(input: { context: string; archive: string }): string[]
 export function dockerUnavailable(result: DockerResult): string {
 	const said = `${result.stderr}\n${result.stdout}`;
 	if (result.code === -1 && /not found|ENOENT/i.test(said)) {
-		return "Deploy from a folder builds with your own Docker, and none was found on this computer. Install Docker Desktop, or deploy an image from a registry.";
+		return t('mainContainers.noDocker');
 	}
-	return "Docker is installed but not running. Start Docker, then build again.";
+	return t('mainContainers.dockerDown');
 }
 
 /** The sentence for a build that failed, from what docker printed. */
 export function buildFailure(output: string): string {
 	if (/exec format error/i.test(output)) {
-		return "A build step ran an arm64 program that this computer cannot run. Docker Desktop runs them by emulation. On Linux, set up emulation as Docker's multi-platform guide describes (docs.docker.com/build/building/multi-platform); its usual command runs a third-party image with root-level access, so read it before you run it.";
+		return t('mainContainers.execFormat');
 	}
 	if (/no match for platform in manifest|does not provide the specified platform|no matching manifest for linux\/arm64/i.test(output)) {
-		return "An image the Dockerfile builds FROM has no linux/arm64 version, and SnoutData Cloud runs arm64 only. Use a base image published for arm64 (most official images are).";
+		return t('mainContainers.noArm64Base');
 	}
 	if (/exporter is not supported for the docker driver|not supported for the docker driver/i.test(output)) {
-		return "This Docker's default builder cannot write an image archive. Turn on the containerd image store (Docker Desktop: Settings, General, \"Use containerd for pulling and storing images\"), or make a builder that can with: docker buildx create --use";
+		return t('mainContainers.noContainerd');
 	}
 	if (/Cannot connect to the Docker daemon|error during connect|daemon is not running/i.test(output)) {
-		return "Docker stopped answering during the build. Start Docker, then build again.";
+		return t('mainContainers.dockerStopped');
 	}
 	const last = output.split(/\r?\n/).map((l) => l.trim()).filter((l) => /^ERROR\b|error:/i.test(l)).pop();
-	return last ? `The build failed: ${last.replace(/^ERROR:?\s*/i, '')}` : "The build failed. Its output is above.";
+	return last ? t('mainContainers.buildFailedDetail', { detail: last.replace(/^ERROR:?\s*/i, '') }) : t('mainContainers.buildFailed');
 }
 
 /** The sentence an upload's refusal carries, or one for a status with none. */
@@ -113,9 +114,9 @@ export function uploadFailure(status: number, body: string): string {
 		return withoutCloudInternals(said);
 	}
 	if (status === 413) {
-		return "The image is too large to upload. A container's image may be at most 1 GB compressed; a slimmer base (alpine, distroless, -slim) usually fixes it.";
+		return t('mainContainers.tooLargeCompressed');
 	}
-	return `The upload failed (${status}). Build again in a moment.`;
+	return t('mainContainers.uploadFailed', { status });
 }
 
 function megabytes(bytes: number): string {
@@ -125,7 +126,7 @@ function megabytes(bytes: number): string {
 async function uploadTicket(api: CloudApi, ref: string, name: string): Promise<UploadTicket> {
 	const ticket = await api.request<Partial<UploadTicket>>('cloud-project-containers', { ref, action: 'upload-ticket', name });
 	if (typeof ticket.url !== 'string' || !ticket.url.startsWith('https://')) {
-		throw new CloudRequestError("SnoutData Cloud did not hand over an upload link. Try again in a moment.", 502);
+		throw new CloudRequestError(t('mainContainers.noUploadLink'), 502);
 	}
 	return { url: ticket.url, expiresAt: String(ticket.expiresAt ?? '') };
 }
@@ -147,7 +148,7 @@ export async function buildAndDeploy(
 		return { ok: false, refused: true, message: badName };
 	}
 	if (!host.hasDockerfile(form.folder)) {
-		return { ok: false, refused: true, message: `${form.folder} has no Dockerfile in it.` };
+		return { ok: false, refused: true, message: t('mainContainers.noDockerfile', { folder: form.folder }) };
 	}
 	const version = await host.docker(['version', '--format', '{{.Server.Version}}']);
 	if (version.code !== 0) {
@@ -155,7 +156,7 @@ export async function buildAndDeploy(
 	}
 	const buildx = await host.docker(['buildx', 'version']);
 	if (buildx.code !== 0) {
-		return { ok: false, refused: true, message: "This Docker has no buildx, which builds for linux/arm64. Update Docker Desktop, or install the buildx plugin." };
+		return { ok: false, refused: true, message: t('mainContainers.noBuildx') };
 	}
 
 	let scratch: { dir: string; file(name: string): string } | null = null;
@@ -164,7 +165,7 @@ export async function buildAndDeploy(
 		let ticket = await uploadTicket(api, ref, name);
 		scratch = await host.scratch();
 		const archive = scratch.file('image.tar');
-		say(`Building ${form.folder} for linux/arm64…`);
+		say(t('mainContainers.building', { folder: form.folder }));
 		const output: string[] = [];
 		const built = await host.docker(buildArgs({ context: form.folder, archive }), {
 			onLine(line) {
@@ -177,17 +178,17 @@ export async function buildAndDeploy(
 		}
 		const size = await host.fileSize(archive).catch(() => -1);
 		if (size <= 0) {
-			return { ok: false, refused: false, message: "Docker finished but wrote no image archive, so there is nothing to upload." };
+			return { ok: false, refused: false, message: t('mainContainers.noArchive') };
 		}
 		if (size > MAX_UPLOAD_BYTES) {
-			return { ok: false, refused: true, message: `The image is ${megabytes(size)}, and a container's image may be at most 1 GB compressed. A slimmer base (alpine, distroless, -slim) usually fixes it.` };
+			return { ok: false, refused: true, message: t('mainContainers.tooLargeSized', { size: megabytes(size) }) };
 		}
 		// A long build can outlast the link: ask again rather than upload to one about to run out.
 		if (!(Date.parse(ticket.expiresAt) - host.now() > TICKET_MARGIN_MS)) {
 			ticket = await uploadTicket(api, ref, name);
 		}
 		const sha256 = await host.hash(archive);
-		say(`Uploading the image (${megabytes(size)})…`);
+		say(t('mainContainers.uploading', { size: megabytes(size) }));
 		let reported = 0;
 		const progress = (bytes: number): void => {
 			const quarter = Math.floor((bytes / size) * 4);

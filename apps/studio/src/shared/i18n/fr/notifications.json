@@ -1,0 +1,41 @@
+{
+	"noVault": {
+		"title": "Mots de passe enregistrés sans coffre-fort",
+		"detail": "Cet ordinateur n'a pas de coffre-fort de mots de passe (trousseau) : Studio enregistre donc vos mots de passe de base de données dans un fichier que seul votre compte utilisateur peut lire. Toute personne utilisant votre compte pourrait les lire. Pour les garder dans un coffre, installez-en un, comme GNOME Keyring, puis redémarrez Studio."
+	},
+	"signInFailed": "Échec de la connexion",
+	"connectionFailed": "Échec de la connexion",
+	"applyFailed": "Échec de l'application des modifications",
+	"exportFailed": "Échec de l'export",
+	"serverNoReason": "Le serveur n'a pas donné de raison.",
+	"queryFailed": "Échec de la requête",
+	"reconnectFailed": "Échec de la reconnexion",
+	"countFailed": "Échec du comptage",
+	"fetchMoreFailed": "Échec du chargement de la suite",
+	"fetchMoreColumns": "Les lignes suivantes sont revenues avec d'autres colonnes, elles n'ont donc pas été ajoutées. Relancez la requête.",
+	"from": "De {name}",
+	"ask": "Demander à {assistant}",
+	"askTitle": "Demander à {assistant}",
+	"viewAll": "Tout voir",
+	"center": {
+		"title": "Notifications",
+		"clearAll": "Tout effacer",
+		"clearAllTooltip": "Effacer toutes les notifications",
+		"clearAllTitle": "Effacer toutes les notifications ?",
+		"clearAllBody": {
+			"one": "La notification sera supprimée. Cette action est irréversible.",
+			"other": "Les {count} notifications seront supprimées. Cette action est irréversible."
+		},
+		"deleteTitle": "Supprimer cette notification ?",
+		"deleteBody": "Cette action est irréversible.",
+		"empty": "Aucune notification. Les erreurs et les événements notables s'afficheront ici.",
+		"secondsAgo": "il y a {count} s",
+		"minutesAgo": "il y a {count} min",
+		"hoursAgo": "il y a {count} h",
+		"daysAgo": "il y a {count} j",
+		"less": "Moins",
+		"details": "Détails",
+		"prev": "Préc.",
+		"range": "{start}-{end} sur {total}"
+	}
+}

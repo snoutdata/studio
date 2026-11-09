@@ -1,0 +1,180 @@
+{
+	"agent": {
+		"notInstalled": "{agent} is not installed on this computer. Install it, then reopen this panel.",
+		"docs": "{agent} documentation",
+		"openSettings": "Open {agent}'s settings folder",
+		"configTitle": "{agent} would not start because of its own settings.",
+		"configDetail": "Its message is above. Those settings live outside SnoutData Studio, so they are yours and {agent}'s to sort out.",
+		"launcherTitle": "{agent} is on this computer but could not run.",
+		"launcherDetail": "Its message is above. How {agent} is installed and updated is outside SnoutData Studio.",
+		"deniedTitle": "{agent} was not allowed to start.",
+		"deniedDetail": "Its message is above. The system refused it something it needed."
+	},
+	"ai": {
+		"projectVendorKey": "{project}: the project's {vendor} key",
+		"projectKeys": "{project}: the project's keys",
+		"yourKey": "Your {provider} key",
+		"ollamaLocal": "Ollama on your computer",
+		"usesBalance": "Uses your balance",
+		"projectKeysBilled": "Your project's keys, billed by {vendors}",
+		"yourProjectKeys": "Your project's keys",
+		"yourKeys": "Your keys",
+		"runsLocal": "Runs on your computer",
+		"billedBy": "Billed by {vendors}",
+		"gatewayOff": "The AI gateway of {project} is switched off. Switch it on in the project's dashboard, or pick another model.",
+		"gatewayForbidden": "You may not use the AI of {project}. Pick another model, or ask the project's owner for access.",
+		"gatewaySignIn": "SnoutData Cloud did not accept your sign-in for {project}. Sign in again, then try once more.",
+		"gatewayRefused": "{project}'s AI gateway refused the request: {detail}",
+		"gatewayRefusedStatus": "{project}'s AI gateway refused the request: status {status}"
+	},
+	"cell": {
+		"items": {
+			"one": "{count} item",
+			"other": "{count} items"
+		},
+		"keys": {
+			"one": "{count} key",
+			"other": "{count} keys"
+		}
+	},
+	"chart": {
+		"notJson": "Chart spec is not valid JSON.",
+		"notObject": "Chart spec must be a JSON object.",
+		"badType": "Chart \"type\" must be one of: {types}.",
+		"noX": "Chart \"x\" (the category key) is required.",
+		"noSeries": "Chart \"series\" must be a non-empty array.",
+		"seriesKey": "Each chart series needs a non-empty \"key\".",
+		"noData": "Chart \"data\" must be a non-empty array of rows.",
+		"rowNotObject": "Each chart data row must be an object."
+	},
+	"chEngine": {
+		"mergeTree": "Keeps every row. The one to pick unless one of the others describes your data.",
+		"replacing": "Keeps the last row for each sort key. It happens during merges, so a SELECT can still see both until then, or use FINAL.",
+		"versionColumn": "Version column",
+		"versionHint": "Which row wins: the largest value of this column. Leave it empty and the last one inserted wins.",
+		"summing": "Merges rows with the same sort key by adding up their numeric columns.",
+		"sumColumns": "Columns to sum",
+		"sumHint": "Leave it empty to sum every numeric column that is not in the sort key.",
+		"aggregating": "Merges rows with the same sort key by combining their AggregateFunction columns. Usually the target of a materialized view.",
+		"collapsing": "A row is cancelled by writing it again with sign = -1, which is how a row is deleted without a mutation.",
+		"signColumn": "Sign column",
+		"signHint": "An Int8 column holding 1 for a row and -1 for the row that cancels it.",
+		"versioned": "CollapsingMergeTree that also copes with the cancelling row arriving before the row it cancels.",
+		"signVersionColumns": "Sign and version columns",
+		"signVersionHint": "The Int8 sign column and the column whose value increases with each state of the row.",
+		"unknownEngine": "{engine} is not an engine this can create.",
+		"needsParameter": "{engine} needs its {parameter}: {hint}",
+		"noSortKey": "{engine} with no sort key treats every row as the same row, so the whole table merges into one. Tick the key columns in Columns.",
+		"needsCluster": "Creating on every replica needs the name of the cluster to create on.",
+		"ttlNoPartition": "A TTL without a PARTITION BY drops expired rows by rewriting whole parts. Partitioning by the same column the TTL uses lets a whole partition be dropped instead."
+	},
+	"chTable": {
+		"merge": "Merge now",
+		"mergeConfirm": "Merge partition {partition} of {table} into one part now? It holds {parts} parts and {rows} rows, and merging them reads and rewrites all {mb} MB. ClickHouse would do this on its own eventually.",
+		"detach": "Detach",
+		"detachConfirm": "Detach partition {partition} of {table}? Its {rows} rows leave the table at once. The files stay on disk under detached/, so ATTACH PARTITION puts them back.",
+		"drop": "Drop",
+		"dropConfirm": "Drop partition {partition} of {table}? This deletes {rows} rows and {mb} MB, and it cannot be undone."
+	},
+	"container": {
+		"badName": "\"{name}\" is not a container name: lower-case letters, digits, hyphens and underscores, up to 32 characters, starting with a letter or a digit.",
+		"badPort": "{port} is not a port: 1 to 65535."
+	},
+	"gateway": {
+		"busy": "SnoutData AI is busier than it can serve right now. Try again in a moment.",
+		"busyIn": "SnoutData AI is busier than it can serve right now. Try again in {time}.",
+		"rate": "That's more requests in a minute than your plan allows. Try again in a moment.",
+		"rateIn": "That's more requests in a minute than your plan allows. Try again in {time}.",
+		"projectLimit": "SnoutData AI has reached its limit for today, which is ours and not yours: your own budget is untouched. Try again later.",
+		"teamBudget": "Your team's shared AI budget is used up for this billing period. It starts again with the next period, or your team's owner can raise it at snoutdata.com.",
+		"userBudget": "You've used up your AI budget for this period. Upgrade or manage your plan at snoutdata.com to keep using the assistant, or wait for it to reset."
+	},
+	"orbit": {
+		"foldIndexes": "Indexes are folded into the tables they belong to, which is why some stars are bigger than their row count.",
+		"capped": "This schema is past what Orbit draws in full. Indexes are folded into their tables, and the least connected objects are left out. Isolate a table to see its neighbourhood exactly.",
+		"ceiling": "This schema is too large for Orbit to draw. Connect to a single schema, or turn indexes off when introspecting, and open it again.",
+		"mysqlFallback": "This server is not recording statements in performance_schema, so Pulse is reading information_schema.processlist instead. Durations there are whole seconds.",
+		"reasonSqlite": "SQLite runs inside this app rather than on a server, so it keeps no list of what other sessions are doing. Pulse still shows what this app ran.",
+		"reasonDuckdb": "DuckDB runs inside this app rather than on a server, so it keeps no list of what other sessions are doing. Pulse still shows what this app ran.",
+		"reasonMongo": "MongoDB reports its running operations through currentOp, which SnoutData does not read yet, so there is no database-wide activity to draw here.",
+		"reasonPinecone": "Pinecone is a hosted vector index with no session activity to read, so there is nothing database-wide to draw here.",
+		"reasonSnowflake": "Snowflake reports running queries through its own query history, which SnoutData does not sample yet, so there is no live activity to draw here.",
+		"reasonDb2": "Db2 reports running statements through MON_GET_ACTIVITY, which SnoutData does not read yet, so there is no live activity to draw here.",
+		"reasonHana": "SAP HANA reports running statements through M_ACTIVE_STATEMENTS, which SnoutData does not read yet, so there is no live activity to draw here.",
+		"reasonLogs": "A log service has no database sessions to sample. What you query here is the log itself.",
+		"reasonUnknown": "SnoutData does not know how to read live activity from this database, so Pulse can only show what this app ran.",
+		"maskedRows": {
+			"one": "{count} session is hidden from this login, so their statements cannot be shown. On Postgres, granting pg_read_all_stats to this role (or connecting as a superuser) is what makes them visible.",
+			"other": "{count} sessions are hidden from this login, so their statements cannot be shown. On Postgres, granting pg_read_all_stats to this role (or connecting as a superuser) is what makes them visible."
+		}
+	},
+	"copy": {
+		"partUsers": "Users",
+		"partDatabase": "Database",
+		"partFiles": "Files",
+		"partFunctions": "Functions",
+		"partSecrets": "Function secrets",
+		"betweenOnly": "A copy goes between this computer and SnoutData Cloud.",
+		"noFunctions": "SnoutData Cloud does not give a function's source back. Put your functions in the local project's functions folder from your own copy.",
+		"noSecrets": "SnoutData Cloud never shows a secret's value, so there is nothing to copy. Set them in the local project's Functions section.",
+		"notKeys": "The API keys and the database password: each project has its own. Point your app at the new project's URL and app key.",
+		"notSignIn": "Sign-in settings (Google, GitHub, the mail server, redirect addresses, email templates). Set them on the new project.",
+		"notFunctions": "Functions and their secrets: SnoutData Cloud does not give them back."
+	},
+	"series": {
+		"chooseColumn": "Choose the column the table is partitioned by: a timestamp, a date, or an integer.",
+		"badType": "{column} is {type}; a series is partitioned by a timestamp, a date or an integer column.",
+		"notNull": "{column} must not allow NULL: every row needs a time to find its partition.",
+		"keyIncludes": "The primary key must include {column}: Postgres can only check uniqueness within one partition.",
+		"sizeInteger": "Partition size must be a whole number such as 100000.",
+		"sizeInterval": "Partition size must be an interval such as 1 day.",
+		"keepInteger": "Keep rows for must be a whole number such as 100000, or empty to keep everything.",
+		"keepInterval": "Keep rows for must be an interval such as 1 day, or empty to keep everything.",
+		"sealInteger": "Seal after must be a whole number, or empty to never seal.",
+		"sealInterval": "Seal after must be an interval such as 1 day, or empty to never seal."
+	},
+	"update": {
+		"offline": "Updates could not be checked: this computer is offline. It will try again later.",
+		"feedUnavailable": "Updates could not be checked: GitHub is not answering. Nothing is wrong with your installation, and it will try again later.",
+		"rateLimited": "Updates could not be checked: GitHub is rate limiting this network. It will try again later.",
+		"noRelease": "Updates could not be checked: no published release was found to update to.",
+		"signature": "An update was downloaded and refused: it did not match the signature it should have. Nothing was installed.",
+		"disk": "The update could not be saved: there is not enough disk space.",
+		"unknown": "Updates could not be checked.",
+		"noteMinute": "this can take a minute",
+		"noteBackground": "still going, in the background",
+		"noteKeepWorking": "you can keep working"
+	},
+	"approval": {
+		"editConnection": "edit connection \"{name}\"{list}{moves}{safety}",
+		"editTunnel": "edit tunnel \"{name}\"{list}{moves}",
+		"safetyNote": "This changes how carefully the app treats this database (whether it is production, or read-only), so it is asked every time.",
+		"destinationNote": "This changes where the connection goes or who it signs in as, so its saved password is removed and has to be typed again in the connection form.",
+		"tunnelMoveNote": "This points the tunnel at a different SSH server or user, so its saved SSH password and key passphrase, and the saved database password of every connection that uses it, are removed and have to be typed again. The new server's host key is trusted the first time it is reached, so check the address.",
+		"testFileNote": "This opens that file on this computer, read-only, if it exists. A test never creates a file.",
+		"testAddressNote": "This connects to an address that is not one of your saved connections and sends it the username and password above. Allow it only if you recognise the address."
+	},
+	"project": {
+		"overview": "Overview",
+		"database": "Database",
+		"extensions": "Extensions",
+		"cron": "Cron",
+		"timeSeries": "Time series",
+		"shards": "Cluster",
+		"auth": "Auth",
+		"storage": "Storage",
+		"dataApi": "Data API",
+		"functions": "Functions",
+		"containers": "Containers",
+		"realtime": "Realtime",
+		"push": "Push",
+		"logs": "Logs",
+		"domains": "Domains",
+		"settings": "Settings"
+	},
+	"projectGroup": {
+		"database": "Database",
+		"services": "Services",
+		"manage": "Manage"
+	}
+}

@@ -13,6 +13,7 @@
 // no way to write one.
 
 import { ASSISTANT_NAME } from '../../shared/assistant';
+import { t } from '../../shared/i18n/core';
 import { AGENTS, type AgentKind } from '../../shared/agentConsole';
 
 /** The three edges a tool window can occupy. No top (that is the title/activity bar) and no
@@ -53,13 +54,13 @@ export function toolLabel(id: ToolId): string {
 		return AGENTS[kind]?.label ?? kind;
 	}
 	switch (id) {
-		case 'connections': return "Connections";
-		case 'workspace': return "Workspace files";
-		case 'flows': return "Data flows";
-		case 'history': return "Query history";
-		case 'mcplog': return "Agent log";
-		case 'dashboard': return "Dashboard";
-		case 'orbit': return "Orbit controls";
+		case 'connections': return t('shell.dock.tool.connections');
+		case 'workspace': return t('shell.dock.tool.workspace');
+		case 'flows': return t('shell.dock.tool.flows');
+		case 'history': return t('shell.dock.tool.history');
+		case 'mcplog': return t('shell.dock.tool.agentLog');
+		case 'dashboard': return t('shell.dock.tool.dashboard');
+		case 'orbit': return t('shell.dock.tool.orbit');
 		case 'assistant': return ASSISTANT_NAME;
 		default: return id;
 	}
@@ -67,9 +68,9 @@ export function toolLabel(id: ToolId): string {
 
 export function areaLabel(area: DockArea): string {
 	switch (area) {
-		case 'left': return "Left";
-		case 'right': return "Right";
-		case 'bottom': return "Bottom";
+		case 'left': return t('shell.dock.area.left');
+		case 'right': return t('shell.dock.area.right');
+		case 'bottom': return t('shell.dock.area.bottom');
 	}
 }
 
@@ -131,7 +132,7 @@ export function areaMax(area: DockArea, windowWidth: number, windowHeight: numbe
 export const DEFAULT_DOCKS: DockLayout = {
 	left: { tools: ['connections', 'workspace', 'history', 'dashboard', 'flows', 'mcplog', 'orbit'], active: 'connections', size: 280, collapsed: false },
 	right: { tools: ['assistant'], active: 'assistant', size: 320, collapsed: false },
-	bottom: { tools: ALL_TOOLS.filter((t) => t.startsWith('agent:')), active: null, size: 300, collapsed: false },
+	bottom: { tools: ALL_TOOLS.filter((tool) => tool.startsWith('agent:')), active: null, size: 300, collapsed: false },
 };
 
 function cloneArea(a: AreaState): AreaState {
@@ -305,7 +306,7 @@ export function moveTool(docks: DockLayout, id: ToolId, to: DockArea): DockLayou
 	const next = cloneDocks(docks);
 	const source = next[from];
 	const wasActive = source.active === id;
-	source.tools = source.tools.filter((t) => t !== id);
+	source.tools = source.tools.filter((tool) => tool !== id);
 	if (wasActive) { source.active = null; }
 	const target = next[to];
 	target.tools = [...target.tools, id];
@@ -337,7 +338,7 @@ export function dropTool(docks: DockLayout, tool: ToolId, isAvailable: (candidat
 export function reorderTool(docks: DockLayout, id: ToolId, index: number): DockLayout {
 	const area = placementOf(docks, id);
 	const next = cloneDocks(docks);
-	const tools = next[area].tools.filter((t) => t !== id);
+	const tools = next[area].tools.filter((tool) => tool !== id);
 	const at = Math.max(0, Math.min(tools.length, Math.round(index)));
 	tools.splice(at, 0, id);
 	next[area].tools = tools;

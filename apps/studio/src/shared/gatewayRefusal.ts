@@ -3,6 +3,8 @@
  *  Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { t } from './i18n/core';
+
 /**
  * What SnoutData AI's gateway (Psyche) means when it refuses a call for a budget or a rate limit,
  * and the sentence a person is shown for it.
@@ -65,16 +67,16 @@ export function gatewayRefusal(text: string): GatewayRefusal | null {
 export function refusalSentence(refusal: GatewayRefusal): string {
 	if (refusal.code === 'rate_limit_exceeded') {
 		if (refusal.scope === 'project') {
-			return `SnoutData AI is busier than it can serve right now. Try again${refusal.retryIn ? ` in ${refusal.retryIn}` : ' in a moment'}.`;
+			return refusal.retryIn ? t('engineShared.gateway.busyIn', { time: refusal.retryIn }) : t('engineShared.gateway.busy');
 		}
-		return `That's more requests in a minute than your plan allows. Try again${refusal.retryIn ? ` in ${refusal.retryIn}` : ' in a moment'}.`;
+		return refusal.retryIn ? t('engineShared.gateway.rateIn', { time: refusal.retryIn }) : t('engineShared.gateway.rate');
 	}
 	switch (refusal.scope) {
 		case 'project':
-			return "SnoutData AI has reached its limit for today, which is ours and not yours: your own budget is untouched. Try again later.";
+			return t('engineShared.gateway.projectLimit');
 		case 'group':
-			return "Your team's shared AI budget is used up for this billing period. It starts again with the next period, or your team's owner can raise it at snoutdata.com.";
+			return t('engineShared.gateway.teamBudget');
 		default:
-			return "You've used up your AI budget for this period. Upgrade or manage your plan at snoutdata.com to keep using the assistant, or wait for it to reset.";
+			return t('engineShared.gateway.userBudget');
 	}
 }

@@ -1,0 +1,209 @@
+{
+	"aiTranslate": {
+		"title": "Translate with {assistant}?",
+		"detail": "{assistant} can turn this query into a MongoDB pipeline, which uses your AI budget. Or write it directly in the Pipeline tab.",
+		"always": "Always translate with {assistant} (don't ask again)",
+		"cancel": "Cancel",
+		"confirm": "Translate with {assistant}"
+	},
+	"attach": {
+		"excerpt": "excerpt · {sent} of {total} chars",
+		"chars": "{total} chars",
+		"excerptTitle": "{name} (only an excerpt, {coverage}, was sent to the assistant)",
+		"remove": "Remove"
+	},
+	"ago": {
+		"seconds": "{n}s ago",
+		"minutes": "{n}m ago",
+		"hours": "{n}h ago",
+		"days": "{n}d ago"
+	},
+	"history": {
+		"title": "Chat history",
+		"clearAll": "Clear all",
+		"close": "Close",
+		"search": "Search title, connection, or message text…",
+		"matches": {
+			"one": "{count} match",
+			"other": "{count} matches"
+		},
+		"empty": "No saved chats yet.",
+		"noMatch": "No chats match the filter.",
+		"untitled": "Untitled chat",
+		"messages": "{count} msgs",
+		"tokens": "{count} tok",
+		"delete": "Delete",
+		"deleteOneTitle": "Delete this chat?",
+		"deleteBody": "This cannot be undone.",
+		"deleteAllTitle": "Delete all chat history?",
+		"deleteAllBody": {
+			"one": "All {count} saved chat will be removed. This cannot be undone.",
+			"other": "All {count} saved chats will be removed. This cannot be undone."
+		},
+		"deleteAll": "Delete all",
+		"prev": "Prev",
+		"next": "Next",
+		"range": "{start}-{end} of {total}"
+	},
+	"knowledge": {
+		"title": "What I know about “{name}”",
+		"close": "Close",
+		"loading": "Loading…",
+		"suggested": "Suggested from your chat",
+		"rememberThis": "Remember this",
+		"remember": "Remember",
+		"dismiss": "Dismiss",
+		"on": "On, I use this",
+		"off": "Off, kept but not used",
+		"everyDatabase": "every database",
+		"delete": "Delete",
+		"placeholder": "Teach it something about this database…",
+		"everywhereTitle": "Apply this to every connection, not just this one",
+		"everywhere": "Applies to every database",
+		"teach": "Teach it",
+		"emptyHint": "Nothing yet. Teach me a fact about this database (like “sales live in `customer_order`, `fulfilled_date` is the sale date”) and I'll remember it so you don't have to repeat it."
+	},
+	"model": {
+		"choose": "Choose the chat model",
+		"none": "no models",
+		"reasoningTitle": "Reasoning (thinking) model",
+		"empty": "No models. Set one in AI settings.",
+		"recommended": "Recommended",
+		"reasoning": "Reasoning model",
+		"contextM": "{n}M context",
+		"contextK": "{n}K context",
+		"yourKey": "Your key",
+		"usesMore": "Uses more of your balance",
+		"uses": "Uses your balance",
+		"included": "Included"
+	},
+	"releaseNotes": {
+		"empty": "No release notes are available for this version.",
+		"showAfterUpdate": "Show release notes after an update",
+		"date": "Release date: {date}",
+		"whatsNew": "What's new",
+		"whatsNewHead": "WHAT'S NEW"
+	},
+	"workspace": {
+		"title": "WORKSPACE",
+		"newFile": "New file",
+		"import": "Import files (this computer or DBeaver)",
+		"refresh": "Refresh",
+		"collapse": "Collapse",
+		"rootTitle": "{root}\n(click to change the workspace folder)",
+		"search": "Search files and contents",
+		"clear": "Clear",
+		"noMatch": "No matching files.",
+		"empty": "No SQL files in this workspace yet.",
+		"matches": "Matches in file contents",
+		"rename": "Rename",
+		"delete": "Delete",
+		"confirmDelete": "Delete {name}?",
+		"cancel": "Cancel"
+	},
+	"panel": {
+		"projectAi": "{name}: the project's own AI",
+		"askAbout": "Ask {assistant} about {name}…",
+		"askAnything": "Ask {assistant} anything…  (⏎ send · ⇧⏎ newline)",
+		"hintConnected": "Ask for SQL grounded in “{name}”'s schema.",
+		"hintNotConnected": "“{name}” isn't connected. Connect it for schema-aware answers, or ask a general SQL question.",
+		"hintNoConnections": "No connections yet. Add one in the Connections panel to get schema-aware answers. You can still ask general SQL questions.",
+		"hintChooseBelow": "Choose a connection below to ground answers in its schema, or ask a general SQL question.",
+		"hintChooseAbove": "Select a connection above the editor to ground answers in its schema, or ask a general SQL question.",
+		"thisConnection": "this connection",
+		"theDatabase": "the database",
+		"connectFailed": "Couldn't connect to \"{name}\". Check the connection settings and try again, or continue without a connection.",
+		"you": "You",
+		"copied": "Copied",
+		"copyReply": "Copy this reply",
+		"collapse": "Collapse",
+		"sees": "{assistant} sees the {context} you have open.",
+		"knows": "What I know about this database",
+		"newChat": "New chat",
+		"chatHistory": "Chat history",
+		"aiSettings": "AI settings",
+		"exitFull": "Exit full screen",
+		"full": "Full screen",
+		"restoring": "Restoring your account",
+		"dismiss": "Dismiss"
+	},
+	"busy": {
+		"approval": "Waiting for your approval…",
+		"query": "Running query…",
+		"tables": "Listing tables…",
+		"reading": "Reading {name}…",
+		"readingTable": "Reading table…",
+		"columns": "Searching columns…",
+		"working": "Working…",
+		"planning": "Planning next moves…"
+	},
+	"signin": {
+		"heldTitle": "Sign in and {assistant} will take it from here",
+		"heldBody": "It is ready to look at this for you. Sign in and it starts right away.",
+		"title": "{assistant}, one assistant for your data and the Studio",
+		"body": "Sign in to have it write SQL, find answers in your databases, and set up connections, monitors, data flows and settings for you.",
+		"signIn": "Sign in",
+		"notNow": "Not now"
+	},
+	"perf": {
+		"title": "This chat is dedicated to optimizing one statement. Start a new chat for anything else.",
+		"heading": "Query optimization",
+		"body": "Tuned for this one statement. Start a new chat for other questions."
+	},
+	"dataAccess": {
+		"title": "What may the AI see of your data?",
+		"body": "The less it sees, the more generic its answers about your data.",
+		"saved": "Saved. You can change it anytime in AI settings.",
+		"openSettings": "Open settings"
+	},
+	"planHint": {
+		"body": "You're on the free plan, which has a monthly AI allowance. Paid plans have more, across every model.",
+		"view": "View plans"
+	},
+	"remember": {
+		"title": "Want me to remember this?",
+		"body": "I'll keep this in mind for “{name}” so I get it right next time.",
+		"remember": "Remember"
+	},
+	"connect": {
+		"title": "Connect to “{name}”?",
+		"body": "It isn't connected. Connect so the assistant can read its schema and run read-only queries for an accurate, data-backed answer, or continue without a connection (general answers only, no live data).",
+		"connect": "Connect",
+		"continueWithout": "Continue without"
+	},
+	"approval": {
+		"runQuery": "The assistant wants to run a query",
+		"run": "Run",
+		"alwaysTitle": "Stop asking before running read-only queries on {name}",
+		"always": "Always allow {name}",
+		"skip": "Skip",
+		"wantsTo": "The assistant wants to {action}",
+		"performAction": "perform an action",
+		"allow": "Allow"
+	},
+	"error": {
+		"retryManaged": "Retry on managed credits",
+		"managePlan": "Manage plan",
+		"openAiSettings": "Open AI settings"
+	},
+	"tokens": {
+		"title": "Tokens used in this chat (prompt + completion)",
+		"total": "{tokens} tokens",
+		"inOut": "{input} in · {output} out"
+	},
+	"composer": {
+		"noConnections": "No connections",
+		"chooseConnection": "Choose a connection",
+		"groundsOn": "Connection {assistant} grounds on",
+		"attachOffPerf": "Attachments are off in a query optimization chat. Start a new chat to attach a document.",
+		"attach": "Attach a document (txt, md, csv, json; PDF and Word on Windows and macOS) as context",
+		"stop": "Stop",
+		"send": "Send (Enter)"
+	},
+	"markdown": {
+		"altFrom": "{name} not loaded, from {where}",
+		"imageFrom": "Image not loaded, from {where}",
+		"alt": "{name} not loaded",
+		"image": "Image not loaded"
+	}
+}

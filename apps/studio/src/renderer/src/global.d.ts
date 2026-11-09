@@ -362,6 +362,8 @@ export interface SqlApi {
 	 *  application menu as data to draw, and the menu items only main can perform. */
 	setWindowChrome(color: string, symbolColor: string): Promise<void>;
 	menuModel(): Promise<AppMenu[]>;
+	languageState(): import('../../shared/i18n/core').LanguageState;
+	setLanguagePreference(preference: import('../../shared/i18n/core').LanguagePreference): Promise<import('../../shared/i18n/core').LanguageState>;
 	menuRole(role: string): Promise<void>;
 	appMemory(): Promise<{ bytes: number }>;
 	openExternal(url: string): Promise<void>;

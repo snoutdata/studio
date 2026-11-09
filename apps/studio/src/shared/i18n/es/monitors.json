@@ -1,0 +1,64 @@
+{
+	"advisory": {
+		"performance": "Consejos de rendimiento",
+		"notes": "Notas de la consulta",
+		"askTitle": "Pedir a {assistant} que sugiera un índice o una reescritura",
+		"askFix": "Pedir a {assistant} que lo arregle",
+		"dismiss": "Descartar"
+	},
+	"newMonitor": "Nuevo monitor",
+	"renameHint": "Doble clic para renombrar",
+	"addWidget": "Añadir widget",
+	"deleteConfirm": "¿Eliminar \"{name}\"?",
+	"delete": "Eliminar",
+	"cancel": "Cancelar",
+	"deleteMonitor": "Eliminar monitor",
+	"close": "Cerrar",
+	"emptyTitle": "Aún no hay monitores",
+	"emptyBody": "Un monitor es un conjunto de widgets SQL en vivo, consultados a intervalos y representados en el tiempo.",
+	"monitorEmpty": "{name} está vacío",
+	"monitorEmptyBody": "Añade un widget: una consulta SQL que se lanza cada pocos segundos y se representa. Una tendencia muestrea un número en el tiempo; una instantánea relanza una consulta y reemplaza el gráfico.",
+	"qp": {
+		"rank": {
+			"time": "Tiempo total",
+			"read": "Datos leídos",
+			"memory": "Pico de memoria"
+		},
+		"selectToAnalyze": "Selecciona una conexión en la barra lateral para analizar",
+		"theDatabase": "la base de datos",
+		"connectToCollect": "Conecta \"{name}\" para recopilar su carga de trabajo",
+		"thisDatabaseCap": "Esta base de datos",
+		"noStats": "{name} no expone estadísticas de consultas en ejecución",
+		"collectTitle": "Recopilar las sentencias más pesadas",
+		"title": "Rendimiento de consultas",
+		"subtitle": {
+			"time": "sentencias más pesadas por tiempo total, en un momento dado",
+			"read": "sentencias más pesadas por datos leídos, en un momento dado",
+			"memory": "sentencias más pesadas por pico de memoria, en un momento dado"
+		},
+		"collecting": "Recopilando…",
+		"collect": "Recopilar datos",
+		"selectDatabase": "Selecciona una base de datos en la barra lateral de conexiones, conéctala y haz clic en \"Recopilar datos\" para ver sus consultas más pesadas.",
+		"noStatsLong": "{name} no expone estadísticas de consultas en ejecución, así que no hay carga de trabajo que analizar.",
+		"collectingLong": "Recopilando las sentencias más pesadas…",
+		"thisDatabase": "esta base de datos",
+		"connectSidebar": "Conecta \"{name}\" en la barra lateral para recopilar sus consultas más pesadas.",
+		"clickCollect": "Haz clic en \"Recopilar datos\" arriba para cargar las consultas más pesadas de {name}.",
+		"noStatements": "Aún no hay sentencias registradas. Ejecuta algunas consultas en esta base de datos y vuelve a recopilar.",
+		"analyzeWith": "Analizar esta sentencia con {assistant}",
+		"suggestWith": "Sugerir una optimización con {assistant}",
+		"statements": {
+			"one": "{count} sentencia",
+			"other": "{count} sentencias"
+		},
+		"allReplicas": "en las {n} réplicas",
+		"oneReplica": "solo 1 de {n} réplicas",
+		"rankBy": "Ordenar por",
+		"top": "Top",
+		"formatQuery": "Formatear consulta",
+		"hintMysqlDenied": "Hace falta SELECT en performance_schema. Pídeselo a un DBA (p. ej. GRANT SELECT ON performance_schema.* TO your_user) y vuelve a recopilar.",
+		"hintMysqlMissing": "performance_schema parece desactivado en este servidor. Actívalo (performance_schema=ON) para ver la carga de trabajo.",
+		"hintPgMissing": "Hace falta la extensión pg_stat_statements. Ejecuta CREATE EXTENSION pg_stat_statements (y añádela a shared_preload_libraries + reinicio) y vuelve a recopilar.",
+		"hintDenied": "Leer las estadísticas de consultas de esta base de datos requiere privilegios adicionales (p. ej. VIEW SERVER STATE en SQL Server, SELECT ANY DICTIONARY en Oracle o MONITOR en Snowflake). Concede el acceso y vuelve a recopilar."
+	}
+}

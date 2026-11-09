@@ -3,6 +3,8 @@
  *  Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { t } from './i18n/core';
+
 /*---------------------------------------------------------------------------------------------
  *  A COMPOSITE CELL: what a value with structure inside it looks like, as a tree.
  *
@@ -91,10 +93,10 @@ export function summarize(value: unknown): string | undefined {
 		return undefined;
 	}
 	if (Array.isArray(parsed)) {
-		return parsed.length === 1 ? "1 item" : `${parsed.length} items`;
+		return t('engineShared.cell.items', { count: parsed.length });
 	}
 	const keys = Object.keys(parsed).length;
-	return keys === 1 ? "1 key" : `${keys} keys`;
+	return t('engineShared.cell.keys', { count: keys });
 }
 
 /** A value as an array or a plain object, parsing a JSON string, or undefined when it is neither. */

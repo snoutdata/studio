@@ -5,6 +5,7 @@
 
 import type { UpdateStatus } from '../../../shared/update';
 import { Icon } from './Icon';
+import { useI18n, type Translate } from '../i18n';
 
 interface UpdateRequiredSheetProps {
 	minimum: string;
@@ -23,6 +24,7 @@ interface UpdateRequiredSheetProps {
  * user's fault. There is no dismiss, only the way forward, which is the app's own updater, and Quit.
  */
 export function UpdateRequiredSheet(props: UpdateRequiredSheetProps): JSX.Element {
+	const { t, tr } = useI18n();
 	const linux = /linux/i.test(navigator.platform || navigator.userAgent);
 	const { update } = props;
 	return (
@@ -30,61 +32,59 @@ export function UpdateRequiredSheet(props: UpdateRequiredSheetProps): JSX.Elemen
 			<div className="modal confirm" role="alertdialog" aria-modal="true" aria-labelledby="update-required-title">
 				<h2 id="update-required-title">
 					<Icon name="cloud-download" />
-					Update required
+					{t('shell.updateRequired.title')}
 				</h2>
 				<p className="confirm-detail">
-					This version of SnoutData Studio (v{props.current}) is no longer supported. Version v{props.minimum} or
-					newer is needed to keep signing in, syncing and using the assistant.
+					{t('shell.updateRequired.body', { current: props.current, minimum: props.minimum })}
 				</p>
 				{linux ? (
 					<p className="confirm-detail">
-						Update SnoutData Studio with your package manager (for example <code>sudo apt upgrade</code>), then
-						start it again.
+						{tr('shell.updateRequired.linux')}
 					</p>
 				) : (
-					<p className="confirm-detail update-required-status" role="status">{statusText(update)}</p>
+					<p className="confirm-detail update-required-status" role="status">{statusText(update, t)}</p>
 				)}
 				<div className="modal-actions">
-					<button type="button" className="secondary" onClick={props.onDownloadPage}><Icon name="link-external" /> Download Page</button>
+					<button type="button" className="secondary" onClick={props.onDownloadPage}><Icon name="link-external" /> {t('shell.updateRequired.downloadPage')}</button>
 					<span className="spacer" />
-					<button type="button" className="secondary" onClick={props.onQuit}><Icon name="sign-out" /> Quit</button>
-					{!linux && primary(update, props)}
+					<button type="button" className="secondary" onClick={props.onQuit}><Icon name="sign-out" /> {t('shell.common.quit')}</button>
+					{!linux && primary(update, props, t)}
 				</div>
 			</div>
 		</div>
 	);
 }
 
-function primary(update: UpdateStatus | null, props: UpdateRequiredSheetProps): JSX.Element {
+function primary(update: UpdateStatus | null, props: UpdateRequiredSheetProps, t: Translate): JSX.Element {
 	if (update?.state === 'downloaded') {
-		return <button type="button" onClick={props.onInstall} autoFocus><Icon name="debug-restart" /> Restart and Update</button>;
+		return <button type="button" onClick={props.onInstall} autoFocus><Icon name="debug-restart" /> {t('shell.updateRequired.restartUpdate')}</button>;
 	}
 	const busy = update?.state === 'checking' || update?.state === 'available' || update?.state === 'downloading';
 	return (
 		<button type="button" onClick={props.onCheck} disabled={busy} autoFocus><Icon name="cloud-download" /> 
-			{busy ? "Updating…" : "Get the Update"}
+			{t(busy ? 'shell.updateRequired.updating' : 'shell.updateRequired.getUpdate')}
 		</button>
 	);
 }
 
-function statusText(update: UpdateStatus | null): string {
+function statusText(update: UpdateStatus | null, t: Translate): string {
 	switch (update?.state) {
 		case undefined:
-			return "Get the update to continue.";
+			return t('shell.updateRequired.statusStart');
 		case 'checking':
-			return "Looking for the latest version…";
+			return t('shell.updateRequired.statusChecking');
 		case 'available':
-			return `Found v${update.version}. Downloading it now.`;
+			return t('shell.updateRequired.statusAvailable', { version: update.version });
 		case 'downloading':
 			if (update.preparing) {
-				return "Getting the update ready.";
+				return t('shell.updateRequired.statusPreparing');
 			}
-			return update.percent !== undefined ? `Downloading the update (${update.percent}%).` : "Downloading the update.";
+			return update.percent !== undefined ? t('shell.updateRequired.statusDownloadingPercent', { percent: update.percent }) : t('shell.updateRequired.statusDownloading');
 		case 'downloaded':
-			return `v${update.version} is ready. Restart to finish updating.`;
+			return t('shell.updateRequired.statusDownloaded', { version: update.version });
 		case 'not-available':
-			return "No newer version was found from here. Try again, or get it from the download page.";
+			return t('shell.updateRequired.statusNotAvailable');
 		case 'error':
-			return `The update could not be fetched: ${update.message}`;
+			return t('shell.updateRequired.statusError', { message: update.message });
 	}
 }

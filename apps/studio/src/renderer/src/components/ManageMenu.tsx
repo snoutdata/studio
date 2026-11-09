@@ -6,6 +6,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Icon } from './Icon';
+import { useT } from '../i18n';
 import { THEMES, type Theme } from '../theme';
 import type { ActivityBarPosition } from '../appSettings';
 
@@ -32,6 +33,7 @@ interface Anchor {
  * their own submenus) instead of piling up as standalone activity-bar icons.
  */
 export function ManageMenu(props: ManageMenuProps): JSX.Element {
+	const t = useT();
 	const [open, setOpen] = useState(false);
 	const [submenu, setSubmenu] = useState<string | null>(null);
 	const [anchor, setAnchor] = useState<Anchor | null>(null);
@@ -62,8 +64,8 @@ export function ManageMenu(props: ManageMenuProps): JSX.Element {
 			return;
 		}
 		function onDown(e: MouseEvent): void {
-			const t = e.target as Node;
-			if (!btnRef.current?.contains(t) && !menuRef.current?.contains(t)) {
+			const target = e.target as Node;
+			if (!btnRef.current?.contains(target) && !menuRef.current?.contains(target)) {
 				setOpen(false);
 			}
 		}
@@ -138,7 +140,7 @@ export function ManageMenu(props: ManageMenuProps): JSX.Element {
 			<button
 				ref={btnRef}
 				className={`activity-item${open ? ' active' : ''}`}
-				aria-label="Manage"
+				aria-label={t('shell.manage.label')}
 				aria-haspopup="menu"
 				aria-expanded={open}
 				onClick={toggle}
@@ -154,22 +156,22 @@ export function ManageMenu(props: ManageMenuProps): JSX.Element {
 						onMouseEnter={() => setSubmenu('theme')}
 						onClick={() => setSubmenu('theme')}
 					>
-						<span className="ctx-label"><Icon name="paintcan" /> Color Theme</span>
+						<span className="ctx-label"><Icon name="paintcan" /> {t('shell.manage.colorTheme')}</span>
 						<Icon name="chevron-right" />
 						{submenu === 'theme' && (
 							<div ref={submenuRef} className={`ctx-menu submenu submenu-${submenuSide}`} role="menu" style={{ top: submenuTop ?? undefined, visibility: submenuTop === null ? 'hidden' : undefined }}>
-								{THEMES.map((t) => (
+								{THEMES.map((theme) => (
 									<button
 										type="button"
 										role="menuitemradio"
-										aria-checked={t.id === props.theme}
-										key={t.id}
+										aria-checked={theme.id === props.theme}
+										key={theme.id}
 										className="ctx-menu-item"
-										onClick={() => chooseTheme(t.id)}
+										onClick={() => chooseTheme(theme.id)}
 									>
 										<span className="ctx-label">
-											<span className="ctx-check">{t.id === props.theme && <Icon name="check" />}</span>
-											{t.label}
+											<span className="ctx-check">{theme.id === props.theme && <Icon name="check" />}</span>
+											{theme.label}
 										</span>
 									</button>
 								))}
@@ -183,7 +185,7 @@ export function ManageMenu(props: ManageMenuProps): JSX.Element {
 						onMouseEnter={() => setSubmenu(null)}
 						onClick={openSettings}
 					>
-						<span className="ctx-label"><Icon name="settings-gear" /> Settings</span>
+						<span className="ctx-label"><Icon name="settings-gear" /> {t('shell.manage.settings')}</span>
 					</button>
 				</div>,
 				document.body,

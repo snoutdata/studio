@@ -1,0 +1,41 @@
+{
+	"noVault": {
+		"title": "Contraseñas guardadas sin almacén de contraseñas",
+		"detail": "Este equipo no tiene un almacén de contraseñas (keyring), así que Studio guarda tus contraseñas de bases de datos en un archivo que solo tu cuenta de usuario puede leer. Cualquiera que use tu cuenta podría leerlas. Para guardarlas en un almacén, instala uno, como GNOME Keyring, y reinicia Studio."
+	},
+	"signInFailed": "Error al iniciar sesión",
+	"connectionFailed": "Error de conexión",
+	"applyFailed": "Error al aplicar los cambios",
+	"exportFailed": "Error al exportar",
+	"serverNoReason": "El servidor no dijo por qué.",
+	"queryFailed": "Error en la consulta",
+	"reconnectFailed": "Error al reconectar",
+	"countFailed": "Error al contar",
+	"fetchMoreFailed": "Error al cargar más filas",
+	"fetchMoreColumns": "Las filas siguientes llegaron con otras columnas, así que no se agregaron. Vuelve a ejecutar la consulta.",
+	"from": "De {name}",
+	"ask": "Preguntar a {assistant}",
+	"askTitle": "Preguntar a {assistant} sobre esto",
+	"viewAll": "Ver todas",
+	"center": {
+		"title": "Notificaciones",
+		"clearAll": "Borrar todas",
+		"clearAllTooltip": "Borrar todas las notificaciones",
+		"clearAllTitle": "¿Borrar todas las notificaciones?",
+		"clearAllBody": {
+			"one": "Se eliminará la notificación. Esta acción no se puede deshacer.",
+			"other": "Se eliminarán las {count} notificaciones. Esta acción no se puede deshacer."
+		},
+		"deleteTitle": "¿Eliminar esta notificación?",
+		"deleteBody": "Esta acción no se puede deshacer.",
+		"empty": "No hay notificaciones. Aquí aparecerán los errores y los eventos destacados.",
+		"secondsAgo": "hace {count} s",
+		"minutesAgo": "hace {count} min",
+		"hoursAgo": "hace {count} h",
+		"daysAgo": "hace {count} d",
+		"less": "Menos",
+		"details": "Detalles",
+		"prev": "Anterior",
+		"range": "{start}-{end} de {total}"
+	}
+}

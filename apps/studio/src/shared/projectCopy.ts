@@ -26,6 +26,7 @@
 import type { MoveSpec } from '@snout/move';
 import type { MoveCheck } from './move';
 import type { ProjectTarget } from './projects';
+import { t } from './i18n/core';
 
 export type ProjectCopyPart = 'users' | 'database' | 'files' | 'functions' | 'secrets';
 
@@ -33,11 +34,11 @@ export type ProjectCopyPart = 'users' | 'database' | 'files' | 'functions' | 'se
 export const PROJECT_COPY_PARTS: readonly ProjectCopyPart[] = ['users', 'database', 'files', 'functions', 'secrets'];
 
 export const PART_TITLE: Record<ProjectCopyPart, string> = {
-	users: "Users",
-	database: "Database",
-	files: "Files",
-	functions: "Functions",
-	secrets: "Function secrets",
+	get users() { return t('engineShared.copy.partUsers'); },
+	get database() { return t('engineShared.copy.partDatabase'); },
+	get files() { return t('engineShared.copy.partFiles'); },
+	get functions() { return t('engineShared.copy.partFunctions'); },
+	get secrets() { return t('engineShared.copy.partSecrets'); },
 };
 
 /** Where a copy goes: a project that exists, or a cloud project made when the copy starts. */
@@ -112,13 +113,13 @@ export type ProjectCopyStartOutcome = { readonly ok: true } | { readonly ok: fal
 /** Why a part cannot be copied between these two kinds of project, or null when it can. */
 export function partUnavailable(part: ProjectCopyPart, source: ProjectTarget['kind'], target: ProjectTarget['kind']): string | null {
 	if (source === target) {
-		return "A copy goes between this computer and SnoutData Cloud.";
+		return t('engineShared.copy.betweenOnly');
 	}
 	if (part === 'functions' && source === 'cloud') {
-		return "SnoutData Cloud does not give a function's source back. Put your functions in the local project's functions folder from your own copy.";
+		return t('engineShared.copy.noFunctions');
 	}
 	if (part === 'secrets' && source === 'cloud') {
-		return "SnoutData Cloud never shows a secret's value, so there is nothing to copy. Set them in the local project's Functions section.";
+		return t('engineShared.copy.noSecrets');
 	}
 	return null;
 }
@@ -126,9 +127,9 @@ export function partUnavailable(part: ProjectCopyPart, source: ProjectTarget['ki
 /** What a copy never takes, in the review's words. */
 export function notCopied(source: ProjectTarget['kind']): string[] {
 	return [
-		"The API keys and the database password: each project has its own. Point your app at the new project's URL and app key.",
-		"Sign-in settings (Google, GitHub, the mail server, redirect addresses, email templates). Set them on the new project.",
-		...(source === 'cloud' ? ["Functions and their secrets: SnoutData Cloud does not give them back."] : []),
+		t('engineShared.copy.notKeys'),
+		t('engineShared.copy.notSignIn'),
+		...(source === 'cloud' ? [t('engineShared.copy.notFunctions')] : []),
 	];
 }
 

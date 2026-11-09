@@ -1,0 +1,31 @@
+{
+	"replicaTaking": "Its replica is taking its place",
+	"replicaFailed": "Its replica could not take its place",
+	"routerDown": "Not answering",
+	"routerStarting": "Starting",
+	"routerPaused": "Paused, wakes on the next connection",
+	"routerOk": "Sends every query",
+	"router": "Router",
+	"serves": "Serves its share",
+	"serverStarting": "Its server is starting",
+	"joinStopped": "Its join stopped",
+	"draining": "Moving its data out",
+	"holdsHome": "Holds tables not spread",
+	"home": "Home",
+	"node": "Node {id}",
+	"queries": "queries",
+	"newNode": "New node",
+	"replica": "Replica",
+	"follows": "Follows it, takes its place if it is lost",
+	"fromBackup": "Being made from its backup",
+	"replicaLine": "replica",
+	"jobWaiting": "Job {id} ({op}) is waiting to start: {done} of {steps} steps. Writes to a range pause for a moment when it moves.",
+	"jobState": "Job {id} ({op}) is {state}: {done} of {steps} steps. Writes to a range pause for a moment when it moves.",
+	"sentenceRouterDown": "The router is not answering, so queries are not reaching the cluster nodes.",
+	"sentenceJoining": "A node is joining. It starts as a copy of the home node and takes its share of the data once it has joined.",
+	"sentenceHomeOnly": "Every row is on the home node. Spread a table to put its rows on the cluster nodes.",
+	"sentenceServing": {
+		"one": "The router sends each query to the home node or to the node holding its rows.",
+		"other": "The router sends each query to the home node or to the {count} nodes holding its rows."
+	}
+}

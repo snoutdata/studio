@@ -7,6 +7,7 @@ import type { ConnectionConfig, SshTunnelProfile } from './connection';
 import { dialectFor, flavorFor } from './engine';
 import type { SslMode } from './forms';
 import { maskUriPasswords } from './connectionUri';
+import { t } from './i18n/core';
 
 /*
  * WHERE a saved connection sends its credentials, and whether an edit moved it.
@@ -217,9 +218,24 @@ export const DESTINATION_CHANGE_NOTE = 'This changes where the connection goes o
 export function editConnectionApproval(existing: ConnectionConfig, args: Record<string, unknown>): string {
 	const changes = describeConnectionEdit(existing, args);
 	const list = changes.length > 0 ? ` (${changes.map(formatChange).join('; ')})` : '';
-	const moves = changes.some((change) => change.destination) ? `. ${DESTINATION_CHANGE_NOTE}` : '';
-	const safety = changes.some((change) => change.safety) ? `. ${SAFETY_CHANGE_NOTE}` : '';
-	return `edit connection "${existing.label}"${list}${moves}${safety}`;
+	const moves = changes.some((change) => change.destination) ? `. ${destinationChangeNote()}` : '';
+	const safety = changes.some((change) => change.safety) ? `. ${safetyChangeNote()}` : '';
+	return t('engineShared.approval.editConnection', { name: existing.label, list, moves, safety });
+}
+
+/** {@link SAFETY_CHANGE_NOTE} for the card a person reads; the constant stays English for the model. */
+export function safetyChangeNote(): string {
+	return t('engineShared.approval.safetyNote');
+}
+
+/** {@link DESTINATION_CHANGE_NOTE} for the card a person reads; the constant stays English for the model. */
+export function destinationChangeNote(): string {
+	return t('engineShared.approval.destinationNote');
+}
+
+/** {@link TUNNEL_MOVE_NOTE} for the card a person reads; the constant stays English for the model. */
+export function tunnelMoveNote(): string {
+	return t('engineShared.approval.tunnelMoveNote');
 }
 
 /**
@@ -282,8 +298,8 @@ export const TUNNEL_MOVE_NOTE = 'This points the tunnel at a different SSH serve
 export function editTunnelApproval(existing: SshTunnelProfile, args: Record<string, unknown>): string {
 	const changes = describeTunnelEdit(existing, args);
 	const list = changes.length > 0 ? ` (${changes.map(formatChange).join('; ')})` : '';
-	const moves = changes.some((change) => change.destination) ? `. ${TUNNEL_MOVE_NOTE}` : '';
-	return `edit tunnel "${existing.name}"${list}${moves}`;
+	const moves = changes.some((change) => change.destination) ? `. ${tunnelMoveNote()}` : '';
+	return t('engineShared.approval.editTunnel', { name: existing.name, list, moves });
 }
 
 /** The drivers whose "destination" is a file on this computer (its path rides in `database`). */
@@ -322,6 +338,6 @@ export function describeTestDestination(args: Record<string, unknown>): string[]
 /** What an approval card for testing new settings says before anyone answers. */
 export function testDestinationNote(args: Record<string, unknown>): string {
 	return isFileDriver(typeof args.driver === 'string' ? args.driver.trim() : '')
-		? 'This opens that file on this computer, read-only, if it exists. A test never creates a file.'
-		: 'This connects to an address that is not one of your saved connections and sends it the username and password above. Allow it only if you recognise the address.';
+		? t('engineShared.approval.testFileNote')
+		: t('engineShared.approval.testAddressNote');
 }

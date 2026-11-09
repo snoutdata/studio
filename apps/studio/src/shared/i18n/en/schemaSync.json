@@ -1,0 +1,106 @@
+{
+	"class": {
+		"add": "Add",
+		"alter": "Modify",
+		"drop": "Delete"
+	},
+	"confirm": {
+		"target": "target",
+		"title": {
+			"one": "Apply {count} statement to {target}?",
+			"other": "Apply {count} statements to {target}?"
+		},
+		"apply": "Apply",
+		"changes": "This changes",
+		"including": ", including",
+		"destructive": {
+			"one": "{count} destructive change",
+			"other": "{count} destructive changes"
+		},
+		"canLose": "that can lose data",
+		"transactional": "It runs in a single transaction (all-or-nothing).",
+		"oneByOne": "Statements apply one by one; a failure can be fixed and resumed."
+	},
+	"title": "Schema Sync",
+	"pick": {
+		"heading": "Sync a database schema",
+		"intro": "The **source** defines the desired schema; the **target** is changed to match it. Both must be connected and use the same database type.",
+		"needTwo": "Connect at least two databases of the same type to sync.",
+		"source": "Source (desired state)",
+		"selectConnection": "Select a connection…",
+		"target": "Target (gets changed)",
+		"readOnlyTarget": "(read-only, cannot be changed)",
+		"comparing": "Comparing…",
+		"compare": "Compare schemas"
+	},
+	"inSync": "In sync",
+	"inSyncBody": "The target already matches the source. No changes needed.",
+	"chooseOther": "Choose different databases",
+	"close": "Close",
+	"chip": {
+		"dropTitle": "Deletes objects that exist only on the target. Hide it to sync additively, never removing anything.",
+		"toggle": {
+			"add": "Show or hide Add changes",
+			"alter": "Show or hide Modify changes",
+			"drop": "Show or hide Delete changes"
+		},
+		"noKeys": "No key, index or foreign-key changes in this diff.",
+		"keysTitle": "Keys, indexes and foreign keys can fail to apply when the target has duplicate or orphaned rows (a data issue, not a schema one). Hide them to sync the rest, then add them once the data is clean.",
+		"keys": "Keys & indexes"
+	},
+	"selected": {
+		"one": "{count} selected",
+		"other": "{count} selected"
+	},
+	"unselectAll": "Unselect all",
+	"selectAll": "Select all",
+	"filter": "Filter changes…",
+	"clearFilter": "Clear filter",
+	"applied": {
+		"one": "Applied {count} statement.",
+		"other": "Applied {count} statements."
+	},
+	"stillDiffer": {
+		"one": "{count} change still differ.",
+		"other": "{count} changes still differ."
+	},
+	"additive": "Additive sync: nothing will be removed from the target.",
+	"noMatch": "No changes match \"{query}\".",
+	"cardTitle": "Click to include or exclude, shift-click to select a range",
+	"canLoseData": "Can lose data",
+	"migrationSql": "Migration SQL",
+	"statements": {
+		"one": "{count} statement",
+		"other": "{count} statements"
+	},
+	"copyScript": "Copy full script",
+	"back": "Back",
+	"selectedOf": "{n} of {total} selected",
+	"destructiveCount": {
+		"one": "{count} destructive",
+		"other": "{count} destructive"
+	},
+	"applyProd": "Apply to PRODUCTION",
+	"applyBtn": "Apply",
+	"applying": "Applying migration…",
+	"runningAgainst": "Running against {name}.",
+	"statementFailed": "Statement {n} of {total} failed",
+	"migrationStopped": "Migration stopped",
+	"rolledBack": "transaction rolled back",
+	"correctedStatement": "Corrected statement",
+	"editRetry": "edit, then Retry",
+	"sentTo": "Sent to {assistant}. Read its fix in the chat, paste the corrected statement above, then Retry.",
+	"stoppedBody": "The migration stopped before a single statement could be pinpointed. Go back to the changes, or recompute the diff against the live database.",
+	"askFix": "Ask {assistant} to fix",
+	"resyncTitle": "Re-introspect the target and rebuild the diff (use after fixing the cause, e.g. clearing duplicate rows).",
+	"resync": "Resync",
+	"backToChanges": "Back to changes",
+	"stop": "Stop",
+	"retry": "Retry",
+	"applied2": "Migration applied",
+	"appliedBody": {
+		"one": "Applied {count} statement to {target}. The databases are in sync.",
+		"other": "Applied {count} statements to {target}. The databases are in sync."
+	},
+	"done": "Done"
+}

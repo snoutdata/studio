@@ -10,8 +10,9 @@ import { telemetryServiceFor } from '../../../shared/cloud';
 import type { CloudAccountView } from '../../../shared/cloud';
 import { DEFAULT_POOL_MAX, MAX_POOL_MAX, MIN_POOL_MAX } from '../../../shared/connection';
 import { destinationChanges, sslSettingOf, tunnelEndpoint, type ConnectionDestination } from '../../../shared/connectionDestination';
-import { backendKindForDriver, DATA_ACCESS_INFO, DATA_ACCESS_LEVELS, dialectFor, flavorFor, listDialects, listFlavors, readOnlyEnforcementFor, type DataAccessLevel } from '../../../shared/engine';
+import { backendKindForDriver, DATA_ACCESS_LEVELS, dataAccessText, dialectFor, flavorFor, listDialects, listFlavors, readOnlyEnforcementText, type DataAccessLevel } from '../../../shared/engine';
 import type { ConnectionFormValues, ImportItem, ImportSourceId, SslMode } from '../../../shared/forms';
+import { useT } from '../i18n';
 import { Icon } from './Icon';
 import { IconSelect, type IconSelectOption } from './IconSelect';
 import { driverKind, DRIVER_KINDS } from '../driverKind';
@@ -75,7 +76,8 @@ interface ConnectionFormProps {
  * Manager and the SSH tunnel each live on their own tab to keep the form compact.
  */
 export function ConnectionForm({ existing, initialDraft, onClose, onSaved, onImport }: ConnectionFormProps): JSX.Element {
-	const isEdit = existing !== undefined;
+	const t = useT();
+const isEdit = existing !== undefined;
 	const ssh0 = existing?.sshTunnel;
 	// In create mode, an AI-proposed (or otherwise prefilled) draft seeds the non-secret fields.
 	const d = isEdit ? undefined : initialDraft;
@@ -243,8 +245,8 @@ export function ConnectionForm({ existing, initialDraft, onClose, onSaved, onImp
 				}
 				const pick = usable[found.findIndex((f) => !f.tentative && `tip:found:${f.where}:${f.port}` === move.topic)] ?? usable[0];
 				libyCall({ ...move, action: pick.item.importsPassword
-					? { label: "Add it", run: () => void addFound(pick.source, pick.item) }
-					: { label: "Fill it in", run: () => fillFrom(pick.item) } });
+					? { label: t('connections.form.addIt'), run: () => void addFound(pick.source, pick.item) }
+					: { label: t('connections.form.fillIt'), run: () => fillFrom(pick.item) } });
 			});
 		return () => {
 			gone = true;
@@ -327,7 +329,7 @@ export function ConnectionForm({ existing, initialDraft, onClose, onSaved, onImp
 	// a half-filled connection. A click outside does NOT close it: the user often goes to another
 	// pane (an agent's console, a browser) to copy a value into it, and that click must not lose it.
 	async function attemptClose(): Promise<void> {
-		if (dirty && !(await confirm({ title: "Discard unsaved changes?", body: "Unsaved changes to this connection will be lost.", confirmLabel: "Discard", danger: true }))) {
+		if (dirty && !(await confirm({ title: t('connections.form.discardTitle'), body: t('connections.form.discardBody'), confirmLabel: t('connections.form.discard'), danger: true }))) {
 			return;
 		}
 		onClose();
@@ -518,44 +520,44 @@ function splitScopes(text: string): string[] | undefined {
 	function validate(values: ConnectionFormValues): string | null {
 		// File-based driver (SQLite): only the database file path is required.
 		if (isFileBased) {
-			return values.database ? null : "Choose a database file.";
+			return values.database ? null : t('connections.form.errChooseDbFile');
 		}
 		// Vector driver (Pinecone): only the API key is required (kept on edit if left blank).
 		if (isVector) {
-			return isEdit || values.password ? null : "An API key is required.";
+			return isEdit || values.password ? null : t('connections.form.errApiKey');
 		}
 		// Telemetry driver: a cloud account of the right vendor, and the container within it. There
 		// is no secret to check here — the credential lives on the account, not on the connection.
 		if (telemetry) {
 			if (!values.cloudAccountId) {
-				return `Pick the ${telemetry.vendor.toUpperCase()} cloud account this connection should use.`;
+				return t('connections.form.errPickAccount', { vendor: telemetry.vendor.toUpperCase() });
 			}
-			return values.cloudScope ? null : `A ${telemetry.containerNoun} is required (for example ${telemetry.containerExample}).`;
+			return values.cloudScope ? null : t(`connections.telemetry.${telemetry.service}.containerRequired`, { example: telemetry.containerExample });
 		}
 		// Account-based driver (Snowflake): account identifier (in `host`) + username are required;
 		// the password is kept on edit if left blank.
 		if (isAccountBased) {
 			if (!values.host || !values.username) {
-				return "Account identifier and username are required.";
+				return t('connections.form.errAccountUser');
 			}
 			return null;
 		}
 		if (awsEnabled && (!values.aws?.region || !values.aws?.secretId)) {
-			return "AWS region and secret name are required.";
+			return t('connections.form.errAws');
 		}
 		// MongoDB may authenticate via credentials embedded in the URI (or not at all), so only the
 		// host/connection string is mandatory; every other driver still needs a username.
 		if (!awsEnabled && driver === 'mongodb' && !values.host) {
-			return mongoUriMode ? "A connection string is required." : "Host is required.";
+			return mongoUriMode ? t('connections.form.errUri') : t('connections.form.errHost');
 		}
 		if (!awsEnabled && driver !== 'mongodb' && (!values.host || !values.username)) {
-			return "Host and username are required.";
+			return t('connections.form.errHostUser');
 		}
 		if (ssl && sslMode === 'custom' && !values.sslCaPath) {
-			return "Choose a CA certificate file, or pick a different SSL mode.";
+			return t('connections.form.errCa');
 		}
 		if (tunnelMode === 'profile' && !values.sshTunnelRef) {
-			return "Choose a saved tunnel, or create one.";
+			return t('connections.form.errTunnel');
 		}
 		return null;
 	}
@@ -568,7 +570,7 @@ function splitScopes(text: string): string[] | undefined {
 			return;
 		}
 		setBusy(true);
-		setStatus({ ok: true, message: "Testing…" });
+		setStatus({ ok: true, message: t('connections.form.testing') });
 		try {
 			const result = await window.sqlApi.testConnection(values);
 			// The Test already forgot the key and trusted the one it saw; forgetting again on Save
@@ -576,7 +578,7 @@ function splitScopes(text: string): string[] | undefined {
 			if (values.forgetSshHostKey) {
 				setForgetHostKey(false);
 			}
-			setStatus({ ok: result.ok, message: result.ok ? "Connection OK." : (result.error ?? "Connection failed.") });
+			setStatus({ ok: result.ok, message: result.ok ? t('connections.form.testOk') : (result.error ?? t('connections.form.testFailed')) });
 			lastTest.current = { ok: result.ok, error: result.error };
 			const move = testAdvice(coachFacts(), result.ok, result.error, testFailed.current);
 			testFailed.current = testFailed.current || !result.ok;
@@ -594,7 +596,7 @@ function splitScopes(text: string): string[] | undefined {
 		event.preventDefault();
 		const values = collect();
 		if (!values.label) {
-			setStatus({ ok: false, message: "Label is required." });
+			setStatus({ ok: false, message: t('connections.form.errLabel') });
 			return;
 		}
 		const error = validate(values);
@@ -613,23 +615,23 @@ function splitScopes(text: string): string[] | undefined {
 		}
 	}
 
-	const keep = isEdit ? "leave blank to keep current" : undefined;
+	const keep = isEdit ? t('connections.form.keepBlank') : undefined;
 	const passwordMoved = isEdit && !password && !awsEnabled && movesDestination(collect());
 
 	return (
 		<>
 		<div className="modal-backdrop">
 			<form className="modal" data-liby="connection-form" onChange={() => setDirty(true)} onSubmit={save}>
-				<h2>{isEdit ? `Edit Connection: ${existing.label}` : "New Connection"}</h2>
+				<h2>{isEdit ? t('connections.form.editTitle', { label: existing.label }) : t('connections.form.newTitle')}</h2>
 				<div className="tabs">
-					<button type="button" className={tab === 'general' ? 'tab active' : 'tab'} onClick={() => setTab('general')}>General</button>
+					<button type="button" className={tab === 'general' ? 'tab active' : 'tab'} onClick={() => setTab('general')}>{t('connections.form.tabGeneral')}</button>
 					{!isSimple && (
 						<>
 							<button type="button" className={tab === 'aws' ? 'tab active' : 'tab'} onClick={() => setTab('aws')}>
-								AWS Secrets Manager{awsEnabled && <span className="tab-dot" title="Enabled" />}
+								AWS Secrets Manager{awsEnabled && <span className="tab-dot" title={t('connections.form.enabled')} />}
 							</button>
 							<button type="button" data-liby="connection-ssh-tab" className={tab === 'ssh' ? 'tab active' : 'tab'} onClick={() => setTab('ssh')}>
-								SSH Tunnel{tunnelMode !== 'none' && <span className="tab-dot" title="Enabled" />}
+								{t('connections.form.tabSsh')}{tunnelMode !== 'none' && <span className="tab-dot" title={t('connections.form.enabled')} />}
 							</button>
 						</>
 					)}
@@ -647,20 +649,20 @@ function splitScopes(text: string): string[] | undefined {
 								<div className="import-note">
 									<Icon name="desktop-download" />
 									<span>
-										Already saved this database in DBeaver, DataGrip, pgAdmin or another tool?{' '}
-										<button type="button" className="link-btn" onClick={onImport}>Import it instead</button>
-										{' '}and skip typing it again.
+										{t('connections.form.importAsk')}{' '}
+										<button type="button" className="link-btn" onClick={onImport}>{t('connections.form.importLink')}</button>
+										{' '}{t('connections.form.importSkip')}
 									</span>
 								</div>
 							)}
-							<label>Label<input value={label} autoFocus onChange={(e) => setLabel(e.target.value)} /></label>
+							<label>{t('connections.form.label')}<input value={label} autoFocus onChange={(e) => setLabel(e.target.value)} /></label>
 							<div className="row">
-								<label className="grow">Driver
-									<IconSelect value={pickerValue(driver, flavor)} options={driverOptions()} onChange={pickDriver} ariaLabel="Driver" />
+								<label className="grow">{t('connections.form.driver')}
+									<IconSelect value={pickerValue(driver, flavor)} options={driverOptions()} onChange={pickDriver} ariaLabel={t('connections.form.driver')} />
 								</label>
-								<label className="env-field">Environment
+								<label className="env-field">{t('connections.form.environment')}
 									<select value={environment} data-liby="connection-env" onChange={(e) => setEnvironment(e.target.value)}>
-										<option value="">(none)</option>
+										<option value="">{t('connections.form.none')}</option>
 										<option value="dev">dev</option>
 										<option value="stage">stage</option>
 										<option value="prod">prod</option>
@@ -668,34 +670,34 @@ function splitScopes(text: string): string[] | undefined {
 								</label>
 							</div>
 							{isFileBased ? (
-								<label>Database file
+								<label>{t('connections.form.databaseFile')}
 									<div className="key-picker">
-										<input placeholder="path to a .db / .sqlite / .duckdb file" value={database} onChange={(e) => setDatabase(e.target.value)} />
-										<button type="button" className="secondary" onClick={() => void pickDb()} title="Choose a database file"><Icon name="folder-opened" /> Browse</button>
+										<input placeholder={t('connections.form.databaseFilePlaceholder')} value={database} onChange={(e) => setDatabase(e.target.value)} />
+										<button type="button" className="secondary" onClick={() => void pickDb()} title={t('connections.form.chooseDbFile')}><Icon name="folder-opened" /> {t('connections.form.browse')}</button>
 									</div>
 								</label>
 							) : isVector ? (
 								<>
-									<label>API key<input type="password" value={password} placeholder={keep ?? "Pinecone API key"} onChange={(e) => setPassword(e.target.value)} /></label>
-									<p className="field-hint">The connection is a Pinecone project, authenticated by its API key. Indexes are discovered automatically and shown as tables; query them with SQL (a WHERE metadata filter, transcribed) or a native Pinecone query.</p>
+									<label>{t('connections.form.apiKey')}<input type="password" value={password} placeholder={keep ?? t('connections.form.pineconeKey')} onChange={(e) => setPassword(e.target.value)} /></label>
+									<p className="field-hint">{t('connections.form.pineconeHint')}</p>
 								</>
 							) : telemetry ? (
 								<>
-									<label>Cloud account
+									<label>{t('connections.form.cloudAccount')}
 										<select value={cloudAccountId} onChange={(e) => chooseCloudAccount(e.target.value)}>
-											<option value="">(pick an account)</option>
+											<option value="">{t('connections.form.pickAccount')}</option>
 											{cloudAccounts.filter((a) => a.vendor === telemetry.vendor).map((account) => (
 												<option key={account.id} value={account.id}>{account.name}</option>
 											))}
 										</select>
 									</label>
 									{cloudAccounts.every((a) => a.vendor !== telemetry.vendor) && (
-										<p className="field-hint">There is no {telemetry.vendor.toUpperCase()} account saved yet. Add one under Settings, Cloud accounts, and it will serve this connection and your data flows alike.</p>
+										<p className="field-hint">{t('connections.form.noAccount', { vendor: telemetry.vendor.toUpperCase() })}</p>
 									)}
-									<label>{telemetry.containerNoun.charAt(0).toUpperCase() + telemetry.containerNoun.slice(1)}
+									<label>{t(`connections.telemetry.${telemetry.service}.container`)}
 										{telemetry.containerOptions ? (
 											<select value={cloudScope} onChange={(e) => setCloudScope(e.target.value)}>
-												<option value="">(pick a {telemetry.containerNoun})</option>
+												<option value="">{t(`connections.telemetry.${telemetry.service}.pickContainer`)}</option>
 												{telemetry.containerOptions.map((option) => (
 													<option key={option} value={option}>{option}</option>
 												))}
@@ -704,135 +706,131 @@ function splitScopes(text: string): string[] | undefined {
 											<input value={cloudScope} placeholder={telemetry.containerExample} onChange={(e) => setCloudScope(e.target.value)} />
 										)}
 									</label>
-									<label>{telemetry.scopeNoun.charAt(0).toUpperCase() + telemetry.scopeNoun.slice(1)}s
+									<label>{t(`connections.telemetry.${telemetry.service}.scopes`)}
 										<textarea
 											rows={3}
 											value={cloudScopes}
-											placeholder={`optional, one per line. Leave empty to show every ${telemetry.scopeNoun} in the ${telemetry.containerNoun}.`}
+											placeholder={t(`connections.telemetry.${telemetry.service}.scopesPlaceholder`)}
 											onChange={(e) => setCloudScopes(e.target.value)}
 										/>
 									</label>
+									<p className="field-hint">{t(`connections.telemetry.${telemetry.service}.listingHint`)}</p>
 									<p className="field-hint">
-										Listing {telemetry.scopeNoun}s is its own permission, and a credential scoped to particular
-										ones is refused it. Name them here and the app stops asking for the list: it reads only what
-										you named, with only the permission you already have.
-									</p>
-									<p className="field-hint">
-										Each {telemetry.scopeNoun} in this {telemetry.containerNoun} is shown as a table you can query with SQL: {" "}
+										{t(`connections.telemetry.${telemetry.service}.eachHint`)}{" "}
 										<code>SELECT ts, message FROM "…" WHERE message LIKE '%ERROR%' AND ts &gt;= ago('1h')</code>.
-										{" "}Every query is bounded by a time range, and one that names none covers the last hour.
+										{" "}{t('connections.form.telemetryBounded')}
 										{telemetry.aggregatesAtSource
-											? ` A GROUP BY is run by ${telemetry.label} itself; the results footer says what it scanned.`
-											: ` ${telemetry.label} cannot group at the source, so a GROUP BY is computed here over the events in the range.`}
+											? ` ${t('connections.form.telemetryGroupSource', { label: telemetry.label })}`
+											: ` ${t('connections.form.telemetryGroupHere', { label: telemetry.label })}`}
 									</p>
 								</>
 							) : isAccountBased ? (
 								<>
-									<label>Account<input value={host} data-liby="connection-host" placeholder="e.g. xy12345.us-east-1 or org-account" onChange={(e) => setHost(e.target.value)} /></label>
-									<label>Database<input value={database} onChange={(e) => setDatabase(e.target.value)} /></label>
-									<label>Username<input value={username} onChange={(e) => setUsername(e.target.value)} /></label>
-									<label>Password<input type="password" value={password} data-liby="connection-password" placeholder={keep} onChange={(e) => setPassword(e.target.value)} /></label>
+									<label>{t('connections.form.account')}<input value={host} data-liby="connection-host" placeholder={t('connections.form.accountPlaceholder')} onChange={(e) => setHost(e.target.value)} /></label>
+									<label>{t('connections.form.database')}<input value={database} onChange={(e) => setDatabase(e.target.value)} /></label>
+									<label>{t('connections.form.username')}<input value={username} onChange={(e) => setUsername(e.target.value)} /></label>
+									<label>{t('connections.form.password')}<input type="password" value={password} data-liby="connection-password" placeholder={keep} onChange={(e) => setPassword(e.target.value)} /></label>
 									<div className="row">
-										<label className="grow">Warehouse<input value={warehouse} placeholder="e.g. COMPUTE_WH" onChange={(e) => setWarehouse(e.target.value)} /></label>
-										<label className="grow">Role<input value={role} placeholder="optional" onChange={(e) => setRole(e.target.value)} /></label>
+										<label className="grow">{t('connections.form.warehouse')}<input value={warehouse} placeholder={t('connections.form.warehousePlaceholder')} onChange={(e) => setWarehouse(e.target.value)} /></label>
+										<label className="grow">{t('connections.form.role')}<input value={role} placeholder={t('connections.form.optional')} onChange={(e) => setRole(e.target.value)} /></label>
 									</div>
-									<p className="field-hint">Snowflake is reached over HTTPS by account identifier (no host/port or SSH tunnel). A running warehouse is needed to run queries. Password auth only for now (key-pair / SSO are not yet supported).</p>
+									<p className="field-hint">{t('connections.form.snowflakeHint')}</p>
 								</>
 							) : (
 							<>
 							{driver === 'mongodb' ? (
 								<>
-								<label>Connection
+								<label>{t('connections.form.connection')}
 									<select value={mongoUriMode ? 'uri' : 'fields'} onChange={(e) => setMongoUriMode(e.target.value === 'uri')}>
-										<option value="fields">Host and port</option>
-										<option value="uri">Connection string (URI)</option>
+										<option value="fields">{t('connections.form.hostAndPort')}</option>
+										<option value="uri">{t('connections.form.connectionUri')}</option>
 									</select>
 								</label>
 								{mongoUriMode ? (
 									<>
-									<label>Connection string<input value={host} data-liby="connection-host" placeholder="mongodb://host:27017/?authMechanism=SCRAM-SHA-1" onChange={(e) => setHost(e.target.value)} /></label>
-									<p className="field-hint">A full "mongodb://" URI (may include credentials, database, and options). A password in it is kept in the keychain when you save, and the connection string is saved without it. Over an SSH tunnel use an explicit host:port (not "mongodb+srv://"); the tunnel forces a direct single-host connection, so "replicaSet" is ignored. For Amazon DocumentDB add "?authMechanism=SCRAM-SHA-1". The Username below is used only when the URI carries no user name; the Password is used either way.</p>
+									<label>{t('connections.form.connectionString')}<input value={host} data-liby="connection-host" placeholder="mongodb://host:27017/?authMechanism=SCRAM-SHA-1" onChange={(e) => setHost(e.target.value)} /></label>
+									<p className="field-hint">{t('connections.form.mongoUriHint')}</p>
 									</>
 								) : (
 								<div className="row">
-									<label className="grow">Host<input value={host} data-liby="connection-host" onChange={(e) => setHost(e.target.value)} /></label>
-									<label className="port">Port<input type="number" value={port} data-liby="connection-port" placeholder={String(defaultPortFor(driver, flavor) ?? "")} onChange={(e) => setPort(e.target.value)} /></label>
+									<label className="grow">{t('connections.form.host')}<input value={host} data-liby="connection-host" onChange={(e) => setHost(e.target.value)} /></label>
+									<label className="port">{t('connections.form.port')}<input type="number" value={port} data-liby="connection-port" placeholder={String(defaultPortFor(driver, flavor) ?? "")} onChange={(e) => setPort(e.target.value)} /></label>
 								</div>
 								)}
 								</>
 							) : (
 								<div className="row">
-									<label className="grow">Host<input value={host} data-liby="connection-host" onChange={(e) => setHost(e.target.value)} /></label>
-									<label className="port">Port<input type="number" value={port} data-liby="connection-port" placeholder={String(defaultPortFor(driver, flavor) ?? "")} onChange={(e) => setPort(e.target.value)} /></label>
+									<label className="grow">{t('connections.form.host')}<input value={host} data-liby="connection-host" onChange={(e) => setHost(e.target.value)} /></label>
+									<label className="port">{t('connections.form.port')}<input type="number" value={port} data-liby="connection-port" placeholder={String(defaultPortFor(driver, flavor) ?? "")} onChange={(e) => setPort(e.target.value)} /></label>
 								</div>
 							)}
-								<label>{driver === 'oracle' ? "Service name" : "Database"}<input value={database} data-liby="connection-database" placeholder={driver === 'oracle' ? "e.g. ORCLPDB1 or XEPDB1" : undefined} onChange={(e) => setDatabase(e.target.value)} /></label>
-							<label>Username<input value={username} placeholder={awsEnabled ? "from AWS secret" : undefined} onChange={(e) => setUsername(e.target.value)} /></label>
-							<label>Password<input type="password" value={password} data-liby="connection-password" placeholder={awsEnabled ? "from AWS secret" : passwordMoved ? undefined : keep} disabled={awsEnabled} onChange={(e) => setPassword(e.target.value)} /></label>
-							{passwordMoved && <p className="field-hint connection-password-moved">This edit changes where the connection goes or who it signs in as, so the saved password will not be sent there. Type it again to keep one.</p>}
-							<label className="check" data-liby="connection-ssl"><input type="checkbox" checked={ssl} onChange={(e) => setSsl(e.target.checked)} /> Use SSL</label>
+								<label>{driver === 'oracle' ? t('connections.form.serviceName') : t('connections.form.database')}<input value={database} data-liby="connection-database" placeholder={driver === 'oracle' ? t('connections.form.oraclePlaceholder') : undefined} onChange={(e) => setDatabase(e.target.value)} /></label>
+							<label>{t('connections.form.username')}<input value={username} placeholder={awsEnabled ? t('connections.form.fromAws') : undefined} onChange={(e) => setUsername(e.target.value)} /></label>
+							<label>{t('connections.form.password')}<input type="password" value={password} data-liby="connection-password" placeholder={awsEnabled ? t('connections.form.fromAws') : passwordMoved ? undefined : keep} disabled={awsEnabled} onChange={(e) => setPassword(e.target.value)} /></label>
+							{passwordMoved && <p className="field-hint connection-password-moved">{t('connections.form.passwordMoved')}</p>}
+							<label className="check" data-liby="connection-ssl"><input type="checkbox" checked={ssl} onChange={(e) => setSsl(e.target.checked)} /> {t('connections.form.useSsl')}</label>
 							{ssl && (
 								<div className="ssl-options">
-									<label>Certificate verification
+									<label>{t('connections.form.certVerification')}
 										<select value={sslMode} onChange={(e) => setSslMode(e.target.value as SslMode)}>
-											<option value="rds">Verify with Amazon RDS CA (bundled)</option>
-											<option value="system">Verify with system trust store</option>
-											<option value="custom">Verify with custom CA file…</option>
-											<option value="insecure">Encrypt, don't verify certificate</option>
+											<option value="rds">{t('connections.form.sslRds')}</option>
+											<option value="system">{t('connections.form.sslSystem')}</option>
+											<option value="custom">{t('connections.form.sslCustom')}</option>
+											<option value="insecure">{t('connections.form.sslInsecure')}</option>
 										</select>
 									</label>
 									{sslMode === 'custom' && (
-										<label>CA certificate file
+										<label>{t('connections.form.caFile')}
 											<div className="key-picker">
-												<input placeholder="path to a .pem file" value={sslCaPath} onChange={(e) => setSslCaPath(e.target.value)} />
-												<button type="button" className="secondary" onClick={() => void pickCa()} title="Choose a CA certificate file"><Icon name="folder-opened" /> Browse</button>
+												<input placeholder={t('connections.form.pemPlaceholder')} value={sslCaPath} onChange={(e) => setSslCaPath(e.target.value)} />
+												<button type="button" className="secondary" onClick={() => void pickCa()} title={t('connections.form.chooseCaFile')}><Icon name="folder-opened" /> {t('connections.form.browse')}</button>
 											</div>
 										</label>
 									)}
 									<p className="field-hint">
-										{sslMode === 'rds' && "For AWS RDS / Aurora endpoints: verifies the server against Amazon's RDS root CA, which isn't in the system trust store."}
-										{sslMode === 'system' && "For servers whose certificate is signed by a publicly trusted CA already in the OS/Node trust store."}
-										{sslMode === 'custom' && "Verifies the server against a CA certificate you supply (PEM)."}
-										{sslMode === 'insecure' && "Encrypts the connection but does not verify the server certificate. Use only when you can't supply the right CA."}
+										{sslMode === 'rds' && t('connections.form.sslRdsHint')}
+										{sslMode === 'system' && t('connections.form.sslSystemHint')}
+										{sslMode === 'custom' && t('connections.form.sslCustomHint')}
+										{sslMode === 'insecure' && t('connections.form.sslInsecureHint')}
 									</p>
 								</div>
 							)}
 							</>
 							)}
-							<label className="check" title="Block writes / DDL and disable in-grid editing for this connection."><input type="checkbox" checked={readOnly} onChange={(e) => setReadOnly(e.target.checked)} /> Read-only (no writes, no DDL)</label>
-							{readOnly && backendKindForDriver(driver) === 'relational' && <p className="field-hint">Each statement is checked before it runs. {readOnlyEnforcementFor(driver, flavor || undefined).summary}</p>}
-							<label>What the AI may see of this database
+							<label className="check" title={t('connections.form.readOnlyTitle')}><input type="checkbox" checked={readOnly} onChange={(e) => setReadOnly(e.target.checked)} /> {t('connections.form.readOnly')}</label>
+							{readOnly && backendKindForDriver(driver) === 'relational' && <p className="field-hint">{t('connections.form.readOnlyChecked')} {readOnlyEnforcementText(driver, flavor || undefined)}</p>}
+							<label>{t('connections.form.dataAccess')}
 								<select value={aiDataAccess} onChange={(e) => setAiDataAccess(e.target.value as DataAccessLevel | '')}>
-									<option value="">Use the default from AI settings</option>
-									{DATA_ACCESS_LEVELS.map((level) => <option key={level} value={level}>{DATA_ACCESS_INFO[level].label}</option>)}
+									<option value="">{t('connections.form.dataAccessDefault')}</option>
+									{DATA_ACCESS_LEVELS.map((level) => <option key={level} value={level}>{dataAccessText(level).label}</option>)}
 								</select>
 							</label>
 							<p className="field-hint">
 								{aiDataAccess
-									? `${DATA_ACCESS_INFO[aiDataAccess].detail} Overrides the default for this database, for the assistant and coding agents.`
-									: "Set one here to give this database its own level, for example schema only on production."}
+									? `${dataAccessText(aiDataAccess).detail} ${t('connections.form.dataAccessOverride')}`
+									: t('connections.form.dataAccessHint')}
 							</p>
-							<label className="grow">Connection pool size<input type="number" min={MIN_POOL_MAX} max={MAX_POOL_MAX} value={poolMax} placeholder={String(DEFAULT_POOL_MAX)} onChange={(e) => setPoolMax(e.target.value)} /></label>
-							<p className="field-hint">Max simultaneous queries this connection runs against the database ({MIN_POOL_MAX} to {MAX_POOL_MAX}, default {DEFAULT_POOL_MAX}). Raise it for heavy dashboards or parallel workloads. The database server's own connection limit still applies.</p>
+							<label className="grow">{t('connections.form.poolSize')}<input type="number" min={MIN_POOL_MAX} max={MAX_POOL_MAX} value={poolMax} placeholder={String(DEFAULT_POOL_MAX)} onChange={(e) => setPoolMax(e.target.value)} /></label>
+							<p className="field-hint">{t('connections.form.poolHint', { min: MIN_POOL_MAX, max: MAX_POOL_MAX, def: DEFAULT_POOL_MAX })}</p>
 						</>
 					)}
 
 					{tab === 'aws' && (
 						<>
-							<label className="check" title="Fetch the database username and password from AWS Secrets Manager at connect time instead of storing a password locally."><input type="checkbox" checked={awsEnabled} onChange={(e) => setAwsEnabled(e.target.checked)} /> Fetch credentials from AWS Secrets Manager</label>
+							<label className="check" title={t('connections.form.awsFetchTitle')}><input type="checkbox" checked={awsEnabled} onChange={(e) => setAwsEnabled(e.target.checked)} /> {t('connections.form.awsFetch')}</label>
 							{awsEnabled && (
 								<fieldset>
 									<legend>AWS Secrets Manager</legend>
 									<div className="row">
-										<label className="grow">Region<input placeholder="us-east-1" value={awsRegion} onChange={(e) => setAwsRegion(e.target.value)} /></label>
-										<label className="grow">Profile<input placeholder="default credential chain" value={awsProfile} onChange={(e) => setAwsProfile(e.target.value)} /></label>
+										<label className="grow">{t('connections.form.region')}<input placeholder="us-east-1" value={awsRegion} onChange={(e) => setAwsRegion(e.target.value)} /></label>
+										<label className="grow">{t('connections.form.profile')}<input placeholder={t('connections.form.credentialChain')} value={awsProfile} onChange={(e) => setAwsProfile(e.target.value)} /></label>
 									</div>
-									<label>Secret name or ARN<input placeholder="prod/db/credentials" value={awsSecretId} onChange={(e) => setAwsSecretId(e.target.value)} /></label>
+									<label>{t('connections.form.secretName')}<input placeholder="prod/db/credentials" value={awsSecretId} onChange={(e) => setAwsSecretId(e.target.value)} /></label>
 									<div className="row">
-										<label className="grow">Access key ID<input placeholder="optional" value={awsAccessKeyId} onChange={(e) => setAwsAccessKeyId(e.target.value)} /></label>
-										<label className="grow">Secret access key<input type="password" placeholder={awsAccessKeyId ? keep ?? "required with access key ID" : "optional"} value={awsSecretAccessKey} onChange={(e) => setAwsSecretAccessKey(e.target.value)} /></label>
+										<label className="grow">{t('connections.form.accessKeyId')}<input placeholder={t('connections.form.optional')} value={awsAccessKeyId} onChange={(e) => setAwsAccessKeyId(e.target.value)} /></label>
+										<label className="grow">{t('connections.form.secretAccessKey')}<input type="password" placeholder={awsAccessKeyId ? keep ?? t('connections.form.requiredWithKeyId') : t('connections.form.optional')} value={awsSecretAccessKey} onChange={(e) => setAwsSecretAccessKey(e.target.value)} /></label>
 									</div>
-									<p className="field-hint">Leave the access key blank to use the named profile or your machine's default AWS credentials (env vars, SSO, instance role). The secret must be JSON with at least "username" and "password". When it carries "host" and "port" (as RDS-managed secrets do), that is where the credentials go: leave the host blank on the General tab, or give the same one, since a different host is refused. "dbname" fills in a blank database.</p>
+									<p className="field-hint">{t('connections.form.awsHint')}</p>
 								</fieldset>
 							)}
 						</>
@@ -840,56 +838,56 @@ function splitScopes(text: string): string[] | undefined {
 
 					{tab === 'ssh' && (
 						<>
-							<label>Tunnel
+							<label>{t('connections.form.tunnel')}
 								<select value={tunnelMode} onChange={(e) => setTunnelMode(e.target.value as TunnelMode)}>
-									<option value="none">No tunnel (connect directly)</option>
-									<option value="profile">Use a saved tunnel</option>
-									<option value="inline">Configure a tunnel for this connection</option>
+									<option value="none">{t('connections.form.tunnelNone')}</option>
+									<option value="profile">{t('connections.form.tunnelProfile')}</option>
+									<option value="inline">{t('connections.form.tunnelInline')}</option>
 								</select>
 							</label>
 							{tunnelMode === 'profile' && (
 								<fieldset>
-									<legend>Saved tunnel</legend>
+									<legend>{t('connections.form.savedTunnel')}</legend>
 									{profiles.length === 0 ? (
-										<p className="field-hint">No saved tunnels yet. Create one to reuse it across connections.</p>
+										<p className="field-hint">{t('connections.form.noTunnels')}</p>
 									) : (
-										<label>Tunnel
+										<label>{t('connections.form.tunnel')}
 											<select value={tunnelRef} onChange={(e) => setTunnelRef(e.target.value)}>
-												<option value="">Select a tunnel…</option>
+												<option value="">{t('connections.form.selectTunnel')}</option>
 												{profiles.map((profile) => (
 													<option key={profile.id} value={profile.id} title={`${profile.username}@${profile.host}${profile.port ? `:${profile.port}` : ''}`}>{profile.name}</option>
 												))}
 											</select>
 										</label>
 									)}
-									<button type="button" className="secondary" onClick={() => setManageTunnels(true)}><Icon name="settings-gear" /> Manage tunnels</button>
-									<p className="field-hint">Saved tunnels are shared: editing one updates every connection that uses it.</p>
+									<button type="button" className="secondary" onClick={() => setManageTunnels(true)}><Icon name="settings-gear" /> {t('connections.form.manageTunnels')}</button>
+									<p className="field-hint">{t('connections.form.tunnelsShared')}</p>
 								</fieldset>
 							)}
 							{tunnelMode === 'inline' && (
 								<fieldset>
-									<legend>SSH tunnel</legend>
+									<legend>{t('connections.form.sshTunnel')}</legend>
 									<div className="row">
-										<label className="grow">SSH host<input value={sshHost} onChange={(e) => setSshHost(e.target.value)} /></label>
-										<label className="port">Port<input type="number" placeholder="22" value={sshPort} onChange={(e) => setSshPort(e.target.value)} /></label>
+										<label className="grow">{t('connections.ssh.host')}<input value={sshHost} onChange={(e) => setSshHost(e.target.value)} /></label>
+										<label className="port">{t('connections.form.port')}<input type="number" placeholder="22" value={sshPort} onChange={(e) => setSshPort(e.target.value)} /></label>
 									</div>
-									<label>SSH username<input value={sshUsername} onChange={(e) => setSshUsername(e.target.value)} /></label>
-									<label>Private key file
+									<label>{t('connections.ssh.username')}<input value={sshUsername} onChange={(e) => setSshUsername(e.target.value)} /></label>
+									<label>{t('connections.ssh.keyFile')}
 										<div className="key-picker">
 											<input placeholder="~/.ssh/id_rsa" value={sshKey} onChange={(e) => setSshKey(e.target.value)} />
-											<button type="button" className="secondary" onClick={() => void pickKey()} title="Choose a private key file"><Icon name="folder-opened" /> Browse</button>
+											<button type="button" className="secondary" onClick={() => void pickKey()} title={t('connections.ssh.chooseKey')}><Icon name="folder-opened" /> {t('connections.form.browse')}</button>
 										</div>
 									</label>
-									<label>Key passphrase<input type="password" placeholder={keep} value={sshPassphrase} onChange={(e) => setSshPassphrase(e.target.value)} /></label>
-									<label>SSH password<input type="password" placeholder={keep} value={sshPassword} onChange={(e) => setSshPassword(e.target.value)} /></label>
-									<label>Local bind port<input type="number" placeholder="auto" value={sshLocalPort} onChange={(e) => setSshLocalPort(e.target.value)} /></label>
-									<label className="check" title="Send SSH keepalives so the bastion doesn't idle-out the tunnel. Leave on unless a bastion rejects keepalive traffic."><input type="checkbox" checked={sshKeepAlive} onChange={(e) => setSshKeepAlive(e.target.checked)} /> Keep tunnel alive (recommended)</label>
+									<label>{t('connections.ssh.passphrase')}<input type="password" placeholder={keep} value={sshPassphrase} onChange={(e) => setSshPassphrase(e.target.value)} /></label>
+									<label>{t('connections.ssh.password')}<input type="password" placeholder={keep} value={sshPassword} onChange={(e) => setSshPassword(e.target.value)} /></label>
+									<label>{t('connections.ssh.localPort')}<input type="number" placeholder="auto" value={sshLocalPort} onChange={(e) => setSshLocalPort(e.target.value)} /></label>
+									<label className="check" title={t('connections.ssh.keepAliveTitle')}><input type="checkbox" checked={sshKeepAlive} onChange={(e) => setSshKeepAlive(e.target.checked)} /> {t('connections.ssh.keepAlive')}</label>
 								</fieldset>
 							)}
 							{tunnelMode !== 'none' && (
 								<>
-									<label className="check"><input type="checkbox" checked={forgetHostKey} onChange={(e) => setForgetHostKey(e.target.checked)} /> Forget the saved host key</label>
-									<p className="field-hint">The app remembers the SSH server's host key the first time it connects and refuses a different one. Turn this on only if the server was rebuilt and you have confirmed its new key. After a Test or Save with this on, the next connection trusts the key it sees.</p>
+									<label className="check"><input type="checkbox" checked={forgetHostKey} onChange={(e) => setForgetHostKey(e.target.checked)} /> {t('connections.ssh.forgetKey')}</label>
+									<p className="field-hint">{t('connections.ssh.forgetKeyHint')}</p>
 								</>
 							)}
 						</>
@@ -897,10 +895,10 @@ function splitScopes(text: string): string[] | undefined {
 				</div>
 
 				<div className="modal-actions">
-					<button type="button" className="secondary" data-liby="connection-test" onClick={() => void test()} disabled={busy}><Icon name="plug" /> Test Connection</button>
+					<button type="button" className="secondary" data-liby="connection-test" onClick={() => void test()} disabled={busy}><Icon name="plug" /> {t('connections.form.test')}</button>
 					<span className="spacer" />
-					<button type="button" className="secondary" onClick={() => void attemptClose()} disabled={busy}><Icon name="close" /> Cancel</button>
-					<button type="submit" disabled={busy}><Icon name="save" /> Save</button>
+					<button type="button" className="secondary" onClick={() => void attemptClose()} disabled={busy}><Icon name="close" /> {t('connections.common.cancel')}</button>
+					<button type="submit" disabled={busy}><Icon name="save" /> {t('connections.common.save')}</button>
 				</div>
 				{status && <div className={`form-status ${status.ok ? "ok" : "error"}`}>{status.message}</div>}
 			</form>

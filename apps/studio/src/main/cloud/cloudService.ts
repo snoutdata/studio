@@ -3,6 +3,7 @@
  *  Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { t } from '../../shared/i18n/core';
 import { CloudStore } from '../cloudStore';
 import { objectStoreFor, objectStoreServices, type ObjectStoreDriver } from './objectStore';
 import { logSourceFor, logSourceServices, type LogSourceDriver } from './logSource';
@@ -48,6 +49,16 @@ interface TestedService extends CloudTestResult {
  *  (`snout/verifyCloudAccount`): what Test falls back to in a build with no storage or log-source
  *  driver of its own, which is the open-source one, where those drivers are Data Flows. */
 export type VerifyCloudAccount = (params: VerifyCloudAccountParams) => Promise<VerifyCloudAccountResult>;
+
+/** A vendor's noun for the things it lists, in the language of the message around it. */
+function nounWord(noun: string, count: number): string {
+	return t(`mainCloud.noun_${noun.replace(' ', '_')}`, { count });
+}
+
+/** "One bucket" / "3 buckets". */
+function nounCount(noun: string, count: number): string {
+	return t(`mainCloud.count_${noun.replace(' ', '_')}`, { count });
+}
 
 export class CloudService {
 	constructor(
@@ -114,7 +125,7 @@ export class CloudService {
 			// credential scoped to particular resources fails all of them and can still do the work.
 			const logs = logSourceFor(form.account.vendor);
 			const scoped = logs
-				? ` Listing is its own permission. If these credentials are scoped to particular ${logs.info.scopeNoun}s rather than the whole account, name those on the connection and it will read them without asking for the list.`
+				? t('mainCloud.listingPermission', { nouns: nounWord(logs.info.scopeNoun, 2) })
 				: '';
 			return { ok: false, message: tried.map((arm) => arm.message).join(' ') + scoped };
 		}
@@ -122,7 +133,7 @@ export class CloudService {
 		// user who meant to reach that one needs to know, but they are not a failure of the account.
 		const missing = tried
 			.filter((arm) => !arm.ok)
-			.map((arm) => `${arm.label} did not answer: ${arm.message}`);
+			.map((arm) => t('mainCloud.armDidNotAnswer', { label: arm.label, message: arm.message }));
 		return {
 			ok: true,
 			message: [...worked.map((arm) => arm.message), ...missing].join(' '),
@@ -153,9 +164,9 @@ export class CloudService {
 		const signedIn = answers.find((entry) => entry.answer.ok);
 		if (signedIn) {
 			const { label, containerNoun } = signedIn.service;
-			return { ok: true, message: `Signed in to ${label}. Choose the ${containerNoun} on the connection.` };
+			return { ok: true, message: t('mainCloud.signedInChoose', { label, noun: nounWord(containerNoun, 1) }) };
 		}
-		return { ok: false, message: answers.map((entry) => entry.answer.message ?? `${entry.service.label} did not answer.`).join(' ') };
+		return { ok: false, message: answers.map((entry) => entry.answer.message ?? t('mainCloud.serviceDidNotAnswer', { label: entry.service.label })).join(' ') };
 	}
 
 	/** Test the FILES arm, by listing the containers its picker lists. */
@@ -169,17 +180,17 @@ export class CloudService {
 		try {
 			const containers = await session.listContainers();
 			const noun = driver.info.containerNoun;
-			const where = form.account.endpoint ? `the storage at ${form.account.endpoint}` : label;
+			const where = form.account.endpoint ? t('mainCloud.storageAt', { endpoint: form.account.endpoint }) : label;
 			if (containers.length === 0) {
 				// Reachable with nothing in it is a success, not a failure: an account with no
 				// containers is a legitimate state, and "failed" would send somebody off to check
 				// credentials that are working perfectly.
-				return { ok: true, label, message: `Connected to ${where}. This account has no ${noun}s yet.` };
+				return { ok: true, label, message: t('mainCloud.connectedNone', { where, nouns: nounWord(noun, 2) }) };
 			}
 			return {
 				ok: true,
 				label,
-				message: `Connected to ${where}. ${containers.length === 1 ? `One ${noun}` : `${containers.length} ${noun}s`} visible.`,
+				message: t('mainCloud.connectedSome', { where, what: nounCount(noun, containers.length) }),
 				sample: containers.slice(0, 3).map((container) => container.name),
 			};
 		} catch (err) {
@@ -221,7 +232,7 @@ export class CloudService {
 		const account = this.store.get(accountId);
 		return account
 			? this.containers({ account })
-			: { ok: false, containers: [], message: 'That storage account is no longer set up.' };
+			: { ok: false, containers: [], message: t('mainCloud.storageGone') };
 	}
 
 	/**
@@ -258,7 +269,7 @@ export class CloudService {
 	async logScopesFor(accountId: string, region: string): Promise<LogScopeList> {
 		const account = this.store.get(accountId);
 		if (!account) {
-			return { ok: false, scopes: [], message: 'That cloud account is no longer set up.' };
+			return { ok: false, scopes: [], message: t('mainCloud.accountGone') };
 		}
 		const driver = logSourceFor(account.vendor);
 		if (!driver) {
@@ -327,12 +338,12 @@ export class CloudService {
 			? objectStoreServices().find((entry) => entry.service === service)?.label
 			: logSourceServices().find((entry) => entry.service === service)?.label;
 		if (label) {
-			return `${label} is not built yet.`;
+			return t('mainCloud.notBuilt', { label });
 		}
 		const vendorLabel = cloudVendorInfo(vendor)?.label ?? vendor;
 		return kind === 'objectStore'
-			? `${vendorLabel} has no file storage this app can read.`
-			: `${vendorLabel} has no log service this app can read.`;
+			? t('mainCloud.noFileStorage', { vendorLabel })
+			: t('mainCloud.noLogService', { vendorLabel });
 	}
 
 	/**
@@ -348,7 +359,7 @@ export class CloudService {
 		const label = driver.info.label;
 		const region = form.account.region || driver.info.regions?.[0];
 		if (!region) {
-			return { ok: false, label, message: `Set a region first: ${label} lists its ${driver.info.scopeNoun}s one region at a time.` };
+			return { ok: false, label, message: t('mainCloud.setRegion', { label, nouns: nounWord(driver.info.scopeNoun, 2) }) };
 		}
 		const scoped = { ...form.account, region };
 		const session = driver.open(scoped, this.secretFrom(form));
@@ -359,8 +370,8 @@ export class CloudService {
 				ok: true,
 				label,
 				message: scopes.length === 0
-					? `Connected to ${label} in ${region}. Nothing there yet.`
-					: `Connected to ${label} in ${region}. ${scopes.length === 1 ? `One ${noun}` : `${scopes.length} ${noun}s`} visible.`,
+					? t('mainCloud.connectedRegionNone', { label, region })
+					: t('mainCloud.connectedRegionSome', { label, region, what: nounCount(noun, scopes.length) }),
 				sample: scopes.slice(0, 3).map((scope) => scope.name),
 			};
 		} catch (err) {

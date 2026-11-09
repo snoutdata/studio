@@ -63,6 +63,7 @@ import {
 	type PickIndex,
 } from '../../../shared/orbitLod';
 import type { OrbitPalette } from './palette';
+import { t } from '../i18n';
 
 /**
  * The slice of the layout the scene reads. Structural on purpose: the scene needs positions and
@@ -647,7 +648,7 @@ export class OrbitScene {
 		// black with no error, which is the worst of all the ways to fail. Frame on a default
 		// instead and let `stats()` say what happened.
 		if (!Number.isFinite(radius) || !Number.isFinite(cx) || !Number.isFinite(cy) || !Number.isFinite(cz)) {
-			this.layoutWarning = "The layout did not converge for this schema, so positions here are approximate. Isolating a table still works.";
+			this.layoutWarning = t('orbit.layoutWarning');
 			return { target: new THREE.Vector3(0, 0, 0), position: new THREE.Vector3(880, 400, 1240) };
 		}
 		const distance = this.worldDistance();

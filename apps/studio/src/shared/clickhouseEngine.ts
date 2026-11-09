@@ -21,6 +21,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { quoteClickHouseIdent } from './engine';
+import { t } from './i18n/core';
 
 /** One engine in the picker. `parameter` is the engine's own argument, where it takes one. */
 export interface MergeTreeEngine {
@@ -41,54 +42,54 @@ export const MERGE_TREE_ENGINES: readonly MergeTreeEngine[] = [
 	{
 		id: 'MergeTree',
 		label: 'MergeTree',
-		hint: 'Keeps every row. The one to pick unless one of the others describes your data.',
+		get hint() { return t('engineShared.chEngine.mergeTree'); },
 	},
 	{
 		id: 'ReplacingMergeTree',
 		label: 'ReplacingMergeTree',
-		hint: 'Keeps the last row for each sort key. It happens during merges, so a SELECT can still see both until then, or use FINAL.',
+		get hint() { return t('engineShared.chEngine.replacing'); },
 		parameter: {
-			label: 'Version column',
+			get label() { return t('engineShared.chEngine.versionColumn'); },
 			placeholder: 'updated_at',
-			hint: 'Which row wins: the largest value of this column. Leave it empty and the last one inserted wins.',
+			get hint() { return t('engineShared.chEngine.versionHint'); },
 			required: false,
 		},
 	},
 	{
 		id: 'SummingMergeTree',
 		label: 'SummingMergeTree',
-		hint: 'Merges rows with the same sort key by adding up their numeric columns.',
+		get hint() { return t('engineShared.chEngine.summing'); },
 		parameter: {
-			label: 'Columns to sum',
+			get label() { return t('engineShared.chEngine.sumColumns'); },
 			placeholder: 'amount, count',
-			hint: 'Leave it empty to sum every numeric column that is not in the sort key.',
+			get hint() { return t('engineShared.chEngine.sumHint'); },
 			required: false,
 		},
 	},
 	{
 		id: 'AggregatingMergeTree',
 		label: 'AggregatingMergeTree',
-		hint: 'Merges rows with the same sort key by combining their AggregateFunction columns. Usually the target of a materialized view.',
+		get hint() { return t('engineShared.chEngine.aggregating'); },
 	},
 	{
 		id: 'CollapsingMergeTree',
 		label: 'CollapsingMergeTree',
-		hint: 'A row is cancelled by writing it again with sign = -1, which is how a row is deleted without a mutation.',
+		get hint() { return t('engineShared.chEngine.collapsing'); },
 		parameter: {
-			label: 'Sign column',
+			get label() { return t('engineShared.chEngine.signColumn'); },
 			placeholder: 'sign',
-			hint: 'An Int8 column holding 1 for a row and -1 for the row that cancels it.',
+			get hint() { return t('engineShared.chEngine.signHint'); },
 			required: true,
 		},
 	},
 	{
 		id: 'VersionedCollapsingMergeTree',
 		label: 'VersionedCollapsingMergeTree',
-		hint: 'CollapsingMergeTree that also copes with the cancelling row arriving before the row it cancels.',
+		get hint() { return t('engineShared.chEngine.versioned'); },
 		parameter: {
-			label: 'Sign and version columns',
+			get label() { return t('engineShared.chEngine.signVersionColumns'); },
 			placeholder: 'sign, version',
-			hint: 'The Int8 sign column and the column whose value increases with each state of the row.',
+			get hint() { return t('engineShared.chEngine.signVersionHint'); },
 			required: true,
 		},
 	},
@@ -187,26 +188,26 @@ export function engineProblems(draft: EngineDraft, orderBy: string): EngineProbl
 	const out: EngineProblem[] = [];
 	const engine = engineById(draft.engine);
 	if (!engine) {
-		return [{ blocking: true, message: `${draft.engine} is not an engine this can create.` }];
+		return [{ blocking: true, message: t('engineShared.chEngine.unknownEngine', { engine: draft.engine }) }];
 	}
 	if (engine.parameter?.required && draft.parameter.trim() === '') {
-		out.push({ blocking: true, message: `${engine.label} needs its ${engine.parameter.label.toLowerCase()}: ${engine.parameter.hint}` });
+		out.push({ blocking: true, message: t('engineShared.chEngine.needsParameter', { engine: engine.label, parameter: engine.parameter.label.toLowerCase(), hint: engine.parameter.hint }) });
 	}
 	// A key-less table is legal, and for every engine but plain MergeTree it means something
 	// drastic: one row for the whole table, all of it summed into one, everything collapsed.
 	if (isKeyless(orderBy) && draft.engine !== 'MergeTree') {
 		out.push({
 			blocking: false,
-			message: `${engine.label} with no sort key treats every row as the same row, so the whole table merges into one. Tick the key columns in Columns.`,
+			message: t('engineShared.chEngine.noSortKey', { engine: engine.label }),
 		});
 	}
 	if (draft.replicated && draft.cluster.trim() === '') {
-		out.push({ blocking: true, message: 'Creating on every replica needs the name of the cluster to create on.' });
+		out.push({ blocking: true, message: t('engineShared.chEngine.needsCluster') });
 	}
 	if (draft.ttl.trim() !== '' && draft.partitionBy.trim() === '') {
 		out.push({
 			blocking: false,
-			message: 'A TTL without a PARTITION BY drops expired rows by rewriting whole parts. Partitioning by the same column the TTL uses lets a whole partition be dropped instead.',
+			message: t('engineShared.chEngine.ttlNoPartition'),
 		});
 	}
 	return out;

@@ -1,0 +1,52 @@
+{
+	"action": {
+		"title": "{client} veut modifier l'application",
+		"clockTitle": "Refusé automatiquement sans réponse de votre part",
+		"seconds": "{n} s",
+		"turnsOn": "La modification de l'application par un agent est désactivée. Autoriser ceci l'active, et chaque action vous sera quand même demandée. L'interrupteur est dans Paramètres, Accès des agents, et refuser ici arrête les demandes.",
+		"allowOnce": "Autoriser une fois",
+		"alwaysTitle": "Ne plus demander avant « {title} ». Réversible dans Paramètres, Accès des agents.",
+		"always": "Toujours autoriser",
+		"decline": "Refuser"
+	},
+	"canvas": {
+		"shownBy": "Affiché par {agent}",
+		"clear": "Effacer ce qui est affiché",
+		"emptyTitle": "Rien d'affiché pour l'instant",
+		"emptyBody": "{agent} affiche ici ce qu'il aurait écrit dans son terminal : des lignes récupérées, une requête proposée, un graphique. Tout ce qui contient du SQL arrive sous forme de carte à insérer ou exécuter."
+	},
+	"console": {
+		"expand": "Développer la console de l'agent",
+		"collapse": "Réduire la console de l'agent",
+		"manualTitle": "{agent} gère sa propre liste d'outils : une seule commande suffit pour le connecter. Ouvrez Paramètres, Accès des agents.",
+		"noToolsTitle": "L'accès des agents est désactivé, cet agent n'a donc aucun outil de l'application. Ouvrez Paramètres, Accès des agents.",
+		"manual": "outils à configurer",
+		"noTools": "sans outils de l'app",
+		"connectedTitle": "Cet agent peut interroger vos connexions autorisées via l'application.",
+		"connected": "connecté",
+		"zoomTitle": "Taille du texte du terminal ({size} px). Ctrl+plus, Ctrl+moins, Ctrl+0, ou Ctrl+molette sur le terminal.",
+		"zoomOut": "Réduire le texte du terminal",
+		"zoomReset": "Réinitialiser la taille du texte",
+		"zoomIn": "Agrandir le texte du terminal",
+		"shownTitle": {
+			"one": "{agent} vous a montré quelque chose dans son propre onglet.",
+			"other": "{agent} vous a montré {count} éléments dans son propre onglet."
+		},
+		"shown": {
+			"one": "affiché dans un onglet",
+			"other": "affiché dans un onglet ({count})"
+		},
+		"restart": "Redémarrer",
+		"stop": "Arrêter",
+		"close": "Fermer le panneau",
+		"checkAgain": "Revérifier",
+		"installGuide": "Guide d'installation",
+		"exited": "L'agent s'est arrêté.",
+		"exitedCode": "L'agent s'est arrêté avec le code {code}.",
+		"runsHere": "S'exécute sur cet ordinateur, dans votre dossier de travail. Vos mots de passe de base de données ne lui sont jamais donnés.",
+		"startAgain": "Redémarrer",
+		"start": "Démarrer {agent}",
+		"exitedLabel": "{agent} s'est arrêté avec le code {code}. Sa dernière sortie est ci-dessus.",
+		"stopped": "{agent} est arrêté."
+	}
+}

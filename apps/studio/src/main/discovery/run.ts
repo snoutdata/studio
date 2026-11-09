@@ -3,6 +3,7 @@
  *  Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { t } from '../../shared/i18n/core';
 import type { ConnectionConfig } from '../../shared/connection';
 import type { ConnectionFormValues, DiscoveryOptions, DiscoveryProgress, ImportItemRef, ImportScanResult, ImportSourceId } from '../../shared/forms';
 import { DISCOVERY_SOURCE_LABELS, discoverySourceIds } from '../../shared/forms';
@@ -81,7 +82,7 @@ function withTimeout(run: SourceRun): Promise<ImportScanResult | null> {
 			sourceId: run.id,
 			sources: [],
 			items: [],
-			unavailable: `${DISCOVERY_SOURCE_LABELS[run.id]} took too long to answer, so it was skipped.`,
+			unavailable: t('mainDiscovery.tookTooLong', { source: DISCOVERY_SOURCE_LABELS[run.id] }),
 		}), run.timeoutMs);
 		Promise.resolve()
 			.then(() => run.scan())
@@ -89,7 +90,7 @@ function withTimeout(run: SourceRun): Promise<ImportScanResult | null> {
 				sourceId: run.id,
 				sources: [],
 				items: [],
-				unavailable: `Could not look at ${DISCOVERY_SOURCE_LABELS[run.id]}: ${err instanceof Error ? err.message : String(err)}`,
+				unavailable: t('mainDiscovery.couldNotLook', { source: DISCOVERY_SOURCE_LABELS[run.id], error: err instanceof Error ? err.message : String(err) }),
 			}))
 			.finally(() => clearTimeout(timer));
 	});

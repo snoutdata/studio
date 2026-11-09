@@ -1,0 +1,31 @@
+{
+	"change": {
+		"createTable": "Crear la tabla `{name}`",
+		"dropTable": "Eliminar la tabla `{name}`",
+		"addColumn": "Añadir la columna `{table}`.`{column}`",
+		"alterColumn": "Modificar la columna `{table}`.`{column}` ({before} → {after})",
+		"dropColumn": "Eliminar la columna `{table}`.`{column}`",
+		"setPrimaryKey": "Cambiar la clave primaria de `{table}`",
+		"addIndex": "Añadir el índice `{name}` en `{table}`",
+		"dropIndex": "Eliminar el índice `{name}` de `{table}`",
+		"replaceIndex": "Reconstruir el índice `{name}` de `{table}`",
+		"addForeignKey": "Añadir la clave foránea `{name}` en `{table}`",
+		"dropForeignKey": "Eliminar la clave foránea `{name}` de `{table}`",
+		"replaceForeignKey": "Reconstruir la clave foránea `{name}` de `{table}`",
+		"addTrigger": "Añadir el trigger `{name}` en `{table}`",
+		"dropTrigger": "Eliminar el trigger `{name}` de `{table}`",
+		"replaceTrigger": "Reemplazar el trigger `{name}` de `{table}`",
+		"createView": "Crear la vista `{name}`",
+		"dropView": "Eliminar la vista `{name}`",
+		"replaceView": "Reemplazar la vista `{name}`"
+	},
+	"emit": {
+		"unsupportedDriver": "La sincronización de esquemas no está disponible para el driver \"{driver}\".",
+		"clickhousePrimaryKey": "ClickHouse no puede cambiar la clave primaria de \"{table}\": es el orden en que se guardan los datos. Crea una tabla nueva con el nuevo ORDER BY y copia las filas en ella.",
+		"sqliteAlterColumn": "SQLite no puede modificar la columna \"{table}\".\"{column}\" sin más (hay que reconstruir toda la tabla, y la sincronización de esquemas aún no lo genera para SQLite).",
+		"sqlitePrimaryKey": "SQLite no puede cambiar la clave primaria de \"{table}\" sin más (hay que reconstruir toda la tabla, y la sincronización de esquemas aún no lo genera para SQLite).",
+		"sqliteAddForeignKey": "SQLite no puede añadir una clave foránea a \"{table}\" sin más (hay que reconstruir toda la tabla, y la sincronización de esquemas aún no lo genera para SQLite).",
+		"sqliteDropForeignKey": "SQLite no puede eliminar una clave foránea de \"{table}\" sin más (hay que reconstruir toda la tabla, y la sincronización de esquemas aún no lo genera para SQLite).",
+		"sqliteChangeForeignKey": "SQLite no puede cambiar una clave foránea de \"{table}\" sin más (hay que reconstruir toda la tabla, y la sincronización de esquemas aún no lo genera para SQLite)."
+	}
+}

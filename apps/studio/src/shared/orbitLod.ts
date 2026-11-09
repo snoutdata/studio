@@ -28,6 +28,7 @@
  */
 
 import type { OrbitGraph } from './orbit';
+import { t } from './i18n/core';
 
 /** What a graph of this size is allowed to draw. */
 export interface LodBudget {
@@ -103,7 +104,7 @@ export function lodFor(nodeCount: number, linkCount: number): LodBudget {
 			maxNodes: 0,
 			maxLinks: 0,
 			ceiling: false,
-			note: "Indexes are folded into the tables they belong to, which is why some stars are bigger than their row count.",
+			note: t('engineShared.orbit.foldIndexes'),
 		};
 	}
 	if (weight <= CAPPED_MAX) {
@@ -116,7 +117,7 @@ export function lodFor(nodeCount: number, linkCount: number): LodBudget {
 			maxNodes: 30_000,
 			maxLinks: 45_000,
 			ceiling: false,
-			note: "This schema is past what Orbit draws in full. Indexes are folded into their tables, and the least connected objects are left out. Isolate a table to see its neighbourhood exactly.",
+			note: t('engineShared.orbit.capped'),
 		};
 	}
 	return {
@@ -128,7 +129,7 @@ export function lodFor(nodeCount: number, linkCount: number): LodBudget {
 		maxNodes: 0,
 		maxLinks: 0,
 		ceiling: true,
-		note: "This schema is too large for Orbit to draw. Connect to a single schema, or turn indexes off when introspecting, and open it again.",
+		note: t('engineShared.orbit.ceiling'),
 	};
 }
 

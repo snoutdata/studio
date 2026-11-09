@@ -6,6 +6,7 @@
 import { Suspense, lazy, useRef, useState } from 'react';
 import { Icon } from './Icon';
 import { chartDataToCsv, type ChartSpec } from '../../../shared/chart';
+import { useT } from '../i18n';
 
 /**
  * Renders a chart the assistant proposed (a parsed ```chart block) inline in the chat, with a
@@ -60,6 +61,7 @@ function svgToPngBase64(svg: string, width: number, height: number): Promise<str
 }
 
 export function ChartView({ spec }: { spec: ChartSpec }): JSX.Element {
+	const t = useT();
 	const bodyRef = useRef<HTMLDivElement>(null);
 	const [menuOpen, setMenuOpen] = useState(false);
 	const [saving, setSaving] = useState(false);
@@ -99,22 +101,22 @@ export function ChartView({ spec }: { spec: ChartSpec }): JSX.Element {
 	return (
 		<div className="chart-block">
 			<div className="chart-block-head">
-				<span className="chart-block-title"><Icon name="graph" /> {spec.title ?? "Chart"}</span>
+				<span className="chart-block-title"><Icon name="graph" /> {spec.title ?? t('charts.view.chart')}</span>
 				<div className="chart-block-tools">
-					<button type="button" className="icon-btn" aria-label="Save chart" disabled={saving} onClick={() => setMenuOpen((o) => !o)}>
+					<button type="button" className="icon-btn" aria-label={t('charts.view.save')} disabled={saving} onClick={() => setMenuOpen((o) => !o)}>
 						<Icon name={saving ? 'loading' : 'save'} className={saving ? 'codicon-modifier-spin' : ''} />
 					</button>
 					{menuOpen && (
 						<div className="chart-save-menu" onMouseLeave={() => setMenuOpen(false)}>
-							<button type="button" onClick={() => void save('png')}><Icon name="file-media" /> Save as PNG</button>
-							<button type="button" onClick={() => void save('svg')}><Icon name="file-media" /> Save as SVG</button>
-							<button type="button" onClick={() => void save('csv')}><Icon name="file" /> Save data as CSV</button>
+							<button type="button" onClick={() => void save('png')}><Icon name="file-media" /> {t('charts.view.savePng')}</button>
+							<button type="button" onClick={() => void save('svg')}><Icon name="file-media" /> {t('charts.view.saveSvg')}</button>
+							<button type="button" onClick={() => void save('csv')}><Icon name="file" /> {t('charts.view.saveCsv')}</button>
 						</div>
 					)}
 				</div>
 			</div>
 			<div className="chart-block-body" ref={bodyRef}>
-				<Suspense fallback={<div className="muted pad small">Loading chart…</div>}>
+				<Suspense fallback={<div className="muted pad small">{t('charts.view.loading')}</div>}>
 					<ChartCanvas spec={spec} />
 				</Suspense>
 			</div>

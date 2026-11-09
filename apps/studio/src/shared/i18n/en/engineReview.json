@@ -1,0 +1,10 @@
+{
+	"boundary": {
+		"rulesOnly": "No explanation is written, and no model is called. The findings are the rules' own words.",
+		"local": "The model runs on this computer, so nothing about the review is sent anywhere. It costs time and power on this machine instead.",
+		"snoutAi": "The changed SQL, and the findings taken from your database, are sent to our servers to be written up, and it comes out of your AI allowance.",
+		"ollamaLocal": "The model runs on this computer, on the Ollama you are running. Nothing about the review is sent anywhere.",
+		"ollamaRemote": "The changed SQL, and the findings taken from your database, are sent to the Ollama server you named ({host}). They do not reach us.",
+		"byok": "The changed SQL, and the findings taken from your database, are sent to {vendor} using your own key. They do not reach us."
+	}
+}

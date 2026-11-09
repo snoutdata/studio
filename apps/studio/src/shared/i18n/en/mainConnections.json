@@ -1,0 +1,22 @@
+{
+	"readOnlyVerb": "Connection \"{label}\" is read-only; {verb} is blocked.",
+	"sendsTo": " and sends them to {host}",
+	"awsImported": "\"{label}\" was imported and fetches its credentials from AWS Secrets Manager (secret \"{secretId}\"){where}. Open it with Edit, check where it connects, and Save it before connecting.",
+	"tunnelTo": " to {host}:{port}",
+	"sshImported": "\"{label}\" was imported and connects through an SSH tunnel{where}, signing in with your own SSH key. Open it with Edit, check where it connects, and Save it before connecting.",
+	"notSnoutSignIn": "This connection does not sign in with your SnoutData account.",
+	"snoutSignInUnavailable": "This connection signs in with your SnoutData account, which is not available yet.",
+	"noPipeline": "This connection runs SQL directly, so there is no pipeline translation.",
+	"readOnlyWrites": "Connection \"{label}\" is read-only; this query writes data and is blocked.",
+	"readOnlyLoad": "Connection \"{label}\" is read-only; loading a file into it is blocked.",
+	"syncGone": "Source or target connection no longer exists.",
+	"syncAcross": "Cannot sync across database types (\"{driver}\" → \"{targetDriver}\"). Source and target must use the same driver.",
+	"sourceNotConnected": "Source \"{label}\" is not connected.",
+	"targetNotConnected": "Target \"{label}\" is not connected.",
+	"readOnlySync": "Connection \"{label}\" is read-only; Schema Sync cannot change its schema.",
+	"componentConnect": "This database needs a one-time component download ({totalLabel}). Click Connect to install it.",
+	"notSupportedOs": "This database isn't supported on your operating system yet.",
+	"componentSave": "This database needs a one-time component download ({totalLabel}). Save the connection and click Connect to install it.",
+	"similarityNeedsEmbed": "Similarity search needs an embeddings model, which this build has no access to yet.",
+	"cloudAccountGone": "The cloud account this connection uses no longer exists. Edit the connection and pick one, or add it again in Settings."
+}

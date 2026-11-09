@@ -3,6 +3,7 @@
  *  Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { t } from '../../shared/i18n/core';
 import { existsSync, readFileSync } from 'node:fs';
 
 import type { ConnectionConfig } from '../../shared/connection';
@@ -99,10 +100,10 @@ export function resolveFileSource(source: FileSource, refs: ImportItemRef[]): Co
 export function credentialNotes(values: ConnectionFormValues, hasPassword: boolean, why?: string): string[] {
 	const notes: string[] = [];
 	if (!values.username) {
-		notes.push("Username not found; set it after import.");
+		notes.push(t('mainDiscovery.noUsername'));
 	}
 	if (!hasPassword) {
-		notes.push(why ?? "No saved password; set it after import.");
+		notes.push(why ?? t('mainDiscovery.noPassword'));
 	}
 	return notes;
 }

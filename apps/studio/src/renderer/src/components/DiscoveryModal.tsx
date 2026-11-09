@@ -5,6 +5,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { Icon } from './Icon';
+import { useT } from '../i18n';
 import { DiscoverArt } from '../art/Illustrations';
 import { ImportRow } from './ImportRow';
 import { DISCOVERY_SOURCE_LABELS, discoverySourceIds } from '../../../shared/forms';
@@ -34,7 +35,8 @@ function rowKey(sourceId: ImportSourceId, key: string): string {
 }
 
 export function DiscoveryModal({ onClose, onImported, onAddConnection }: DiscoveryModalProps): JSX.Element {
-	const [step, setStep] = useState<Step>('intro');
+	const t = useT();
+const [step, setStep] = useState<Step>('intro');
 	const [network, setNetwork] = useState(false);
 	const [progress, setProgress] = useState<DiscoveryProgress[]>([]);
 	const [results, setResults] = useState<ImportScanResult[]>([]);
@@ -84,7 +86,7 @@ export function DiscoveryModal({ onClose, onImported, onAddConnection }: Discove
 			// Every source has its own limit in main (30 seconds at most, for the network), so no
 			// answer in a minute means the run itself is not coming back.
 			const ceiling = new Promise<never>((_, reject) => {
-				timer = window.setTimeout(() => reject(new Error("The search did not finish within a minute.")), 60_000);
+				timer = window.setTimeout(() => reject(new Error(t('connections.discovery.timeout'))), 60_000);
 			});
 			const found = await Promise.race([window.sqlApi.discoverRun({ network }), ceiling]);
 			if (!alive.current) {
@@ -152,7 +154,7 @@ export function DiscoveryModal({ onClose, onImported, onAddConnection }: Discove
 		<div className="modal-head">
 			<h2>{title}</h2>
 			<span className="spacer" />
-			<button type="button" className="icon-btn" aria-label="Close" onClick={onClose}><Icon name="close" /></button>
+			<button type="button" className="icon-btn" aria-label={t('connections.common.close')} onClick={onClose}><Icon name="close" /></button>
 		</div>
 	);
 
@@ -160,18 +162,18 @@ export function DiscoveryModal({ onClose, onImported, onAddConnection }: Discove
 		return (
 			<div className="modal-backdrop" onClick={onClose}>
 				<div className="modal discovery" onClick={(e) => e.stopPropagation()} data-test="discovery-modal">
-					{head("Find your databases")}
+					{head(t('connections.discovery.title'))}
 					<DiscoverArt className="discovery-art" />
-					<p className="muted">SnoutData Studio can look on this computer for databases and for connections saved in other tools. Nothing leaves this computer.</p>
+					<p className="muted">{t('connections.discovery.intro')}</p>
 					<label className="check">
 						<input type="checkbox" checked={network} onChange={(e) => setNetwork(e.target.checked)} data-test="discovery-network" />
-						Also search my local network
+						{t('connections.discovery.alsoNetwork')}
 					</label>
-					<p className="field-hint">This checks the machines on your local network for open database ports. A company's security tools can flag that, so leave it off on a work network.</p>
+					<p className="field-hint">{t('connections.discovery.networkHint')}</p>
 					<div className="modal-actions">
 						<span className="spacer" />
-						<button type="button" className="secondary" onClick={onClose} data-test="discovery-skip"><Icon name="debug-step-over" /> Skip</button>
-						<button type="button" onClick={() => void find()} autoFocus data-test="discovery-find"><Icon name="search" /> Find databases</button>
+						<button type="button" className="secondary" onClick={onClose} data-test="discovery-skip"><Icon name="debug-step-over" /> {t('connections.common.skip')}</button>
+						<button type="button" onClick={() => void find()} autoFocus data-test="discovery-find"><Icon name="search" /> {t('connections.import.findDatabases')}</button>
 					</div>
 				</div>
 			</div>
@@ -185,15 +187,15 @@ export function DiscoveryModal({ onClose, onImported, onAddConnection }: Discove
 		return (
 			<div className="modal-backdrop">
 				<div className="modal discovery" data-test="discovery-modal">
-					{head("Looking for databases")}
+					{head(t('connections.discovery.looking'))}
 					<div className="discovery-meter" role="progressbar" aria-valuemin={0} aria-valuemax={progress.length} aria-valuenow={done}>
 						<div className="discovery-meter-fill" style={{ width: `${progress.length ? (done / progress.length) * 100 : 0}%` }} />
 					</div>
 					<p className="muted small discovery-status" data-test="discovery-status">
-						{done} of {progress.length} checked
-						{foundSoFar > 0 ? `, ${foundSoFar} found so far` : ''}
-						{looking ? `. Looking at ${DISCOVERY_SOURCE_LABELS[looking.sourceId]}` : ''}
-						{looking?.sourceId === 'network' ? " (this takes up to 20 seconds)" : ''}
+						{t('connections.discovery.checked', { done, total: progress.length })}
+						{foundSoFar > 0 ? t('connections.discovery.foundSoFar', { count: foundSoFar }) : ''}
+						{looking ? t('connections.discovery.lookingAt', { name: DISCOVERY_SOURCE_LABELS[looking.sourceId] }) : ''}
+						{looking?.sourceId === 'network' ? t('connections.discovery.networkTime') : ''}
 					</p>
 					<ul className="discovery-progress" data-test="discovery-progress">
 						{progress.map((p) => (
@@ -201,13 +203,13 @@ export function DiscoveryModal({ onClose, onImported, onAddConnection }: Discove
 								<Icon name={p.state === 'done' ? 'check' : 'loading'} className={p.state === 'done' ? undefined : 'codicon-modifier-spin'} />
 								<span>{DISCOVERY_SOURCE_LABELS[p.sourceId]}</span>
 								<span className="spacer" />
-								<span className="muted small">{p.state === 'done' ? (p.found ? `${p.found} found` : "nothing") : "looking"}</span>
+								<span className="muted small">{p.state === 'done' ? (p.found ? t('connections.discovery.found', { count: p.found }) : t('connections.discovery.nothing')) : t('connections.discovery.lookingShort')}</span>
 							</li>
 						))}
 					</ul>
 					<div className="modal-actions">
 						<span className="spacer" />
-						<button type="button" className="secondary" onClick={onClose}><Icon name="debug-step-over" /> Skip</button>
+						<button type="button" className="secondary" onClick={onClose}><Icon name="debug-step-over" /> {t('connections.common.skip')}</button>
 					</div>
 				</div>
 			</div>
@@ -218,15 +220,15 @@ export function DiscoveryModal({ onClose, onImported, onAddConnection }: Discove
 		return (
 			<div className="modal-backdrop" onClick={onClose}>
 				<div className="modal discovery" onClick={(e) => e.stopPropagation()} data-test="discovery-modal">
-					{head("No databases found")}
+					{head(t('connections.discovery.none'))}
 					<DiscoverArt className="discovery-art" />
 					<p className="muted" data-test="discovery-empty">
-						Nothing turned up on this computer{network ? " or your local network" : ''}. You can add a connection by hand, or look again later with Find Databases in the command palette or the Import connections screen.
+						{network ? t('connections.discovery.emptyNetwork') : t('connections.discovery.empty')}
 					</p>
 					<div className="modal-actions">
 						<span className="spacer" />
-						<button type="button" className="secondary" onClick={onClose}><Icon name="close" /> Close</button>
-						<button type="button" onClick={onAddConnection}><Icon name="add" /> Add a connection</button>
+						<button type="button" className="secondary" onClick={onClose}><Icon name="close" /> {t('connections.common.close')}</button>
+						<button type="button" onClick={onAddConnection}><Icon name="add" /> {t('connections.discovery.addConnection')}</button>
 					</div>
 				</div>
 			</div>
@@ -236,7 +238,7 @@ export function DiscoveryModal({ onClose, onImported, onAddConnection }: Discove
 	return (
 		<div className="modal-backdrop">
 			<div className="modal discovery import-picker" data-test="discovery-modal">
-				{head(groups.length === 0 && error ? "The search did not finish" : "Databases found")}
+				{head(groups.length === 0 && error ? t('connections.discovery.searchFailed') : t('connections.discovery.foundTitle'))}
 				<div className="discovery-groups" data-test="discovery-results">
 					{groups.map((r) => (
 						<section className="discovery-group" key={r.sourceId} data-test={`discovery-group-${r.sourceId}`}>
@@ -251,7 +253,7 @@ export function DiscoveryModal({ onClose, onImported, onAddConnection }: Discove
 											item={item}
 											checked={selected.has(rowKey(r.sourceId, item.key))}
 											onToggle={() => toggle(rowKey(r.sourceId, item.key))}
-											duplicateLabel={r.sourceId === 'snoutdata-cloud' ? "already imported, will update" : undefined}
+											duplicateLabel={r.sourceId === 'snoutdata-cloud' ? t('connections.import.alreadyUpdated') : undefined}
 										/>
 									))}
 								</div>
@@ -261,11 +263,11 @@ export function DiscoveryModal({ onClose, onImported, onAddConnection }: Discove
 				</div>
 				{error && <div className="form-status error" data-test="discovery-error">{error}</div>}
 				<div className="modal-actions">
-					{error && !busy && <button type="button" className="secondary" onClick={() => void find()}><Icon name="refresh" /> Try again</button>}
+					{error && !busy && <button type="button" className="secondary" onClick={() => void find()}><Icon name="refresh" /> {t('connections.discovery.tryAgain')}</button>}
 					<span className="spacer" />
-					<button type="button" className="secondary" onClick={onClose} disabled={busy} data-test="discovery-skip"><Icon name="debug-step-over" /> Skip</button>
+					<button type="button" className="secondary" onClick={onClose} disabled={busy} data-test="discovery-skip"><Icon name="debug-step-over" /> {t('connections.common.skip')}</button>
 					<button type="button" onClick={() => void importSelected()} disabled={busy || selectedCount === 0} data-test="discovery-import">
-						<Icon name="cloud-download" /> Import {selectedCount > 0 ? selectedCount : ''}
+						<Icon name="cloud-download" /> {selectedCount > 0 ? t('connections.import.importCount', { count: selectedCount }) : t('connections.import.import')}
 					</button>
 				</div>
 			</div>

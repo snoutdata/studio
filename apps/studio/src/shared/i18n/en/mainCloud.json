@@ -1,0 +1,95 @@
+{
+	"listingPermission": " Listing is its own permission. If these credentials are scoped to particular {nouns} rather than the whole account, name those on the connection and it will read them without asking for the list.",
+	"armDidNotAnswer": "{label} did not answer: {message}",
+	"signedInChoose": "Signed in to {label}. Choose the {noun} on the connection.",
+	"serviceDidNotAnswer": "{label} did not answer.",
+	"storageAt": "the storage at {endpoint}",
+	"connectedNone": "Connected to {where}. This account has no {nouns} yet.",
+	"connectedSome": "Connected to {where}. {what} visible.",
+	"storageGone": "That storage account is no longer set up.",
+	"accountGone": "That cloud account is no longer set up.",
+	"notBuilt": "{label} is not built yet.",
+	"noFileStorage": "{vendorLabel} has no file storage this app can read.",
+	"noLogService": "{vendorLabel} has no log service this app can read.",
+	"setRegion": "Set a region first: {label} lists its {nouns} one region at a time.",
+	"connectedRegionNone": "Connected to {label} in {region}. Nothing there yet.",
+	"connectedRegionSome": "Connected to {label} in {region}. {what} visible.",
+	"noun_bucket": {
+		"one": "bucket",
+		"other": "buckets"
+	},
+	"noun_container": {
+		"one": "container",
+		"other": "containers"
+	},
+	"noun_log_group": {
+		"one": "log group",
+		"other": "log groups"
+	},
+	"noun_table": {
+		"one": "table",
+		"other": "tables"
+	},
+	"noun_log": {
+		"one": "log",
+		"other": "logs"
+	},
+	"count_bucket": {
+		"one": "One bucket",
+		"other": "{count} buckets"
+	},
+	"count_container": {
+		"one": "One container",
+		"other": "{count} containers"
+	},
+	"count_log_group": {
+		"one": "One log group",
+		"other": "{count} log groups"
+	},
+	"count_table": {
+		"one": "One table",
+		"other": "{count} tables"
+	},
+	"count_log": {
+		"one": "One log",
+		"other": "{count} logs"
+	},
+	"whatAws": "Files in S3, log events in CloudWatch.",
+	"whatAzure": "Files in Blob Storage, log events in Azure Monitor.",
+	"whatGcp": "Files in Cloud Storage, log events in Cloud Logging.",
+	"s3CompatLabel": "S3-compatible storage",
+	"whatS3Compat": "Cloudflare R2, MinIO, Backblaze B2, Wasabi, Ceph, or anything else that speaks the S3 API.",
+	"importsAws": "the AWS CLI",
+	"importsAzure": "the Azure CLI",
+	"importsGcp": "the gcloud CLI",
+	"importsS3Compat": "your AWS CLI config, where an S3-compatible key is usually kept",
+	"awsSso": "Signed in through SSO. It works while your session lasts, and a scheduled flow stops when it expires until you sign in again.",
+	"awsAssume": "Assumes a role. It works wherever the profile it is based on does.",
+	"awsCommand": "Runs a command of yours to fetch credentials. It works here as long as that command does.",
+	"awsWebIdentity": "Uses a web identity token file.",
+	"awsNoCreds": "This profile names no credentials of its own, so it may rely on something else on this computer.",
+	"noun_region": {
+		"one": "region",
+		"other": "regions"
+	},
+	"count_region": {
+		"one": "One region",
+		"other": "{count} regions"
+	},
+	"noun_workspace_ID": {
+		"one": "workspace ID",
+		"other": "workspace IDs"
+	},
+	"count_workspace_ID": {
+		"one": "One workspace ID",
+		"other": "{count} workspace IDs"
+	},
+	"noun_project": {
+		"one": "project",
+		"other": "projects"
+	},
+	"count_project": {
+		"one": "One project",
+		"other": "{count} projects"
+	}
+}

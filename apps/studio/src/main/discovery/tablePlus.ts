@@ -3,6 +3,7 @@
  *  Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { t } from '../../shared/i18n/core';
 import { execFile } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 
@@ -117,8 +118,8 @@ export function tablePlusToFound(file: string, plist: Plist): Found[] {
 			supported: driver !== null && values.host !== '',
 			importsPassword: false,
 			note: driver === null
-				? `Unsupported driver (${driverText || "unknown"}).`
-				: credentialNotes(values, false, "TablePlus keeps passwords in your Keychain, so set it after import.").join(' '),
+				? t('mainDiscovery.unsupportedDriver', { driver: driverText || t('mainDiscovery.unknown') })
+				: credentialNotes(values, false, t('mainDiscovery.tablePlusKeychain')).join(' '),
 		};
 	});
 }

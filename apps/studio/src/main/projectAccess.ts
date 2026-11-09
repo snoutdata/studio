@@ -3,6 +3,7 @@
  *  Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { t } from '../shared/i18n/core';
 import { readFileSync, writeFileSync } from 'node:fs';
 import { basename, extname } from 'node:path';
 
@@ -117,7 +118,7 @@ export class ProjectAccess {
 				rows: [],
 				rowCount: 0,
 				truncated: false,
-				error: /ECONNREFUSED|ETIMEDOUT|timeout expired/i.test(message) ? `The database is not answering on 127.0.0.1:${local.dbPort}. Is the project running?` : message,
+				error: /ECONNREFUSED|ETIMEDOUT|timeout expired/i.test(message) ? t('mainProjects.dbSilent', { port: String(local.dbPort) }) : message,
 			};
 		} finally {
 			await client.end().catch(() => undefined);
@@ -136,7 +137,7 @@ export class ProjectAccess {
 			const details = await this.deps.cloud.connection(target.ref) as { serverKey?: string | null; serviceRoleKey?: string | null };
 			const serverKey = details.serverKey ?? details.serviceRoleKey;
 			if (!serverKey) {
-				throw new Error("This project's API keys could not be read just now. Try again in a moment.");
+				throw new Error(t('mainProjects.keysUnreadable'));
 			}
 			key = serverKey;
 			this.cloudKeys.set(target.ref, key);
@@ -155,7 +156,7 @@ export class ProjectAccess {
 		const wire = wirePath(path, vocabulary);
 		// Both: the path as written, and the path as it goes out.
 		if (!apiPathAllowed(path) || !apiPathAllowed(wire)) {
-			return { ok: false, status: 0, text: `The app does not call ${path} for you.` };
+			return { ok: false, status: 0, text: t('mainProjects.noCall', { path }) };
 		}
 		for (let attempt = 0; attempt < 2; attempt++) {
 			let gateway: { base: string; key: string };
@@ -173,8 +174,8 @@ export class ProjectAccess {
 					signal: AbortSignal.timeout(120000),
 				});
 			} catch (err) {
-				const where = target.kind === 'local' ? `${gateway.base}. Is the project running?` : gateway.base;
-				return { ok: false, status: 0, text: `The gateway did not answer at ${where} (${err instanceof Error ? err.message : String(err)})` };
+				const where = target.kind === 'local' ? t('mainProjects.gatewayLocal', { base: gateway.base }) : gateway.base;
+				return { ok: false, status: 0, text: t('mainProjects.gatewaySilent', { where, error: err instanceof Error ? err.message : String(err) }) };
 			}
 			// A cloud key rotated since it was read: read it again, once.
 			if (res.status === 401 && target.kind === 'cloud' && attempt === 0) {
@@ -185,7 +186,7 @@ export class ProjectAccess {
 			}
 			return { ok: res.ok, status: res.status, text: await res.text() };
 		}
-		return { ok: false, status: 401, text: "The project refused its own server key." };
+		return { ok: false, status: 401, text: t('mainProjects.ownKeyRefused') };
 	}
 
 	async api(target: ProjectTarget, request: ProjectApiRequest): Promise<ProjectApiResponse> {
@@ -206,11 +207,11 @@ export class ProjectAccess {
 				'x-upsert': upsert ? 'true' : 'false',
 			});
 			if (!res.ok) {
-				return { ok: false, message: `${name}: ${apiErrorMessage(parse(res.text), res.text, res.status)}${sent > 0 ? ` (${sent} uploaded before it)` : ''}` };
+				return { ok: false, message: `${name}: ${apiErrorMessage(parse(res.text), res.text, res.status)}${sent > 0 ? t('mainProjects.uploadedBefore', { count: sent }) : ''}` };
 			}
 			sent++;
 		}
-		return { ok: true, message: sent === 1 ? "1 file uploaded." : `${sent} files uploaded.` };
+		return { ok: true, message: t('mainProjects.filesUploaded', { count: sent }) };
 	}
 
 	/** One object's bytes, for a copy to another project (`projectCopy.ts`). */
@@ -237,10 +238,10 @@ export class ProjectAccess {
 	async download(target: ProjectTarget, bucket: string, path: string, file: string): Promise<ProjectActionOutcome> {
 		const res = await this.send(target, 'GET', `/v1/files/file/${encodeURIComponent(bucket)}/${encodeStoragePath(path)}`, undefined, {}, true);
 		if (!res.ok || !res.bytes) {
-			return { ok: false, message: `Could not download it: ${apiErrorMessage(parse(res.text), res.text, res.status)}` };
+			return { ok: false, message: t('mainProjects.downloadFailed', { detail: apiErrorMessage(parse(res.text), res.text, res.status) }) };
 		}
 		writeFileSync(file, Buffer.from(res.bytes));
-		return { ok: true, message: `Saved to ${file}.` };
+		return { ok: true, message: t('mainProjects.savedTo', { file }) };
 	}
 }
 

@@ -30,6 +30,7 @@ import type { AmbientCell } from '../../../shared/ai';
 import { looksLikeConnectionLoss, policyFor, type ConnectionPolicy, type MongoWrite } from '../../../shared/engine';
 import type { ExecuteQueryResult } from '../../../shared/protocol';
 import type { ColumnInfo, DatabaseSchema, TableInfo } from '../../../shared/schema';
+import { formatLocale, useI18n, type Translate } from '../i18n';
 
 // The query results view: a virtualized DataGrid plus header-click
 // sorting and a footer with row/time details + a client-side paginator. The whole
@@ -56,16 +57,17 @@ function loadWrap(): WrapMode {
 }
 
 /** What the footer's wrap button says it will do next, and what it is doing now. */
-function wrapTitle(mode: WrapMode, pageRows: number): string {
+function wrapTitle(t: Translate, mode: WrapMode, pageRows: number): string {
+	const lines = String(WRAP_LINES);
 	if (mode === 'off') {
-		return `Wrap long text over ${WRAP_LINES} lines (click again to expand every row to fit)`;
+		return t('results.wrap.off', { lines });
 	}
 	if (mode === 'lines') {
-		return `Wrapping over ${WRAP_LINES} lines. Click to expand every row to fit its whole value.`;
+		return t('results.wrap.lines', { lines });
 	}
 	return pageRows > FULL_WRAP_MAX_ROWS
-		? `Too many rows on this page to expand each one, so they stay ${WRAP_LINES} lines. Click for single-line rows.`
-		: "Rows expanded to fit their whole value. Click for single-line rows.";
+		? t('results.wrap.tooMany', { lines })
+		: t('results.wrap.full');
 }
 
 function saveWrap(mode: WrapMode): void {
@@ -284,24 +286,24 @@ interface ResultsGridProps {
 
 /** The ranges the footer offers. Coarse on purpose: these re-run a metered query, so the list is
  *  the handful of answers to "look further back", not a duration picker. */
-const LOG_RANGES: { ms: number; label: string }[] = [
-	{ ms: 15 * 60_000, label: 'Last 15 minutes' },
-	{ ms: 60 * 60_000, label: 'Last hour' },
-	{ ms: 6 * 60 * 60_000, label: 'Last 6 hours' },
-	{ ms: 24 * 60 * 60_000, label: 'Last 24 hours' },
-	{ ms: 7 * 24 * 60 * 60_000, label: 'Last 7 days' },
-	{ ms: 30 * 24 * 60 * 60_000, label: 'Last 30 days' },
+const LOG_RANGES: { ms: number; label(t: Translate): string }[] = [
+	{ ms: 15 * 60_000, label: (t) => t('results.log.last15m') },
+	{ ms: 60 * 60_000, label: (t) => t('results.log.last1h') },
+	{ ms: 6 * 60 * 60_000, label: (t) => t('results.log.last6h') },
+	{ ms: 24 * 60 * 60_000, label: (t) => t('results.log.last24h') },
+	{ ms: 7 * 24 * 60 * 60_000, label: (t) => t('results.log.last7d') },
+	{ ms: 30 * 24 * 60 * 60_000, label: (t) => t('results.log.last30d') },
 ];
 
 /** How a range reads in the footer: a preset by name, anything else by its length, and a range the
  *  SQL chose by its ends, because that one is a fact about the statement rather than a setting. */
-function describeLogWindow(start: number, end: number, fromSql: boolean): string {
+function describeLogWindow(t: Translate, start: number, end: number, fromSql: boolean): string {
 	if (fromSql) {
-		return `${formatWindowEdge(start)} to ${formatWindowEdge(end)}`;
+		return t('results.log.windowRange', { start: formatWindowEdge(start), end: formatWindowEdge(end) });
 	}
 	const span = end - start;
 	const preset = LOG_RANGES.find((range) => Math.abs(range.ms - span) < 60_000);
-	return preset ? preset.label.toLowerCase() : `${formatDuration(span)} to ${formatWindowEdge(end)}`;
+	return preset ? preset.label(t).toLocaleLowerCase(formatLocale()) : t('results.log.windowSpan', { span: formatDuration(t, span), end: formatWindowEdge(end) });
 }
 
 /** An absolute instant, in the reader's own zone, without the date when it is today. */
@@ -309,20 +311,21 @@ function formatWindowEdge(at: number): string {
 	const date = new Date(at);
 	const today = new Date().toDateString() === date.toDateString();
 	return today
-		? date.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })
-		: date.toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+		? date.toLocaleTimeString(formatLocale(), { hour: '2-digit', minute: '2-digit' })
+		: date.toLocaleString(formatLocale(), { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
 }
 
-function formatDuration(ms: number): string {
+function formatDuration(t: Translate, ms: number): string {
 	const minutes = Math.round(ms / 60_000);
 	if (minutes < 90) {
 		return `${minutes} min`;
 	}
 	const hours = Math.round(minutes / 60);
-	return hours < 48 ? `${hours} h` : `${Math.round(hours / 24)} d`;
+	return hours < 48 ? `${hours} h` : t('results.log.days', { n: String(Math.round(hours / 24)) });
 }
 
 export function ResultsGrid({ response, connecting = false, active = true, live = true, appliedLimit, onFetchMore, resultKey, edit, notEditableReason, isProd = false, policy = DEFAULT_POLICY, schema, resolveFkLabels = true, onNavigateFk, totalCount = null, countingTotal = false, onCountTotal, logWindow, onReconnect, onSelectionChange, aiActions = false, documentView = false, logView = false, runLogContext }: ResultsGridProps): JSX.Element {
+	const { t, tr } = useI18n();
 	const [sort, setSort] = useState<SortState | null>(null);
 	const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
 	const [page, setPage] = useState(0);
@@ -464,9 +467,9 @@ export function ResultsGrid({ response, connecting = false, active = true, live 
 	const readOnlyReason = editingEnabled
 		? undefined
 		: canEdit && !actionsAllowed
-			? 'This is a production connection, so editing is locked. Click to allow editing for this session.'
+			? t('results.view.prodLocked')
 			: !editing.editable
-				? 'This backend has no write path: an ingested log event cannot be changed.'
+				? t('results.view.noWritePath')
 				: notEditableReason;
 	// Ctrl+S commits the pending grid edits (opens the DML preview) rather than saving the
 	// SQL file, while this pane is the foreground view and has unsaved edits.
@@ -664,7 +667,7 @@ export function ResultsGrid({ response, connecting = false, active = true, live 
 		requestLabels: live ? lookup.requestLabels : () => undefined,
 		requestPeek: live ? lookup.requestPeek : () => undefined,
 		peekData: lookup.peekData,
-		onNavigate: live ? (col, row) => { const t = lookup.navTarget(col, row); if (t) { onNavigateFk(t.table, t.filters); } } : () => undefined,
+		onNavigate: live ? (col, row) => { const target = lookup.navTarget(col, row); if (target) { onNavigateFk(target.table, target.filters); } } : () => undefined,
 	} : undefined;
 
 	// New result: drop a stale sort (its columns may differ) and jump back to page 1. Keyed on the
@@ -708,7 +711,7 @@ export function ResultsGrid({ response, connecting = false, active = true, live 
 			setDocSave(null);
 			edit.onReload();
 		} else {
-			setDocSaveError(res.error ?? 'The write failed.');
+			setDocSaveError(res.error ?? t('results.view.writeFailed'));
 		}
 	}
 
@@ -757,14 +760,14 @@ export function ResultsGrid({ response, connecting = false, active = true, live 
 		// `connecting` is set only by an explicit Run/Ctrl+Enter that hit a not-yet-connected
 		// connection — never by a picker/sidebar connect — so showing it here is the feedback
 		// the user is looking for, and a plain connect leaves the grid untouched.
-		return <div className="results-message results-connecting"><Icon name="loading" className="codicon-modifier-spin" /> Connecting to the database…</div>;
+		return <div className="results-message results-connecting"><Icon name="loading" className="codicon-modifier-spin" /> {t('results.view.connecting')}</div>;
 	}
 	if (!response) {
 		return (
 			<div className="results-empty">
 				<ResultsArt className="results-empty-art" />
-				<p>Run a query to see its results here.</p>
-				<p className="results-empty-keys"><kbd>{formatShortcut('Mod+Enter')}</kbd> runs the statement under the cursor, or the selection.</p>
+				<p>{t('results.view.runPrompt')}</p>
+				<p className="results-empty-keys"><kbd>{formatShortcut('Mod+Enter')}</kbd> {t('results.view.runKeys')}</p>
 			</div>
 		);
 	}
@@ -781,7 +784,7 @@ export function ResultsGrid({ response, connecting = false, active = true, live 
 				<span>{response.error}</span>
 				{showReconnect && (
 					<button type="button" className="secondary results-error-action" onClick={onReconnect}>
-						<Icon name="plug" /> Reconnect &amp; retry
+						<Icon name="plug" /> {t('results.view.reconnect')}
 					</button>
 				)}
 			</div>
@@ -793,7 +796,7 @@ export function ResultsGrid({ response, connecting = false, active = true, live 
 		const n = response.result.rowCount;
 		return (
 			<div className="results-message">
-				{n.toLocaleString()} {n === 1 ? 'row' : 'rows'} affected
+				{t('results.view.rowsAffected', { count: n })}
 				<span className="sep"> · </span>{response.result.durationMs} ms
 			</div>
 		);
@@ -849,6 +852,7 @@ export function ResultsGrid({ response, connecting = false, active = true, live 
 		void navigator.clipboard.writeText(generateRowSql(kind, edit.table, edit.driver, fields, getRow(i)));
 	}
 
+	const searched = logWindow ? t('results.log.searched', { start: new Date(logWindow.start).toLocaleString(formatLocale()), end: new Date(logWindow.end).toLocaleString(formatLocale()) }) : '';
 	const atFirst = safePage <= 0;
 	const atLast = safePage >= pageCount - 1;
 	// On the last loaded page, "Next" may still have somewhere to go: it fetches the next window
@@ -906,8 +910,8 @@ export function ResultsGrid({ response, connecting = false, active = true, live 
 			{filter && (
 				<div className="filter-bar">
 					<Icon name="filter" className="filter-bar-icon" />
-					<span className="filter-clause"><b>{fields[filter.col]?.name}</b> {filter.value === null || filter.value === undefined ? (filter.op === '<>' ? 'IS NOT NULL' : 'IS NULL') : filter.op === 'contains' ? `contains ${String(filter.value)}` : `${filter.op === '=' ? '=' : '≠'} ${String(filter.value)}`}</span>
-					<button type="button" className="filter-clear" title="Clear filter" onClick={() => { setFilter(null); setPage(0); }}><Icon name="close" /></button>
+					<span className="filter-clause"><b>{fields[filter.col]?.name}</b> {filter.value === null || filter.value === undefined ? (filter.op === '<>' ? 'IS NOT NULL' : 'IS NULL') : filter.op === 'contains' ? t('results.filter.contains', { value: String(filter.value) }) : `${filter.op === '=' ? '=' : '≠'} ${String(filter.value)}`}</span>
+					<button type="button" className="filter-clear" title={t('results.filter.clear')} onClick={() => { setFilter(null); setPage(0); }}><Icon name="close" /></button>
 				</div>
 			)}
 			{/* The RESULT's own count, not `total`: a client-side filter that hides every row must not
@@ -916,16 +920,16 @@ export function ResultsGrid({ response, connecting = false, active = true, live 
 				<div className="log-empty">
 					<Icon name="watch" className="log-empty-icon" />
 					<div className="log-empty-text">
-						<b>No events {describeLogWindow(logWindow.start, logWindow.end, logWindow.fromSql && !logWindow.editsSql)}.</b>
+						<b>{t('results.log.noEvents', { window: describeLogWindow(t, logWindow.start, logWindow.end, logWindow.fromSql && !logWindow.editsSql) })}</b>
 						{!logWindow.fromSql && (logWindow.editsSql
-							? <span> The statement named no time range, so that is what ran. Looking further back writes the range into your SQL, as <code>WHERE ts &gt;= ago('24h')</code>.</span>
-							: <span> The statement named no time range, so that is what ran. Look further back, or add a bound of your own with <code>WHERE ts &gt;= ago('24h')</code>.</span>
+							? <span> {tr('results.log.noRangeEdits')}</span>
+							: <span> {tr('results.log.noRangeAdd')}</span>
 						)}
 					</div>
 					{logWindow.onRerun && (
 						<div className="log-empty-actions">
 							{LOG_RANGES.filter((range) => range.ms > logWindow.end - logWindow.start).slice(0, 3).map((range) => (
-								<button key={range.ms} type="button" className="secondary" onClick={() => logWindow.onRerun?.(range.ms)}>{range.label}</button>
+								<button key={range.ms} type="button" className="secondary" onClick={() => logWindow.onRerun?.(range.ms)}>{range.label(t)}</button>
 							))}
 						</div>
 					)}
@@ -1024,6 +1028,7 @@ export function ResultsGrid({ response, connecting = false, active = true, live 
 					setBigEdit({ slot, col, value: cellText(row[col]), columnName: fields[col]?.name ?? '', raw: row[col], dataType: fields[col]?.dataType });
 				} : undefined}
 			defaultActionLabel={canEdit ? (col) => defaultAction(columnByField?.[col])?.label ?? null : undefined}
+			defaultActionIsNull={canEdit ? (col) => defaultAction(columnByField?.[col])?.value === NULL_VALUE : undefined}
 			onSetDefault={canEdit ? (i, col) => {
 				const action = defaultAction(columnByField?.[col]);
 				if (!action) { return; }
@@ -1063,7 +1068,7 @@ export function ResultsGrid({ response, connecting = false, active = true, live 
 			fk={fk}
 			rowActions={documentView ? [{
 				icon: 'json',
-				title: 'View document',
+				title: t('results.grid.viewDocument'),
 				// Jump the one-row tree view to this row (i is page-relative → global slot index).
 				onClick: (i) => { setRecordIndex(start + i); setViewMode('tree'); },
 			}] : undefined}
@@ -1085,19 +1090,19 @@ export function ResultsGrid({ response, connecting = false, active = true, live 
 			<div className="results-footer">
 				<div className="view-toggle" role="tablist">
 					{logShape && (
-						<button type="button" role="tab" aria-selected={mode === 'log'} className={mode === 'log' ? 'active' : ''} title="Log reader (one line per event, expandable)" onClick={() => setViewMode('log')}><Icon name="output" /></button>
+						<button type="button" role="tab" aria-selected={mode === 'log'} className={mode === 'log' ? 'active' : ''} title={t('results.mode.log')} onClick={() => setViewMode('log')}><Icon name="output" /></button>
 					)}
-					<button type="button" role="tab" aria-selected={mode === 'grid'} className={mode === 'grid' ? 'active' : ''} title="Grid view" onClick={() => setViewMode('grid')}><Icon name="table" /></button>
-					<button type="button" role="tab" aria-selected={mode === 'record'} className={mode === 'record' ? 'active' : ''} title="Record view (one row at a time)" onClick={() => setViewMode('record')}><Icon name="list-selection" /></button>
-					<button type="button" role="tab" aria-selected={mode === 'json'} className={mode === 'json' ? 'active' : ''} title="JSON view (active row)" onClick={() => setViewMode('json')}><Icon name="json" /></button>
-					<button type="button" role="tab" aria-selected={mode === 'tree'} className={mode === 'tree' ? 'active' : ''} title="Document tree (active row, expandable)" onClick={() => setViewMode('tree')}><Icon name="list-tree" /></button>
+					<button type="button" role="tab" aria-selected={mode === 'grid'} className={mode === 'grid' ? 'active' : ''} title={t('results.mode.grid')} onClick={() => setViewMode('grid')}><Icon name="table" /></button>
+					<button type="button" role="tab" aria-selected={mode === 'record'} className={mode === 'record' ? 'active' : ''} title={t('results.mode.record')} onClick={() => setViewMode('record')}><Icon name="list-selection" /></button>
+					<button type="button" role="tab" aria-selected={mode === 'json'} className={mode === 'json' ? 'active' : ''} title={t('results.mode.json')} onClick={() => setViewMode('json')}><Icon name="json" /></button>
+					<button type="button" role="tab" aria-selected={mode === 'tree'} className={mode === 'tree' ? 'active' : ''} title={t('results.mode.tree')} onClick={() => setViewMode('tree')}><Icon name="list-tree" /></button>
 				</div>
 				{mode === 'log' && (
 					<button
 						type="button"
 						className={`grid-wrap-toggle${expandAllLines ? ' active' : ''}`}
 						aria-pressed={expandAllLines}
-						title={expandAllLines ? "Every line is open. Click to close them all." : "Open every line (payloads pretty-printed)"}
+						title={expandAllLines ? t('results.lines.closeAll') : t('results.lines.openAll')}
 						onClick={() => setExpandAllLines((on) => !on)}
 					><Icon name={expandAllLines ? 'collapse-all' : 'expand-all'} /></button>
 				)}
@@ -1106,7 +1111,7 @@ export function ResultsGrid({ response, connecting = false, active = true, live 
 						type="button"
 						className={`grid-wrap-toggle${wrap === 'off' ? '' : ' active'}`}
 						aria-pressed={wrap !== 'off'}
-						title={wrapTitle(wrap, end - start)}
+						title={wrapTitle(t, wrap, end - start)}
 						onClick={() => { setWrap((mode) => { const next = WRAP_ORDER[(WRAP_ORDER.indexOf(mode) + 1) % WRAP_ORDER.length]; saveWrap(next); return next; }); }}
 					><Icon name={wrap === 'full' ? 'expand-all' : 'word-wrap'} /></button>
 				)}
@@ -1117,88 +1122,88 @@ export function ResultsGrid({ response, connecting = false, active = true, live 
 					<input
 						type="text"
 						value={search}
-						placeholder="Search"
-						aria-label={mode === 'log' ? "Search the loaded lines" : "Search all columns"}
+						placeholder={t('results.search.placeholder')}
+						aria-label={mode === 'log' ? t('results.search.linesLabel') : t('results.search.columnsLabel')}
 						title={mode === 'log'
 							// The reader narrows to the matching LINES, and shows a fragment from around
 							// the hit when it is buried in one — so say what it searches, which is the
 							// whole event and not only the part the line is showing.
-							? "Search the lines loaded in the reader. Matches anywhere in an event, including inside a folded-away payload."
-							: "Search all columns of the rows loaded in the grid"}
+							? t('results.search.linesTitle')
+							: t('results.search.columnsTitle')}
 						onChange={(e) => { setSearch(e.target.value); setPage(0); setRecordIndex(0); }}
 					/>
 					{search !== '' && (
-						<button type="button" className="grid-search-clear" title="Clear search" onClick={() => { setSearch(''); setPage(0); }}><Icon name="close" /></button>
+						<button type="button" className="grid-search-clear" title={t('results.search.clear')} onClick={() => { setSearch(''); setPage(0); }}><Icon name="close" /></button>
 					)}
 				</div>
-				<span>{total.toLocaleString()} {total === 1 ? 'row' : 'rows'}</span>
+				<span>{t('results.footer.rows', { count: total })}</span>
 				{onCountTotal && (totalCount !== null
-					? <span className="total-count" title="True total, ignoring the fetch limit">of {totalCount.toLocaleString()} total</span>
-					: <button type="button" className="count-total-btn" disabled={countingTotal} onClick={onCountTotal}>{countingTotal ? 'Counting…' : 'Count total'}</button>
+					? <span className="total-count" title={t('results.footer.trueTotalTitle')}>{t('results.footer.ofTotal', { count: totalCount })}</span>
+					: <button type="button" className="count-total-btn" disabled={countingTotal} onClick={onCountTotal}>{countingTotal ? t('results.footer.counting') : t('results.footer.countTotal')}</button>
 				)}
 				<span className="sep">·</span>
 				<span>{response.result.durationMs} ms</span>
 				{logWindow && (logWindow.onRerun ? (
-					<label className="log-range" title={`Searched ${new Date(logWindow.start).toLocaleString()} to ${new Date(logWindow.end).toLocaleString()}. Changing this ${logWindow.editsSql ? "writes the range into the statement and runs it" : "re-runs the statement"}.`}>
+					<label className="log-range" title={`${searched} ${logWindow.editsSql ? t('results.log.changeWrites') : t('results.log.changeReruns')}`}>
 						<Icon name="watch" />
 						<select
 							value={String(LOG_RANGES.find((range) => Math.abs(range.ms - (logWindow.end - logWindow.start)) < 60_000)?.ms ?? '')}
 							onChange={(e) => logWindow.onRerun?.(Number(e.target.value))}
 						>
 							{!LOG_RANGES.some((range) => Math.abs(range.ms - (logWindow.end - logWindow.start)) < 60_000) && (
-								<option value="">{describeLogWindow(logWindow.start, logWindow.end, logWindow.fromSql)}</option>
+								<option value="">{describeLogWindow(t, logWindow.start, logWindow.end, logWindow.fromSql)}</option>
 							)}
-							{LOG_RANGES.map((range) => <option key={range.ms} value={range.ms}>{range.label}</option>)}
+							{LOG_RANGES.map((range) => <option key={range.ms} value={range.ms}>{range.label(t)}</option>)}
 						</select>
 					</label>
 				) : (
-					<span className="limit-badge info" title={`Searched ${new Date(logWindow.start).toLocaleString()} to ${new Date(logWindow.end).toLocaleString()}.`}>
-						{describeLogWindow(logWindow.start, logWindow.end, logWindow.fromSql && !logWindow.editsSql)}
+					<span className="limit-badge info" title={searched}>
+						{describeLogWindow(t, logWindow.start, logWindow.end, logWindow.fromSql && !logWindow.editsSql)}
 					</span>
 				))}
 				{logWindow && logWindow.fromSql && !logWindow.editsSql && (
-					<span className="limit-badge info" title="This range came from the statement, so the control above does not apply to it. Remove the time bound from the WHERE to use it.">from SQL</span>
+					<span className="limit-badge info" title={t('results.log.fromSqlTitle')}>{t('results.log.fromSql')}</span>
 				)}
 				{response.result.cost?.recordsScanned !== undefined && (
 					<span className="limit-badge info" title={response.result.cost.recordsMatched !== undefined
-						? `${response.result.cost.recordsScanned.toLocaleString()} ${logView ? 'events' : 'rows'} were read to answer this, of which ${response.result.cost.recordsMatched.toLocaleString()} matched. ${response.result.cost.engine ?? ''}`.trim()
-						: `${response.result.cost.recordsScanned.toLocaleString()} ${logView ? 'events' : 'rows'} were read to answer this.`}>
-						{response.result.cost.recordsScanned.toLocaleString()} scanned
+						? `${logView ? t('results.footer.eventsReadMatched', { scanned: response.result.cost.recordsScanned, matched: response.result.cost.recordsMatched }) : t('results.footer.rowsReadMatched', { scanned: response.result.cost.recordsScanned, matched: response.result.cost.recordsMatched })} ${response.result.cost.engine ?? ''}`.trim()
+						: logView ? t('results.footer.eventsRead', { scanned: response.result.cost.recordsScanned }) : t('results.footer.rowsRead', { scanned: response.result.cost.recordsScanned })}>
+						{t('results.footer.scanned', { scanned: response.result.cost.recordsScanned })}
 					</span>
 				)}
 				{response.result.cost?.bytesScanned !== undefined && (
-					<span className="limit-badge info" title="Bytes the database read to answer this. On a columnar engine it is what a query costs, whatever the number of rows it returns.">
-						{formatBytes(response.result.cost.bytesScanned)} read
+					<span className="limit-badge info" title={t('results.footer.bytesTitle')}>
+						{t('results.footer.bytesRead', { bytes: formatBytes(response.result.cost.bytesScanned) })}
 					</span>
 				)}
 				{response.result.cost?.truncated && (
-					<span className="limit-badge" title="A cap stopped the read before the end of the range, so this is a prefix of the answer and not all of it. Narrow the range or add a filter.">cut short</span>
+					<span className="limit-badge" title={t('results.footer.cutShortTitle')}>{t('results.footer.cutShort')}</span>
 				)}
 				{readOnlyReason && (prodLocked && unlockConnectionId
-					? <button type="button" className="limit-badge limit-badge-btn" title={readOnlyReason} onClick={() => unlockProdEditing(unlockConnectionId)}><Icon name="lock" />Read-only</button>
-					: <span className="limit-badge" title={readOnlyReason}>Read-only</span>)}
+					? <button type="button" className="limit-badge limit-badge-btn" title={readOnlyReason} onClick={() => unlockProdEditing(unlockConnectionId)}><Icon name="lock" />{t('results.footer.readOnly')}</button>
+					: <span className="limit-badge" title={readOnlyReason}>{t('results.footer.readOnly')}</span>)}
 				{prodSessionUnlocked && unlockConnectionId && (
-					<button type="button" className="limit-badge limit-badge-btn" title="Editing is allowed on this production connection until the app restarts. Click to lock it again." onClick={() => lockProdEditing(unlockConnectionId)}><Icon name="unlock" />Editing prod</button>
+					<button type="button" className="limit-badge limit-badge-btn" title={t('results.footer.editingProdTitle')} onClick={() => lockProdEditing(unlockConnectionId)}><Icon name="unlock" />{t('results.footer.editingProd')}</button>
 				)}
 				{appliedLimit !== undefined && (
 					<span className="limit-badge" title={onFetchMore
-						? `Auto-LIMIT ${appliedLimit} was appended. Next past the last row fetches another ${appliedLimit}. Change the size in Settings → Editor & Query.`
-						: `Auto-LIMIT ${appliedLimit} was appended. Change it in Settings → Editor & Query.`}>LIMIT {appliedLimit}</span>
+						? t('results.footer.limitMore', { limit: String(appliedLimit) })
+						: t('results.footer.limitNote', { limit: String(appliedLimit) })}>LIMIT {appliedLimit}</span>
 				)}
 				<span className="spacer" />
 				{(mode === 'grid' || mode === 'log') && <div className="paginator">
-					<label className="page-size">Rows per page
+					<label className="page-size">{t('results.paging.perPage')}
 						<select value={pageSize} onChange={(e) => { setPageSize(Number(e.target.value)); setPage(0); }}>
-							{PAGE_SIZES.map((n) => <option key={n} value={n}>{n === 0 ? 'All' : n}</option>)}
+							{PAGE_SIZES.map((n) => <option key={n} value={n}>{n === 0 ? t('results.paging.all') : n}</option>)}
 						</select>
 					</label>
-					<span className="page-range">{total === 0 ? '0 of 0' : `${(start + 1).toLocaleString()}–${end.toLocaleString()} of ${total.toLocaleString()}`}</span>
-					<button type="button" className="page-btn first" title="First page" disabled={atFirst} onClick={() => setPage(0)}><span className="pg-bar" /><Icon name="chevron-left" /></button>
-					<button type="button" className="page-btn" title="Previous page" disabled={atFirst} onClick={() => setPage(Math.max(0, safePage - 1))}><Icon name="chevron-left" /></button>
-					<button type="button" className="page-btn" title={atLast && canFetchMore ? (appliedLimit ? `Fetch the next ${appliedLimit.toLocaleString()} rows` : "Fetch more rows") : "Next page"} disabled={(atLast && !canFetchMore) || fetching} onClick={() => void nextPage()}><Icon name={fetching ? 'loading' : 'chevron-right'} className={fetching ? 'codicon-modifier-spin' : undefined} /></button>
+					<span className="page-range">{total === 0 ? t('results.zeroOfZero') : t('results.paging.range', { range: `${(start + 1).toLocaleString(formatLocale())}–${end.toLocaleString(formatLocale())}`, total })}</span>
+					<button type="button" className="page-btn first" title={t('results.paging.first')} disabled={atFirst} onClick={() => setPage(0)}><span className="pg-bar" /><Icon name="chevron-left" /></button>
+					<button type="button" className="page-btn" title={t('results.paging.previous')} disabled={atFirst} onClick={() => setPage(Math.max(0, safePage - 1))}><Icon name="chevron-left" /></button>
+					<button type="button" className="page-btn" title={atLast && canFetchMore ? (appliedLimit ? t('results.paging.fetchNext', { count: appliedLimit }) : t('results.paging.fetchMore')) : t('results.paging.next')} disabled={(atLast && !canFetchMore) || fetching} onClick={() => void nextPage()}><Icon name={fetching ? 'loading' : 'chevron-right'} className={fetching ? 'codicon-modifier-spin' : undefined} /></button>
 					{/* "Last" stays client-side: jumping to the end of an unknown-length result would mean
 					    fetching all of it, so it means the last LOADED page. */}
-					<button type="button" className="page-btn last" title="Last loaded page" disabled={atLast} onClick={() => setPage(pageCount - 1)}><Icon name="chevron-right" /><span className="pg-bar" /></button>
+					<button type="button" className="page-btn last" title={t('results.paging.lastLoaded')} disabled={atLast} onClick={() => setPage(pageCount - 1)}><Icon name="chevron-right" /><span className="pg-bar" /></button>
 				</div>}
 			</div>
 			{canEdit && edit && editing.savePreview !== null && (

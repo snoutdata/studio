@@ -7,6 +7,7 @@ import { ASSISTANT_NAME } from '../../shared/assistant';
 import { monaco } from './monaco';
 import { isReasoningModel, type AiProviderId } from '../../shared/ai';
 import { formatShortcut } from './shortcuts';
+import { t } from './i18n';
 
 // Inline editor edit (Ctrl+K): a content widget anchored at the selection
 // where the user types an instruction. With a selection it rewrites it ("edit"); with none
@@ -277,11 +278,11 @@ class EditSession {
 		this.input.className = 'ai-edit-input';
 		this.input.rows = 2;
 		this.input.spellcheck = false;
-		this.input.placeholder = this.mode === 'edit' ? 'Edit selection: describe the change…' : 'Generate SQL: describe what you want…';
+		this.input.placeholder = this.mode === 'edit' ? t('editor.aiEdit.editPlaceholder') : t('editor.aiEdit.generatePlaceholder');
 		this.input.addEventListener('keydown', (e) => this.onPromptKey(e));
 		this.input.addEventListener('input', () => this.autoGrow());
 		this.modelSelect.className = 'ai-edit-model';
-		this.modelSelect.title = 'Model for this edit';
+		this.modelSelect.title = t('editor.aiEdit.modelTitle');
 		// Keep the select's own key handling (arrow keys) from bubbling to the editor.
 		this.modelSelect.addEventListener('keydown', (e) => e.stopPropagation());
 		this.modelSelect.addEventListener('change', () => this.onModelChange());
@@ -289,7 +290,7 @@ class EditSession {
 		this.spinner.className = 'codicon codicon-loading codicon-modifier-spin ai-edit-spin';
 		this.spinner.setAttribute('aria-hidden', 'true');
 		this.hintText.className = 'ai-edit-hint-text';
-		this.hintText.textContent = this.mode === 'edit' ? '⏎ apply · ⇧⏎ newline · Esc cancel' : '⏎ generate · ⇧⏎ newline · Esc cancel';
+		this.hintText.textContent = this.mode === 'edit' ? t('editor.aiEdit.applyHint') : t('editor.aiEdit.generateHint');
 		// The spinner is added to the DOM only while streaming (see submit) — toggling it by
 		// CSS loses to the codicon base rule's display:inline-block.
 		this.hint.append(this.hintText);
@@ -308,11 +309,11 @@ class EditSession {
 		icon.className = 'codicon codicon-plug ai-edit-blocked-icon';
 		icon.setAttribute('aria-hidden', 'true');
 		const text = document.createElement('span');
-		text.textContent = 'Connect to a database to use Quick Edit.';
+		text.textContent = t('editor.aiEdit.connectFirst');
 		msg.append(icon, text);
 		this.hint.className = 'ai-edit-hint';
 		this.hintText.className = 'ai-edit-hint-text';
-		this.hintText.textContent = 'Esc to dismiss';
+		this.hintText.textContent = t('editor.aiEdit.escDismiss');
 		this.hint.append(this.hintText);
 		this.footer.className = 'ai-edit-foot';
 		this.footer.append(this.hint);
@@ -435,7 +436,7 @@ class EditSession {
 		this.modelSelect.disabled = true;
 		this.hint.classList.add('streaming');
 		this.hint.prepend(this.spinner);
-		this.hintText.textContent = 'Processing…';
+		this.hintText.textContent = t('editor.aiEdit.processing');
 		const model = this.editor.getModel();
 		// Stream the reply so the hint shows the latest line as live progress (replacing the
 		// static "Generating…"), scoped to this request's id.
@@ -470,7 +471,7 @@ class EditSession {
 			return;
 		}
 		if (!result.text.trim()) {
-			ctx.onStatus(`${ASSISTANT_NAME}: no change suggested.`);
+			ctx.onStatus(t('editor.ai.noChange', { assistant: ASSISTANT_NAME }));
 			this.close();
 			return;
 		}
@@ -511,12 +512,12 @@ class EditSession {
 		const bar = document.createElement('div');
 		bar.className = 'ai-edit-review';
 		bar.append(
-			button('Accept', 'ai-edit-accept', () => this.accept()),
-			button('Reject', 'ai-edit-reject', () => this.reject()),
+			button(t('editor.aiEdit.accept'), 'ai-edit-accept', () => this.accept()),
+			button(t('editor.aiEdit.reject'), 'ai-edit-reject', () => this.reject()),
 		);
 		const hint = document.createElement('div');
 		hint.className = 'ai-edit-hint';
-		hint.textContent = '⏎ accept · Esc reject';
+		hint.textContent = t('editor.aiEdit.reviewHint');
 		this.node.append(bar, hint);
 		this.node.tabIndex = -1;
 		this.node.addEventListener('keydown', (e) => {
@@ -578,14 +579,16 @@ const HINT_WIDGET_ID = 'snout.aiEdit.hint';
  */
 class SelectionHint {
 	private readonly node = document.createElement('div');
+	private readonly addToChatLabel = document.createElement('span');
+	private readonly quickEditLabel = document.createElement('span');
 	private readonly widget: monaco.editor.IContentWidget;
 	private anchor: monaco.IPosition | null = null;
 
 	constructor(private readonly editor: monaco.editor.IStandaloneCodeEditor) {
 		this.node.className = 'ai-edit-pill';
 		this.node.append(
-			this.pillButton('Add to Chat', formatShortcut('Mod+L'), () => triggerAddToChat(this.editor)),
-			this.pillButton('Quick Edit', formatShortcut('Mod+K'), () => triggerAiEdit(this.editor)),
+			this.pillButton(this.addToChatLabel, formatShortcut('Mod+L'), () => triggerAddToChat(this.editor)),
+			this.pillButton(this.quickEditLabel, formatShortcut('Mod+K'), () => triggerAiEdit(this.editor)),
 		);
 		this.widget = {
 			getId: () => HINT_WIDGET_ID,
@@ -600,12 +603,10 @@ class SelectionHint {
 	}
 
 	/** One pill button: a label with its dimmed keybind. */
-	private pillButton(label: string, kbd: string, onClick: () => void): HTMLButtonElement {
+	private pillButton(labelEl: HTMLSpanElement, kbd: string, onClick: () => void): HTMLButtonElement {
 		const btn = document.createElement('button');
 		btn.type = 'button';
 		btn.className = 'ai-edit-pill-btn';
-		const labelEl = document.createElement('span');
-		labelEl.textContent = label;
 		const kbdEl = document.createElement('span');
 		kbdEl.className = 'ai-edit-pill-kbd';
 		kbdEl.textContent = kbd;
@@ -623,6 +624,9 @@ class SelectionHint {
 			this.hide();
 			return;
 		}
+		// The language may have changed since the pill was last shown.
+		this.addToChatLabel.textContent = t('editor.aiEdit.addToChat');
+		this.quickEditLabel.textContent = t('editor.aiEdit.quickEdit');
 		this.anchor = selection.getStartPosition();
 		this.editor.layoutContentWidget(this.widget);
 	}

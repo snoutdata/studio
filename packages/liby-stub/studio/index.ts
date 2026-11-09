@@ -117,6 +117,7 @@ export function studioHost(_live: {
 	deeper(question: string): void;
 	busy(): boolean;
 	off(): void;
+	language: unknown;
 }): LibyHost<StudioEvent> {
 	return {};
 }
@@ -184,7 +185,9 @@ export function helpShortcutDescription(keys: string): string {
 }
 
 /** What the Settings switch that hides the companion says it hides; never shown in this build. */
-export const HIDE_SETTING_HINT = 'the companion';
+export function hideSettingHint(): string {
+	return 'the companion';
+}
 
 // ---- The first-run tour, in the app's own words ----------------------------------------------------------
 

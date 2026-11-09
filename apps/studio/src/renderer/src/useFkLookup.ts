@@ -8,6 +8,7 @@ import { resolveFkTarget, buildLabelSql, buildPeekSql, type FkTarget } from './f
 import { isCellExpr } from './dml';
 import type { QueryField } from '../../shared/query';
 import type { TableInfo } from '../../shared/schema';
+import { t } from '../../shared/i18n/core';
 
 // React state/cache/querying for FK value resolution (the pure SQL builders live in
 // fkResolve.ts). Everything is lazy: inline labels are batch-resolved one query per FK column
@@ -88,16 +89,16 @@ export function useFkLookup({ connectionId, driver, sourceTable, tables, fields 
 	// or null when a part of the key isn't present in the result (then the FK can't be resolved).
 	const sourceIndices = useMemo<(number[] | null)[]>(() => {
 		const byName = new Map(fields.map((f, i) => [f.name.toLowerCase(), i]));
-		return targets.map((t) => {
-			if (!t) {
+		return targets.map((target) => {
+			if (!target) {
 				return null;
 			}
-			const idx = t.sourceColumns.map((c) => byName.get(c.toLowerCase()) ?? -1);
+			const idx = target.sourceColumns.map((c) => byName.get(c.toLowerCase()) ?? -1);
 			return idx.some((i) => i < 0) ? null : idx;
 		});
 	}, [targets, fields]);
 
-	const anyFk = useMemo(() => targets.some((t, col) => t && sourceIndices[col]), [targets, sourceIndices]);
+	const anyFk = useMemo(() => targets.some((target, col) => target && sourceIndices[col]), [targets, sourceIndices]);
 
 	// Caches keyed by referenced table + value tuple, so columns pointing at the same table share
 	// hits. A `bump` forces a re-render when a cache fills in (the Maps live in refs to stay stable).
@@ -230,7 +231,7 @@ export function useFkLookup({ connectionId, driver, sourceTable, tables, fields 
 			if (!res.ok) {
 				peekCache.current.set(key, { status: 'error', error: res.error });
 			} else if (res.result.rows.length === 0) {
-				peekCache.current.set(key, { status: 'error', error: 'No referenced row found.' });
+				peekCache.current.set(key, { status: 'error', error: t('results.fk.notFound') });
 			} else {
 				peekCache.current.set(key, { status: 'done', columns: res.result.fields.map((f) => f.name), values: res.result.rows[0] });
 			}

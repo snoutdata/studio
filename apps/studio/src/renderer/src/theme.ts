@@ -5,6 +5,7 @@
 
 import { monaco } from './monaco';
 import { registerSqlHighlighting } from './sqlHighlight';
+import { t } from '../../shared/i18n/core';
 
 // The base palette a theme builds on: it drives the native window chrome shade, the
 // `color-scheme` of native controls, and which Monaco editor base + token colors are used.
@@ -63,13 +64,13 @@ const MATRIX_RULES: monaco.editor.ITokenThemeRule[] = [
 // sits together. The default stays first: themeDef falls back to THEMES[0]. Labels only; the ids
 // are what profiles store and never change.
 export const THEMES: ThemeDef[] = [
-	{ id: 'gold', label: 'Dark Gold', base: 'dark', editorBg: '#121110', editorFg: '#e4dfd6', editorRules: GOLD_RULES },
-	{ id: 'dark', label: 'Dark', base: 'dark', editorBg: '#1f1f1f', editorFg: '#cccccc' },
-	{ id: 'warm-dark', label: 'Dark Warm', base: 'dark', editorBg: '#1f1b16', editorFg: '#e6dccb' },
-	{ id: 'abyss', label: 'Abyss', base: 'dark', editorBg: '#0a0b10', editorFg: '#c5c8d6' },
-	{ id: 'matrix', label: 'Matrix', base: 'dark', editorBg: '#000000', editorFg: '#00ff41', editorRules: MATRIX_RULES },
-	{ id: 'light', label: 'Light', base: 'light', editorBg: '#ffffff', editorFg: '#26251e' },
-	{ id: 'warm', label: 'Light Warm', base: 'light', editorBg: '#f5efe1', editorFg: '#43382a' },
+	{ id: 'gold', get label() { return t('settings.themes.gold'); }, base: 'dark', editorBg: '#121110', editorFg: '#e4dfd6', editorRules: GOLD_RULES },
+	{ id: 'dark', get label() { return t('settings.themes.dark'); }, base: 'dark', editorBg: '#1f1f1f', editorFg: '#cccccc' },
+	{ id: 'warm-dark', get label() { return t('settings.themes.warmDark'); }, base: 'dark', editorBg: '#1f1b16', editorFg: '#e6dccb' },
+	{ id: 'abyss', get label() { return t('settings.themes.abyss'); }, base: 'dark', editorBg: '#0a0b10', editorFg: '#c5c8d6' },
+	{ id: 'matrix', get label() { return t('settings.themes.matrix'); }, base: 'dark', editorBg: '#000000', editorFg: '#00ff41', editorRules: MATRIX_RULES },
+	{ id: 'light', get label() { return t('settings.themes.light'); }, base: 'light', editorBg: '#ffffff', editorFg: '#26251e' },
+	{ id: 'warm', get label() { return t('settings.themes.warm'); }, base: 'light', editorBg: '#f5efe1', editorFg: '#43382a' },
 ];
 
 // Back-compat alias: lots of call sites import `type Theme`. A theme is just its id.
@@ -85,18 +86,18 @@ registerSqlHighlighting(THEMES);
 
 /** Look up a theme by id, falling back to the default (first registered) theme. */
 export function themeDef(id: Theme): ThemeDef {
-	return THEMES.find((t) => t.id === id) ?? THEMES[0];
+	return THEMES.find((theme) => theme.id === id) ?? THEMES[0];
 }
 
 /** The next theme in the registry (wraps), for the quick-cycle toggle. */
 export function nextTheme(id: Theme): Theme {
-	const i = THEMES.findIndex((t) => t.id === id);
+	const i = THEMES.findIndex((theme) => theme.id === id);
 	return THEMES[(i + 1) % THEMES.length].id;
 }
 
 /** Whether a string is a known theme id (used to sanitize persisted/synced values). */
 export function isThemeId(id: unknown): id is Theme {
-	return typeof id === 'string' && THEMES.some((t) => t.id === id);
+	return typeof id === 'string' && THEMES.some((theme) => theme.id === id);
 }
 
 export function loadTheme(): Theme {

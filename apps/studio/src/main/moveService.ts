@@ -13,6 +13,7 @@
  * be driven without one too.
  */
 
+import { t } from '../shared/i18n/core';
 import { execFile } from 'node:child_process';
 import { join } from 'node:path';
 
@@ -93,7 +94,7 @@ export function connectionFor(endpoint: MoveEndpoint, connections: readonly Conn
  */
 function refuseTunnel(config: ConnectionConfig): void {
 	if (config.sshTunnel || config.sshTunnelRef) {
-		throw new Error(`"${config.label}" connects through an SSH tunnel, and a move cannot use one yet.`);
+		throw new Error(t('mainMove.sshTunnel', { label: config.label }));
 	}
 }
 
@@ -106,7 +107,7 @@ async function targetFactsFor(spec: MoveSpec, all: readonly ConnectionConfig[], 
 	if (target.kind === 'newDatabase') {
 		const server = all.find((connection) => connection.id === target.serverConnectionId);
 		if (!server) {
-			throw new Error("The server for the new database is not a saved connection any more.");
+			throw new Error(t('mainMove.serverGone'));
 		}
 		if (server.driver !== 'postgres') {
 			return { ...unknownFacts(server), creation: { canCreate: null, nameTaken: null } };
@@ -115,7 +116,7 @@ async function targetFactsFor(spec: MoveSpec, all: readonly ConnectionConfig[], 
 		await host.ensureConnected(server.id);
 		const answer = await host.execute(server.id, pgServerFactsSql(target.database));
 		if (!answer.ok) {
-			throw new Error(`Could not read the server of "${server.label}": ${String(answer.error)}`);
+			throw new Error(t('mainMove.serverUnreadable', { label: server.label, error: String(answer.error) }));
 		}
 		return newDatabaseFactsFromPg(answer.result.rows[0]?.[0], {
 			identity: `${server.host}:${server.port}/${target.database}`,
@@ -126,7 +127,7 @@ async function targetFactsFor(spec: MoveSpec, all: readonly ConnectionConfig[], 
 	}
 	const existing = connectionFor(target, all);
 	if (!existing) {
-		throw new Error("The target is not a saved connection any more.");
+		throw new Error(t('mainMove.targetGone'));
 	}
 	return factsFor(existing, host);
 }
@@ -141,7 +142,7 @@ async function factsFor(config: ConnectionConfig, host: MoveHost): Promise<Endpo
 	await host.ensureConnected(config.id);
 	const answer = await host.execute(config.id, PG_FACTS_SQL);
 	if (!answer.ok) {
-		throw new Error(`Could not read "${config.label}": ${String(answer.error)}`);
+		throw new Error(t('mainMove.configUnreadable', { label: config.label, error: String(answer.error) }));
 	}
 	return endpointFactsFromPg(answer.result.rows[0]?.[0], {
 		identity: `${config.host}:${config.port}/${config.database ?? ''}`,
@@ -166,7 +167,7 @@ export async function gatherFacts(spec: MoveSpec, host: MoveHost): Promise<Gathe
 	const all = host.connections();
 	const source = connectionFor(spec.source, all);
 	if (!source) {
-		throw new Error("The source is not a saved connection any more.");
+		throw new Error(t('mainMove.sourceGone'));
 	}
 	const [sourceFacts, targetFacts, toolMajor] = await Promise.all([factsFor(source, host), targetFactsFor(spec, all, host), host.toolMajor()]);
 	return { source: sourceFacts, target: targetFacts, toolMajor };
@@ -195,7 +196,7 @@ export async function fixMove(spec: MoveSpec, key: string, fix: FixId, host: Mov
 	}
 	const finding = findFinding(before.findings, key);
 	if (!finding) {
-		return { ok: false, error: "That finding is no longer there. Check both databases again." };
+		return { ok: false, error: t('mainMove.findingGone') };
 	}
 	const applied = applyFix(spec, finding, fix);
 	if (!applied.ok) {

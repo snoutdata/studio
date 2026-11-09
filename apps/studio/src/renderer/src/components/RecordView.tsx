@@ -10,6 +10,7 @@ import { DocumentTree } from './DocumentTree';
 import { isCellExpr } from '../dml';
 import type { DocumentFieldEdit } from '../mongoDml';
 import type { QueryField } from '../../../shared/query';
+import { useT } from '../i18n';
 
 // A DBeaver-style single-record view of the results: shows one row at a time, as a vertical
 // column/value list ("record"), pretty-printed JSON, or an expandable document "tree" (Compass-style,
@@ -49,6 +50,7 @@ function jsonValue(value: unknown): unknown {
 }
 
 export function RecordView({ mode, fields, row, index, total, onPrev, onNext, editable = false, onSaveDocument, resetKey = '' }: RecordViewProps): JSX.Element {
+	const t = useT();
 	// Arrow up/down step between records (matching the grid's row navigation).
 	useEffect(() => {
 		function onKey(e: KeyboardEvent): void {
@@ -69,9 +71,9 @@ export function RecordView({ mode, fields, row, index, total, onPrev, onNext, ed
 	return (
 		<div className="record-view">
 			<div className="record-nav">
-				<button type="button" className="page-btn" title="Previous record" disabled={index <= 0} onClick={onPrev}><Icon name="chevron-left" /></button>
-				<span className="record-pos">{total === 0 ? '0 of 0' : `row ${(index + 1).toLocaleString()} of ${total.toLocaleString()}`}</span>
-				<button type="button" className="page-btn" title="Next record" disabled={index >= total - 1} onClick={onNext}><Icon name="chevron-right" /></button>
+				<button type="button" className="page-btn" title={t('results.record.previous')} disabled={index <= 0} onClick={onPrev}><Icon name="chevron-left" /></button>
+				<span className="record-pos">{total === 0 ? t('results.zeroOfZero') : t('results.record.position', { row: index + 1, total })}</span>
+				<button type="button" className="page-btn" title={t('results.record.next')} disabled={index >= total - 1} onClick={onNext}><Icon name="chevron-right" /></button>
 			</div>
 			{mode === 'record' ? (
 				<div className="record-body">

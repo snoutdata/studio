@@ -1,0 +1,23 @@
+{
+	"explain": {
+		"plan": "Plan",
+		"planHint": "Los pasos, y lo que cada índice descartó antes de leer un gránulo.",
+		"estimate": "Estimación",
+		"estimateHint": "Lo que leería al ejecutarla: parts, filas y marcas por tabla.",
+		"pipeline": "Pipeline",
+		"pipelineHint": "Los procesadores que llevan las filas, y cuántos hilos tiene cada uno.",
+		"syntax": "Sintaxis",
+		"syntaxHint": "La consulta tal como la reescribió el optimizador.",
+		"queryTree": "Árbol de consulta",
+		"queryTreeHint": "La lectura que hace el analizador de la consulta, resuelta en ids de columna y tipos."
+	},
+	"replicasDenied": "Este servidor tiene {replicas} réplicas y este usuario no puede leerlas todas (necesita el permiso READ ON REMOTE), así que solo se muestra la réplica que respondió.",
+	"replicasFailed": "Este servidor tiene {replicas} réplicas y falló la lectura en todas ellas, así que solo se muestra la réplica que respondió. {message}",
+	"insert": {
+		"cannotWrite": "No se puede escribir {value} en una columna.",
+		"unsupportedType": "Tipo de valor {type} no admitido en un lote de filas.",
+		"rowWidth": "La fila tiene {values} valores pero el lote tiene {columns} columnas.",
+		"keyMissing": "La clave {key} no está entre las columnas que se escriben.",
+		"noUpsert": "{engine} no puede actualizar e insertar en una sola sentencia, así que este flujo no puede hacer upsert ahí."
+	}
+}

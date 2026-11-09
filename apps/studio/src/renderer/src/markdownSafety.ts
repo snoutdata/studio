@@ -15,6 +15,8 @@
 //   anything else does nothing.
 
 /** True when `url` is inline content the page can show without a request: a data: image, or a blob:. */
+import { t } from '../../shared/i18n/core';
+
 export function isInlineResourceUrl(url: string | null | undefined): boolean {
 	if (!url) {
 		return false;
@@ -49,8 +51,11 @@ export function blockedImageLabel(url: string, alt: string | null | undefined): 
 	} catch {
 		where = '';
 	}
-	const name = alt?.trim() ? `"${alt.trim()}"` : 'Image';
-	return where ? `${name} not loaded, from ${where}` : `${name} not loaded`;
+	if (alt?.trim()) {
+		const name = `"${alt.trim()}"`;
+		return where ? t('chat.markdown.altFrom', { name, where }) : t('chat.markdown.alt', { name });
+	}
+	return where ? t('chat.markdown.imageFrom', { where }) : t('chat.markdown.image');
 }
 
 /** Attributes that make an element fetch a URL as it renders. */

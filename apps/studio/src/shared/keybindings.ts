@@ -17,6 +17,7 @@
 // ('Enter', 'Space'). This is the same grammar formatShortcut() (shortcuts.ts) renders.
 
 import { ASSISTANT_NAME } from './assistant';
+import { t } from './i18n/core';
 
 export type KeybindingScope = 'global' | 'editor';
 
@@ -92,27 +93,28 @@ export function conflictingIds(bindings: ResolvedKeybinding[], id: string, combo
 
 // Built-in shortcuts a user combo would shadow. Our editor dispatcher is the first responder, so
 // binding to one of these WINS — but it disables that built-in (e.g. Trigger Suggest), which is
-// worth warning about. Keys are normalized combos; values are a short description for the UI.
+// worth warning about. Keys are normalized combos; values are the catalog key of a short description.
 // (Only combos expressible in our token grammar — letters/digits/Enter/Space/\ — can be listed.)
 const RESERVED_COMBOS: Record<string, string> = {
-	'Mod+C': 'Copy',
-	'Mod+V': 'Paste',
-	'Mod+X': 'Cut',
-	'Mod+A': 'Select All',
-	'Mod+Z': 'Undo',
-	'Mod+Y': 'Redo',
-	'Mod+F': 'editor: Find',
-	'Mod+H': 'editor: Replace',
-	'Mod+G': 'editor: Go to Line',
-	'Mod+D': 'editor: Add Selection to Next Match',
-	'Mod+I': 'editor: Trigger Suggest',
-	'Ctrl+Space': 'editor: Trigger Suggest',
-	'Mod+Space': 'editor: Trigger Suggest',
+	'Mod+C': 'engineKeybindings.reserved.copy',
+	'Mod+V': 'engineKeybindings.reserved.paste',
+	'Mod+X': 'engineKeybindings.reserved.cut',
+	'Mod+A': 'engineKeybindings.reserved.selectAll',
+	'Mod+Z': 'engineKeybindings.reserved.undo',
+	'Mod+Y': 'engineKeybindings.reserved.redo',
+	'Mod+F': 'engineKeybindings.reserved.find',
+	'Mod+H': 'engineKeybindings.reserved.replace',
+	'Mod+G': 'engineKeybindings.reserved.goToLine',
+	'Mod+D': 'engineKeybindings.reserved.addNextMatch',
+	'Mod+I': 'engineKeybindings.reserved.triggerSuggest',
+	'Ctrl+Space': 'engineKeybindings.reserved.triggerSuggest',
+	'Mod+Space': 'engineKeybindings.reserved.triggerSuggest',
 };
 
 /** A description of the built-in a combo would shadow, or undefined if it shadows nothing known. */
 export function reservedHint(combo: string): string | undefined {
-	return RESERVED_COMBOS[normalizeCombo(combo)];
+	const key = RESERVED_COMBOS[normalizeCombo(combo)];
+	return key ? t(key) : undefined;
 }
 
 // --- DOM matching (renderer only; main never calls these) -------------------------------

@@ -5,6 +5,7 @@
 
 import { useEffect, useState } from 'react';
 import { Icon } from './Icon';
+import { useT } from '../i18n';
 import logoMark from '../assets/logo-mark.png';
 import { AboutArt } from '../art/Illustrations';
 import { secretsPlace, useSecretsWeak } from '../secretsPlace';
@@ -19,6 +20,7 @@ interface AboutModalProps {
 
 /** A small "About SnoutData Studio" card opened from Help → About (or the command palette). */
 export function AboutModal({ version, onClose }: AboutModalProps): JSX.Element {
+	const t = useT();
 	const secretsWeak = useSecretsWeak();
 	// Third-party licences: null while the About card shows, 'loading' while main reads the files the
 	// build wrote, then their text (or false when this build has none).
@@ -42,7 +44,7 @@ export function AboutModal({ version, onClose }: AboutModalProps): JSX.Element {
 		setLicences('loading');
 		window.sqlApi.thirdPartyLicences().then(
 			({ notice, licences: list }) => {
-				const parts = [notice, list].filter((t): t is string => typeof t === 'string' && t.trim() !== '');
+				const parts = [notice, list].filter((text): text is string => typeof text === 'string' && text.trim() !== '');
 				setLicences(parts.length > 0 ? parts.join('\n\n') : false);
 			},
 			() => setLicences(false),
@@ -53,19 +55,18 @@ export function AboutModal({ version, onClose }: AboutModalProps): JSX.Element {
 		return (
 			<div className="modal-backdrop" onClick={onClose}>
 				<div className="modal about about-licences" onClick={(e) => e.stopPropagation()}>
-					<h2>Third-party licences</h2>
+					<h2>{t('shell.about.thirdParty')}</h2>
 					<p className="about-desc">
-						SnoutData Studio is built on open source software. Each package it includes is listed below with
-						its licence, after Studio's own notice.
+						{t('shell.about.thirdPartyIntro')}
 					</p>
 					{licences === 'loading'
-						? <p className="about-desc">Reading…</p>
+						? <p className="about-desc">{t('shell.about.reading')}</p>
 						: licences === false
-							? <p className="about-desc">This build carries no licence file. A build from source writes it with "npm run build".</p>
+							? <p className="about-desc">{t('shell.about.noLicenceFile')}</p>
 							: <pre className="about-licences-text" tabIndex={0}>{licences}</pre>}
 					<div className="modal-actions">
-						<button type="button" onClick={() => setLicences(null)}><Icon name="arrow-left" /> Back</button>
-						<button type="button" onClick={onClose}><Icon name="close" /> Close</button>
+						<button type="button" onClick={() => setLicences(null)}><Icon name="arrow-left" /> {t('shell.common.back')}</button>
+						<button type="button" onClick={onClose}><Icon name="close" /> {t('shell.common.close')}</button>
 					</div>
 				</div>
 			</div>
@@ -80,33 +81,28 @@ export function AboutModal({ version, onClose }: AboutModalProps): JSX.Element {
 					<img src={logoMark} className="about-logo" alt="SnoutData Studio" />
 					<div>
 						<h2>SnoutData Studio</h2>
-						<div className="about-tagline">Your databases, your data, your projects, your agent. One app.</div>
+						<div className="about-tagline">{t('shell.about.tagline')}</div>
 					</div>
 				</div>
 				<div className="about-meta">
-					<div>Version {version || "—"}</div>
+					<div>{t('shell.about.version', { version: version || "—" })}</div>
 				</div>
 				<p className="about-desc">
-					A desktop workbench for everything around your data. Query relational, document, vector
-					and cloud log stores in SQL or their own language, watch them with live monitors, and see
-					a schema as a map. Build data flows that pull from files, PDFs, web pages, cloud storage
-					and other databases. Run SnoutData projects in your own Docker or in SnoutData Cloud, and
-					move a database between any two of them.
+					{t('shell.about.intro')}
 				</p>
 				<p className="about-desc">
-					Bring the coding agent you already use: it works through the app and never receives your
-					credentials, which stay {secretsPlace(secretsWeak)}. A model is called only where it is needed.
+					{t('shell.about.agent', { place: secretsPlace(secretsWeak) })}
 				</p>
 				<a
 					className="about-star"
 					href={REPO_URL}
 					onClick={(e) => { e.preventDefault(); void window.sqlApi.openExternal(REPO_URL); }}
 				>
-					<Icon name="github" /> Star us on GitHub
+					<Icon name="github" /> {t('shell.about.star')}
 				</a>
 				<div className="modal-actions">
-					<button type="button" onClick={showLicences}><Icon name="law" /> Third-party licences</button>
-					<button type="button" onClick={onClose}><Icon name="close" /> Close</button>
+					<button type="button" onClick={showLicences}><Icon name="law" /> {t('shell.about.thirdParty')}</button>
+					<button type="button" onClick={onClose}><Icon name="close" /> {t('shell.common.close')}</button>
 				</div>
 			</div>
 		</div>

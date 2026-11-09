@@ -14,6 +14,7 @@ import { ACCOUNTS_FUNCTIONS_URL, ACCOUNTS_URL, accountsAppKeyHeader, getCloudCli
 import { projectModelInfos, projectRefusal, projectRelayBase } from '../shared/aiSources';
 import { createProjectAiSources } from './projectAiSources';
 import { readCreditBalance } from './creditBalance';
+import { currentLocale, type Locale, t } from '../shared/i18n/core';
 import { autoRunBlocker, backendKindForDriver, dataAccessAllows, dataAccessPromptNote, dataAccessRefusal, gateValuesResult, limitAmbient, resolveDataAccess, strictestDataAccess, type DataAccessLevel, buildAgentPrompt, buildAmbientComment, buildCompletionPrompt, buildCompletionUser, buildEditPrompt, buildEditUser, buildGlossaryBlock, buildHistoryComment, buildKnowledgeDraftPrompt, buildKnowledgeDraftUser, buildSchemaComment, buildSystemPrompt, buildTableUsage, buildToolSpecs, cleanKnowledgeDraft, engineAiDisplayName, editDecoyTables, completionFocus, extractCompletion, guardCompletion, partialIdentifier, inlineAttachments, runTool, type BackendKind, type ConnectionHandle, type NativeQuery, type ToolAuditRecord, type ToolContext } from '../shared/engine';
 import type { DatabaseSchema } from '../shared/schema';
 import { buildMongoTranscribePrompt, parseMongoPipeline } from './ai/transcribe';
@@ -255,6 +256,13 @@ async function askRelayForSources(): Promise<unknown> {
 	return data;
 }
 
+const REPLY_LANGUAGES: Record<Exclude<Locale, 'en'>, string> = { fr: 'French', es: 'Spanish', pt: 'Brazilian Portuguese' };
+
+/** The app's language, for the model's prose. Nothing for English, which is what the prompt is already in. */
+function replyLanguageLine(locale: Locale): string | null {
+	return locale === 'en' ? null : `Write your answers to the user in ${REPLY_LANGUAGES[locale]}, even when these instructions are in English. SQL, code and identifiers stay exactly as they are.`;
+}
+
 export class AiService {
 	/** Which interaction kinds the user wants recorded (mirrors Settings → AI Audit). Empty
 	 *  until the renderer pushes the setting on launch (no AI call can happen before then). */
@@ -386,7 +394,7 @@ export class AiService {
 		const { data } = await getCloudClient().identity.currentSession();
 		const token = data.session?.access_token;
 		if (!token) {
-			throw new Error('Sign in to use the assistant.');
+			throw new Error(t('mainAi.signInPeriod'));
 		}
 		return token;
 	}
@@ -687,7 +695,9 @@ export class AiService {
 			// what this app has instead of an embedding model on the way to every prompt.
 			vocabulary: kb?.glossary.map((note) => note.text),
 		};
-		const base = useTools ? buildAgentPrompt(dialect, schema, opts) : buildSystemPrompt(dialect, schema, opts);
+		const reply = replyLanguageLine(currentLocale());
+		const prompt = useTools ? buildAgentPrompt(dialect, schema, opts) : buildSystemPrompt(dialect, schema, opts);
+		const base = reply ? `${prompt}\n\n${reply}` : prompt;
 		// The always-included glossary block (bucket A): the durable facts the user has taught the app
 		// about this database. Placed right after the schema (connection-stable content, near where it's
 		// relevant) and kept separate from opts.instructions so each stays independently sourced.
@@ -1292,7 +1302,7 @@ export class AiService {
 			// The runner gates this, and a caller that gets here has lost the gate rather than
 			// asked for something reasonable. Loud, because the alternative is a review that
 			// quietly grew an explanation the user did not choose.
-			throw new Error('This repository is reviewed by the rules alone. No model is called.');
+			throw new Error(t('mainAi.rulesOnly'));
 		}
 		// The two LOCAL rungs never touch our gateway, so they never touch the account either: a
 		// model on this computer does not care whether anybody is signed in, and asking them to be
@@ -1344,7 +1354,7 @@ export class AiService {
 		signal?: AbortSignal,
 	): Promise<{ text: string; model: string }> {
 		if (!this.localProse) {
-			throw new Error("This build does not include a model on this computer, so it cannot explain the review. Choose another way to review this repository in Settings, Snoutbot.");
+			throw new Error(t('mainAi.noLocalModel'));
 		}
 		const resolved = this.localProse(method);
 		if (!resolved.ok) {
@@ -1388,7 +1398,7 @@ export class AiService {
 			? settings.provider
 			: byokIds.find((p) => this.settings.byokKey(p));
 		if (!chosen) {
-			throw new Error('No bring-your-own-key provider is set up. Add a key under Settings → AI.');
+			throw new Error(t('mainAi.noByok'));
 		}
 		return { providerId: chosen, model: settings.byok[chosen].model };
 	}
@@ -1631,7 +1641,7 @@ export class AiService {
 				provider: 'positron-cloud',
 				configured: false,
 				reachable: false,
-				detail: 'Sign in to use the assistant',
+				detail: t('mainAi.signIn'),
 				models: [],
 				completionModels: [],
 			});
@@ -1680,7 +1690,7 @@ export class AiService {
 					} catch {
 						// keep the raw base if it isn't a parseable URL
 					}
-					pcDetail = `Offline: can't reach the gateway ${networkErrorDetail(err, host)}`.trim();
+					pcDetail = t('mainAi.offline', { detail: networkErrorDetail(err, host) }).trim();
 				}
 			}
 		}
@@ -1694,7 +1704,7 @@ export class AiService {
 		if (pcBudgetBlocked && pcModels.length === 0) {
 			pcModels = [...catalog.keys()];
 			pcReachable = true;
-			pcDetail = "Monthly usage limit reached";
+			pcDetail = t('mainAi.usageLimit');
 		}
 		const decorate = (model: string): AiModelInfo => {
 			const meta = catalog.get(model);
@@ -1766,7 +1776,7 @@ export class AiService {
 		const label = BYOK_PROVIDER_DEFAULTS[provider].label;
 		const key = this.settings.byokKey(provider);
 		if (!key) {
-			return { provider, configured: false, reachable: false, detail: `No API key: add your ${label} key below`, models: [], completionModels: [] };
+			return { provider, configured: false, reachable: false, detail: t('mainAi.noApiKey', { label }), models: [], completionModels: [] };
 		}
 		const curated = settings.byok[provider].models ?? [];
 		const decorate = (model: string): AiModelInfo => ({
@@ -1871,7 +1881,7 @@ export class AiService {
 			const provider = this.buildProvider(settings, providerId, model);
 			let sample = '';
 			await provider.chat([{ role: 'user', content: 'Reply with exactly: OK' }], { onDelta: (t) => { sample += t; } });
-			return { ok: true, message: sample.trim() ? `Model replied: ${sample.trim().slice(0, 60)}` : 'Connected (empty reply).' };
+			return { ok: true, message: sample.trim() ? t('mainAi.modelReplied', { reply: sample.trim().slice(0, 60) }) : t('mainAi.connectedEmpty') };
 		} catch (err) {
 			return { ok: false, message: this.explain(err, settings, providerId).message };
 		}
@@ -1902,27 +1912,27 @@ export class AiService {
 		// A BYO provider's spend cap is exhausted (or a gateway's refusal this could not read).
 		if (isBudgetExceeded(err)) {
 			if (isByokProvider(providerId)) {
-				return new Error(`${BYOK_PROVIDER_DEFAULTS[providerId].label} reports your account has hit its spending limit. Raise the limit (or check billing) with ${BYOK_PROVIDER_DEFAULTS[providerId].label}, then try again.`);
+				return new Error(t('mainAi.spendLimit', { provider: BYOK_PROVIDER_DEFAULTS[providerId].label }));
 			}
 			return new Error(refusalSentence({ code: 'budget_exceeded', scope: null, retryIn: null }));
 		}
 		if (providerId === 'ollama' && networkErr) {
-			return new Error(`Can't reach Ollama at ${settings.ollama.endpoint}. Start it (run "ollama serve") and make sure the model is pulled, then try again.`);
+			return new Error(t('mainAi.ollamaDown', { endpoint: settings.ollama.endpoint }));
 		}
 		if (providerId === 'positron-cloud' && /\b401\b|\b403\b|invalid.*api.*key|unauthor|authentication|incorrect api key/i.test(message)) {
-			return new Error(`${CLOUD_LABEL[providerId]} rejected the request. Check the API key under Settings → AI → Chat. (${message})`);
+			return new Error(t('mainAi.cloudRejected', { provider: CLOUD_LABEL[providerId], message }));
 		}
 		// BYOK: keep the provider's verbatim error (bad-key UX is where BYOK products die), but
 		// point the user at where their key lives. Auth failures are the common case.
 		if (isByokProvider(providerId) && /\b401\b|\b403\b|invalid.*api.*key|unauthor|authentication|incorrect api key/i.test(message)) {
-			return new Error(`${BYOK_PROVIDER_DEFAULTS[providerId].label} rejected your API key. Check it under Settings → AI. (${message})`);
+			return new Error(t('mainAi.byokRejected', { provider: BYOK_PROVIDER_DEFAULTS[providerId].label, message }));
 		}
 		// Couldn't reach the AI service at all (timeout, refused/reset, DNS, or a corporate
 		// TLS/proxy block). Say so plainly instead of leaking a raw "net::ERR_…" into the chat; the
 		// company-policy sentence is kept for an error that actually shows a proxy or certificate
 		// block. BYOK hits the user's own provider, so name that one.
 		if (networkErr) {
-			return new Error(networkBlockedMessage(isByokProvider(providerId) ? BYOK_PROVIDER_DEFAULTS[providerId].label : 'the AI service', err));
+			return new Error(networkBlockedMessage(isByokProvider(providerId) ? BYOK_PROVIDER_DEFAULTS[providerId].label : t('mainErrors.theAiService'), err));
 		}
 		return err instanceof Error ? err : new Error(message);
 	}
@@ -1958,7 +1968,7 @@ export class AiService {
 			const cfg = settings.byok[providerId];
 			const apiKey = this.settings.byokKey(providerId);
 			if (!apiKey) {
-				throw new Error(`Add your ${BYOK_PROVIDER_DEFAULTS[providerId].label} API key under Settings → AI to use this provider.`);
+				throw new Error(t('mainAi.addKey', { provider: BYOK_PROVIDER_DEFAULTS[providerId].label }));
 			}
 			const baseUrl = cfg.baseUrl?.trim() || BYOK_PROVIDER_DEFAULTS[providerId].baseUrl;
 			return new OpenAiProvider({ baseUrl, apiKey, model });

@@ -22,6 +22,7 @@
  */
 
 import { backendKindForDriver } from '../../shared/engine';
+import { t } from '../../shared/i18n/core';
 
 export interface DriverKind {
 	/** The heading this driver sits under in a grouped picker. */
@@ -38,15 +39,15 @@ export interface DriverKind {
  * which is what the rest of the form becomes (a path picker, not host, port and credentials).
  */
 export const DRIVER_KINDS: readonly (DriverKind & { match(driverId: string): boolean })[] = [
-	{ group: 'File-based', icon: 'file-binary', match: (id) => id === 'sqlite' || id === 'duckdb' },
-	{ group: 'Relational', icon: 'database', match: (id) => backendKindForDriver(id) === 'relational' },
-	{ group: 'Document', icon: 'json', match: (id) => backendKindForDriver(id) === 'document' },
-	{ group: 'Vector', icon: 'graph-scatter', match: (id) => backendKindForDriver(id) === 'vector' },
-	{ group: 'Cloud logs', icon: 'cloud', match: (id) => backendKindForDriver(id) === 'telemetry' },
+	{ get group() { return t('connections.kinds.fileBased'); }, icon: 'file-binary', match: (id) => id === 'sqlite' || id === 'duckdb' },
+	{ get group() { return t('connections.kinds.relational'); }, icon: 'database', match: (id) => backendKindForDriver(id) === 'relational' },
+	{ get group() { return t('connections.kinds.document'); }, icon: 'json', match: (id) => backendKindForDriver(id) === 'document' },
+	{ get group() { return t('connections.kinds.vector'); }, icon: 'graph-scatter', match: (id) => backendKindForDriver(id) === 'vector' },
+	{ get group() { return t('connections.kinds.cloudLogs'); }, icon: 'cloud', match: (id) => backendKindForDriver(id) === 'telemetry' },
 ];
 
 /** The family a driver belongs to. A driver matching none still gets a mark rather than a gap. */
 export function driverKind(driverId: string): DriverKind {
 	const found = DRIVER_KINDS.find((kind) => kind.match(driverId));
-	return found ? { group: found.group, icon: found.icon } : { group: 'Other', icon: 'database' };
+	return found ? { group: found.group, icon: found.icon } : { group: t('connections.kinds.unknown'), icon: 'database' };
 }

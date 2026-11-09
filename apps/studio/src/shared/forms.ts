@@ -8,6 +8,7 @@
 // never sees form values — only the resolved ConnectionConfig.
 
 import type { ConnectionConfig, SshTunnelProfile } from './connection';
+import { t } from './i18n/core';
 
 /** Snapshot the sidebar renders: the saved (non-secret) connections + which are live. */
 export interface ConnectionsState {
@@ -167,17 +168,17 @@ export interface ImportSource {
 export const IMPORT_SOURCES: ImportSource[] = [
 	// First, because it is the only one that needs nothing but being signed in: no file to
 	// find, no export to make, and the password comes with it.
-	{ id: 'snoutdata-cloud', label: "SnoutData Cloud", description: "Your hosted databases. Being signed in is enough: no connection string to paste." },
-	{ id: 'dbeaver', label: "DBeaver", description: "Import saved connections from your local DBeaver workspace." },
-	{ id: 'datagrip', label: "DataGrip", description: "Import data sources from JetBrains DataGrip or another IntelliJ IDE." },
-	{ id: 'navicat', label: "Navicat", description: "Import connections from a Navicat .ncx export file." },
-	{ id: 'pgadmin', label: "pgAdmin", description: "Import servers from pgAdmin 4, or from a servers.json it exported." },
-	{ id: 'mysql-workbench', label: "MySQL Workbench", description: "Import saved connections from MySQL Workbench." },
-	{ id: 'azure-data-studio', label: "Azure Data Studio", description: "Import SQL Server and PostgreSQL connections from Azure Data Studio." },
-	{ id: 'ssms', label: "SQL Server Management Studio", description: "Import the servers SSMS remembers.", platforms: ['win32'] },
-	{ id: 'heidisql', label: "HeidiSQL", description: "Import HeidiSQL sessions, passwords included.", platforms: ['win32'] },
-	{ id: 'tableplus', label: "TablePlus", description: "Import saved connections from TablePlus.", platforms: ['darwin'] },
-	{ id: 'pgpass', label: "Postgres password file", description: "Import the entries in your .pgpass (pgpass.conf on Windows), passwords included." },
+	{ id: 'snoutdata-cloud', label: "SnoutData Cloud", get description() { return t('engineForms.sources.cloud'); } },
+	{ id: 'dbeaver', label: "DBeaver", get description() { return t('engineForms.sources.dbeaver'); } },
+	{ id: 'datagrip', label: "DataGrip", get description() { return t('engineForms.sources.datagrip'); } },
+	{ id: 'navicat', label: "Navicat", get description() { return t('engineForms.sources.navicat'); } },
+	{ id: 'pgadmin', label: "pgAdmin", get description() { return t('engineForms.sources.pgadmin'); } },
+	{ id: 'mysql-workbench', label: "MySQL Workbench", get description() { return t('engineForms.sources.workbench'); } },
+	{ id: 'azure-data-studio', label: "Azure Data Studio", get description() { return t('engineForms.sources.ads'); } },
+	{ id: 'ssms', label: "SQL Server Management Studio", get description() { return t('engineForms.sources.ssms'); }, platforms: ['win32'] },
+	{ id: 'heidisql', label: "HeidiSQL", get description() { return t('engineForms.sources.heidi'); }, platforms: ['win32'] },
+	{ id: 'tableplus', label: "TablePlus", get description() { return t('engineForms.sources.tableplus'); }, platforms: ['darwin'] },
+	{ id: 'pgpass', get label() { return t('engineForms.pgpass'); }, get description() { return t('engineForms.sources.pgpass'); } },
 ];
 
 /** What each source is called as a group heading in the discovery results. */
@@ -191,11 +192,11 @@ export const DISCOVERY_SOURCE_LABELS: Record<ImportSourceId, string> = {
 	'azure-data-studio': "Azure Data Studio",
 	ssms: "SQL Server Management Studio",
 	heidisql: "HeidiSQL",
-	pgpass: "Postgres password file",
+	get pgpass() { return t('engineForms.pgpass'); },
 	tableplus: "TablePlus",
-	docker: "Docker and Podman containers",
-	local: "Running on this computer",
-	network: "On your local network",
+	get docker() { return t('engineForms.discovery.docker'); },
+	get local() { return t('engineForms.discovery.local'); },
+	get network() { return t('engineForms.discovery.network'); },
 };
 
 /**

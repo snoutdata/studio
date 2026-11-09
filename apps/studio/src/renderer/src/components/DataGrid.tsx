@@ -10,6 +10,7 @@ import { isCellExpr } from '../dml';
 import { compositeCount } from '../../../shared/cellValue';
 import type { FkPeekData } from '../useFkLookup';
 import type { QueryField } from '../../../shared/query';
+import { useT } from '../i18n';
 
 /** Foreign-key resolution the grid renders (inline labels + the hover/right-click peek card).
  *  The parent builds this from {@link useFkLookup}; absent when the result isn't a known table. */
@@ -212,6 +213,8 @@ interface DataGridProps {
 	/** Type-aware "Set to default" menu label for a column (e.g. "Set to current time"),
 	 *  or null when the column has no sensible default action. Pair with {@link onSetDefault}. */
 	defaultActionLabel?(colIndex: number): string | null;
+	/** The column's default action writes NULL, so the menu's separate "Set to NULL" would repeat it. */
+	defaultActionIsNull?(colIndex: number): boolean;
 	/** Right-click "Set to default": apply the column's type-aware default to the cell. */
 	onSetDefault?(rowIndex: number, colIndex: number): void;
 	/** Right-click "Set to NULL": set the cell to an explicit NULL. */
@@ -262,7 +265,8 @@ interface DataGridProps {
 	deleteHint?: string;
 }
 
-export function DataGrid({ fields, rowCount, getRow, widths, rowOffset = 0, sort = null, onSortColumn, resetKey, editable = false, editLocked = false, onUnlock, columnDefaults, isEdited, rowState, onEditCell, onToggleDelete, onDuplicateRow, onOpenCellEditor, onCopyCell, onCopyRow, onGenerateSql, defaultActionLabel, onSetDefault, onSetNull, onCopyFromAdjacent, onOrderBy, onFilterByValue, fk, onActiveChange, rowActions, rowActionsLabel = 'AI', deleteHint = 'Click to mark this row for deletion', onViewCell, wrapMode = 'off', wrapLines = 4 }: DataGridProps): JSX.Element {
+export function DataGrid({ fields, rowCount, getRow, widths, rowOffset = 0, sort = null, onSortColumn, resetKey, editable = false, editLocked = false, onUnlock, columnDefaults, isEdited, rowState, onEditCell, onToggleDelete, onDuplicateRow, onOpenCellEditor, onCopyCell, onCopyRow, onGenerateSql, defaultActionLabel, defaultActionIsNull, onSetDefault, onSetNull, onCopyFromAdjacent, onOrderBy, onFilterByValue, fk, onActiveChange, rowActions, rowActionsLabel = 'AI', deleteHint, onViewCell, wrapMode = 'off', wrapLines = 4 }: DataGridProps): JSX.Element {
+	const t = useT();
 	const gridRef = useRef<HTMLDivElement>(null);
 	// Width of the sticky right-edge actions cell (28px per icon button + padding), 0 when unused.
 	const actionsW = rowActions && rowActions.length > 0 ? rowActions.length * 28 + 8 : 0;
@@ -372,7 +376,7 @@ export function DataGrid({ fields, rowCount, getRow, widths, rowOffset = 0, sort
 	// Active editing is allowed only when editable and not locked; locked still shows the menu
 	// items (greyed) so the capability stays discoverable on prod.
 	const canEditNow = editable && !editLocked;
-	const lockTitle = editLocked ? 'This is a production connection, so editing is locked. Choose "Allow editing" to unlock it for this session.' : undefined;
+	const lockTitle = editLocked ? t('results.grid.lockedTitle') : undefined;
 
 	// Dismiss the context menu on outside click or Escape.
 	useEffect(() => {
@@ -730,13 +734,13 @@ export function DataGrid({ fields, rowCount, getRow, widths, rowOffset = 0, sort
 						style={{ width: effectiveWidths[col] }}
 						key={col}
 						onClick={onSortColumn ? () => onSortColumn(col) : undefined}
-						title={onSortColumn ? 'Click to sort' : undefined}
+						title={onSortColumn ? t('results.grid.sort') : undefined}
 					>
 						<span className="head-label">{fields[col].name}</span>
 						{sort?.col === col && <Icon name={sort.dir === 'asc' ? 'arrow-up' : 'arrow-down'} className="sort-caret" />}
 						<div
 							className="col-resizer"
-							title="Drag to resize column"
+							title={t('results.grid.resize')}
 							onMouseDown={(e) => startResize(col, e)}
 							onClick={(e) => e.stopPropagation()}
 							onDoubleClick={(e) => { e.stopPropagation(); setWidthOverrides((prev) => { const next = { ...prev }; delete next[col]; return next; }); }}
@@ -766,7 +770,7 @@ export function DataGrid({ fields, rowCount, getRow, widths, rowOffset = 0, sort
 								className={`cell gutter${canEditNow ? ' deletable' : ''}`}
 								style={{ width: GUTTER_W }}
 								onClick={canEditNow ? () => onToggleDelete?.(i) : undefined}
-								title={canEditNow ? deleteHint : undefined}
+								title={canEditNow ? (deleteHint ?? t('results.grid.deleteHint')) : undefined}
 							>
 								{isNew ? '✱' : rowOffset + i + 1}
 							</div>
@@ -819,7 +823,7 @@ export function DataGrid({ fields, rowCount, getRow, widths, rowOffset = 0, sort
 										onClick={() => setActive({ row: i, col })}
 										onMouseEnter={text === null || expr ? undefined : (e) => scheduleValuePeek(e.currentTarget, text, display !== text)}
 										onMouseLeave={text === null || expr ? undefined : closeValuePeek}
-										title={expr ? expr.display : showDefault ? `Column default: leave blank to use "${columnDefaults![col]}"` : fkLabel ? `${display} · ${fkLabel}` : undefined}
+										title={expr ? expr.display : showDefault ? t('results.grid.columnDefault', { value: String(columnDefaults![col]) }) : fkLabel ? `${display} · ${fkLabel}` : undefined}
 										onDoubleClick={canEditNow && state !== 'deleted' ? () => setEditing({ row: i, col }) : undefined}
 										onContextMenu={(onCopyCell || onCopyRow || onGenerateSql || onOrderBy || onFilterByValue || editable || isFk || onViewCell) ? (e) => { e.preventDefault(); e.stopPropagation(); setActive({ row: i, col }); setSubmenu(null); setMenu({ row: i, col, x: e.clientX, y: e.clientY }); } : undefined}
 									>
@@ -827,7 +831,7 @@ export function DataGrid({ fields, rowCount, getRow, widths, rowOffset = 0, sort
 										{inner !== undefined && (
 											<span
 												className="cell-count"
-												title={onViewCell ? "Open this value as a tree" : `${inner} inside`}
+												title={onViewCell ? t('results.grid.openAsTree') : t('results.grid.inside', { count: String(inner) })}
 												onClick={onViewCell ? (e) => { e.stopPropagation(); onViewCell(i, col); } : undefined}
 											>{inner}</span>
 										)}
@@ -835,7 +839,7 @@ export function DataGrid({ fields, rowCount, getRow, widths, rowOffset = 0, sort
 										{isFk && (
 											<span
 												className="fk-link"
-												title="Peek referenced row"
+												title={t('results.grid.peek')}
 												onMouseEnter={(e) => scheduleOpenPeek(i, col, cur, e.currentTarget)}
 												onMouseLeave={scheduleClosePeek}
 												onClick={(e) => { e.stopPropagation(); openPeek(i, col, cur, e.currentTarget.getBoundingClientRect()); }}
@@ -878,23 +882,23 @@ export function DataGrid({ fields, rowCount, getRow, widths, rowOffset = 0, sort
 			const hasSubmenus = Boolean(onGenerateSql || editable || onOrderBy || onFilterByValue || isFkCol);
 			return (
 			<div ref={menuRef} className="ctx-menu" style={{ position: 'fixed', left: menuPos?.x ?? menu.x, top: menuPos?.y ?? menu.y, visibility: menuPos ? 'visible' : 'hidden' }} onMouseDown={(e) => e.stopPropagation()}>
-				{onCopyCell && <button type="button" className="ctx-menu-item" onMouseEnter={() => setSubmenu(null)} onClick={() => { onCopyCell(menu.row, menu.col); setMenu(null); }}><span className="ctx-label"><Icon name="copy" />Copy</span><span className="shortcut">Ctrl+C</span></button>}
-				{editable && <button type="button" className="ctx-menu-item" disabled={editLocked} title={lockTitle} onMouseEnter={() => setSubmenu(null)} onClick={() => { if (!editLocked) { void pasteCell(menu.row, menu.col); } setMenu(null); }}><span className="ctx-label"><Icon name="clippy" />Paste</span><span className="shortcut">Ctrl+V</span></button>}
-				{onCopyRow && <button type="button" className="ctx-menu-item" onMouseEnter={() => setSubmenu(null)} onClick={() => { onCopyRow(menu.row); setMenu(null); }}><span className="ctx-label"><Icon name="list-flat" />Copy row</span></button>}
-				{onViewCell && <button type="button" className="ctx-menu-item" onMouseEnter={() => setSubmenu(null)} onClick={() => { onViewCell(menu.row, menu.col); setMenu(null); }}><span className="ctx-label"><Icon name="eye" />View value…</span><span className="shortcut">Shift+Enter</span></button>}
+				{onCopyCell && <button type="button" className="ctx-menu-item" onMouseEnter={() => setSubmenu(null)} onClick={() => { onCopyCell(menu.row, menu.col); setMenu(null); }}><span className="ctx-label"><Icon name="copy" />{t('results.menu.copy')}</span><span className="shortcut">Ctrl+C</span></button>}
+				{editable && <button type="button" className="ctx-menu-item" disabled={editLocked} title={lockTitle} onMouseEnter={() => setSubmenu(null)} onClick={() => { if (!editLocked) { void pasteCell(menu.row, menu.col); } setMenu(null); }}><span className="ctx-label"><Icon name="clippy" />{t('results.menu.paste')}</span><span className="shortcut">Ctrl+V</span></button>}
+				{onCopyRow && <button type="button" className="ctx-menu-item" onMouseEnter={() => setSubmenu(null)} onClick={() => { onCopyRow(menu.row); setMenu(null); }}><span className="ctx-label"><Icon name="list-flat" />{t('results.menu.copyRow')}</span></button>}
+				{onViewCell && <button type="button" className="ctx-menu-item" onMouseEnter={() => setSubmenu(null)} onClick={() => { onViewCell(menu.row, menu.col); setMenu(null); }}><span className="ctx-label"><Icon name="eye" />{t('results.menu.viewValue')}</span><span className="shortcut">Shift+Enter</span></button>}
 				{editable && (
 					<>
 						<div className="ctx-sep" />
-						{editLocked && onUnlock && <button type="button" className="ctx-menu-item" onMouseEnter={() => setSubmenu(null)} onClick={() => { onUnlock(); setMenu(null); }}><span className="ctx-label"><Icon name="unlock" />Allow editing (this session)</span></button>}
-						{onDuplicateRow && <button type="button" className="ctx-menu-item" disabled={editLocked} title={lockTitle} onMouseEnter={() => setSubmenu(null)} onClick={() => { if (!editLocked) { onDuplicateRow(menu.row); } setMenu(null); }}><span className="ctx-label"><Icon name="add" />Duplicate row</span><span className="shortcut">Ctrl+Alt+Ins</span></button>}
-						{onToggleDelete && <button type="button" className="ctx-menu-item" disabled={editLocked} title={lockTitle} onMouseEnter={() => setSubmenu(null)} onClick={() => { if (!editLocked) { onToggleDelete(menu.row); } setMenu(null); }}><span className="ctx-label"><Icon name="trash" />{rowState?.(menu.row) === 'deleted' ? 'Undo delete' : rowState?.(menu.row) === 'new' ? 'Remove row' : 'Delete row'}</span><span className="shortcut">Alt+Delete</span></button>}
+						{editLocked && onUnlock && <button type="button" className="ctx-menu-item" onMouseEnter={() => setSubmenu(null)} onClick={() => { onUnlock(); setMenu(null); }}><span className="ctx-label"><Icon name="unlock" />{t('results.menu.allowEditing')}</span></button>}
+						{onDuplicateRow && <button type="button" className="ctx-menu-item" disabled={editLocked} title={lockTitle} onMouseEnter={() => setSubmenu(null)} onClick={() => { if (!editLocked) { onDuplicateRow(menu.row); } setMenu(null); }}><span className="ctx-label"><Icon name="add" />{t('results.menu.duplicateRow')}</span><span className="shortcut">Ctrl+Alt+Ins</span></button>}
+						{onToggleDelete && <button type="button" className="ctx-menu-item" disabled={editLocked} title={lockTitle} onMouseEnter={() => setSubmenu(null)} onClick={() => { if (!editLocked) { onToggleDelete(menu.row); } setMenu(null); }}><span className="ctx-label"><Icon name="trash" />{rowState?.(menu.row) === 'deleted' ? t('results.menu.undoDelete') : rowState?.(menu.row) === 'new' ? t('results.menu.removeRow') : t('results.menu.deleteRow')}</span><span className="shortcut">Alt+Delete</span></button>}
 					</>
 				)}
 				{hasSubmenus && <div className="ctx-sep" />}
 
 				{onGenerateSql && (
 					<div className="ctx-menu-item has-submenu" role="menuitem" aria-haspopup="menu" onMouseEnter={() => setSubmenu('sql')} onClick={() => setSubmenu(submenu === 'sql' ? null : 'sql')}>
-						<span className="ctx-label"><Icon name="database" />Generate SQL</span>
+						<span className="ctx-label"><Icon name="database" />{t('results.menu.generateSql')}</span>
 						<Icon name="chevron-right" />
 						{submenu === 'sql' && (
 							<div ref={submenuRef} className={`ctx-menu submenu submenu-${submenuSide}`} role="menu" style={{ top: submenuTop ?? undefined, visibility: submenuTop === null ? 'hidden' : undefined }}>
@@ -909,16 +913,16 @@ export function DataGrid({ fields, rowCount, getRow, widths, rowOffset = 0, sort
 
 				{editable && (
 					<div className="ctx-menu-item has-submenu" role="menuitem" aria-haspopup="menu" onMouseEnter={() => setSubmenu('edit')} onClick={() => setSubmenu(submenu === 'edit' ? null : 'edit')}>
-						<span className="ctx-label"><Icon name="edit" />Edit cell</span>
+						<span className="ctx-label"><Icon name="edit" />{t('results.menu.editCell')}</span>
 						<Icon name="chevron-right" />
 						{submenu === 'edit' && (
 							<div ref={submenuRef} className={`ctx-menu submenu submenu-${submenuSide}`} role="menu" style={{ top: submenuTop ?? undefined, visibility: submenuTop === null ? 'hidden' : undefined }}>
-								<button type="button" className="ctx-menu-item" disabled={editLocked} title={lockTitle} onClick={() => { if (!editLocked) { onOpenCellEditor?.(menu.row, menu.col); } setMenu(null); }}><span className="ctx-label"><Icon name="edit" />Edit value…</span><span className="shortcut">Shift+Enter</span></button>
+								<button type="button" className="ctx-menu-item" disabled={editLocked} title={lockTitle} onClick={() => { if (!editLocked) { onOpenCellEditor?.(menu.row, menu.col); } setMenu(null); }}><span className="ctx-label"><Icon name="edit" />{t('results.menu.editValue')}</span><span className="shortcut">Shift+Enter</span></button>
 								{defaultActionLabel?.(menu.col) && <button type="button" className="ctx-menu-item" disabled={editLocked} title={lockTitle} onClick={() => { if (!editLocked) { onSetDefault?.(menu.row, menu.col); } setMenu(null); }}><span className="ctx-label"><Icon name="discard" />{defaultActionLabel(menu.col)}</span><span className="shortcut">Ctrl+Backspace</span></button>}
-								{defaultActionLabel?.(menu.col) !== 'Set to NULL' && <button type="button" className="ctx-menu-item" disabled={editLocked} title={lockTitle} onClick={() => { if (!editLocked) { onSetNull?.(menu.row, menu.col); } setMenu(null); }}><span className="ctx-label"><Icon name="circle-slash" />Set to NULL</span><span className="shortcut">Delete</span></button>}
+								{!defaultActionIsNull?.(menu.col) && <button type="button" className="ctx-menu-item" disabled={editLocked} title={lockTitle} onClick={() => { if (!editLocked) { onSetNull?.(menu.row, menu.col); } setMenu(null); }}><span className="ctx-label"><Icon name="circle-slash" />{t('results.menu.setNull')}</span><span className="shortcut">Delete</span></button>}
 								<div className="ctx-sep" />
-								<button type="button" className="ctx-menu-item" disabled={editLocked || menu.row <= 0} title={lockTitle} onClick={() => { if (!editLocked) { onCopyFromAdjacent?.(menu.row, menu.col, -1); } setMenu(null); }}><span className="ctx-label"><Icon name="arrow-up" />Copy from row above</span><span className="shortcut">Ctrl+D</span></button>
-								<button type="button" className="ctx-menu-item" disabled={editLocked || menu.row >= rowCount - 1} title={lockTitle} onClick={() => { if (!editLocked) { onCopyFromAdjacent?.(menu.row, menu.col, 1); } setMenu(null); }}><span className="ctx-label"><Icon name="arrow-down" />Copy from row below</span><span className="shortcut">Ctrl+Alt+D</span></button>
+								<button type="button" className="ctx-menu-item" disabled={editLocked || menu.row <= 0} title={lockTitle} onClick={() => { if (!editLocked) { onCopyFromAdjacent?.(menu.row, menu.col, -1); } setMenu(null); }}><span className="ctx-label"><Icon name="arrow-up" />{t('results.menu.copyAbove')}</span><span className="shortcut">Ctrl+D</span></button>
+								<button type="button" className="ctx-menu-item" disabled={editLocked || menu.row >= rowCount - 1} title={lockTitle} onClick={() => { if (!editLocked) { onCopyFromAdjacent?.(menu.row, menu.col, 1); } setMenu(null); }}><span className="ctx-label"><Icon name="arrow-down" />{t('results.menu.copyBelow')}</span><span className="shortcut">Ctrl+Alt+D</span></button>
 							</div>
 						)}
 					</div>
@@ -926,14 +930,14 @@ export function DataGrid({ fields, rowCount, getRow, widths, rowOffset = 0, sort
 
 				{(onOrderBy || onFilterByValue) && (
 					<div className="ctx-menu-item has-submenu" role="menuitem" aria-haspopup="menu" onMouseEnter={() => setSubmenu('filter')} onClick={() => setSubmenu(submenu === 'filter' ? null : 'filter')}>
-						<span className="ctx-label"><Icon name="filter" />Filter &amp; sort</span>
+						<span className="ctx-label"><Icon name="filter" />{t('results.menu.filterSort')}</span>
 						<Icon name="chevron-right" />
 						{submenu === 'filter' && (
 							<div ref={submenuRef} className={`ctx-menu submenu submenu-${submenuSide}`} role="menu" style={{ top: submenuTop ?? undefined, visibility: submenuTop === null ? 'hidden' : undefined }}>
-								{onOrderBy && <button type="button" className="ctx-menu-item" onClick={() => { onOrderBy(menu.col, 'asc'); setMenu(null); }}><span className="ctx-label"><Icon name="arrow-up" />Order ascending</span></button>}
-								{onOrderBy && <button type="button" className="ctx-menu-item" onClick={() => { onOrderBy(menu.col, 'desc'); setMenu(null); }}><span className="ctx-label"><Icon name="arrow-down" />Order descending</span></button>}
-								{onFilterByValue && <button type="button" className="ctx-menu-item" onClick={() => { onFilterByValue(menu.row, menu.col, '='); setMenu(null); }}><span className="ctx-label"><Icon name="filter" />Filter to this value</span></button>}
-								{onFilterByValue && <button type="button" className="ctx-menu-item" onClick={() => { onFilterByValue(menu.row, menu.col, '<>'); setMenu(null); }}><span className="ctx-label"><Icon name="filter" />Exclude this value</span></button>}
+								{onOrderBy && <button type="button" className="ctx-menu-item" onClick={() => { onOrderBy(menu.col, 'asc'); setMenu(null); }}><span className="ctx-label"><Icon name="arrow-up" />{t('results.menu.orderAsc')}</span></button>}
+								{onOrderBy && <button type="button" className="ctx-menu-item" onClick={() => { onOrderBy(menu.col, 'desc'); setMenu(null); }}><span className="ctx-label"><Icon name="arrow-down" />{t('results.menu.orderDesc')}</span></button>}
+								{onFilterByValue && <button type="button" className="ctx-menu-item" onClick={() => { onFilterByValue(menu.row, menu.col, '='); setMenu(null); }}><span className="ctx-label"><Icon name="filter" />{t('results.menu.filterTo')}</span></button>}
+								{onFilterByValue && <button type="button" className="ctx-menu-item" onClick={() => { onFilterByValue(menu.row, menu.col, '<>'); setMenu(null); }}><span className="ctx-label"><Icon name="filter" />{t('results.menu.exclude')}</span></button>}
 							</div>
 						)}
 					</div>
@@ -941,12 +945,12 @@ export function DataGrid({ fields, rowCount, getRow, widths, rowOffset = 0, sort
 
 				{isFkCol && fk && (
 					<div className="ctx-menu-item has-submenu" role="menuitem" aria-haspopup="menu" onMouseEnter={() => setSubmenu('fk')} onClick={() => setSubmenu(submenu === 'fk' ? null : 'fk')}>
-						<span className="ctx-label"><Icon name="references" />Foreign key</span>
+						<span className="ctx-label"><Icon name="references" />{t('results.menu.foreignKey')}</span>
 						<Icon name="chevron-right" />
 						{submenu === 'fk' && (
 							<div ref={submenuRef} className={`ctx-menu submenu submenu-${submenuSide}`} role="menu" style={{ top: submenuTop ?? undefined, visibility: submenuTop === null ? 'hidden' : undefined }}>
-								<button type="button" className="ctx-menu-item" onClick={() => { openPeek(menu.row, menu.col, getRow(menu.row)[menu.col], new DOMRect(menu.x, menu.y, 0, 0)); setMenu(null); }}><span className="ctx-label"><Icon name="references" />Peek referenced row</span></button>
-								<button type="button" className="ctx-menu-item" onClick={() => { fk.onNavigate(menu.col, getRow(menu.row)); setMenu(null); }}><span className="ctx-label"><Icon name="link-external" />Open referenced row</span></button>
+								<button type="button" className="ctx-menu-item" onClick={() => { openPeek(menu.row, menu.col, getRow(menu.row)[menu.col], new DOMRect(menu.x, menu.y, 0, 0)); setMenu(null); }}><span className="ctx-label"><Icon name="references" />{t('results.grid.peek')}</span></button>
+								<button type="button" className="ctx-menu-item" onClick={() => { fk.onNavigate(menu.col, getRow(menu.row)); setMenu(null); }}><span className="ctx-label"><Icon name="link-external" />{t('results.menu.openReferenced')}</span></button>
 							</div>
 						)}
 					</div>

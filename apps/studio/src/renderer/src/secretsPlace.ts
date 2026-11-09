@@ -10,6 +10,7 @@
 // (a settings screen asks the first time it opens).
 
 import { useEffect, useState } from 'react';
+import { t } from '../../shared/i18n/core';
 
 let weakRead: Promise<boolean> | undefined;
 
@@ -37,5 +38,5 @@ export function useSecretsWeak(): boolean {
 
 /** The end of "The key is kept …": where a secret saved now will be. */
 export function secretsPlace(weak: boolean): string {
-	return weak ? "in a file on this computer that only your user account can read" : "in this computer's keychain";
+	return weak ? t('connections.secretsPlace.file') : t('connections.secretsPlace.keychain');
 }

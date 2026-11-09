@@ -11,6 +11,7 @@
  *  real publishers by a plain Node test (componentVendors.test.ts).
  *--------------------------------------------------------------------------------------------*/
 
+import { t } from '../shared/i18n/core';
 import type { VendorTerms } from '../shared/components';
 import type { BundlePart } from './componentInstall';
 
@@ -57,7 +58,7 @@ export const IBM_CLI_DRIVER_WIN32_X64: BundlePart = {
 	bytes: 27_235_419,
 	format: 'zip',
 	into: 'node_modules/ibm_db/installer',
-	notice: "IBM's Db2 driver is downloaded from IBM and used under IBM's licence.",
+	get notice() { return t('mainErrors.noticeIbm'); },
 	terms: IBM_CLI_DRIVER_TERMS,
 };
 
@@ -95,7 +96,7 @@ export function hanaParts(prebuilt: string): BundlePart[] {
 			into: 'node_modules/@sap/hana-client',
 			strip: 'package',
 			only: { dir: 'prebuilt', keep: prebuilt },
-			notice: "The SAP HANA client is downloaded from SAP's package on npm and used under SAP's licence.",
+			get notice() { return t('mainErrors.noticeSap'); },
 			terms: SAP_HANA_CLIENT_TERMS,
 		},
 		{

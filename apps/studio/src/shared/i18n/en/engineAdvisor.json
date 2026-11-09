@@ -1,0 +1,52 @@
+{
+	"sarg": {
+		"leadingWildcard": "`{operator} '%…'` on the indexed column {column} can't use its index.",
+		"leadingWildcardWhy": "A leading `%` means the b-tree index on this column can't be used, so the query scans every row. Consider a full-text index, a trigram index (Postgres `pg_trgm`), or anchoring the pattern (`prefix%`).",
+		"typeMismatch": "Comparing the string column {column} to a numeric literal forces an implicit cast.",
+		"typeMismatchWhy": "When a string column is compared to a number, the engine converts every row's value to compare, which defeats the index on this column (a common MySQL footgun). Quote the literal so the types match.",
+		"wrapFunction": "`{fn}({name})` can't use the index on {column}: the function runs on every row.",
+		"wrapCast": "`CAST({name} …)` can't use the index on {column}.",
+		"wrapArith": "Arithmetic on {column} (`{name} {op} …`) can't use its index: move the math to the other side.",
+		"wrapWhy": "Wrapping an indexed column in a function or expression means the index (which stores the raw column value) can't be used, so the query scans the whole table. Rewrite so the bare column is on one side of the comparison, or add an expression index on the wrapped form."
+	},
+	"plan": {
+		"partitionScan": "Reads all {leaves} partitions of {table} (~{rows} rows): nothing in the query lets the database skip one.",
+		"partitionSeriesWhy": "{table} is a series table partitioned by {time}. Filter on {time} with a range the planner can compare directly ({time} >= now() - interval '1 day', or a literal range), never on a function or cast of {time}, so it reads only the partitions in that range.",
+		"partitionWhy": "{table} is partitioned. A filter on its partition key, compared directly rather than through a function or cast, lets the planner skip the partitions outside it.",
+		"sort": "The plan sorts rows that aren't already ordered by an index (an in-memory/disk sort).",
+		"sortWhy": "Add an index whose leading columns match the ORDER BY so the engine reads rows in order instead of sorting them.",
+		"filesort": "The plan uses a filesort (rows aren't read in the required order from an index).",
+		"filesortWhy": "Add a composite index whose columns cover the WHERE equality columns then the ORDER BY column, so one index serves both.",
+		"tempTable": "The plan materialises an internal temporary table.",
+		"tempTableWhy": "A GROUP BY/DISTINCT/UNION that can't use an index builds a temp table; an index matching the grouping columns often removes it.",
+		"filesortTable": "The plan uses a filesort on this table (rows aren't read in order from an index).",
+		"filesortTableWhy": "Add a composite index covering the WHERE equality columns then the ORDER BY column.",
+		"tempTableStep": "The plan materialises an internal temporary table for this step.",
+		"tempTableStepWhy": "An index matching the grouping/join columns often removes the temp table.",
+		"final": "FINAL on {table} ({rows} rows) merges its parts while the query reads them.",
+		"finalWhy": "FINAL collapses duplicate rows at read time, which on a large table costs far more than the query itself. Filter first so less is merged, or deduplicate in the query instead (argMax(value, version) ... GROUP BY key); do_not_merge_across_partitions_select_final = 1 helps when the key never crosses partitions.",
+		"projection": "Answered from projection {name}: {last} of {first} granules read.",
+		"projectionWhy": "A projection is a copy of the table kept in a different order or pre-aggregated, and ClickHouse used it because it reads less than the table would. Nothing to do: this is the lever working.",
+		"granulesTable": "Full scan of {table}: all {first} granules ({approx}{rows} rows) were read, none skipped.",
+		"granules": "Full scan: all {first} granules ({approx}{rows} rows) were read, none skipped.",
+		"granulesWhy": "ClickHouse skips data by the table's ORDER BY key and its partition key, not by an index on any column. This filter narrowed neither, so every granule was read. Filter on a leading column of the ORDER BY key (the first one first), or on the partition key; for a column outside the key, a data-skipping index (bloom_filter, set, minmax) or a projection ordered by it is the lever.",
+		"fullScan": "Full table scan: no index is used to narrow the rows.",
+		"fullScanRows": "Full table scan (~{rows} rows): no index is used to narrow the rows.",
+		"fullScanTable": "Full table scan of {table}: no index is used to narrow the rows.",
+		"fullScanTableRows": "Full table scan of {table} (~{rows} rows): no index is used to narrow the rows.",
+		"fullScanWhy": "The engine reads every row because no index matches the query's filter or join. Add an index on the column(s) in the WHERE/JOIN, or make the predicate sargable (see the inline hints), so the query touches only the rows it needs."
+	},
+	"hazards": {
+		"setIgnored": "Only \"{column}\" is assigned. {ignored} will NOT be updated.",
+		"setBoolean": "Only \"{column}\" is assigned, and its value is a boolean expression, not the value it looks like.",
+		"setWhy": "{operator} does not separate assignments in a SET clause, a comma does. This parses as the single assignment \"{column} = ({value})\", so the whole right-hand side collapses to one true/false/NULL value and every other column named in it is only being compared, not set.",
+		"nullNotEqual": "\"<> NULL\" never matches any row, not even the non-NULL ones.",
+		"nullEqual": "\"= NULL\" never matches any row, not even the NULL ones.",
+		"nullWhy": "Comparing anything to NULL yields NULL (unknown), never true, so the predicate filters everything out. Use {fix} instead.",
+		"theTable": "the table",
+		"chDelete": "ALTER TABLE ... DELETE rewrites every part of {table} that holds a matching row, in the background, and cannot be rolled back.",
+		"chDeleteWhy": "This is a mutation, not a row delete. A lightweight DELETE FROM {table} WHERE ... (ClickHouse 23.3 and later) marks the rows deleted at once and drops them in ordinary merges, which is far cheaper; ALTER TABLE ... DELETE is for when the disk space must come back now. Watch it in Operations > Storage > Mutations.",
+		"chUpdate": "ALTER TABLE ... UPDATE rewrites every column it sets in every part that holds a matching row, in the background, and cannot be rolled back.",
+		"chUpdateWhy": "This is a mutation, not a row update: on a large table it is a long rewrite, and a failing one blocks the mutations after it on the same table. Narrow the WHERE as far as it will go, and watch it in Operations > Storage > Mutations."
+	}
+}

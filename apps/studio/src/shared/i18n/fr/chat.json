@@ -1,0 +1,209 @@
+{
+	"aiTranslate": {
+		"title": "Traduire avec {assistant} ?",
+		"detail": "{assistant} peut transformer cette requête en pipeline MongoDB, ce qui consomme votre budget IA. Vous pouvez aussi l'écrire directement dans l'onglet Pipeline.",
+		"always": "Toujours traduire avec {assistant} (ne plus demander)",
+		"cancel": "Annuler",
+		"confirm": "Traduire avec {assistant}"
+	},
+	"attach": {
+		"excerpt": "extrait · {sent} sur {total} car.",
+		"chars": "{total} car.",
+		"excerptTitle": "{name} (seul un extrait, {coverage}, a été envoyé à l'assistant)",
+		"remove": "Retirer"
+	},
+	"ago": {
+		"seconds": "il y a {n} s",
+		"minutes": "il y a {n} min",
+		"hours": "il y a {n} h",
+		"days": "il y a {n} j"
+	},
+	"history": {
+		"title": "Historique des discussions",
+		"clearAll": "Tout effacer",
+		"close": "Fermer",
+		"search": "Rechercher un titre, une connexion ou un message…",
+		"matches": {
+			"one": "{count} résultat",
+			"other": "{count} résultats"
+		},
+		"empty": "Aucune discussion enregistrée.",
+		"noMatch": "Aucune discussion ne correspond au filtre.",
+		"untitled": "Discussion sans titre",
+		"messages": "{count} msg",
+		"tokens": "{count} jetons",
+		"delete": "Supprimer",
+		"deleteOneTitle": "Supprimer cette discussion ?",
+		"deleteBody": "Cette action est irréversible.",
+		"deleteAllTitle": "Supprimer tout l'historique ?",
+		"deleteAllBody": {
+			"one": "{count} discussion enregistrée sera supprimée. Cette action est irréversible.",
+			"other": "Les {count} discussions enregistrées seront supprimées. Cette action est irréversible."
+		},
+		"deleteAll": "Tout supprimer",
+		"prev": "Préc.",
+		"next": "Suiv.",
+		"range": "{start}-{end} sur {total}"
+	},
+	"knowledge": {
+		"title": "Ce que je sais sur « {name} »",
+		"close": "Fermer",
+		"loading": "Chargement…",
+		"suggested": "Suggéré par votre discussion",
+		"rememberThis": "Retenir ceci",
+		"remember": "Retenir",
+		"dismiss": "Ignorer",
+		"on": "Activé, je m'en sers",
+		"off": "Désactivé, conservé mais non utilisé",
+		"everyDatabase": "toutes les bases",
+		"delete": "Supprimer",
+		"placeholder": "Apprenez-lui quelque chose sur cette base de données…",
+		"everywhereTitle": "Appliquer à toutes les connexions, pas seulement celle-ci",
+		"everywhere": "S'applique à toutes les bases",
+		"teach": "Lui apprendre",
+		"emptyHint": "Rien pour l'instant. Apprenez-moi un fait sur cette base (par exemple « les ventes sont dans `customer_order`, `fulfilled_date` est la date de vente ») et je le retiendrai pour que vous n'ayez pas à le répéter."
+	},
+	"model": {
+		"choose": "Choisir le modèle de discussion",
+		"none": "aucun modèle",
+		"reasoningTitle": "Modèle de raisonnement",
+		"empty": "Aucun modèle. Configurez-en un dans les paramètres IA.",
+		"recommended": "Recommandé",
+		"reasoning": "Modèle de raisonnement",
+		"contextM": "Contexte {n} M",
+		"contextK": "Contexte {n} K",
+		"yourKey": "Votre clé",
+		"usesMore": "Consomme plus de votre solde",
+		"uses": "Consomme votre solde",
+		"included": "Inclus"
+	},
+	"releaseNotes": {
+		"empty": "Aucune note de version pour cette version.",
+		"showAfterUpdate": "Afficher les notes de version après une mise à jour",
+		"date": "Date de sortie : {date}",
+		"whatsNew": "Nouveautés",
+		"whatsNewHead": "NOUVEAUTÉS"
+	},
+	"workspace": {
+		"title": "ESPACE DE TRAVAIL",
+		"newFile": "Nouveau fichier",
+		"import": "Importer des fichiers (cet ordinateur ou DBeaver)",
+		"refresh": "Actualiser",
+		"collapse": "Réduire",
+		"rootTitle": "{root}\n(cliquez pour changer de dossier)",
+		"search": "Rechercher fichiers et contenu",
+		"clear": "Effacer",
+		"noMatch": "Aucun fichier correspondant.",
+		"empty": "Aucun fichier SQL dans cet espace de travail.",
+		"matches": "Occurrences dans le contenu du fichier",
+		"rename": "Renommer",
+		"delete": "Supprimer",
+		"confirmDelete": "Supprimer {name} ?",
+		"cancel": "Annuler"
+	},
+	"panel": {
+		"projectAi": "{name} : l'IA du projet",
+		"askAbout": "Demandez à {assistant} à propos de {name}…",
+		"askAnything": "Demandez ce que vous voulez à {assistant}…  (⏎ envoyer · ⇧⏎ saut de ligne)",
+		"hintConnected": "Demandez du SQL fondé sur le schéma de « {name} ».",
+		"hintNotConnected": "« {name} » n'est pas connectée. Connectez-la pour des réponses tenant compte du schéma, ou posez une question SQL générale.",
+		"hintNoConnections": "Aucune connexion pour l'instant. Ajoutez-en une dans le panneau Connexions pour des réponses tenant compte du schéma. Vous pouvez quand même poser des questions SQL générales.",
+		"hintChooseBelow": "Choisissez une connexion ci-dessous pour fonder les réponses sur son schéma, ou posez une question SQL générale.",
+		"hintChooseAbove": "Sélectionnez une connexion au-dessus de l'éditeur pour fonder les réponses sur son schéma, ou posez une question SQL générale.",
+		"thisConnection": "cette connexion",
+		"theDatabase": "la base de données",
+		"connectFailed": "Impossible de se connecter à « {name} ». Vérifiez les paramètres de connexion et réessayez, ou continuez sans connexion.",
+		"you": "Vous",
+		"copied": "Copié",
+		"copyReply": "Copier cette réponse",
+		"collapse": "Réduire",
+		"sees": "{assistant} voit ce que vous avez ouvert : {context}.",
+		"knows": "Ce que je sais sur cette base de données",
+		"newChat": "Nouvelle discussion",
+		"chatHistory": "Historique des discussions",
+		"aiSettings": "Paramètres IA",
+		"exitFull": "Quitter le plein écran",
+		"full": "Plein écran",
+		"restoring": "Restauration de votre compte",
+		"dismiss": "Ignorer"
+	},
+	"busy": {
+		"approval": "En attente de votre accord…",
+		"query": "Exécution de la requête…",
+		"tables": "Liste des tables…",
+		"reading": "Lecture de {name}…",
+		"readingTable": "Lecture de la table…",
+		"columns": "Recherche des colonnes…",
+		"working": "En cours…",
+		"planning": "Préparation des prochaines étapes…"
+	},
+	"signin": {
+		"heldTitle": "Connectez-vous et {assistant} prend le relais",
+		"heldBody": "Tout est prêt pour examiner ceci. Connectez-vous et c'est parti.",
+		"title": "{assistant}, un seul assistant pour vos données et Studio",
+		"body": "Connectez-vous pour qu'il écrive du SQL, trouve des réponses dans vos bases de données et configure pour vous connexions, moniteurs, Data Flows et paramètres.",
+		"signIn": "Se connecter",
+		"notNow": "Pas maintenant"
+	},
+	"perf": {
+		"title": "Cette discussion est dédiée à l'optimisation d'une instruction. Lancez une nouvelle discussion pour autre chose.",
+		"heading": "Optimisation de requête",
+		"body": "Réglé pour cette seule instruction. Lancez une nouvelle discussion pour d'autres questions."
+	},
+	"dataAccess": {
+		"title": "Que peut voir l'IA de vos données ?",
+		"body": "Moins elle en voit, plus ses réponses sur vos données sont génériques.",
+		"saved": "Enregistré. Modifiable à tout moment dans les paramètres IA.",
+		"openSettings": "Ouvrir les paramètres"
+	},
+	"planHint": {
+		"body": "Vous êtes sur l'offre Gratuite, avec un quota IA mensuel. Les offres payantes en donnent plus, sur tous les modèles.",
+		"view": "Voir les offres"
+	},
+	"remember": {
+		"title": "Je retiens ça ?",
+		"body": "Je le garde en tête pour « {name} » afin de ne pas me tromper la prochaine fois.",
+		"remember": "Retenir"
+	},
+	"connect": {
+		"title": "Se connecter à « {name} » ?",
+		"body": "Elle n'est pas connectée. Connectez-vous pour que l'assistant lise son schéma et exécute des requêtes en lecture seule pour une réponse exacte, appuyée sur les données, ou continuez sans connexion (réponses générales, sans données en direct).",
+		"connect": "Se connecter",
+		"continueWithout": "Continuer sans"
+	},
+	"approval": {
+		"runQuery": "L'assistant veut exécuter une requête",
+		"run": "Exécuter",
+		"alwaysTitle": "Ne plus demander avant d'exécuter des requêtes en lecture seule sur {name}",
+		"always": "Toujours autoriser {name}",
+		"skip": "Passer",
+		"wantsTo": "L'assistant veut : {action}",
+		"performAction": "effectuer une action",
+		"allow": "Autoriser"
+	},
+	"error": {
+		"retryManaged": "Réessayer avec les crédits SnoutData",
+		"managePlan": "Gérer l'offre",
+		"openAiSettings": "Ouvrir les paramètres IA"
+	},
+	"tokens": {
+		"title": "Jetons utilisés dans cette discussion (invite + réponse)",
+		"total": "{tokens} jetons",
+		"inOut": "{input} entrée · {output} sortie"
+	},
+	"composer": {
+		"noConnections": "Aucune connexion",
+		"chooseConnection": "Choisir une connexion",
+		"groundsOn": "Connexion utilisée par {assistant}",
+		"attachOffPerf": "Pas de pièces jointes dans une discussion d'optimisation. Lancez une nouvelle discussion pour joindre un document.",
+		"attach": "Joindre un document (txt, md, csv, json ; PDF et Word sous Windows et macOS) comme contexte",
+		"stop": "Arrêter",
+		"send": "Envoyer (Entrée)"
+	},
+	"markdown": {
+		"altFrom": "{name} non chargée, depuis {where}",
+		"imageFrom": "Image non chargée, depuis {where}",
+		"alt": "{name} non chargée",
+		"image": "Image non chargée"
+	}
+}

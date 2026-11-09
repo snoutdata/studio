@@ -17,6 +17,7 @@ import { CLICKHOUSE_TABLE_FUNCTIONS, type TableFunctionSpec } from './tableFunct
 import { CLICKHOUSE_EXPLAIN_VARIANTS, type ExplainVariant } from './explain';
 import { maskClickHouse, topLevelMatch } from './mask';
 import { CLICKHOUSE_READ_ONLY, DUCKDB_READ_ONLY, lexicalOnly, MYSQL_READ_ONLY, ORACLE_READ_ONLY, POSTGRES_READ_ONLY, REDSHIFT_READ_ONLY, SQLITE_READ_ONLY, SQLSERVER_READ_ONLY, type ReadOnlyEnforcement } from './readOnly';
+import { t } from '../../i18n/core';
 
 export * from './readOnly';
 
@@ -909,8 +910,8 @@ async function clickhouseReplicaScope(run: ReplicaRunner): Promise<ReplicaScope>
 			replicas,
 			settings: '',
 			limitation: /\bREMOTE\b|ACCESS_DENIED/.test(message)
-				? `This server has ${replicas} replicas and this user may not read across them (it needs the READ ON REMOTE grant), so only the replica that answered is shown.`
-				: `This server has ${replicas} replicas and reading across them failed, so only the replica that answered is shown. ${message}`,
+				? t('engineDialect.replicasDenied', { replicas })
+				: t('engineDialect.replicasFailed', { replicas, message }),
 		};
 	}
 }

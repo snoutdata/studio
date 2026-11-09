@@ -1,0 +1,21 @@
+{
+	"pgpass": "Fichier de mots de passe Postgres",
+	"sources": {
+		"cloud": "Vos bases hébergées. Être connecté suffit : aucune chaîne de connexion à coller.",
+		"dbeaver": "Importer les connexions enregistrées depuis votre workspace DBeaver local.",
+		"datagrip": "Importer des sources de données depuis JetBrains DataGrip ou un autre IDE IntelliJ.",
+		"navicat": "Importer des connexions depuis un fichier d'export Navicat .ncx.",
+		"pgadmin": "Importer des serveurs depuis pgAdmin 4, ou depuis un servers.json exporté.",
+		"workbench": "Importer les connexions enregistrées depuis MySQL Workbench.",
+		"ads": "Importer les connexions SQL Server et PostgreSQL depuis Azure Data Studio.",
+		"ssms": "Importer les serveurs mémorisés par SSMS.",
+		"heidi": "Importer les sessions HeidiSQL, mots de passe compris.",
+		"tableplus": "Importer les connexions enregistrées depuis TablePlus.",
+		"pgpass": "Importer les entrées de votre .pgpass (pgpass.conf sous Windows), mots de passe compris."
+	},
+	"discovery": {
+		"docker": "Conteneurs Docker et Podman",
+		"local": "Sur cet ordinateur",
+		"network": "Sur votre réseau local"
+	}
+}

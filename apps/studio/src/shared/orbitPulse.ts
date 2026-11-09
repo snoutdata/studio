@@ -4,6 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import type { QueryResult } from './query';
+import { t } from './i18n/core';
 
 /*
  * Pulse 3b: what the DATABASE is doing.
@@ -324,7 +325,7 @@ const PULSE_SOURCES: Record<string, PulseSourceQuery> = {
 		fallbackSql: MYSQL_PROCESSLIST_PULSE,
 		fallbackSourceName: 'information_schema.processlist',
 		requiresSql: MYSQL_PULSE_READY,
-		requiresReason: "This server is not recording statements in performance_schema, so Pulse is reading information_schema.processlist instead. Durations there are whole seconds.",
+		get requiresReason() { return t('engineShared.orbit.mysqlFallback'); },
 	},
 	mariadb: { sql: MARIADB_PULSE, sourceName: 'information_schema.processlist' },
 	sqlserver: { sql: SQLSERVER_PULSE, sourceName: 'sys.dm_exec_requests' },
@@ -339,19 +340,19 @@ const PULSE_SOURCES: Record<string, PulseSourceQuery> = {
  * the house style.
  */
 const PULSE_REASONS: Record<string, string> = {
-	sqlite: "SQLite runs inside this app rather than on a server, so it keeps no list of what other sessions are doing. Pulse still shows what this app ran.",
-	duckdb: "DuckDB runs inside this app rather than on a server, so it keeps no list of what other sessions are doing. Pulse still shows what this app ran.",
-	mongodb: "MongoDB reports its running operations through currentOp, which SnoutData does not read yet, so there is no database-wide activity to draw here.",
-	pinecone: "Pinecone is a hosted vector index with no session activity to read, so there is nothing database-wide to draw here.",
-	snowflake: "Snowflake reports running queries through its own query history, which SnoutData does not sample yet, so there is no live activity to draw here.",
-	db2: "Db2 reports running statements through MON_GET_ACTIVITY, which SnoutData does not read yet, so there is no live activity to draw here.",
-	hana: "SAP HANA reports running statements through M_ACTIVE_STATEMENTS, which SnoutData does not read yet, so there is no live activity to draw here.",
-	cloudwatch: "A log service has no database sessions to sample. What you query here is the log itself.",
-	azureMonitor: "A log service has no database sessions to sample. What you query here is the log itself.",
-	gcpLogging: "A log service has no database sessions to sample. What you query here is the log itself.",
+	sqlite: 'engineShared.orbit.reasonSqlite',
+	duckdb: 'engineShared.orbit.reasonDuckdb',
+	mongodb: 'engineShared.orbit.reasonMongo',
+	pinecone: 'engineShared.orbit.reasonPinecone',
+	snowflake: 'engineShared.orbit.reasonSnowflake',
+	db2: 'engineShared.orbit.reasonDb2',
+	hana: 'engineShared.orbit.reasonHana',
+	cloudwatch: 'engineShared.orbit.reasonLogs',
+	azureMonitor: 'engineShared.orbit.reasonLogs',
+	gcpLogging: 'engineShared.orbit.reasonLogs',
 };
 
-const UNKNOWN_DRIVER_REASON = "SnoutData does not know how to read live activity from this database, so Pulse can only show what this app ran.";
+const UNKNOWN_DRIVER_REASON = 'engineShared.orbit.reasonUnknown';
 
 /** The activity read for a driver, or undefined when that engine exposes no such view. */
 export function pulseSourceFor(driver: string | undefined): PulseSourceQuery | undefined {
@@ -378,7 +379,7 @@ export function pulseUnavailableReason(driver: string | undefined): string {
 	if (pulseSupported(driver)) {
 		return '';
 	}
-	return (driver && PULSE_REASONS[driver]) || UNKNOWN_DRIVER_REASON;
+	return t((driver && PULSE_REASONS[driver]) || UNKNOWN_DRIVER_REASON);
 }
 
 /** Map result field name (lowercased) to column index. Oracle folds unquoted aliases to uppercase
@@ -503,6 +504,5 @@ export function readPulseRows(result: QueryResult, now: number, connectionId?: s
 /** What to tell someone whose login the database will not let see other sessions. A whole sentence,
  *  shown verbatim in Orbit's rail, so it says what to do about it rather than only that it happened. */
 export function maskedRowsMessage(count: number): string {
-	const sessions = count === 1 ? '1 session is' : `${count} sessions are`;
-	return `${sessions} hidden from this login, so their statements cannot be shown. On Postgres, granting pg_read_all_stats to this role (or connecting as a superuser) is what makes them visible.`;
+	return t('engineShared.orbit.maskedRows', { count });
 }

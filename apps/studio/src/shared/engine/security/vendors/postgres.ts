@@ -21,6 +21,7 @@ import type { CatalogQuery, SecurityCatalog } from '../catalog';
 import type { SecurityEmitter } from '../emitter';
 import { assertSafeName, assertSafePassword, privilegeList, quoteDouble, quoteLiteral, refusePolicy } from '../emitter';
 import type { GrantScope, GrantTarget, PrincipalRef, SecurityChange } from '../types';
+import { t } from '../../../i18n/core';
 
 const PRINCIPALS = `SELECT r.rolname AS name,
        CASE WHEN r.rolcanlogin THEN 'user' ELSE 'role' END AS kind,
@@ -121,15 +122,15 @@ WHERE d.datacl IS NOT NULL
   AND NOT d.datistemplate`;
 
 const GRANT_QUERIES: CatalogQuery[] = [
-	{ label: 'database privileges', candidates: [DATABASE_GRANTS] },
-	{ label: 'schema privileges', candidates: [SCHEMA_GRANTS] },
-	{ label: 'table and view privileges', candidates: [TABLE_GRANTS] },
-	{ label: 'column privileges', candidates: [COLUMN_GRANTS] },
+	{ get label() { return t('engineSecurity.catalog.databasePrivileges'); }, candidates: [DATABASE_GRANTS] },
+	{ get label() { return t('engineSecurity.catalog.schemaPrivileges'); }, candidates: [SCHEMA_GRANTS] },
+	{ get label() { return t('engineSecurity.catalog.tableAndViewPrivileges'); }, candidates: [TABLE_GRANTS] },
+	{ get label() { return t('engineSecurity.catalog.columnPrivileges'); }, candidates: [COLUMN_GRANTS] },
 ];
 
 export const postgresCatalog: SecurityCatalog = {
 	driverId: 'postgres',
-	principals: [{ label: 'roles and users', candidates: [PRINCIPALS] }],
+	principals: [{ get label() { return t('engineSecurity.catalog.rolesAndUsers'); }, candidates: [PRINCIPALS] }],
 	grants: GRANT_QUERIES,
 };
 
@@ -146,7 +147,7 @@ function onClause(target: GrantTarget): string {
 	switch (target.scope) {
 		case 'database': return `DATABASE ${quoteDouble(assertSafeName(target.database ?? '', 'database name'))}`;
 		case 'schema': return `SCHEMA ${quoteDouble(assertSafeName(target.schema ?? '', 'schema name'))}`;
-		case 'global': throw new Error('PostgreSQL has no server-wide GRANT. Grant on a database, schema or table instead.');
+		case 'global': throw new Error(t('engineSecurity.vendors.pgNoGlobal'));
 		default: return qualified(target);
 	}
 }

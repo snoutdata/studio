@@ -9,6 +9,7 @@
 // alongside theme/layout/appSettings.
 
 import { ASSISTANT_NAME } from '../../shared/assistant';
+import { t } from '../../shared/i18n/core';
 
 /** The five starter tasks tracked by the getting-started checklist. */
 export type ChecklistTaskId = 'addConnection' | 'run' | 'explore' | 'ai' | 'save';
@@ -32,17 +33,17 @@ export interface OnboardingState {
 
 export interface ChecklistTaskMeta {
 	id: ChecklistTaskId;
-	label: string;
-	hint: string;
+	readonly label: string;
+	readonly hint: string;
 }
 
 /** The checklist rows, in the order a new user naturally hits them. */
 export const CHECKLIST_TASKS: ChecklistTaskMeta[] = [
-	{ id: 'addConnection', label: "Add a database connection", hint: "Connect a MySQL, Postgres, or SQL Server database." },
-	{ id: 'run', label: "Run a query", hint: "Type SQL in the editor and press Run (or Ctrl/Cmd+Enter)." },
-	{ id: 'explore', label: "Explore a table", hint: "Double-click a table in the sidebar to browse its data." },
-	{ id: 'ai', label: `Ask ${ASSISTANT_NAME}`, hint: `Insert SQL that ${ASSISTANT_NAME} proposes into your editor.` },
-	{ id: 'save', label: "Save a query", hint: "Keep a query you'll reuse for later." },
+	{ id: 'addConnection', get label() { return t('onboarding.checklist.addConnection.label'); }, get hint() { return t('onboarding.checklist.addConnection.hint'); } },
+	{ id: 'run', get label() { return t('onboarding.checklist.run.label'); }, get hint() { return t('onboarding.checklist.run.hint'); } },
+	{ id: 'explore', get label() { return t('onboarding.checklist.explore.label'); }, get hint() { return t('onboarding.checklist.explore.hint'); } },
+	{ id: 'ai', get label() { return t('onboarding.checklist.ai.label', { assistant: ASSISTANT_NAME }); }, get hint() { return t('onboarding.checklist.ai.hint', { assistant: ASSISTANT_NAME }); } },
+	{ id: 'save', get label() { return t('onboarding.checklist.save.label'); }, get hint() { return t('onboarding.checklist.save.hint'); } },
 ];
 
 const STORAGE_KEY = 'positron-db.onboarding';
@@ -97,10 +98,10 @@ export function saveOnboarding(state: OnboardingState): void {
 
 /** How many checklist tasks are done. */
 export function tasksDone(state: OnboardingState): number {
-	return CHECKLIST_TASKS.reduce((n, t) => n + (state.tasks[t.id] ? 1 : 0), 0);
+	return CHECKLIST_TASKS.reduce((n, task) => n + (state.tasks[task.id] ? 1 : 0), 0);
 }
 
 /** True once every checklist task is complete. */
 export function allTasksDone(state: OnboardingState): boolean {
-	return CHECKLIST_TASKS.every((t) => state.tasks[t.id]);
+	return CHECKLIST_TASKS.every((task) => state.tasks[task.id]);
 }

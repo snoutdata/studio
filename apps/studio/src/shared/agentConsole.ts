@@ -3,6 +3,8 @@
  *  Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { t } from './i18n/core';
+
 // The Agent Console contract: the user's own coding agent (Claude Code today, Codex later) run
 // as a real process inside the app, one SINGLETON console per agent kind. This file is the
 // shared vocabulary — pure, node-free, importable from main, the preload and the renderer
@@ -92,7 +94,7 @@ export const AGENTS: Record<AgentKind, AgentDescriptor> = {
 		handoff: 'flag',
 		configDir: '.claude',
 		installUrl: 'https://docs.claude.com/en/docs/claude-code',
-		installHint: "Claude Code is not installed on this computer. Install it, then reopen this panel.",
+		get installHint() { return t('engineShared.agent.notInstalled', { agent: 'Claude Code' }); },
 		imagePasteKeys: { win32: '\u001bv', other: '\u0016' },
 	},
 	codex: {
@@ -105,7 +107,7 @@ export const AGENTS: Record<AgentKind, AgentDescriptor> = {
 		handoff: 'flag',
 		configDir: '.codex',
 		installUrl: 'https://developers.openai.com/codex/cli',
-		installHint: "Codex is not installed on this computer. Install it, then reopen this panel.",
+		get installHint() { return t('engineShared.agent.notInstalled', { agent: 'Codex' }); },
 		// Nothing checked in its CLI, so an image reaches it as a file path. Flip this the day
 		// somebody verifies a key in the installed binary, the way Claude Code's was.
 		imagePasteKeys: null,
@@ -120,7 +122,7 @@ export const AGENTS: Record<AgentKind, AgentDescriptor> = {
 		handoff: 'manual',
 		configDir: '.config/opencode',
 		installUrl: 'https://opencode.ai',
-		installHint: "opencode is not installed on this computer. Install it, then reopen this panel.",
+		get installHint() { return t('engineShared.agent.notInstalled', { agent: 'opencode' }); },
 		imagePasteKeys: null,
 	},
 };

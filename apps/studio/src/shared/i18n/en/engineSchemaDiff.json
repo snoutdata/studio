@@ -1,0 +1,31 @@
+{
+	"change": {
+		"createTable": "Create table `{name}`",
+		"dropTable": "Drop table `{name}`",
+		"addColumn": "Add column `{table}`.`{column}`",
+		"alterColumn": "Alter column `{table}`.`{column}` ({before} → {after})",
+		"dropColumn": "Drop column `{table}`.`{column}`",
+		"setPrimaryKey": "Change primary key of `{table}`",
+		"addIndex": "Add index `{name}` on `{table}`",
+		"dropIndex": "Drop index `{name}` on `{table}`",
+		"replaceIndex": "Rebuild index `{name}` on `{table}`",
+		"addForeignKey": "Add foreign key `{name}` on `{table}`",
+		"dropForeignKey": "Drop foreign key `{name}` on `{table}`",
+		"replaceForeignKey": "Rebuild foreign key `{name}` on `{table}`",
+		"addTrigger": "Add trigger `{name}` on `{table}`",
+		"dropTrigger": "Drop trigger `{name}` on `{table}`",
+		"replaceTrigger": "Replace trigger `{name}` on `{table}`",
+		"createView": "Create view `{name}`",
+		"dropView": "Drop view `{name}`",
+		"replaceView": "Replace view `{name}`"
+	},
+	"emit": {
+		"unsupportedDriver": "Schema sync is not supported for driver \"{driver}\".",
+		"clickhousePrimaryKey": "ClickHouse cannot change the primary key of \"{table}\": it is the order the data is stored in. Create a new table with the new ORDER BY and copy the rows into it.",
+		"sqliteAlterColumn": "SQLite can't alter column \"{table}\".\"{column}\" in place (it requires a full table rebuild, which schema sync does not yet generate for SQLite).",
+		"sqlitePrimaryKey": "SQLite can't change the primary key of \"{table}\" in place (it requires a full table rebuild, which schema sync does not yet generate for SQLite).",
+		"sqliteAddForeignKey": "SQLite can't add a foreign key to \"{table}\" in place (it requires a full table rebuild, which schema sync does not yet generate for SQLite).",
+		"sqliteDropForeignKey": "SQLite can't drop a foreign key from \"{table}\" in place (it requires a full table rebuild, which schema sync does not yet generate for SQLite).",
+		"sqliteChangeForeignKey": "SQLite can't change a foreign key on \"{table}\" in place (it requires a full table rebuild, which schema sync does not yet generate for SQLite)."
+	}
+}

@@ -96,6 +96,8 @@ import { markTrayNoticeShown, readWindowSize, trayNoticeShown, writeWindowSize }
 import { AppTray } from './tray';
 import type { TrayProjectVerb } from './trayMenu';
 import { reportHandled, setTelemetryEnabled, startTelemetry, telemetryActive, telemetryAvailable, telemetryEnabled } from './telemetry';
+import { initLanguage, languageState, setLanguagePreference } from './i18n';
+import { isLanguagePreference, t } from '../shared/i18n/core';
 import { applyHardwareAcceleration, hardwareAccelerationAutoDisabled, hardwareAccelerationEnabled, recordGpuCrash, setHardwareAccelerationEnabled } from './gpuStore';
 import type { ConnectionFormValues, DiscoveryOptions, ImportItemRef, ImportScanResult, ImportSourceId, TunnelProfileFormValues } from '../shared/forms';
 import { resolveDbeaverImport, scanDbeaver, scanDbeaverFiles, scanDbeaverScripts } from './dbeaverImport';
@@ -126,7 +128,7 @@ import { resolveNavicatImport, scanNavicat, scanNavicatFiles } from './navicatIm
 import { browseDiscoverySource, resolveDiscoveryImport, runDiscovery, scanDiscoverySource } from './discovery/run';
 import { type AiAuditKind, type AiCompletionOutcomeParams, type AiCompletionParams, type AiCompletionResult, type AiEditParams, type AiEditResult, type AiProviderId, type AiSettingsFormValues, type AiToolEvent, type AmbientContext, type ByokProviderId, type ChatMessage, type ExtractDocumentResult, type LibyChatRequest } from '../shared/ai';
 import type { CapabilityInvocation, CapabilityResult, CapabilitySpec } from '../shared/capabilities';
-import { asksEveryTime, capabilityTitle } from '../shared/capabilities';
+import { asksEveryTime, capabilityConsent, capabilityTitle } from '../shared/capabilities';
 import type { AuthProviderId, AuthUser, Tier } from '../shared/auth';
 import type { ChatSession } from '../shared/chat';
 import type { KnowledgeNote } from '../shared/knowledge';
@@ -629,10 +631,10 @@ let mcpPortTaken: { port: number; suggestedPort: number | null } | null = null;
  */
 async function moveMcpPort(port: number): Promise<void> {
 	if (!Number.isInteger(port) || port < 1024 || port > 65535) {
-		throw new Error("Choose a port between 1024 and 65535.");
+		throw new Error(t('mainErrors.choosePort'));
 	}
 	if (!(await loopbackPortFree(port))) {
-		throw new Error(`Port ${port} is in use too. Choose another.`);
+		throw new Error(t('mainErrors.portTaken', { port: String(port) }));
 	}
 	await mcpServer.stop();
 	mcpStore.setPort(port);
@@ -836,8 +838,8 @@ async function proxyStatus(): Promise<ProxyStatus> {
  *  means we got any HTTP response (even a 401) — only a connectivity failure counts as blocked. */
 async function proxyTest(): Promise<ProxyTestResult> {
 	const probes: Array<{ label: string; host: string; url: string }> = [
-		{ label: 'Sign-in service', host: ACCOUNTS_HOST, url: ACCOUNTS_HEALTH_URL },
-		{ label: 'AI service', host: 'api.snoutdata.com', url: 'https://api.snoutdata.com/health' },
+		{ label: t('mainErrors.signInService'), host: ACCOUNTS_HOST, url: ACCOUNTS_HEALTH_URL },
+		{ label: t('mainErrors.aiService'), host: 'api.snoutdata.com', url: 'https://api.snoutdata.com/health' },
 	];
 	const targets: ProxyTestTarget[] = await Promise.all(
 		probes.map(async (p): Promise<ProxyTestTarget> => {
@@ -1039,8 +1041,9 @@ const AGENT_CAPABILITY_TIMEOUT_MS = 60_000;
  * sentence and cap it, so the card stays a question rather than a paragraph.
  */
 function consentSentence(spec: CapabilitySpec): string {
-	if (spec.consentLabel) {
-		return spec.consentLabel;
+	const consent = capabilityConsent(spec);
+	if (consent) {
+		return consent;
 	}
 	const first = /^(.*?[.!?])(\s|$)/.exec(spec.description.trim())?.[1] ?? spec.description.trim();
 	return first.length > 160 ? `${first.slice(0, 157)}...` : first;
@@ -1551,124 +1554,124 @@ function menuTemplate(): MenuItemConstructorOptions[] {
 	const template: MenuItemConstructorOptions[] = [
 		...(isMac ? [{ role: 'appMenu' } as MenuItemConstructorOptions] : []),
 		{
-			label: "File",
+			label: t('mainMenu.file'),
 			submenu: [
-				cmd("New Query", 'new', 'new-file'),
-				cmd("New Workspace File", 'newWorkspaceFile', 'file-add'),
-				cmd("Open File…", 'open', 'folder-opened'),
+				cmd(t('mainMenu.newQuery'), 'new', 'new-file'),
+				cmd(t('mainMenu.newWorkspaceFile'), 'newWorkspaceFile', 'file-add'),
+				cmd(t('mainMenu.openFile'), 'open', 'folder-opened'),
 				{ type: 'separator' },
-				cmd("Save File", 'saveFile', 'save'),
-				cmd("Save Query…", 'saveQuery', 'bookmark'),
+				cmd(t('mainMenu.saveFile'), 'saveFile', 'save'),
+				cmd(t('mainMenu.saveQuery'), 'saveQuery', 'bookmark'),
 				{ type: 'separator' },
-				cmd("New Connection…", 'addConn', 'add'),
-				cmd("Find Databases…", 'findDatabases', 'search'),
+				cmd(t('mainMenu.newConnection'), 'addConn', 'add'),
+				cmd(t('mainMenu.findDatabases'), 'findDatabases', 'search'),
 				{ type: 'separator' },
-				cmd("Change Workspace Folder…", 'openWorkspaceFolder', 'folder'),
-				cmd("Import Files to Workspace…", 'importWorkspaceFile', 'cloud-download'),
+				cmd(t('mainMenu.changeWorkspaceFolder'), 'openWorkspaceFolder', 'folder'),
+				cmd(t('mainMenu.importToWorkspace'), 'importWorkspaceFile', 'cloud-download'),
 				{ type: 'separator' },
-				cmd("Account…", 'account', 'account'),
-				cmd("Settings…", 'settings', 'settings-gear'),
+				cmd(t('mainMenu.account'), 'account', 'account'),
+				cmd(t('mainMenu.settings'), 'settings', 'settings-gear'),
 				{ type: 'separator' },
-				cmd("Close Tab", 'closeTab', 'close'),
+				cmd(t('mainMenu.closeTab'), 'closeTab', 'close'),
 				{ type: 'separator' },
-				isMac ? { role: 'close' } : { role: 'quit' },
+				isMac ? { role: 'close', label: roleLabel('close') } : { role: 'quit', label: roleLabel('quit') },
 			],
 		},
 		{
-			label: "Edit",
+			label: t('mainMenu.edit'),
 			submenu: [
-				{ role: 'undo' },
-				{ role: 'redo' },
+				{ role: 'undo', label: roleLabel('undo') },
+				{ role: 'redo', label: roleLabel('redo') },
 				{ type: 'separator' },
-				{ role: 'cut' },
-				{ role: 'copy' },
-				{ role: 'paste' },
-				{ role: 'selectAll' },
+				{ role: 'cut', label: roleLabel('cut') },
+				{ role: 'copy', label: roleLabel('copy') },
+				{ role: 'paste', label: roleLabel('paste') },
+				{ role: 'selectAll', label: roleLabel('selectAll') },
 				{ type: 'separator' },
-				cmd("Format SQL", 'format', 'list-flat'),
+				cmd(t('mainMenu.formatSql'), 'format', 'list-flat'),
 			],
 		},
 		{
-			label: "View",
+			label: t('mainMenu.view'),
 			submenu: [
-				cmd("Command Palette…", 'commandPalette', 'symbol-event'),
+				cmd(t('mainMenu.commandPalette'), 'commandPalette', 'symbol-event'),
 				{ type: 'separator' },
-				cmd("Connections", 'connectionsView', 'database'),
-				cmd("Workspace Files", 'workspaceView', 'folder'),
+				cmd(t('mainMenu.connections'), 'connectionsView', 'database'),
+				cmd(t('mainMenu.workspaceFiles'), 'workspaceView', 'folder'),
 				cmd("Data Flows", 'flowsPanel', 'combine'),
-				cmd("Query History & Saved", 'history', 'history'),
-				cmd("Dashboard", 'dashboardView', 'glyph:dashboard'),
-				cmd("Notifications", 'notifications', 'bell'),
+				cmd(t('mainMenu.historySaved'), 'history', 'history'),
+				cmd(t('mainMenu.dashboard'), 'dashboardView', 'glyph:dashboard'),
+				cmd(t('mainMenu.notifications'), 'notifications', 'bell'),
 				{ type: 'separator' },
-				cmd("Toggle Sidebar", 'toggleSidebar', 'layout-sidebar-left'),
-				cmd("Toggle Results Panel", 'toggleResults', 'layout-panel'),
-				cmd("Switch Theme", 'theme', 'color-mode'),
+				cmd(t('mainMenu.toggleSidebar'), 'toggleSidebar', 'layout-sidebar-left'),
+				cmd(t('mainMenu.toggleResults'), 'toggleResults', 'layout-panel'),
+				cmd(t('mainMenu.switchTheme'), 'theme', 'color-mode'),
 				{ type: 'separator' },
 				// Reload + dev tools are a development convenience (with their default
 				// Ctrl+R / F12 accelerators); hide them and their shortcuts in packaged builds.
 				...(app.isPackaged ? [] : [
-					{ role: 'reload' } as MenuItemConstructorOptions,
-					{ role: 'toggleDevTools' } as MenuItemConstructorOptions,
+					{ role: 'reload', label: roleLabel('reload') } as MenuItemConstructorOptions,
+					{ role: 'toggleDevTools', label: roleLabel('toggleDevTools') } as MenuItemConstructorOptions,
 					{ type: 'separator' } as MenuItemConstructorOptions,
 				]),
-				{ role: 'resetZoom' },
-				{ role: 'zoomIn' },
-				{ role: 'zoomOut' },
+				{ role: 'resetZoom', label: roleLabel('resetZoom') },
+				{ role: 'zoomIn', label: roleLabel('zoomIn') },
+				{ role: 'zoomOut', label: roleLabel('zoomOut') },
 				{ type: 'separator' },
-				{ role: 'togglefullscreen' },
+				{ role: 'togglefullscreen', label: roleLabel('togglefullscreen') },
 			],
 		},
 		{
-			label: "Query",
+			label: t('mainMenu.query'),
 			submenu: [
-				cmd("Run Query", 'run', 'play'),
-				cmd("Run in New Tab", 'runNewTab', 'empty-window'),
-				cmd("Run as Script", 'runScript', 'run-all'),
+				cmd(t('mainMenu.runQuery'), 'run', 'play'),
+				cmd(t('mainMenu.runNewTab'), 'runNewTab', 'empty-window'),
+				cmd(t('mainMenu.runScript'), 'runScript', 'run-all'),
 				{ type: 'separator' },
-				cmd("Query Performance…", 'queryPerformance', 'pulse'),
+				cmd(t('mainMenu.queryPerformance'), 'queryPerformance', 'pulse'),
 			],
 		},
 		{
 			// Everything that moves data, which before this had no menu of its own: flows were on
 			// File and the panel nowhere, and the Dashboard's projects were reachable only from the
 			// activity bar and the palette.
-			label: "Data",
+			label: t('mainMenu.data'),
 			submenu: [
-				cmd("New Data Flow…", 'newFlow', 'add'),
+				cmd(t('mainMenu.newDataFlow'), 'newFlow', 'add'),
 				cmd("Data Flows", 'flowsPanel', 'combine'),
-				cmd("Import Data Flow…", 'importFlow', 'cloud-download'),
-				cmd("Cloud Accounts…", 'cloudSettings', 'cloud'),
+				cmd(t('mainMenu.importDataFlow'), 'importFlow', 'cloud-download'),
+				cmd(t('mainMenu.cloudAccounts'), 'cloudSettings', 'cloud'),
 				{ type: 'separator' },
-				cmd("Move Database…", 'moveDatabase', 'arrow-both'),
+				cmd(t('mainMenu.moveDatabase'), 'moveDatabase', 'arrow-both'),
 				{ type: 'separator' },
-				cmd("Set Up a Local Project…", 'localSetup', 'vm'),
+				cmd(t('mainMenu.setUpLocal'), 'localSetup', 'vm'),
 			],
 		},
 		{
-			label: "AI",
+			label: t('mainMenu.ai'),
 			submenu: [
-				cmd(`Toggle ${ASSISTANT_NAME}`, 'assistant', 'sparkle'),
-				cmd(`Toggle ${ASSISTANT_NAME} Full Screen`, 'assistantFull', 'screen-full'),
-				cmd("Fix Last Error", 'fixError', 'wand'),
+				cmd(t('mainMenu.toggleAssistant', { assistant: ASSISTANT_NAME }), 'assistant', 'sparkle'),
+				cmd(t('mainMenu.toggleAssistantFull', { assistant: ASSISTANT_NAME }), 'assistantFull', 'screen-full'),
+				cmd(t('mainMenu.fixLastError'), 'fixError', 'wand'),
 				{ type: 'separator' },
-				cmd("Complete at Cursor", 'aiComplete', 'lightbulb'),
-				cmd("Edit / Generate (inline)", 'aiEdit', 'edit'),
+				cmd(t('mainMenu.completeAtCursor'), 'aiComplete', 'lightbulb'),
+				cmd(t('mainMenu.editGenerate'), 'aiEdit', 'edit'),
 				{ type: 'separator' },
-				cmd("AI Settings…", 'aiSettings', 'settings-gear'),
-				cmd("Data Generation Settings…", 'dataGenSettings', 'beaker'),
-				cmd("AI Audit Log…", 'auditLog', 'checklist'),
+				cmd(t('mainMenu.aiSettings'), 'aiSettings', 'settings-gear'),
+				cmd(t('mainMenu.dataGenSettings'), 'dataGenSettings', 'beaker'),
+				cmd(t('mainMenu.aiAuditLog'), 'auditLog', 'checklist'),
 			],
 		},
 		{
-			label: "Tools",
+			label: t('mainMenu.tools'),
 			submenu: [
-				cmd("Monitors…", 'monitors', 'graph-line'),
-				cmd("Orbit: Map This Database in 3D", 'orbit', 'globe'),
-				cmd("Sync Schema…", 'schemaSync', 'git-compare'),
-				cmd("Users & Privileges…", 'security', 'shield'),
+				cmd(t('mainMenu.monitors'), 'monitors', 'graph-line'),
+				cmd(t('mainMenu.orbit'), 'orbit', 'globe'),
+				cmd(t('mainMenu.syncSchema'), 'schemaSync', 'git-compare'),
+				cmd(t('mainMenu.usersPrivileges'), 'security', 'shield'),
 				{ type: 'separator' },
-				cmd("ClickHouse Operations…", 'clickhouseOps', 'server-process'),
-				cmd("ClickHouse Remote Data…", 'clickhouseRemote', 'cloud-download'),
+				cmd(t('mainMenu.clickhouseOps'), 'clickhouseOps', 'server-process'),
+				cmd(t('mainMenu.clickhouseRemote'), 'clickhouseRemote', 'cloud-download'),
 				{ type: 'separator' },
 				// Snoutbot, the pull-request reviewer. The same
 				// three items the tray's submenu carries, in the same order, because they are the
@@ -1676,26 +1679,26 @@ function menuTemplate(): MenuItemConstructorOptions[] {
 				// activity-bar icon this is NOT gated on being set up: a menu is where somebody
 				// looks for a feature they have not found yet, and the settings item is how they
 				// find it.
-				cmd("Snoutbot Reviews", 'reviews', 'git-pull-request'),
-				cmd("Snoutbot: Check for New Pull Requests", 'snoutbotCheck', 'refresh'),
-				cmd("Snoutbot Settings…", 'snoutbotSettings', 'settings-gear'),
+				cmd(t('mainMenu.snoutbotReviews'), 'reviews', 'git-pull-request'),
+				cmd(t('mainMenu.snoutbotCheck'), 'snoutbotCheck', 'refresh'),
+				cmd(t('mainMenu.snoutbotSettings'), 'snoutbotSettings', 'settings-gear'),
 			],
 		},
-		{ role: 'windowMenu' },
+		{ role: 'windowMenu', label: roleLabel('windowMenu') },
 		{
-			role: 'help',
+			role: 'help', label: roleLabel('help'),
 			submenu: [
-				cmd("Getting Started", 'gettingStarted', 'checklist'),
-				cmd("Take a Quick Tour", 'startTour', 'compass'),
+				cmd(t('mainMenu.gettingStarted'), 'gettingStarted', 'checklist'),
+				cmd(t('mainMenu.quickTour'), 'startTour', 'compass'),
 				{ type: 'separator' },
-				link("Official Website", 'website', 'globe'),
-				link("Documentation", 'docs', 'book'),
-				link("Report an Issue", 'issues', 'issues'),
+				link(t('mainMenu.officialWebsite'), 'website', 'globe'),
+				link(t('mainMenu.documentation'), 'docs', 'book'),
+				link(t('mainMenu.reportIssue'), 'issues', 'issues'),
 				{ type: 'separator' },
-				cmd("Check for Updates…", 'checkUpdate', 'sync'),
-				cmd("Release Notes", 'releaseNotes', 'note'),
+				cmd(t('mainMenu.checkUpdates'), 'checkUpdate', 'sync'),
+				cmd(t('mainMenu.releaseNotes'), 'releaseNotes', 'note'),
 				{ type: 'separator' },
-				cmd("About SnoutData Studio", 'about', 'info'),
+				cmd(t('mainMenu.about'), 'about', 'info'),
 			],
 		},
 	];
@@ -1717,12 +1720,12 @@ function menuModel(): AppMenu[] {
 			continue;
 		}
 		if (top.role === 'windowMenu') {
-			out.push({ label: "Window", items: [
-				{ label: "Minimize", role: 'minimize', icon: ROLE_ICONS.minimize },
+			out.push({ label: t('mainMenu.window'), items: [
+				{ label: t('mainMenu.minimize'), role: 'minimize', icon: ROLE_ICONS.minimize },
 				// "Zoom" is the macOS word, and macOS keeps its native menu; here it maximizes and restores.
-				{ label: "Maximize", role: 'zoom', icon: ROLE_ICONS.zoom },
+				{ label: t('mainMenu.maximize'), role: 'zoom', icon: ROLE_ICONS.zoom },
 				{ separator: true },
-				{ label: "Close", role: 'close', icon: ROLE_ICONS.close },
+				{ label: t('mainMenu.close'), role: 'close', icon: ROLE_ICONS.close },
 			] });
 			continue;
 		}
@@ -1751,11 +1754,11 @@ function menuModel(): AppMenu[] {
 /** A readable label for a bare `{ role }` item, which Electron would otherwise name itself. */
 function roleLabel(role: string): string {
 	const named: Record<string, string> = {
-		undo: "Undo", redo: "Redo", cut: "Cut", copy: "Copy", paste: "Paste", selectAll: "Select All",
-		reload: "Reload", toggleDevTools: "Toggle Developer Tools", resetZoom: "Actual Size",
-		zoomIn: "Zoom In", zoomOut: "Zoom Out", togglefullscreen: "Toggle Full Screen",
-		quit: "Quit", close: "Close", minimize: "Minimize", zoom: "Zoom",
-		help: "Help", fileMenu: "File", editMenu: "Edit", viewMenu: "View", windowMenu: "Window",
+		undo: t('mainMenu.undo'), redo: t('mainMenu.redo'), cut: t('mainMenu.cut'), copy: t('mainMenu.copy'), paste: t('mainMenu.paste'), selectAll: t('mainMenu.selectAll'),
+		reload: t('mainMenu.reload'), toggleDevTools: t('mainMenu.devTools'), resetZoom: t('mainMenu.actualSize'),
+		zoomIn: t('mainMenu.zoomIn'), zoomOut: t('mainMenu.zoomOut'), togglefullscreen: t('mainMenu.fullScreen'),
+		quit: t('mainMenu.quit'), close: t('mainMenu.close'), minimize: t('mainMenu.minimize'), zoom: t('mainMenu.zoom'),
+		help: t('mainMenu.help'), fileMenu: t('mainMenu.file'), editMenu: t('mainMenu.edit'), viewMenu: t('mainMenu.view'), windowMenu: t('mainMenu.window'),
 	};
 	return named[role] ?? role;
 }
@@ -2244,24 +2247,24 @@ function registerIpc(): void {
 	}
 	// Per-source title + file filter for the Browse dialog (each tool stores its
 	// connections in a differently named/typed file).
-	const browseDialog: Partial<Record<ImportSourceId, { title: string; filters: Electron.FileFilter[] }>> = {
-		dbeaver: { title: "Choose a DBeaver data-sources.json", filters: [{ name: 'DBeaver config', extensions: ['json'] }] },
-		datagrip: { title: "Choose a DataGrip dataSources.xml", filters: [{ name: 'DataGrip data sources', extensions: ['xml'] }] },
-		navicat: { title: "Choose a Navicat .ncx export", filters: [{ name: 'Navicat connections', extensions: ['ncx', 'xml'] }] },
-		pgadmin: { title: "Choose pgadmin4.db or a servers.json export", filters: [{ name: 'pgAdmin servers', extensions: ['db', 'json'] }] },
-		'mysql-workbench': { title: "Choose MySQL Workbench's connections.xml", filters: [{ name: 'Workbench connections', extensions: ['xml'] }] },
-		'azure-data-studio': { title: "Choose Azure Data Studio's settings.json", filters: [{ name: 'Settings', extensions: ['json'] }] },
-		ssms: { title: "Choose an SSMS UserSettings.xml", filters: [{ name: 'SSMS settings', extensions: ['xml'] }] },
-		heidisql: { title: "Choose HeidiSQL's portable_settings.txt", filters: [{ name: 'HeidiSQL settings', extensions: ['txt'] }] },
+	const browseDialog = (): Partial<Record<ImportSourceId, { title: string; filters: Electron.FileFilter[] }>> => ({
+		dbeaver: { title: t('mainDialogs.chooseDbeaver'), filters: [{ name: t('mainDialogs.filterDbeaver'), extensions: ['json'] }] },
+		datagrip: { title: t('mainDialogs.chooseDatagrip'), filters: [{ name: t('mainDialogs.filterDatagrip'), extensions: ['xml'] }] },
+		navicat: { title: t('mainDialogs.chooseNavicat'), filters: [{ name: t('mainDialogs.filterNavicat'), extensions: ['ncx', 'xml'] }] },
+		pgadmin: { title: t('mainDialogs.choosePgadmin'), filters: [{ name: t('mainDialogs.filterPgadmin'), extensions: ['db', 'json'] }] },
+		'mysql-workbench': { title: t('mainDialogs.chooseWorkbench'), filters: [{ name: t('mainDialogs.filterWorkbench'), extensions: ['xml'] }] },
+		'azure-data-studio': { title: t('mainDialogs.chooseAzure'), filters: [{ name: t('mainDialogs.filterSettings'), extensions: ['json'] }] },
+		ssms: { title: t('mainDialogs.chooseSsms'), filters: [{ name: t('mainDialogs.filterSsms'), extensions: ['xml'] }] },
+		heidisql: { title: t('mainDialogs.chooseHeidi'), filters: [{ name: t('mainDialogs.filterHeidi'), extensions: ['txt'] }] },
 		// A .pgpass has no extension, so the filter is everything.
-		pgpass: { title: "Choose a .pgpass or pgpass.conf", filters: [{ name: 'All files', extensions: ['*'] }] },
-		tableplus: { title: "Choose TablePlus's Connections.plist", filters: [{ name: 'Property lists', extensions: ['plist'] }] },
-	};
+		pgpass: { title: t('mainDialogs.choosePgpass'), filters: [{ name: t('mainDialogs.filterAll'), extensions: ['*'] }] },
+		tableplus: { title: t('mainDialogs.chooseTablePlus'), filters: [{ name: t('mainDialogs.filterPlist'), extensions: ['plist'] }] },
+	});
 	ipcMain.handle('import:browse', async (_event, source: ImportSourceId): Promise<ImportScanResult | null> => {
-		const opts = browseDialog[source];
+		const opts = browseDialog()[source];
 		const result = await dialog.showOpenDialog({
-			title: opts?.title ?? "Choose a config file",
-			filters: opts?.filters ?? [{ name: 'All files', extensions: ['*'] }],
+			title: opts?.title ?? t('mainDialogs.chooseConfig'),
+			filters: opts?.filters ?? [{ name: t('mainDialogs.filterAll'), extensions: ['*'] }],
 			properties: ['openFile', 'showHiddenFiles'],
 		});
 		if (result.canceled || result.filePaths.length === 0) {
@@ -2435,7 +2438,7 @@ function registerIpc(): void {
 	const pickedBuildFolders = new Set<string>();
 	ipcMain.handle('cloud:containers-pick-folder', async (event) => {
 		const win = BrowserWindow.fromWebContents(event.sender);
-		const options: Electron.OpenDialogOptions = { title: "Choose the folder with the Dockerfile", properties: ['openDirectory'] };
+		const options: Electron.OpenDialogOptions = { title: t('mainDialogs.chooseDockerfileFolder'), properties: ['openDirectory'] };
 		const picked = win ? await dialog.showOpenDialog(win, options) : await dialog.showOpenDialog(options);
 		const folder = picked.canceled ? null : picked.filePaths[0] ?? null;
 		if (folder) {
@@ -2445,7 +2448,7 @@ function registerIpc(): void {
 	});
 	ipcMain.handle('cloud:containers-build', async (event, ref: string, form: ContainerBuildForm, buildId: string) => {
 		if (!form || typeof form.folder !== 'string' || !pickedBuildFolders.has(form.folder)) {
-			return { ok: false, refused: true, message: "Choose the folder again with Choose folder." };
+			return { ok: false, refused: true, message: t('mainErrors.chooseFolderAgain') };
 		}
 		const say = (line: string): void => {
 			if (!event.sender.isDestroyed()) {
@@ -2481,7 +2484,7 @@ function registerIpc(): void {
 	ipcMain.handle('local:ports-in-use', (_event, ports: number[]) => localStack.portsInUse(ports.filter((p) => Number.isInteger(p))));
 	ipcMain.handle('local:pick-folder', async (event, current: string) => {
 		const win = BrowserWindow.fromWebContents(event.sender);
-		const options: Electron.OpenDialogOptions = { title: "Choose a folder for the project", defaultPath: current, properties: ['openDirectory', 'createDirectory'] };
+		const options: Electron.OpenDialogOptions = { title: t('mainDialogs.chooseProjectFolder'), defaultPath: current, properties: ['openDirectory', 'createDirectory'] };
 		const picked = win ? await dialog.showOpenDialog(win, options) : await dialog.showOpenDialog(options);
 		return picked.canceled ? null : picked.filePaths[0] ?? null;
 	});
@@ -2584,12 +2587,12 @@ function registerIpc(): void {
 				}
 			});
 			if (files.length !== dropped.length) {
-				return { ok: false, message: "Only files can be dropped here, not folders. Nothing was uploaded." };
+				return { ok: false, message: t('mainErrors.onlyFiles') };
 			}
 			return projectAccess.upload(project, bucket, String(prefix ?? ''), files, upsert === true);
 		}
 		const win = BrowserWindow.fromWebContents(event.sender);
-		const options: Electron.OpenDialogOptions = { title: "Upload to " + bucket, properties: ['openFile', 'multiSelections'] };
+		const options: Electron.OpenDialogOptions = { title: t('mainDialogs.uploadTo', { bucket }), properties: ['openFile', 'multiSelections'] };
 		const picked = win ? await dialog.showOpenDialog(win, options) : await dialog.showOpenDialog(options);
 		if (picked.canceled || picked.filePaths.length === 0) {
 			return null;
@@ -2599,7 +2602,7 @@ function registerIpc(): void {
 	ipcMain.handle('project:download', async (event, which: unknown, bucket: string, path: string) => {
 		const project = target(which);
 		const win = BrowserWindow.fromWebContents(event.sender);
-		const options: Electron.SaveDialogOptions = { title: "Save " + path, defaultPath: path.split('/').pop() };
+		const options: Electron.SaveDialogOptions = { title: t('mainDialogs.savePath', { path }), defaultPath: path.split('/').pop() };
 		const picked = win ? await dialog.showSaveDialog(win, options) : await dialog.showSaveDialog(options);
 		if (picked.canceled || !picked.filePath) {
 			return null;
@@ -2662,11 +2665,11 @@ function registerIpc(): void {
 		if (!path) {
 			const win = BrowserWindow.fromWebContents(event.sender);
 			const options = {
-				title: "Choose a file to load",
+				title: t('mainDialogs.chooseFileToLoad'),
 				properties: ['openFile' as const],
 				filters: [
-					{ name: "Data files", extensions: bulkLoadExtensions(driver) },
-					{ name: "All files", extensions: ['*'] },
+					{ name: t('mainDialogs.filterData'), extensions: bulkLoadExtensions(driver) },
+					{ name: t('mainDialogs.filterAll'), extensions: ['*'] },
 				],
 			};
 			const chosen = win ? await dialog.showOpenDialog(win, options) : await dialog.showOpenDialog(options);
@@ -2689,10 +2692,10 @@ function registerIpc(): void {
 			const driver = readConnections().find((entry) => entry.id === params.connectionId)?.driver ?? '';
 			const format = bulkFormatById(driver, params.formatId);
 			if (!format) {
-				return { ok: false, error: `"${params.formatId}" is not a format this connection can be handed a file of.` };
+				return { ok: false, error: t('mainErrors.notAFormat', { formatId: params.formatId }) };
 			}
 			if (!pathGrants.allowed('sql:bulkLoad', params.filePath)) {
-				return { ok: false, error: "That file was not chosen in this app's file picker, so it was not loaded. Choose it again." };
+				return { ok: false, error: t('mainErrors.fileNotChosen') };
 			}
 			const sql = emitBulkLoad(driver, { schema: params.schema, table: params.table, columns: params.columns }, format);
 			return await connections.bulkLoad(params.connectionId, { sql, filePath: params.filePath, encoding: encodingForFile(params.filePath) });
@@ -2719,27 +2722,27 @@ function registerIpc(): void {
 			const driver = config?.driver ?? '';
 			const spec = tableFunctionById(driver, params.functionId);
 			if (!spec) {
-				return { ok: false, error: `"${params.functionId}" is not a table function this connection offers.` };
+				return { ok: false, error: t('mainErrors.notATableFunction', { functionId: params.functionId }) };
 			}
 			let values = params.values;
 			let accountName: string | undefined;
 			if (params.accountId) {
 				if (!spec.keyPair) {
-					return { ok: false, error: `${spec.label} does not take a key pair, so a saved account cannot fill it in.` };
+					return { ok: false, error: t('mainErrors.noKeyPair', { label: spec.label }) };
 				}
 				const account = cloudService.get(params.accountId);
 				if (!account) {
-					return { ok: false, error: 'That cloud account is no longer saved.' };
+					return { ok: false, error: t('mainErrors.accountGone') };
 				}
 				// The SERVER fetches the object, so a credential that lives on THIS computer (an AWS
 				// CLI profile, an instance role) is no use: it cannot be handed over. Only a key pair
 				// can, and saying so by name is better than a permission error from a bucket.
 				if (account.auth.mode !== 'key') {
-					return { ok: false, error: `"${account.name}" is a ${account.auth.mode === 'named' ? 'named profile on this computer' : 'credential this computer resolves for itself'}, and the ClickHouse server is what reads the data. Use an account saved as an access key, or type the key here.` };
+					return { ok: false, error: t(account.auth.mode === 'named' ? 'mainErrors.accountNamedProfile' : 'mainErrors.accountResolved', { name: account.name }) };
 				}
 				const secret = cloudService.secretFor(params.accountId);
 				if (!secret) {
-					return { ok: false, error: `"${account.name}" has no secret in the keychain on this computer.` };
+					return { ok: false, error: t('mainErrors.noSecret', { name: account.name }) };
 				}
 				accountName = account.name;
 				values = { ...values, [spec.keyPair.idParam]: account.auth.keyId, [spec.keyPair.secretParam]: secret };
@@ -2761,10 +2764,10 @@ function registerIpc(): void {
 				shownSql = previewStatement(shownCall, params.limit ?? 100);
 			} else {
 				if (!params.target) {
-					return { ok: false, error: 'No table to create.' };
+					return { ok: false, error: t('mainErrors.noTable') };
 				}
 				if (config?.readOnly) {
-					return { ok: false, error: `Connection "${config.label}" is read-only; creating a table is blocked.` };
+					return { ok: false, error: t('mainErrors.readOnly', { label: config.label }) };
 				}
 				sql = importStatement(driver, params.target, call);
 				shownSql = importStatement(driver, params.target, shownCall);
@@ -2786,7 +2789,7 @@ function registerIpc(): void {
 			const driver = config?.driver ?? '';
 			const format = bulkFormatById(driver, params.formatId);
 			if (!format) {
-				return { ok: false, error: `"${params.formatId}" is not a format this connection can write.` };
+				return { ok: false, error: t('mainErrors.cannotWriteFormat', { formatId: params.formatId }) };
 			}
 			// Before the save dialog, so a statement that writes is not asked where to put its file.
 			// connections.bulkExport refuses it again on the way to the server.
@@ -2797,7 +2800,7 @@ function registerIpc(): void {
 			const extension = bulkExportExtension(format).slice(1);
 			const win = BrowserWindow.fromWebContents(event.sender);
 			const options = {
-				title: "Export from the server",
+				title: t('mainDialogs.exportFromServer'),
 				defaultPath: join(app.getPath('documents'), `${(params.suggestedName || 'export').replace(/[^\w .-]+/g, '_')}.${extension}`),
 				filters: [{ name: format.label, extensions: [extension] }],
 			};
@@ -2970,7 +2973,7 @@ function registerIpc(): void {
 	ipcMain.handle('workspace:import', async (event) => {
 		const win = BrowserWindow.fromWebContents(event.sender);
 		const properties: Array<'openFile' | 'multiSelections'> = ['openFile', 'multiSelections'];
-		const options = { properties, filters: [{ name: 'SQL', extensions: ['sql'] }, { name: 'All Files', extensions: ['*'] }] };
+		const options = { properties, filters: [{ name: 'SQL', extensions: ['sql'] }, { name: t('mainDialogs.filterAllFiles'), extensions: ['*'] }] };
 		const result = win ? await dialog.showOpenDialog(win, options) : await dialog.showOpenDialog(options);
 		if (result.canceled || result.filePaths.length === 0) {
 			return null;
@@ -3033,7 +3036,7 @@ function registerIpc(): void {
 	ipcMain.handle('file:open', async () => {
 		const result = await dialog.showOpenDialog({
 			properties: ['openFile'],
-			filters: [{ name: 'SQL', extensions: ['sql'] }, { name: 'All Files', extensions: ['*'] }],
+			filters: [{ name: 'SQL', extensions: ['sql'] }, { name: t('mainDialogs.filterAllFiles'), extensions: ['*'] }],
 		});
 		if (result.canceled || result.filePaths.length === 0) {
 			return null;
@@ -3049,11 +3052,11 @@ function registerIpc(): void {
 	ipcMain.handle('ai:pickDocument', async (event): Promise<ExtractDocumentResult | null> => {
 		const win = BrowserWindow.fromWebContents(event.sender);
 		const options = {
-			title: "Attach a document to the chat",
+			title: t('mainDialogs.attachDocument'),
 			properties: ['openFile' as const],
 			filters: [
-				{ name: 'Documents', extensions: ATTACHABLE_EXTENSIONS },
-				{ name: 'All Files', extensions: ['*'] },
+				{ name: t('mainDialogs.filterDocuments'), extensions: ATTACHABLE_EXTENSIONS },
+				{ name: t('mainDialogs.filterAllFiles'), extensions: ['*'] },
 			],
 		};
 		const result = win ? await dialog.showOpenDialog(win, options) : await dialog.showOpenDialog(options);
@@ -3106,7 +3109,7 @@ function registerIpc(): void {
 		const ext = defaultName.split('.').pop() || 'csv';
 		const options = {
 			defaultPath: defaultName,
-			filters: [{ name: ext.toUpperCase(), extensions: [ext] }, { name: 'All Files', extensions: ['*'] }],
+			filters: [{ name: ext.toUpperCase(), extensions: [ext] }, { name: t('mainDialogs.filterAllFiles'), extensions: ['*'] }],
 		};
 		const win = BrowserWindow.fromWebContents(event.sender);
 		const result = win ? await dialog.showSaveDialog(win, options) : await dialog.showSaveDialog(options);
@@ -3123,7 +3126,7 @@ function registerIpc(): void {
 	ipcMain.handle('file:exportXlsx', async (event, defaultName: string, sheet: XlsxSheet) => {
 		const options = {
 			defaultPath: defaultName,
-			filters: [{ name: 'Excel Workbook', extensions: ['xlsx'] }, { name: 'All Files', extensions: ['*'] }],
+			filters: [{ name: t('mainDialogs.filterExcel'), extensions: ['xlsx'] }, { name: t('mainDialogs.filterAllFiles'), extensions: ['*'] }],
 		};
 		const win = BrowserWindow.fromWebContents(event.sender);
 		const result = win ? await dialog.showSaveDialog(win, options) : await dialog.showSaveDialog(options);
@@ -3139,7 +3142,7 @@ function registerIpc(): void {
 	ipcMain.handle('chart:save', async (event, defaultName: string, format: 'png' | 'svg' | 'csv', data: string) => {
 		const options = {
 			defaultPath: defaultName,
-			filters: [{ name: format.toUpperCase(), extensions: [format] }, { name: 'All Files', extensions: ['*'] }],
+			filters: [{ name: format.toUpperCase(), extensions: [format] }, { name: t('mainDialogs.filterAllFiles'), extensions: ['*'] }],
 		};
 		const win = BrowserWindow.fromWebContents(event.sender);
 		const result = win ? await dialog.showSaveDialog(win, options) : await dialog.showSaveDialog(options);
@@ -3182,7 +3185,7 @@ function registerIpc(): void {
 	});
 	ipcMain.handle('ai:setDataAccess', (_event, level: DataAccessLevel) => {
 		if (!DATA_ACCESS_LEVELS.includes(level)) {
-			throw new Error(`Unknown data access level "${String(level)}".`);
+			throw new Error(t('mainErrors.unknownAccessLevel', { level: String(level) }));
 		}
 		return aiSettingsStore.setDataAccess(level);
 	});
@@ -3345,6 +3348,17 @@ function registerIpc(): void {
 	});
 	// The application menu as data, for the title bar to draw where there is no native menu bar.
 	ipcMain.handle('app:menuModel', (): AppMenu[] => menuModel());
+	ipcMain.on('i18n:state', (event) => { event.returnValue = languageState(); });
+	ipcMain.handle('i18n:setPreference', (_event, preference: unknown) => {
+		if (!isLanguagePreference(preference)) {
+			return languageState();
+		}
+		const state = setLanguagePreference(preference);
+		// What main has already drawn, in the new language. The drawn title bar asks again itself.
+		buildMenu();
+		tray?.refresh();
+		return state;
+	});
 	// The menu items only main can perform: Electron roles (undo/zoom/quit and friends). Command
 	// items never come back here — the renderer owns those and runs them itself.
 	ipcMain.handle('app:menuRole', (event, role: string) => {
@@ -3512,9 +3526,9 @@ function registerIpc(): void {
 	});
 	ipcMain.handle('review:chooseGithubApp', async (_event, appId: string) => {
 		const picked = await dialog.showOpenDialog({
-			title: "Choose the GitHub App's private key",
+			title: t('mainDialogs.chooseGithubKey'),
 			properties: ['openFile'],
-			filters: [{ name: 'Private key', extensions: ['pem'] }],
+			filters: [{ name: t('mainDialogs.filterPrivateKey'), extensions: ['pem'] }],
 		});
 		if (picked.canceled || picked.filePaths.length === 0) {
 			return { ok: false, error: '' };
@@ -3637,7 +3651,7 @@ function registerIpc(): void {
 		if (path === undefined) {
 			const win = BrowserWindow.fromWebContents(event.sender);
 			const options = {
-				title: `Choose the ${AGENTS[kind].label} program`,
+				title: t('mainDialogs.chooseAgentProgram', { agent: AGENTS[kind].label }),
 				properties: ['openFile' as const],
 			};
 			const result = win ? await dialog.showOpenDialog(win, options) : await dialog.showOpenDialog(options);
@@ -3821,6 +3835,7 @@ if (!app.requestSingleInstanceLock()) {
 
 	bootMark('modules-evaluated');
 	void app.whenReady().then(async () => {
+		initLanguage();
 		bootMark('ready');
 		// Before anything below can read or write a secret (the self-check included: it should start
 		// the way a real launch does).

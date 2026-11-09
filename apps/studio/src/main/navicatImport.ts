@@ -3,6 +3,7 @@
  *  Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { t } from '../shared/i18n/core';
 import { readFileSync } from 'node:fs';
 
 import type { ConnectionConfig } from '../shared/connection';
@@ -64,12 +65,12 @@ function buildParsed(attrs: Record<string, string>, index: number, existing: Con
 
 	const notes: string[] = [];
 	if (!driver) {
-		notes.push(`Unsupported connection type (${connType || "unknown"}).`);
+		notes.push(t('mainDiscovery.unsupportedConnType', { type: connType || t('mainDiscovery.unknown') }));
 	} else {
 		if (!username) {
-			notes.push("Username not found; set it after import.");
+			notes.push(t('mainDiscovery.noUsername'));
 		}
-		notes.push("Passwords aren't imported from Navicat; set it after import.");
+		notes.push(t('mainDiscovery.navicatNoPw'));
 	}
 
 	return {

@@ -19,6 +19,8 @@
  * with `THREE.Color.setStyle`, which is what keeps this file node-testable.
  */
 
+import { t } from '../i18n';
+
 export type PaletteId = 'theme' | 'gold' | 'tron' | 'ember';
 
 export interface OrbitPalette {
@@ -142,8 +144,8 @@ export function resolvePalette(id: PaletteId, source: TokenSource): OrbitPalette
 }
 
 export const PALETTE_LABELS: Record<PaletteId, string> = {
-	theme: "Theme",
-	gold: "Gold",
-	tron: "Tron",
-	ember: "Ember",
+	get theme() { return t('orbit.palette.theme'); },
+	get gold() { return t('orbit.palette.gold'); },
+	get tron() { return t('orbit.palette.tron'); },
+	get ember() { return t('orbit.palette.ember'); },
 };

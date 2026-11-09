@@ -5,6 +5,7 @@
 
 import { useEffect, useState } from 'react';
 import { Icon } from './Icon';
+import { useT } from '../i18n';
 import { ImportRow } from './ImportRow';
 import { IMPORT_SOURCES } from '../../../shared/forms';
 import type { ImportItem, ImportScanResult, ImportSource, ImportSourceId } from '../../../shared/forms';
@@ -27,7 +28,8 @@ interface ImportConnectionsModalProps {
  * Secrets are never imported, so the user reviews/fills passwords afterwards.
  */
 export function ImportConnectionsModal({ onClose, onImported, onFindDatabases }: ImportConnectionsModalProps): JSX.Element {
-	const keyPlace = secretsPlace(useSecretsWeak());
+	const t = useT();
+const keyPlace = secretsPlace(useSecretsWeak());
 	const [source, setSource] = useState<ImportSource | null>(null);
 	const [scan, setScan] = useState<ImportScanResult | null>(null);
 	const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -116,18 +118,18 @@ export function ImportConnectionsModal({ onClose, onImported, onFindDatabases }:
 			<div className="modal-backdrop" onClick={onClose}>
 				<div className="modal" onClick={(e) => e.stopPropagation()}>
 					<div className="modal-head">
-						<h2>Import connections</h2>
+						<h2>{t('connections.import.title')}</h2>
 						<span className="spacer" />
-						<button type="button" className="icon-btn" aria-label="Close" onClick={onClose}><Icon name="close" /></button>
+						<button type="button" className="icon-btn" aria-label={t('connections.common.close')} onClick={onClose}><Icon name="close" /></button>
 					</div>
-					<p className="muted">Choose a tool to import saved connections from. Saved usernames and passwords are imported when available; otherwise you set them after.</p>
+					<p className="muted">{t('connections.import.intro')}</p>
 					<div className="import-sources">
 						{onFindDatabases && (
 							<button type="button" className="import-source" onClick={onFindDatabases} disabled={busy} data-test="import-find-databases">
 								<Icon name="search" />
 								<div className="import-source-text">
-									<div className="import-source-label">Find databases</div>
-									<div className="muted small">Look everywhere at once: the tools below, containers, and databases running on this computer.</div>
+									<div className="import-source-label">{t('connections.import.findDatabases')}</div>
+									<div className="muted small">{t('connections.import.findHint')}</div>
 								</div>
 								<Icon name="chevron-right" />
 							</button>
@@ -158,13 +160,13 @@ export function ImportConnectionsModal({ onClose, onImported, onFindDatabases }:
 		<div className="modal-backdrop" onClick={onClose}>
 			<div className="modal import-picker" onClick={(e) => e.stopPropagation()}>
 				<div className="modal-head">
-					<button type="button" className="icon-btn" aria-label="Back" onClick={() => { setSource(null); setScan(null); setError(null); }}><Icon name="arrow-left" /></button>
-					<h2>Import from {source.label}</h2>
+					<button type="button" className="icon-btn" aria-label={t('connections.common.back')} onClick={() => { setSource(null); setScan(null); setError(null); }}><Icon name="arrow-left" /></button>
+					<h2>{t('connections.import.fromTitle', { name: source.label })}</h2>
 					<span className="spacer" />
-					<button type="button" className="icon-btn" aria-label="Close" onClick={onClose}><Icon name="close" /></button>
+					<button type="button" className="icon-btn" aria-label={t('connections.common.close')} onClick={onClose}><Icon name="close" /></button>
 				</div>
 
-				{busy && !scan && <div className="muted pad">Scanning…</div>}
+				{busy && !scan && <div className="muted pad">{t('connections.import.scanning')}</div>}
 
 				{/* A source that could not be read for a reason the user can act on: not signed
 				    in, offline, nothing there yet. Distinct from `notFound`, whose answer is
@@ -179,9 +181,9 @@ export function ImportConnectionsModal({ onClose, onImported, onFindDatabases }:
 
 				{scan && scan.notFound && !scan.unavailable && (
 					<div className="pad">
-						<p className="muted">No {source.label} connections were found automatically.</p>
+						<p className="muted">{t('connections.import.notFound', { name: source.label })}</p>
 						<button type="button" className="secondary" onClick={() => void browse(source.id)} disabled={busy}>
-							<Icon name="folder-opened" /> Browse for a config file…
+							<Icon name="folder-opened" /> {t('connections.import.browseConfig')}
 						</button>
 					</div>
 				)}
@@ -191,12 +193,12 @@ export function ImportConnectionsModal({ onClose, onImported, onFindDatabases }:
 						<div className="import-note">
 							<Icon name="info" />
 							<span>{source.id === 'snoutdata-cloud'
-								? `These are your own hosted databases, so the username and password come with them and are kept ${keyPlace}. Each one becomes an ordinary connection: importing again later picks up a reset password without making a second copy.`
+								? t('connections.import.noteCloud', { place: keyPlace })
 								: source.id === 'dbeaver'
-									? "Usernames and passwords are imported from DBeaver when it has them saved (Community Edition). A connection protected by a DBeaver master password, or from DBeaver Enterprise, comes in without credentials, set those after import."
+									? t('connections.import.noteDbeaver')
 									: source.id === 'heidisql' || source.id === 'pgpass'
-										? `Usernames and passwords are imported from ${source.label}; the passwords are kept ${keyPlace}.`
-										: `Usernames are imported from ${source.label}. Passwords are not (they're kept in your OS keychain or encrypted), so set those after import.`}</span>
+										? t('connections.import.notePasswords', { name: source.label, place: keyPlace })
+										: t('connections.import.noteNoPasswords', { name: source.label })}</span>
 						</div>
 						<div className="import-toolbar">
 							<label className="check">
@@ -204,14 +206,14 @@ export function ImportConnectionsModal({ onClose, onImported, onFindDatabases }:
 									type="checkbox"
 									checked={allSelected}
 									onChange={(e) => setSelected(e.target.checked ? new Set(items.filter((i) => i.supported).map((i) => i.key)) : new Set())}
-								/> Select all ({selectableCount})
+								/> {t('connections.import.selectAll', { count: selectableCount })}
 							</label>
 							<span className="spacer" />
 							{/* Nothing to browse for when the source is an API. A button that
 							    opens a file dialog against a cloud account is worse than absent. */}
 							{source.id !== 'snoutdata-cloud' && (
-								<button type="button" className="secondary small" onClick={() => void browse(source.id)} disabled={busy} title="Import from a different config file">
-									<Icon name="folder-opened" /> Browse…
+								<button type="button" className="secondary small" onClick={() => void browse(source.id)} disabled={busy} title={t('connections.import.browseTitle')}>
+									<Icon name="folder-opened" /> {t('connections.common.browse')}
 								</button>
 							)}
 						</div>
@@ -225,15 +227,15 @@ export function ImportConnectionsModal({ onClose, onImported, onFindDatabases }:
 									// For a cloud project this is not a warning: re-importing is the
 									// supported way to pick up a reset password, and it writes to
 									// the connection that already exists.
-									duplicateLabel={source.id === 'snoutdata-cloud' ? "already imported, will update" : undefined}
+									duplicateLabel={source.id === 'snoutdata-cloud' ? t('connections.import.alreadyUpdated') : undefined}
 								/>
 							))}
 						</div>
 						{scan.sources.length > 0 && (
 							<div className="muted small pad-x" title={scan.sources.join('\n')}>
 								{source.id === 'snoutdata-cloud'
-									? `Signed in as ${scan.sources[0]}.`
-									: `Read from ${scan.sources.length} file${scan.sources.length === 1 ? '' : 's'}.`}
+									? t('connections.import.signedInAs', { email: scan.sources[0] })
+									: t('connections.import.readFrom', { count: scan.sources.length })}
 							</div>
 						)}
 					</>
@@ -243,9 +245,9 @@ export function ImportConnectionsModal({ onClose, onImported, onFindDatabases }:
 
 				<div className="modal-actions">
 					<span className="spacer" />
-					<button type="button" className="secondary" onClick={onClose} disabled={busy}><Icon name="close" /> Cancel</button>
+					<button type="button" className="secondary" onClick={onClose} disabled={busy}><Icon name="close" /> {t('connections.common.cancel')}</button>
 					<button type="button" onClick={() => void importSelected(items)} disabled={busy || selectedCount === 0}>
-						<Icon name="cloud-download" /> Import {selectedCount > 0 ? selectedCount : ''}
+						<Icon name="cloud-download" /> {selectedCount > 0 ? t('connections.import.importCount', { count: selectedCount }) : t('connections.import.import')}
 					</button>
 				</div>
 			</div>

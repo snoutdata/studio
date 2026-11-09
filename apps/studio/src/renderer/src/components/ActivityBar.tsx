@@ -8,6 +8,7 @@ import { useRef } from 'react';
 import { Icon } from './Icon';
 import { useHoverTip } from './HoverTip';
 import { ManageMenu } from './ManageMenu';
+import { useT, type Translate } from '../i18n';
 import type { SideView } from '../layout';
 import type { ToolId } from '../docking';
 import type { ActivityBarPosition } from '../appSettings';
@@ -79,18 +80,20 @@ interface ActivityBarProps {
  * is VSCode's remote-explorer glyph, which means "another machine" only if you already knew).
  * The pairs that must never be confusable are workspace-vs-connections and flows-vs-history.
  */
-const VIEWS: Array<{ id: SideView; icon: string; title: string }> = [
-	{ id: 'connections', icon: 'database', title: 'Connections' },
-	// A folder, not a page: this view is a folder of .sql scripts on disk, and a page is what a
-	// single open file looks like everywhere else in the app.
-	{ id: 'workspace', icon: 'folder', title: 'Workspace files' },
-	{ id: 'history', icon: 'history', title: 'Query history & saved' },
-	// The user's SnoutData projects, local and cloud. Tiles, not the Codicon `dashboard`, which is
-	// a speedometer and means speed everywhere else in the app (Glyph.tsx says more).
-	{ id: 'dashboard', icon: 'glyph:dashboard', title: 'Dashboard' },
-	// Two streams merging into one: a flow is source(s) -> transform -> destination.
-	{ id: 'flows', icon: 'combine', title: 'Data flows' },
-];
+function viewsOf(t: Translate): Array<{ id: SideView; icon: string; title: string }> {
+	return [
+		{ id: 'connections', icon: 'database', title: t('shell.dock.tool.connections') },
+		// A folder, not a page: this view is a folder of .sql scripts on disk, and a page is what a
+		// single open file looks like everywhere else in the app.
+		{ id: 'workspace', icon: 'folder', title: t('shell.dock.tool.workspace') },
+		{ id: 'history', icon: 'history', title: t('shell.activity.history') },
+		// The user's SnoutData projects, local and cloud. Tiles, not the Codicon `dashboard`, which is
+		// a speedometer and means speed everywhere else in the app (Glyph.tsx says more).
+		{ id: 'dashboard', icon: 'glyph:dashboard', title: t('shell.dock.tool.dashboard') },
+		// Two streams merging into one: a flow is source(s) -> transform -> destination.
+		{ id: 'flows', icon: 'combine', title: t('shell.dock.tool.flows') },
+	];
+}
 
 // The Agent (MCP) log has no icon here, to save the strip's space: it opens from the palette
 // ("Show Agent (MCP) Log") while agent access is on, and keeps its docked panel.
@@ -101,7 +104,8 @@ const VIEWS: Array<{ id: SideView; icon: string; title: string }> = [
  * a horizontal top row depending on `position`; the layout/CSS handle the orientation.
  */
 export function ActivityBar(props: ActivityBarProps): JSX.Element {
-	const views = VIEWS;
+	const t = useT();
+	const views = viewsOf(t);
 	const showing = (id: ToolId): boolean => props.visibleTools.includes(id);
 	const menu = (tool: ToolId) => (event: React.MouseEvent): void => {
 		event.preventDefault();
@@ -125,7 +129,7 @@ export function ActivityBar(props: ActivityBarProps): JSX.Element {
 						<button
 							key={item.id}
 							className={`activity-item${showing(item.id) ? ' active' : ''}`}
-							aria-label={badge > 0 ? `${item.title}: ${badge.toLocaleString()} reading${badge === 1 ? '' : 's'} the extraction model left for you to check` : item.title}
+							aria-label={badge > 0 ? t('shell.activity.flowsReadings', { title: item.title, count: badge }) : item.title}
 							onClick={() => props.onSelectView(item.id)}
 							onContextMenu={menu(item.id)}
 							onPointerDown={drag(item.id)}
@@ -137,7 +141,7 @@ export function ActivityBar(props: ActivityBarProps): JSX.Element {
 				})}
 				<button
 					className="activity-item"
-					aria-label="Monitors"
+					aria-label={t('shell.tabs.monitors')}
 					onClick={props.onOpenMonitors}
 				>
 					<Icon name="graph-line" />
@@ -146,7 +150,7 @@ export function ActivityBar(props: ActivityBarProps): JSX.Element {
 				    side panel. Two arrows between two places, the glyph its tab carries. */}
 				<button
 					className="activity-item"
-					aria-label="Move a database"
+					aria-label={t('shell.activity.moveDatabase')}
 					onClick={props.onOpenMove}
 				>
 					<Icon name="arrow-both" />
@@ -159,8 +163,8 @@ export function ActivityBar(props: ActivityBarProps): JSX.Element {
 					<button
 						className="activity-item"
 						aria-label={props.snoutbotAwaiting > 0
-							? `Snoutbot: ${props.snoutbotAwaiting} review${props.snoutbotAwaiting === 1 ? '' : 's'} waiting for you to read`
-							: 'Snoutbot reviews'}
+							? t('shell.activity.snoutbotAwaiting', { count: props.snoutbotAwaiting })
+							: t('shell.activity.snoutbotReviews')}
 						onClick={props.onOpenReviews}
 					>
 						<Icon name="git-pull-request" />
@@ -192,7 +196,7 @@ export function ActivityBar(props: ActivityBarProps): JSX.Element {
 				    highlights off the panel like a view rather than off nothing like Monitors. */}
 				<button
 					className={`activity-item${showing('orbit') ? ' active' : ''}`}
-					aria-label="Orbit: this database in 3D"
+					aria-label={t('shell.activity.orbit')}
 					onClick={props.onOpenOrbit}
 					onContextMenu={menu('orbit')}
 					onPointerDown={drag('orbit')}
@@ -209,7 +213,7 @@ export function ActivityBar(props: ActivityBarProps): JSX.Element {
 						<button
 							key={agent.kind}
 							className={`activity-item${showing(`agent:${agent.kind}`) ? ' active' : ''}`}
-							aria-label={`${agent.label} console`}
+							aria-label={t('shell.activity.agentConsole', { agent: agent.label })}
 							onClick={() => props.onOpenAgent(agent.kind)}
 							onContextMenu={menu(`agent:${agent.kind}`)}
 							onPointerDown={drag(`agent:${agent.kind}`)}
@@ -220,7 +224,7 @@ export function ActivityBar(props: ActivityBarProps): JSX.Element {
 				</div>
 			)}
 			<div className="activity-group activity-bottom">
-				<button className="activity-item" aria-label="Notifications" onClick={props.onOpenNotifications}>
+				<button className="activity-item" aria-label={t('notifications.center.title')} onClick={props.onOpenNotifications}>
 					<Icon name={props.notificationCount > 0 ? 'bell-dot' : 'bell'} />
 					{props.notificationCount > 0 && <span className="activity-badge">{props.notificationCount > 99 ? '99+' : props.notificationCount}</span>}
 				</button>

@@ -1,0 +1,122 @@
+{
+	"ai": {
+		"completionOff": "El autocompletado con IA está desactivado. Actívalo en Configuración → IA.",
+		"noChange": "{assistant}: no se sugiere ningún cambio.",
+		"noSuggestion": "{assistant}: sin sugerencias",
+		"thinking": "{assistant}: pensando…"
+	},
+	"aiEdit": {
+		"accept": "Aceptar",
+		"addToChat": "Añadir al chat",
+		"applyHint": "⏎ aplicar · ⇧⏎ nueva línea · Esc cancelar",
+		"connectFirst": "Conéctate a una base de datos para usar la edición rápida.",
+		"editPlaceholder": "Editar selección: describe el cambio…",
+		"escDismiss": "Esc para cerrar",
+		"generateHint": "⏎ generar · ⇧⏎ nueva línea · Esc cancelar",
+		"generatePlaceholder": "Generar SQL: describe lo que quieres…",
+		"modelTitle": "Modelo para esta edición",
+		"processing": "Procesando…",
+		"quickEdit": "Edición rápida",
+		"reject": "Rechazar",
+		"reviewHint": "⏎ aceptar · Esc rechazar"
+	},
+	"builder": {
+		"addStage": "Añadir etapa",
+		"apply": "Aplicar al editor",
+		"deleteStage": "Eliminar esta etapa",
+		"disable": "Desactivar esta etapa (se conserva, excluida de la ejecución)",
+		"empty": "Sin etapas. Añade una para empezar el pipeline.",
+		"enable": "Activar esta etapa",
+		"moveDown": "Bajar",
+		"moveUp": "Subir",
+		"on": "activa",
+		"operator": "Operador de la etapa",
+		"runTo": "Ejecutar el pipeline hasta esta etapa, incluida",
+		"title": "Etapas del pipeline"
+	},
+	"common": {
+		"cancel": "Cancelar",
+		"close": "Cerrar",
+		"collapse": "Contraer",
+		"delete": "Eliminar",
+		"loading": "Cargando…",
+		"notConnected": "{label} (sin conexión)",
+		"refresh": "Actualizar",
+		"revert": "Revertir",
+		"run": "Ejecutar",
+		"save": "Guardar"
+	},
+	"conn": {
+		"choose": "Elegir una conexión",
+		"filter": "Filtrar conexiones",
+		"localProject": "Proyecto local de SnoutData",
+		"new": "Nueva conexión…",
+		"noMatch": "Sin resultados",
+		"noneYet": "Aún no hay conexiones",
+		"readOnlyTitle": "Conexión de solo lectura. Las escrituras y el DDL están bloqueados."
+	},
+	"ctx": {
+		"explainSql": "Explicar SQL",
+		"optimizeSql": "Optimización de SQL",
+		"pipelineTranslation": "Obtener traducción a pipeline",
+		"textToSql": "Texto a SQL"
+	},
+	"find": {
+		"collectionPlaceholder": "Colección…",
+		"collectionTitle": "Colección a consultar",
+		"fieldsPlaceholder": "Campos, p. ej. name, email, -_id",
+		"fieldsTitle": "Proyección: el nombre incluye, el prefijo - excluye (p. ej. -password). En blanco devuelve documentos completos.",
+		"filterPlaceholder": "Filtro, p. ej. { \"status\": \"active\" }",
+		"filterTitle": "Un documento de consulta Mongo (JSON). En blanco coincide con todos los documentos.",
+		"find": "Buscar",
+		"limit": "Límite",
+		"limitInvalid": "El límite debe ser un número no negativo.",
+		"limitTitle": "Máximo de documentos a devolver",
+		"pickCollection": "Elige una colección para consultar.",
+		"runTitle": "Ejecutar esta búsqueda (Intro)",
+		"sortPlaceholder": "Orden, p. ej. createdAt:-1, name",
+		"sortTitle": "Claves de orden: campo o campo:dir (1/asc o -1/desc)."
+	},
+	"history": {
+		"clear": "Borrar historial",
+		"clearBody": "Se eliminarán todas las consultas registradas en tu historial. Esto no se puede deshacer.",
+		"clearTitle": "¿Borrar el historial de consultas?",
+		"daysAgo": "hace {n} d",
+		"emptyRecent": "Aún no hay historial. Las consultas que ejecutes aparecen aquí.",
+		"emptySaved": "No hay consultas guardadas. Guarda una desde el editor y se conservará aquí.",
+		"error": "error",
+		"heading": "HISTORIAL",
+		"hoursAgo": "hace {n} h",
+		"minutesAgo": "hace {n} min",
+		"recent": "Recientes",
+		"rowsMs": {
+			"one": "{count} fila · {ms} ms",
+			"other": "{count} filas · {ms} ms"
+		},
+		"saved": "Guardadas",
+		"secondsAgo": "hace {n} s"
+	},
+	"params": {
+		"detail": "ClickHouse los enlaza en el servidor con sus tipos. Escribe el valor tal cual, sin comillas.",
+		"title": "Parámetros de la consulta"
+	},
+	"pipeline": {
+		"collectionTitle": "Colección sobre la que se ejecuta este pipeline",
+		"explainTitle": "Explicar este pipeline: muestra el plan de consulta (qué índice usa) sin ejecutarlo",
+		"findTitle": "Búsqueda rápida: filtra, proyecta y ordena sin escribir un pipeline",
+		"nativeTitle": "Escribir un pipeline de agregación nativo (JSON)",
+		"pipeline": "Pipeline",
+		"sqlTitle": "Escribir SQL (traducido a un pipeline de agregación)",
+		"stages": "Etapas",
+		"stagesTitle": "Editar el pipeline como etapas visuales (añadir, reordenar, desactivar, previsualizar cada paso)",
+		"surface": "Superficie de consulta MongoDB"
+	},
+	"run": {
+		"explain": "Explicar",
+		"explainTitle": "Muestra cómo la base de datos ejecutaría esta sentencia, sin ejecutarla",
+		"more": "Más opciones de ejecución",
+		"newTab": "Ejecutar en una pestaña nueva",
+		"script": "Ejecutar script",
+		"scriptTitle": "Ejecuta cada sentencia del editor, una a la vez"
+	}
+}

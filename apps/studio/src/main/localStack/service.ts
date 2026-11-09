@@ -3,6 +3,7 @@
  *  Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { t } from '../../shared/i18n/core';
 import { spawn } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import { createReadStream, createWriteStream, existsSync, lstatSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, unlinkSync, writeFileSync } from 'node:fs';
@@ -71,7 +72,7 @@ export function readFunctionTree(root: string): FunctionFile[] {
 	const name = (full: string): string => relative(root, full).split(sep).join('/') || basename(root);
 	const refuseLink = (full: string): void => {
 		if (lstatSync(full).isSymbolicLink()) {
-			throw new Error(`${name(full)} is a link, and a function is copied from its own folder only. Put the file itself there.`);
+			throw new Error(t('mainLocalStack.fnLink', { name: name(full) }));
 		}
 	};
 	refuseLink(root);
@@ -92,16 +93,16 @@ export function readFunctionTree(root: string): FunctionFile[] {
 				continue;
 			}
 			if (files.length >= FUNCTION_TREE_MAX_FILES) {
-				throw new Error(`${basename(root)} has more than ${FUNCTION_TREE_MAX_FILES} files, the most a function may hold.`);
+				throw new Error(t('mainLocalStack.fnTooManyFiles', { folder: basename(root), max: String(FUNCTION_TREE_MAX_FILES) }));
 			}
 			bytesRead += lstatSync(full).size;
 			if (bytesRead > FUNCTION_TREE_MAX_BYTES) {
-				throw new Error(`${basename(root)} holds more than ${FUNCTION_TREE_MAX_BYTES / 1024} KB, the most a function may. A function is source code; put large files in Storage.`);
+				throw new Error(t('mainLocalStack.fnTooBig', { folder: basename(root), max: String(FUNCTION_TREE_MAX_BYTES / 1024) }));
 			}
 			const bytes = readFileSync(full);
 			const text = bytes.toString('utf8');
 			if (Buffer.compare(Buffer.from(text, 'utf8'), bytes) !== 0) {
-				throw new Error(`${relative(root, full)} is not text, and a function is source code. Put binary files in Storage.`);
+				throw new Error(t('mainLocalStack.fnNotText', { path: relative(root, full) }));
 			}
 			files.push({ path: relative(root, full).split(sep).join('/'), text });
 		}
@@ -253,12 +254,12 @@ async function portAvailable(port: number): Promise<boolean> {
 /** The paths a project's gateway serves, in the names it serves them under (shared/ownLayout.ts). */
 function gatewayPaths(vocabulary: Vocabulary): LocalConnectionFacts['paths'] {
 	return [
-		{ path: `${prefix('data', vocabulary)}/`, what: "The data API" },
+		{ path: `${prefix('data', vocabulary)}/`, what: t('mainLocalStack.routeData') },
 		{ path: prefix('graph', vocabulary), what: "GraphQL" },
 		{ path: `${prefix('identity', vocabulary)}/`, what: "Auth" },
-		{ path: `${prefix('files', vocabulary)}/`, what: "Storage" },
+		{ path: `${prefix('files', vocabulary)}/`, what: t('mainLocalStack.routeStorage') },
 		{ path: `${prefix('live', vocabulary)}/`, what: "Realtime" },
-		{ path: `${prefix('fn', vocabulary)}/<name>`, what: "Your functions" },
+		{ path: `${prefix('fn', vocabulary)}/<name>`, what: t('mainLocalStack.routeFunctions') },
 	];
 }
 
@@ -293,7 +294,7 @@ export class LocalStackService {
 	private find(id: string): StoredProject {
 		const project = this.readStore().find((p) => p.id === id);
 		if (!project) {
-			throw new Error("That local project is not in the list any more.");
+			throw new Error(t('mainLocalStack.notListed'));
 		}
 		return project;
 	}
@@ -344,7 +345,7 @@ export class LocalStackService {
 	private readEnv(project: StoredProject): Map<string, string> {
 		const path = join(project.folder, '.env');
 		if (!existsSync(path)) {
-			throw new Error(`${path} is missing. It held this project's keys; restore it from your backup to run the project again.`);
+			throw new Error(t('mainLocalStack.envMissing', { path }));
 		}
 		return parseEnv(readFileSync(path, 'utf8'));
 	}
@@ -398,7 +399,7 @@ export class LocalStackService {
 		}
 		const docker = this.dockerPath;
 		if (!docker) {
-			return { code: -1, stdout: '', stderr: "The docker command was not found on this computer." };
+			return { code: -1, stdout: '', stderr: t('mainLocalStack.dockerNotFound') };
 		}
 		const env = await this.env();
 		return new Promise((done) => {
@@ -504,7 +505,7 @@ export class LocalStackService {
 	async startEngine(): Promise<LocalActionOutcome> {
 		const app = desktopApp(this.deps.platform, this.deps.env);
 		if (!app) {
-			return { ok: false, message: "Docker Desktop is not installed where the app can start it. Start your container engine yourself." };
+			return { ok: false, message: t('mainLocalStack.noDesktop') };
 		}
 		const detached = (file: string, args: string[]): void => {
 			spawn(file, args, { detached: true, stdio: 'ignore', windowsHide: false }).unref();
@@ -516,7 +517,7 @@ export class LocalStackService {
 		} else {
 			detached('systemctl', ['--user', 'start', 'docker-desktop']);
 		}
-		return { ok: true, message: "Starting Docker Desktop. This can take a minute." };
+		return { ok: true, message: t('mainLocalStack.startingDesktop') };
 	}
 
 	// --- the wizard's defaults ------------------------------------------------------------------
@@ -584,7 +585,7 @@ export class LocalStackService {
 		});
 		return {
 			projects,
-			unavailable: reachable ? undefined : `Docker is not running, so these projects' states cannot be read. ${this.dockerPath ? "Start Docker" : "Install Docker"} to run them.`,
+			unavailable: reachable ? undefined : t(this.dockerPath ? 'mainLocalStack.unavailableStart' : 'mainLocalStack.unavailableInstall'),
 		};
 	}
 
@@ -604,17 +605,17 @@ export class LocalStackService {
 		}
 		const folder = resolve(form.folder.trim());
 		if (existsSync(folder) && (!statSync(folder).isDirectory() || !isEmptyDir(folder))) {
-			return fail(`${folder} is not empty. Choose a new or empty folder: the project's files go there.`);
+			return fail(t('mainLocalStack.folderNotEmpty', { folder }));
 		}
 		const busyPorts = await this.portsInUse([form.apiPort, form.dbPort]);
 		if (busyPorts.length > 0) {
-			return fail(`Port ${busyPorts.join(" and ")} is already in use on this computer. Choose another.`);
+			return fail(t('mainLocalStack.portsBusyChoose', { ports: busyPorts.join(t('mainLocalStack.and')) }));
 		}
 
 		// 1. The published stack's files, as the README's `git clone` would have them: from the
 		// pinned commit, and every one checked against its pinned hash BEFORE the folder is made,
 		// so a changed file leaves nothing on disk and nothing is run.
-		say('download', "Downloading the stack from github.com/snoutdata/snout-stack");
+		say('download', t('mainLocalStack.sayDownload'));
 		const downloaded = await downloadStack(this.deps.fetch);
 		if ('problem' in downloaded) {
 			return fail(downloaded.problem);
@@ -622,7 +623,7 @@ export class LocalStackService {
 		const compose = Buffer.from(downloaded.files.get('compose.yaml') ?? new Uint8Array()).toString('utf8');
 		const image = stackImageFrom(compose);
 		if (image !== STACK_IMAGE) {
-			return fail("The downloaded compose.yaml does not name the snout-stack image this version of the app expects. Try again later, or report it.");
+			return fail(t('mainLocalStack.composeNotExpected'));
 		}
 		try {
 			mkdirSync(folder, { recursive: true });
@@ -635,16 +636,16 @@ export class LocalStackService {
 			writeFileSync(join(folder, 'compose.override.yaml'), APP_OVERRIDE);
 			mkdirSync(join(folder, ...MAIL_DIR.split('/')), { recursive: true });
 		} catch (err) {
-			return fail(`Could not write the stack's files: ${err instanceof Error ? err.message : String(err)}`);
+			return fail(t('mainLocalStack.writeFiles', { error: err instanceof Error ? err.message : String(err) }));
 		}
 
 		// 2. Keys: `snout-stack init`, from the very image the compose file runs.
-		say('keys', "Making this project's keys and passwords");
+		say('keys', t('mainLocalStack.sayKeys'));
 		const init = await this.run(['run', '--rm', image, 'init'], { onLine: (l) => { if (!/^[A-Z_]+=/.test(l)) { line('keys')(l); } }, timeoutMs: 15 * 60 * 1000 });
 		const made = parseEnv(init.stdout);
 		const ref = made.get('SNOUT_REF') ?? '';
 		if (init.code !== 0 || !isRef(ref) || !envKey(made, 'app')) {
-			return fail(`Could not make the project's keys: ${tailOf(init.stderr) || "snout-stack init gave nothing back."}`);
+			return fail(t('mainLocalStack.makeKeys', { detail: tailOf(init.stderr) || t('mainLocalStack.initSilent') }));
 		}
 		const envPath = join(folder, '.env');
 		writeFileSync(envPath, applyEnv(init.stdout, envFor(form)), { mode: 0o600 });
@@ -679,32 +680,32 @@ export class LocalStackService {
 		this.busy.add(project.id);
 		try {
 			// 3. The images. Their own step so a slow first pull reads as progress, not a hang.
-			say('pull', "Downloading the images (about 670 MB the first time)");
+			say('pull', t('mainLocalStack.sayPull'));
 			const pull = await this.compose(project, ['pull'], { onLine: line('pull'), timeoutMs: 60 * 60 * 1000 });
 			if (pull.code !== 0) {
-				return { ...fail(`Could not download the images: ${tailOf(pull.stderr)}`), id: project.id };
+				return { ...fail(t('mainLocalStack.pullFailed', { detail: tailOf(pull.stderr) })), id: project.id };
 			}
 
 			// 4. Up, and wait for every health check, as the README does.
-			say('start', "Starting the services");
+			say('start', t('mainLocalStack.sayStart'));
 			const up = await this.compose(project, ['up', '-d', '--wait', '--wait-timeout', '600'], { onLine: line('start'), timeoutMs: 15 * 60 * 1000 });
 			if (up.code !== 0) {
-				return { ...fail(`The stack did not start: ${tailOf(up.stderr)}`), id: project.id };
+				return { ...fail(t('mainLocalStack.upFailed', { detail: tailOf(up.stderr) })), id: project.id };
 			}
 		} finally {
 			this.busy.delete(project.id);
 		}
 
 		this.note(project.id, "Set up and started");
-		say('done', `${project.name} is running at http://localhost:${form.apiPort}`);
-		return { ok: true, message: `${project.name} is running.`, id: project.id };
+		say('done', t('mainLocalStack.runningAt', { name: project.name, port: String(form.apiPort) }));
+		return { ok: true, message: t('mainLocalStack.isRunning', { name: project.name }), id: project.id };
 	}
 
 	// --- lifecycle ------------------------------------------------------------------------------
 
 	private async exclusive(id: string, work: () => Promise<LocalActionOutcome>): Promise<LocalActionOutcome> {
 		if (this.busy.has(id)) {
-			return { ok: false, message: "Something is already happening to this project. Wait for it to finish." };
+			return { ok: false, message: t('mainLocalStack.busy') };
 		}
 		this.busy.add(id);
 		try {
@@ -721,14 +722,14 @@ export class LocalStackService {
 			const project = this.find(id);
 			this.readEnv(project);
 			this.ensureOverride(project);
-			progress({ installId: id, step: 'start', message: "Starting the services" });
+			progress({ installId: id, step: 'start', message: t('mainLocalStack.sayStart') });
 			const up = await this.compose(project, ['up', '-d', '--wait', '--wait-timeout', '600'], {
 				onLine: (l) => progress({ installId: id, step: 'start', message: '', line: l }),
 				timeoutMs: 60 * 60 * 1000,
 			});
 			const outcome = up.code === 0
-				? { ok: true, message: `${project.name} is running.` }
-				: { ok: false, message: `It did not start: ${tailOf(up.stderr)}` };
+				? { ok: true, message: t('mainLocalStack.isRunning', { name: project.name }) }
+				: { ok: false, message: t('mainLocalStack.didNotStart', { detail: tailOf(up.stderr) }) };
 			this.note(id, outcome.ok ? "Started" : "Start failed", outcome.ok);
 			progress({ installId: id, step: outcome.ok ? 'done' : 'failed', message: outcome.message });
 			return outcome;
@@ -741,8 +742,8 @@ export class LocalStackService {
 			const res = await this.compose(project, ['stop'], { timeoutMs: 5 * 60 * 1000 });
 			this.note(id, res.code === 0 ? "Stopped" : "Stop failed", res.code === 0);
 			return res.code === 0
-				? { ok: true, message: `${project.name} is stopped. Its data is kept.` }
-				: { ok: false, message: `Could not stop it: ${tailOf(res.stderr)}` };
+				? { ok: true, message: t('mainLocalStack.isStopped', { name: project.name }) }
+				: { ok: false, message: t('mainLocalStack.stopFailed', { detail: tailOf(res.stderr) }) };
 		});
 	}
 
@@ -757,10 +758,10 @@ export class LocalStackService {
 			if (existsSync(join(project.folder, 'compose.yaml')) && existsSync(join(project.folder, '.env'))) {
 				const down = await this.compose(project, ['down', '--remove-orphans', ...(options.deleteData ? ['--volumes'] : [])], { timeoutMs: 10 * 60 * 1000 });
 				if (down.code !== 0) {
-					return { ok: false, message: `Could not remove its containers: ${tailOf(down.stderr)}` };
+					return { ok: false, message: t('mainLocalStack.removeContainers', { detail: tailOf(down.stderr) }) };
 				}
 			} else if (options.deleteData) {
-				return { ok: false, message: "Its folder is gone, so its data cannot be found to delete. Remove it from the list without deleting data." };
+				return { ok: false, message: t('mainLocalStack.folderGone') };
 			}
 			for (const connection of this.deps.connectionsOf(id)) {
 				await this.deps.removeConnection(connection.id);
@@ -771,7 +772,7 @@ export class LocalStackService {
 			if (options.deleteFolder && existsSync(join(project.folder, 'compose.yaml'))) {
 				rmSync(project.folder, { recursive: true, force: true });
 			}
-			return { ok: true, message: `${project.name} was removed.` };
+			return { ok: true, message: t('mainLocalStack.wasRemoved', { name: project.name }) };
 		});
 	}
 
@@ -781,7 +782,7 @@ export class LocalStackService {
 			return '';
 		}
 		const res = await this.compose(project, ['logs', '--no-color', '--tail', String(tail), ...(service ? [service] : [])], { timeoutMs: 30000 });
-		return res.code === 0 ? plain(res.stdout + res.stderr) : `Could not read the logs: ${tailOf(res.stderr)}`;
+		return res.code === 0 ? plain(res.stdout + res.stderr) : t('mainLocalStack.readLogs', { detail: tailOf(res.stderr) });
 	}
 
 	/** What the dashboard's sections need to reach the project: read off .env, for main only. */
@@ -828,13 +829,13 @@ export class LocalStackService {
 		};
 		const [value, label] = values[target];
 		if (!value) {
-			return { ok: false, message: `${label} is not in .env.` };
+			return { ok: false, message: t('mainLocalStack.notInEnv', { label: t(`mainLocalStack.copyLabel_${target}`) }) };
 		}
 		this.deps.copy(value);
 		if (target !== 'apiUrl') {
 			this.note(id, `${label} was copied`);
 		}
-		return { ok: true, message: `${label} was copied.` };
+		return { ok: true, message: t('mainLocalStack.wasCopied', { label: t(`mainLocalStack.copyLabel_${target}`) }) };
 	}
 
 	/** The project's exports, in the file manager. */
@@ -870,15 +871,15 @@ export class LocalStackService {
 	newFunction(id: string, name: string): LocalActionOutcome {
 		const project = this.find(id);
 		if (!isFunctionName(name) || name.startsWith('_')) {
-			return { ok: false, message: "A function name is letters, digits, dashes and underscores, and does not start with _." };
+			return { ok: false, message: t('mainLocalStack.fnName') };
 		}
 		const dir = join(project.folder, 'functions', name);
 		if (existsSync(dir)) {
-			return { ok: false, message: `functions/${name} already exists.` };
+			return { ok: false, message: t('mainLocalStack.fnExists', { name }) };
 		}
 		mkdirSync(dir, { recursive: true });
 		writeFileSync(join(dir, 'index.ts'), functionTemplate(name));
-		return { ok: true, message: `functions/${name}/index.ts was created. Deploy to serve it.` };
+		return { ok: true, message: t('mainLocalStack.fnCreated', { name }) };
 	}
 
 	deployFunctions(id: string, progress: (p: LocalProgress) => void): Promise<LocalActionOutcome> {
@@ -890,8 +891,8 @@ export class LocalStackService {
 			});
 			this.note(id, res.code === 0 ? "Functions deployed" : "Functions deploy failed", res.code === 0);
 			return res.code === 0
-				? { ok: true, message: "Functions deployed. The runtime serves the new code at once." }
-				: { ok: false, message: `The deploy failed: ${tailOf(res.stderr || res.stdout)}` };
+				? { ok: true, message: t('mainLocalStack.deployed') }
+				: { ok: false, message: t('mainLocalStack.deployFailed', { detail: tailOf(res.stderr || res.stdout) }) };
 		});
 	}
 
@@ -920,7 +921,7 @@ export class LocalStackService {
 			const path = this.overridePath(project);
 			const override = existsSync(path) ? readFileSync(path, 'utf8') : null;
 			if (override !== null && !override.startsWith(OVERRIDE_MARK)) {
-				return { ok: false, message: "This project has a compose.override.yaml of your own, so the app leaves the data API to it." };
+				return { ok: false, message: t('mainLocalStack.ownOverrideApi') };
 			}
 			this.ensureOverride(project);
 			const envPath = join(project.folder, '.env');
@@ -932,11 +933,11 @@ export class LocalStackService {
 				: await this.compose(project, ['rm', '--stop', '--force', 'rest'], { onLine: line, timeoutMs: 5 * 60 * 1000 });
 			this.note(id, on ? "Data API switched on" : "Data API switched off", res.code === 0);
 			if (res.code !== 0) {
-				return { ok: false, message: `The switch is saved, but Docker did not apply it: ${tailOf(res.stderr)}` };
+				return { ok: false, message: t('mainLocalStack.switchNotApplied', { detail: tailOf(res.stderr) }) };
 			}
 			return on
-				? { ok: true, message: `The data API is on: REST at ${prefix('data', this.vocabulary(project))} and GraphQL at ${prefix('graph', this.vocabulary(project))}.` }
-				: { ok: true, message: "The data API is off. The rest of the project keeps running." };
+				? { ok: true, message: t('mainLocalStack.dataApiOn', { rest: prefix('data', this.vocabulary(project)), graphql: prefix('graph', this.vocabulary(project)) }) }
+				: { ok: true, message: t('mainLocalStack.dataApiOff') };
 		});
 	}
 
@@ -954,10 +955,10 @@ export class LocalStackService {
 			const moved = [change.apiPort, change.dbPort].filter((p): p is number => p !== undefined && p !== project.apiPort && p !== project.dbPort);
 			const inUse = await this.portsInUse(moved);
 			if (inUse.length > 0) {
-				return { ok: false, message: `Port ${inUse.join(" and ")} is already in use on this computer.` };
+				return { ok: false, message: t('mainLocalStack.portsBusy', { ports: inUse.join(t('mainLocalStack.and')) }) };
 			}
 			if (change.apiPort !== undefined && change.apiPort === (change.dbPort ?? project.dbPort)) {
-				return { ok: false, message: "The API and the database need different ports." };
+				return { ok: false, message: t('mainLocalStack.differentPorts') };
 			}
 			if (change.publicUrl !== undefined) {
 				const problem = publicUrlProblem(change.publicUrl);
@@ -982,14 +983,14 @@ export class LocalStackService {
 					this.deps.updateConnection(connection.id, { port: change.dbPort });
 				}
 			}
-			progress({ installId: id, step: 'start', message: "Applying the change" });
+			progress({ installId: id, step: 'start', message: t('mainLocalStack.sayApply') });
 			const up = await this.compose(project, ['up', '-d', '--wait', '--wait-timeout', '600'], {
 				onLine: (l) => progress({ installId: id, step: 'start', message: '', line: l }),
 				timeoutMs: 30 * 60 * 1000,
 			});
 			const outcome = up.code === 0
-				? { ok: true, message: "Saved. The services that changed were restarted." }
-				: { ok: false, message: `Saved, but the stack did not come back up: ${tailOf(up.stderr)}` };
+				? { ok: true, message: t('mainLocalStack.savedRestarted') }
+				: { ok: false, message: t('mainLocalStack.savedNotUp', { detail: tailOf(up.stderr) }) };
 			this.note(id, `Settings changed: ${Object.keys(change).join(', ')}`, outcome.ok);
 			progress({ installId: id, step: outcome.ok ? 'done' : 'failed', message: outcome.message });
 			return outcome;
@@ -1043,12 +1044,12 @@ export class LocalStackService {
 	saveMailTemplate(id: string, kind: LocalMailKind, template: { subject: string; body: string } | null, progress: (p: LocalProgress) => void): Promise<LocalActionOutcome> {
 		return this.exclusive(id, async () => {
 			if (!isMailKind(kind)) {
-				return { ok: false, message: "Not one of auth's emails." };
+				return { ok: false, message: t('mainLocalStack.notAuthEmail') };
 			}
 			const project = this.find(id);
 			this.readEnv(project);
 			if (!this.ensureOverride(project)) {
-				return { ok: false, message: "This project has a compose.override.yaml of your own, so the app cannot add the email templates to it." };
+				return { ok: false, message: t('mainLocalStack.ownOverrideEmail') };
 			}
 			if (template) {
 				const problem = mailTemplateProblem(template.subject, template.body);
@@ -1074,8 +1075,8 @@ export class LocalStackService {
 			const ok = up.code === 0 && restart.code === 0;
 			this.note(id, `Email template ${template ? 'saved' : 'reset'}: ${kind.replace('_', ' ')}`, ok);
 			return ok
-				? { ok: true, message: template ? "Saved. Auth sends it from now on." : "Back to auth's own email." }
-				: { ok: false, message: `Saved, but auth did not restart: ${tailOf((up.code !== 0 ? up : restart).stderr)}` };
+				? { ok: true, message: template ? t('mainLocalStack.templateSaved') : t('mainLocalStack.templateReset') }
+				: { ok: false, message: t('mainLocalStack.authNotRestarted', { detail: tailOf((up.code !== 0 ? up : restart).stderr) }) };
 		});
 	}
 
@@ -1150,8 +1151,8 @@ export class LocalStackService {
 		writeFileSync(file, withSecret(text, name, value), { mode: 0o600 });
 		this.note(id, value === null ? `Secret removed: ${name}` : `Secret set: ${name}`);
 		return this.deployFunctions(id, progress).then((outcome) => outcome.ok
-			? { ok: true, message: value === null ? `${name} was removed. Functions were deployed without it.` : `${name} was set. Functions were deployed with it.` }
-			: { ok: false, message: `${name} is saved in functions/.env, but ${outcome.message.charAt(0).toLowerCase()}${outcome.message.slice(1)}` });
+			? { ok: true, message: value === null ? t('mainLocalStack.secretRemoved', { name }) : t('mainLocalStack.secretSet', { name }) }
+			: { ok: false, message: t('mainLocalStack.secretSavedBut', { name, a: outcome.message.charAt(0).toLowerCase(), b: outcome.message.slice(1) }) });
 	}
 
 	// --- the things done TO a project: password, keys, production, exports ----------------------
@@ -1177,13 +1178,13 @@ export class LocalStackService {
 			const project = this.find(id);
 			this.readEnv(project);
 			if (!(await this.running(project))) {
-				return { ok: false, message: "Start the project first: the password is changed in its running database." };
+				return { ok: false, message: t('mainLocalStack.startFirstPassword') };
 			}
 			const password = randomSecret(24);
 			const res = await this.admin(project, ownerPasswordSql(project.ref, scramVerifier(password)));
 			if (res.code !== 0) {
 				this.note(id, "Password reset failed", false);
-				return { ok: false, message: `The database refused the new password: ${tailOf(res.stderr)}` };
+				return { ok: false, message: t('mainLocalStack.passwordRefused', { detail: tailOf(res.stderr) }) };
 			}
 			const envPath = join(project.folder, '.env');
 			writeFileSync(envPath, applyEnv(readFileSync(envPath, 'utf8'), { POSTGRES_OWNER_PASSWORD: password }), { mode: 0o600 });
@@ -1192,8 +1193,8 @@ export class LocalStackService {
 				this.deps.updateConnection(connection.id, { password });
 			}
 			this.note(id, "Database password reset");
-			const said = updated.length === 0 ? '' : updated.length === 1 ? " Your connection was updated." : ` ${updated.length} connections were updated.`;
-			return { ok: true, message: `New password set.${said} Copy it from Database.` };
+			const said = updated.length === 0 ? '' : updated.length === 1 ? t('mainLocalStack.connUpdated') : t('mainLocalStack.connsUpdated', { count: updated.length });
+			return { ok: true, message: t('mainLocalStack.newPassword', { said }) };
 		});
 	}
 
@@ -1208,15 +1209,15 @@ export class LocalStackService {
 			const env = this.readEnv(project);
 			const envPath = join(project.folder, '.env');
 			writeFileSync(envPath, applyEnv(readFileSync(envPath, 'utf8'), rotatedKeys(env)), { mode: 0o600 });
-			progress({ installId: id, step: 'start', message: "Restarting with the new keys" });
+			progress({ installId: id, step: 'start', message: t('mainLocalStack.sayRestartKeys') });
 			const up = await this.compose(project, ['up', '-d', '--wait', '--wait-timeout', '600'], {
 				onLine: (l) => progress({ installId: id, step: 'start', message: '', line: l }),
 				timeoutMs: 30 * 60 * 1000,
 			});
 			this.note(id, "API keys rotated", up.code === 0);
 			const outcome = up.code === 0
-				? { ok: true, message: "New keys issued. Every key pasted into an app or a secret stops working, and signed-in users sign in again." }
-				: { ok: false, message: `The new keys are in .env, but the stack did not come back up: ${tailOf(up.stderr)}` };
+				? { ok: true, message: t('mainLocalStack.keysIssued') }
+				: { ok: false, message: t('mainLocalStack.keysNotUp', { detail: tailOf(up.stderr) }) };
 			progress({ installId: id, step: outcome.ok ? 'done' : 'failed', message: outcome.message });
 			return outcome;
 		});
@@ -1230,7 +1231,7 @@ export class LocalStackService {
 			this.deps.updateConnection(connection.id, { production: on });
 		}
 		this.note(id, on ? "Marked production" : "No longer production");
-		return { ok: true, message: on ? "Marked production." : "No longer production." };
+		return { ok: true, message: on ? t('mainLocalStack.markedProd') : t('mainLocalStack.notProd') };
 	}
 
 	private exportDir(project: StoredProject): string {
@@ -1257,7 +1258,7 @@ export class LocalStackService {
 			const project = this.find(id);
 			this.readEnv(project);
 			if (!(await this.running(project))) {
-				return { ok: false, message: "Start the project first: the export is taken from the running database." };
+				return { ok: false, message: t('mainLocalStack.startFirstExport') };
 			}
 			// An export is the whole database, auth's password hashes and every key included, so the
 			// folder and each file in it are the owner's alone, and exports an older build left
@@ -1277,10 +1278,10 @@ export class LocalStackService {
 			if (res.code !== 0) {
 				rmSync(file, { force: true });
 				this.note(id, "Export failed", false);
-				return { ok: false, message: `The export failed: ${tailOf(res.stderr)}` };
+				return { ok: false, message: t('mainLocalStack.exportFailed', { detail: tailOf(res.stderr) }) };
 			}
 			this.note(id, `Exported ${name}`);
-			return { ok: true, message: `Exported to ${EXPORT_DIR}/${name}. Files in storage are not in it; they stay in the objects volume.` };
+			return { ok: true, message: t('mainLocalStack.exported', { EXPORT_DIR, name }) };
 		});
 	}
 
@@ -1297,10 +1298,10 @@ export class LocalStackService {
 			this.readEnv(project);
 			const file = join(this.exportDir(project), name);
 			if (!isExportName(name) || !existsSync(file)) {
-				return { ok: false, message: "That export is not in the project's backups folder." };
+				return { ok: false, message: t('mainLocalStack.notInBackups') };
 			}
 			if (!(await this.running(project))) {
-				return { ok: false, message: "Start the project first: the restore runs in its database server." };
+				return { ok: false, message: t('mainLocalStack.startFirstRestore') };
 			}
 			const line = (l: string): void => progress({ installId: id, step: 'start', message: '', line: l });
 			const failed = (message: string): LocalActionOutcome => {
@@ -1310,23 +1311,23 @@ export class LocalStackService {
 			};
 
 			// 1. Into a scratch database beside the project's, which keeps running untouched.
-			progress({ installId: id, step: 'start', message: "Restoring the export beside the project's database" });
+			progress({ installId: id, step: 'start', message: t('mainLocalStack.sayRestoreBeside') });
 			const copied = await this.compose(project, ['exec', '-T', 'db', 'sh', '-c', `cat > ${RESTORE_FILE}`], { stdinFile: file, timeoutMs: 60 * 60 * 1000 });
 			const restored = copied.code === 0
 				? await this.compose(project, ['exec', '-T', 'db', 'sh', '-s'], { input: restoreScript(project.ref), onLine: line, timeoutMs: 6 * 60 * 60 * 1000 })
 				: copied;
 			if (restored.code !== 0) {
 				await this.compose(project, ['exec', '-T', 'db', 'sh', '-s'], { input: restoreCleanupScript(project.ref), timeoutMs: 5 * 60 * 1000 });
-				return failed(`Nothing was changed: the export did not restore. ${tailOf(restored.stderr)}`);
+				return failed(t('mainLocalStack.restoreFailed', { detail: tailOf(restored.stderr) }));
 			}
 
 			// 2. The swap, with the services that hold sessions stopped for it.
-			progress({ installId: id, step: 'start', message: "Swapping it in" });
+			progress({ installId: id, step: 'start', message: t('mainLocalStack.saySwap') });
 			const stop = await this.compose(project, ['stop', 'gateway', 'auth', 'rest', 'storage', 'realtime', 'functions'], { onLine: line, timeoutMs: 5 * 60 * 1000 });
 			const swap = stop.code === 0 ? await this.admin(project, restoreSwapSql(project.ref)) : stop;
 			let outcome: LocalActionOutcome = swap.code === 0
-				? { ok: true, message: `Put back to ${name}.` }
-				: { ok: false, message: `The restored database could not be swapped in: ${tailOf(swap.stderr)}` };
+				? { ok: true, message: t('mainLocalStack.putBack', { name }) }
+				: { ok: false, message: t('mainLocalStack.swapFailed', { detail: tailOf(swap.stderr) }) };
 			if (swap.code !== 0) {
 				await this.compose(project, ['exec', '-T', 'db', 'sh', '-s'], { input: restoreCleanupScript(project.ref), timeoutMs: 5 * 60 * 1000 });
 			}
@@ -1334,13 +1335,13 @@ export class LocalStackService {
 			if (outcome.ok) {
 				const after = await this.compose(project, ['exec', '-T', 'db', 'sh', '-s'], { input: restoreAfterSwapScript(project.ref), onLine: line, timeoutMs: 30 * 60 * 1000 });
 				if (after.code !== 0) {
-					outcome = { ok: false, message: `Put back to ${name}, but its Cron jobs could not be restored: ${tailOf(after.stderr)}` };
+					outcome = { ok: false, message: t('mainLocalStack.putBackCron', { name, detail: tailOf(after.stderr) }) };
 				}
 			}
-			progress({ installId: id, step: 'start', message: "Starting the services again" });
+			progress({ installId: id, step: 'start', message: t('mainLocalStack.sayStartAgain') });
 			const up = await this.compose(project, ['up', '-d', '--wait', '--wait-timeout', '600'], { onLine: line, timeoutMs: 30 * 60 * 1000 });
 			if (outcome.ok && up.code !== 0) {
-				outcome = { ok: false, message: `Restored, but the stack did not come back up: ${tailOf(up.stderr)}` };
+				outcome = { ok: false, message: t('mainLocalStack.restoredNotUp', { detail: tailOf(up.stderr) }) };
 			}
 			this.note(id, outcome.ok ? `Restored from ${name}` : `Restore from ${name} failed`, outcome.ok);
 			progress({ installId: id, step: outcome.ok ? 'done' : 'failed', message: outcome.message });

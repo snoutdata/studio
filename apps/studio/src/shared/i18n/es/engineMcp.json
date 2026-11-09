@@ -1,0 +1,14 @@
+{
+	"portInUse": {
+		"title": "El acceso de agentes está desactivado: el puerto {port} está en uso",
+		"detail": "Otro programa de este equipo está escuchando en 127.0.0.1:{port}, el puerto que tus agentes tienen configurado, así que la aplicación no inició ahí su servidor de agentes y no cambió de puerto por su cuenta. Si no iniciaste ese programa, no dejes que un agente le envíe tu token. En Configuración, Acceso de agentes, puedes pasar al puerto {suggested}: eso también reemplaza el token, y los agentes de código que inicia esta aplicación reciben la nueva dirección. Una configuración que hayas pegado en otro sitio necesita la nueva.",
+		"detailNoSuggestion": "Otro programa de este equipo está escuchando en 127.0.0.1:{port}, el puerto que tus agentes tienen configurado, así que la aplicación no inició ahí su servidor de agentes y no cambió de puerto por su cuenta. Si no iniciaste ese programa, no dejes que un agente le envíe tu token. En Configuración, Acceso de agentes, puedes pasar a otro puerto: eso también reemplaza el token, y los agentes de código que inicia esta aplicación reciben la nueva dirección. Una configuración que hayas pegado en otro sitio necesita la nueva."
+	},
+	"lockout": {
+		"title": "El acceso de agentes rechazó un programa que seguía enviando un token incorrecto",
+		"detail": {
+			"one": "Llegaron {attempts} solicitudes con un token incorrecto desde {remote}, así que el servidor de agentes rechaza cualquier otro token incorrecto de esa dirección durante unos {count} minuto. Tus propios agentes y todo lo que tenga el token correcto siguen entrando. El token no se cambió. Si crees que se ha filtrado, reemplázalo en Configuración, Acceso de agentes.",
+			"other": "Llegaron {attempts} solicitudes con un token incorrecto desde {remote}, así que el servidor de agentes rechaza cualquier otro token incorrecto de esa dirección durante unos {count} minutos. Tus propios agentes y todo lo que tenga el token correcto siguen entrando. El token no se cambió. Si crees que se ha filtrado, reemplázalo en Configuración, Acceso de agentes."
+		}
+	}
+}

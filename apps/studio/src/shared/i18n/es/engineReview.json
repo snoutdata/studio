@@ -1,0 +1,10 @@
+{
+	"boundary": {
+		"rulesOnly": "No se escribe ninguna explicación y no se llama a ningún modelo. Los hallazgos son las palabras de las propias reglas.",
+		"local": "El modelo se ejecuta en este equipo, así que nada de la revisión se envía a ningún sitio. A cambio consume tiempo y energía de esta máquina.",
+		"snoutAi": "El SQL modificado y los hallazgos tomados de tu base de datos se envían a nuestros servidores para redactarlos, y se descuenta de tu cuota de IA.",
+		"ollamaLocal": "El modelo se ejecuta en este equipo, en tu Ollama. Nada de la revisión se envía a ningún sitio.",
+		"ollamaRemote": "El SQL modificado y los hallazgos tomados de tu base de datos se envían al servidor Ollama que indicaste ({host}). No nos llegan.",
+		"byok": "El SQL modificado y los hallazgos tomados de tu base de datos se envían a {vendor} con tu propia clave. No nos llegan."
+	}
+}

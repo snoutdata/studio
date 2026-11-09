@@ -1,0 +1,23 @@
+{
+	"explain": {
+		"plan": "Plan",
+		"planHint": "The steps, and what each index crossed out before a granule was read.",
+		"estimate": "Estimate",
+		"estimateHint": "What running this would read: parts, rows and marks per table.",
+		"pipeline": "Pipeline",
+		"pipelineHint": "The processors that carry the rows, and how many threads each gets.",
+		"syntax": "Syntax",
+		"syntaxHint": "The query as the optimizer rewrote it.",
+		"queryTree": "Query tree",
+		"queryTreeHint": "The analyzer's own reading of the query, resolved to column ids and types."
+	},
+	"replicasDenied": "This server has {replicas} replicas and this user may not read across them (it needs the READ ON REMOTE grant), so only the replica that answered is shown.",
+	"replicasFailed": "This server has {replicas} replicas and reading across them failed, so only the replica that answered is shown. {message}",
+	"insert": {
+		"cannotWrite": "Cannot write {value} to a database column.",
+		"unsupportedType": "Unsupported value type {type} in a row batch.",
+		"rowWidth": "Row has {values} values but the batch has {columns} columns.",
+		"keyMissing": "The key {key} is not among the columns being written.",
+		"noUpsert": "{engine} cannot update and insert in one statement, so this flow cannot upsert into it."
+	}
+}

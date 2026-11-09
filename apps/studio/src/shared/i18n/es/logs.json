@@ -1,0 +1,62 @@
+{
+	"aroundIn": "Alrededor de este evento en",
+	"around": "Alrededor de este evento",
+	"readingAround": "Leyendo los eventos alrededor…",
+	"noEarlier": "Sin eventos anteriores en el día previo",
+	"loadEarlier": "Cargar anteriores",
+	"collapse": "Contraer",
+	"expand": "Expandir",
+	"showLine": "Mostrar la línea entera",
+	"noLater": "Aún no hay eventos posteriores",
+	"loadLater": "Cargar posteriores",
+	"chip": {
+		"stream": "flujo",
+		"request": "petición",
+		"loggedAt": "registrado a las",
+		"ingested": "ingerido",
+		"event": "evento"
+	},
+	"surroundingTitle": "Mostrar los eventos registrados justo antes y después de este, en el mismo flujo",
+	"hideSurrounding": "Ocultar contexto",
+	"surrounding": "Eventos alrededor",
+	"copyTitle": "Copiar el mensaje tal como lo guardó el servicio",
+	"copied": "Copiado",
+	"copy": "Copiar",
+	"noMessage": "Este evento no tiene mensaje.",
+	"script": {
+		"done": "Listo: {ok} correctas, {failed} con error de {total}",
+		"running": "Ejecutando {n} de {total}…",
+		"rows": {
+			"one": "{count} fila",
+			"other": "{count} filas"
+		},
+		"seconds": "{value} s",
+		"skipped": "omitida"
+	},
+	"mcp": {
+		"agoSeconds": "hace {n} s",
+		"agoMinutes": "hace {n} min",
+		"agoHours": "hace {n} h",
+		"agoDays": "hace {n} d",
+		"refused": "rechazado",
+		"error": "error",
+		"rows": "{rows} filas",
+		"ms": "{ms} ms",
+		"clearTitle": "¿Borrar el registro del agente?",
+		"clearBody": "Se eliminarán de este registro todas las consultas que un agente ejecutó por MCP. No se puede deshacer.",
+		"clearLog": "Borrar registro",
+		"header": "REGISTRO DEL AGENTE",
+		"refresh": "Actualizar",
+		"search": "Buscar en el registro del agente",
+		"clear": "Borrar",
+		"kindAll": "Todo",
+		"kindQuery": "Bases de datos",
+		"kindApp": "La aplicación",
+		"empty": "Nada por ahora. Todo lo que un agente externo hace a través de SnoutData Studio, tanto consultas como acciones en la aplicación, aparece aquí.",
+		"noMatch": "Ninguna entrada coincide con el filtro.",
+		"openTab": "Abrir en una pestaña nueva",
+		"changesTitle": "Esta llamada cambió algo",
+		"changes": "cambia",
+		"deleteEntry": "Eliminar entrada"
+	}
+}

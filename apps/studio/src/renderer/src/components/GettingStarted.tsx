@@ -6,6 +6,7 @@
 import { Icon } from './Icon';
 import { ChecklistArt } from '../art/Illustrations';
 import { CHECKLIST_TASKS, type ChecklistTaskId, type OnboardingState } from '../onboarding';
+import { useT } from '../i18n';
 
 interface GettingStartedProps {
 	state: OnboardingState;
@@ -24,15 +25,16 @@ interface GettingStartedProps {
  * pill, and offers a one-click jump to each remaining task plus a "Take the tour" button.
  */
 export function GettingStarted({ state, open, onToggleOpen, onStartTour, onDismiss, onRunTask }: GettingStartedProps): JSX.Element {
-	const done = CHECKLIST_TASKS.filter((t) => state.tasks[t.id]).length;
+	const t = useT();
+	const done = CHECKLIST_TASKS.filter((task) => state.tasks[task.id]).length;
 	const total = CHECKLIST_TASKS.length;
 	const complete = done === total;
 
 	if (!open) {
 		return (
-			<button className="gs-pill" type="button" onClick={onToggleOpen} title="Getting started">
+			<button className="gs-pill" type="button" onClick={onToggleOpen} title={t('onboarding.gettingStarted')}>
 				<Icon name={complete ? 'check-all' : 'rocket'} />
-				<span>Getting started</span>
+				<span>{t('onboarding.gettingStarted')}</span>
 				<span className="gs-pill-count">{done}/{total}</span>
 			</button>
 		);
@@ -42,23 +44,23 @@ export function GettingStarted({ state, open, onToggleOpen, onStartTour, onDismi
 		<div className="gs-card">
 			<div className="gs-header">
 				<ChecklistArt className="gs-art" />
-				<span className="gs-title">Getting started</span>
+				<span className="gs-title">{t('onboarding.gettingStarted')}</span>
 				<span className="gs-progress">{done}/{total}</span>
 				<span className="spacer" />
-				<button className="icon-btn" type="button" aria-label="Minimize" onClick={onToggleOpen}><Icon name="chevron-down" /></button>
-				<button className="icon-btn" type="button" aria-label="Don't show again" onClick={onDismiss}><Icon name="close" /></button>
+				<button className="icon-btn" type="button" aria-label={t('onboarding.minimize')} onClick={onToggleOpen}><Icon name="chevron-down" /></button>
+				<button className="icon-btn" type="button" aria-label={t('onboarding.dontShowAgain')} onClick={onDismiss}><Icon name="close" /></button>
 			</div>
 			<div className="gs-track"><div className="gs-track-fill" style={{ width: `${(done / total) * 100}%` }} /></div>
 			<ul className="gs-list">
-				{CHECKLIST_TASKS.map((t) => {
-					const isDone = state.tasks[t.id];
+				{CHECKLIST_TASKS.map((task) => {
+					const isDone = state.tasks[task.id];
 					return (
-						<li key={t.id} className={`gs-task${isDone ? ' done' : ''}`}>
-							<button type="button" onClick={() => !isDone && onRunTask(t.id)} disabled={isDone}>
+						<li key={task.id} className={`gs-task${isDone ? ' done' : ''}`}>
+							<button type="button" onClick={() => !isDone && onRunTask(task.id)} disabled={isDone}>
 								<Icon name={isDone ? 'pass-filled' : 'circle-large-outline'} className="gs-check" />
 								<span className="gs-task-text">
-									<span className="gs-task-label">{t.label}</span>
-									{!isDone && <span className="gs-task-hint">{t.hint}</span>}
+									<span className="gs-task-label">{task.label}</span>
+									{!isDone && <span className="gs-task-hint">{task.hint}</span>}
 								</span>
 								{!isDone && <Icon name="chevron-right" className="gs-task-go" />}
 							</button>
@@ -67,10 +69,10 @@ export function GettingStarted({ state, open, onToggleOpen, onStartTour, onDismi
 				})}
 			</ul>
 			{complete ? (
-				<div className="gs-done-banner"><Icon name="check-all" /> You're all set. Happy querying!</div>
+				<div className="gs-done-banner"><Icon name="check-all" /> {t('onboarding.allSet')}</div>
 			) : (
 				<button className="gs-tour-btn" type="button" onClick={onStartTour}>
-					<Icon name="play-circle" /> Take a quick tour
+					<Icon name="play-circle" /> {t('onboarding.takeTour')}
 				</button>
 			)}
 		</div>

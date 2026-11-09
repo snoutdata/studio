@@ -6,7 +6,17 @@
 import { useEffect, useRef } from 'react';
 
 import { Icon } from './Icon';
-import { DOCK_AREAS, areaLabel, toolLabel, type DockArea, type ToolId } from '../docking';
+import { DOCK_AREAS, toolLabel, type DockArea, type ToolId } from '../docking';
+import { useT, type Translate } from '../i18n';
+
+/** Each area a whole phrase, since "to the left" is not built the same way in every language. */
+function moveToLabel(area: DockArea, t: Translate): string {
+	switch (area) {
+		case 'left': return t('shell.dock.moveToLeft');
+		case 'right': return t('shell.dock.moveToRight');
+		case 'bottom': return t('shell.dock.moveToBottom');
+	}
+}
 
 /*
  * "Move to Left / Right / Bottom" for one tool window.
@@ -29,6 +39,7 @@ interface PanelMenuProps {
 }
 
 export function PanelMenu({ tool, at, current, onMove, onHide, onClose }: PanelMenuProps): JSX.Element {
+	const t = useT();
 	const ref = useRef<HTMLDivElement | null>(null);
 
 	useEffect(() => {
@@ -69,13 +80,13 @@ export function PanelMenu({ tool, at, current, onMove, onHide, onClose }: PanelM
 					onClick={() => { onMove(area); onClose(); }}
 				>
 					<Icon name={area === current ? 'check' : 'blank'} />
-					Move to {areaLabel(area).toLowerCase()}
+					{moveToLabel(area, t)}
 				</button>
 			))}
 			<div className="panel-menu-sep" />
 			<button type="button" role="menuitem" className="panel-menu-item" onClick={() => { onHide(); onClose(); }}>
 				<Icon name="close" />
-				Hide
+				{t('shell.dock.hide')}
 			</button>
 		</div>
 	);

@@ -3,6 +3,8 @@
  *  Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { t } from './i18n/core';
+
 // Contracts for the local MCP server: a credential broker that lets an external agent
 // (Claude Code, or any MCP client) query the user's databases *through the app*, so DB
 // credentials stay in the keychain and never land in a .env or repo.
@@ -74,15 +76,19 @@ export type McpProblem =
 /** The notice for a problem: one title and one paragraph, the same in the notifications center and in Settings. */
 export function mcpProblemNotice(problem: McpProblem): { title: string; detail: string } {
 	if (problem.kind === 'port-in-use') {
+		// Ports as strings: a number placeholder would come back with the locale's digit grouping.
+		const port = String(problem.port);
 		return {
-			title: `Agent access is off: port ${problem.port} is in use`,
-			detail: `Something else on this computer is listening on 127.0.0.1:${problem.port}, the port your agents are configured to reach, so the app did not start its agent server there and did not move to another port by itself. If you did not start that program, do not let an agent send it your token. In Settings, Agent access, you can move to ${problem.suggestedPort ? `port ${problem.suggestedPort}` : 'another port'}: that also replaces the token, and the coding agents this app starts get the new address. A config you pasted elsewhere needs the new one.`,
+			title: t('engineMcp.portInUse.title', { port }),
+			detail: problem.suggestedPort
+				? t('engineMcp.portInUse.detail', { port, suggested: String(problem.suggestedPort) })
+				: t('engineMcp.portInUse.detailNoSuggestion', { port }),
 		};
 	}
 	const minutes = Math.max(1, Math.ceil((problem.until - Date.now()) / 60_000));
 	return {
-		title: "Agent access refused a program that kept sending a wrong token",
-		detail: `${problem.attempts} requests with a wrong token arrived from ${problem.remote}, so the agent server refuses any further wrong token from that address for about ${minutes} minute${minutes === 1 ? '' : 's'}. Your own agents and anything else holding the right token still get in. The token was not changed. If you think it has leaked, replace it in Settings, Agent access.`,
+		title: t('engineMcp.lockout.title'),
+		detail: t('engineMcp.lockout.detail', { attempts: problem.attempts, remote: problem.remote, count: minutes }),
 	};
 }
 

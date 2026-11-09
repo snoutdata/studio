@@ -6,6 +6,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import { Icon } from './Icon';
+import { useT } from '../i18n';
 
 export interface ConfirmOptions {
 	title: string;
@@ -29,6 +30,7 @@ interface ConfirmDialogProps extends ConfirmOptions {
 /** Themed confirmation modal, mirroring ConfirmQuit/ConfirmRun, so we never fall back to
  *  the OS confirm box. Usually driven through useConfirm() rather than rendered directly. */
 export function ConfirmDialog(props: ConfirmDialogProps): JSX.Element {
+	const t = useT();
 	const { onConfirm, onCancel } = props;
 	useEffect(() => {
 		function onKey(e: KeyboardEvent): void {
@@ -52,8 +54,8 @@ export function ConfirmDialog(props: ConfirmDialogProps): JSX.Element {
 				{props.body !== undefined && <div className="confirm-detail">{props.body}</div>}
 				<div className="modal-actions">
 					<span className="spacer" />
-					<button type="button" className="secondary" onClick={onCancel} autoFocus><Icon name="close" /> {props.cancelLabel ?? 'Cancel'}</button>
-					<button type="button" className={props.danger ? 'danger' : ''} onClick={onConfirm}>{props.confirmLabel ?? 'OK'}</button>
+					<button type="button" className="secondary" onClick={onCancel} autoFocus><Icon name="close" /> {props.cancelLabel ?? t('shell.common.cancel')}</button>
+					<button type="button" className={props.danger ? 'danger' : ''} onClick={onConfirm}>{props.confirmLabel ?? t('shell.common.ok')}</button>
 				</div>
 			</div>
 		</div>

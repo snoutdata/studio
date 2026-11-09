@@ -15,12 +15,13 @@
  * production target asks for its name to be typed, checked again here.
  */
 
+import { t } from '../shared/i18n/core';
 import { HOSTED_POSTGRES_PLATFORM, newMoveSpec, type MoveEndpoint, type MoveRunResult, type MoveSpec } from '@snout/move';
 import type { ConnectionConfig } from '../shared/connection';
 import type { ConnectionFormValues } from '../shared/forms';
 import type { MoveCheck, MoveConfirmations, MoveStartOutcome } from '../shared/move';
 import {
-	PART_TITLE, PROJECT_COPY_PARTS, bucketCreateBody, functionBundle, isAlreadyThere, isFolder, joinPath, notCopied, partUnavailable, plural, secretReserved, userCreateBody, usersPageSql,
+	PART_TITLE, PROJECT_COPY_PARTS, bucketCreateBody, functionBundle, isAlreadyThere, isFolder, joinPath, notCopied, partUnavailable, secretReserved, userCreateBody, usersPageSql,
 	type AuthUserRow, type BucketRow, type ListedObject, type PartProgress, type ProjectCopyCheck, type ProjectCopyDestination, type ProjectCopyPart, type ProjectCopyPartCheck,
 	type ProjectCopyProgress, type ProjectCopyRequest, type ProjectCopyStartOutcome,
 } from '../shared/projectCopy';
@@ -63,7 +64,7 @@ const LIST_PAGE = 1000;
 const SERVICE_WAIT_MS = 5 * 60_000;
 
 /** Why the platform's schemas are left out of the database part. */
-const PLATFORM_REASON = "Part of the project's platform. Users and files are copied as parts of their own.";
+function platformReason(): string { return t('mainProjectCopy.platformReason'); }
 
 interface Run {
 	progress: ProjectCopyProgress;
@@ -108,7 +109,7 @@ export class ProjectCopies {
 	private async cloudRow(ref: string): Promise<CloudProjectSummary> {
 		const row = (await this.deps.cloud.list()).find((p) => p.ref === ref);
 		if (!row) {
-			throw new Error("SnoutData Cloud does not list that project any more.");
+			throw new Error(t('mainProjectCopy.noLongerListed'));
 		}
 		return row;
 	}
@@ -151,8 +152,8 @@ export class ProjectCopies {
 			status: 'draft',
 			selection: {
 				...base.selection,
-				excludeSchemas: [...base.selection.excludeSchemas, ...HOSTED_POSTGRES_PLATFORM.schemas.filter((s) => !excluded.has(s)).map((schema) => ({ schema, reason: PLATFORM_REASON }))],
-				excludeExtensions: [...base.selection.excludeExtensions, ...HOSTED_POSTGRES_PLATFORM.extensions.filter((e) => !excludedExt.has(e)).map((extension) => ({ extension, reason: PLATFORM_REASON }))],
+				excludeSchemas: [...base.selection.excludeSchemas, ...HOSTED_POSTGRES_PLATFORM.schemas.filter((s) => !excluded.has(s)).map((schema) => ({ schema, reason: platformReason() }))],
+				excludeExtensions: [...base.selection.excludeExtensions, ...HOSTED_POSTGRES_PLATFORM.extensions.filter((e) => !excludedExt.has(e)).map((extension) => ({ extension, reason: platformReason() }))],
 			},
 		};
 	}
@@ -164,14 +165,14 @@ export class ProjectCopies {
 		const { source, target } = request;
 		const targetKind = target.kind === 'newCloud' ? 'cloud' : target.kind;
 		if (source.kind === targetKind) {
-			return empty("A copy goes between this computer and SnoutData Cloud.");
+			return empty(t('mainProjectCopy.betweenOnly'));
 		}
 		const sleep = this.deps.sleep ?? sleepFor;
 		try {
 			const sourceLabel = await this.labelOf(source);
 			const targetLabel = target.kind === 'newCloud' ? target.name.trim() : await this.labelOf(target);
 			if (!targetLabel) {
-				return empty("Give the new project a name.");
+				return empty(t('mainProjectCopy.nameNew'));
 			}
 			// A paused cloud project cannot be read; the Move wakes one the same way.
 			for (const end of [source, target]) {
@@ -196,11 +197,11 @@ export class ProjectCopies {
 				}
 				if (part === 'database') {
 					if (!sourceConnection) {
-						parts.push({ part, available: true, summary: "Not readable", notes: [], problem: `"${sourceLabel}" has no saved connection for its database. Open its Database section to add one.` });
+						parts.push({ part, available: true, summary: t('mainProjectCopy.notReadable'), notes: [], problem: t('mainProjectCopy.sourceNoConn', { sourceLabel }) });
 						continue;
 					}
 					if (target.kind !== 'newCloud' && !targetConnection) {
-						parts.push({ part, available: true, summary: "Not writable", notes: [], problem: `"${targetLabel}" has no saved connection for its database. Open its Database section to add one.` });
+						parts.push({ part, available: true, summary: t('mainProjectCopy.notWritable'), notes: [], problem: t('mainProjectCopy.targetNoConn', { targetLabel }) });
 						continue;
 					}
 					const targetEnd: MoveEndpoint = target.kind === 'newCloud'
@@ -213,9 +214,9 @@ export class ProjectCopies {
 					parts.push({
 						part,
 						available: true,
-						summary: check.error ? "Could not be checked" : "Your schemas, tables and data",
-						notes: check.findings.length > 0 ? [plural(check.findings.length, 'finding') + (decisions > 0 ? `, ${decisions} to decide below` : '')] : [],
-						problem: check.error ?? (check.ready ? null : "The database has findings to decide below."),
+						summary: check.error ? t('mainProjectCopy.notChecked') : t('mainProjectCopy.yourData'),
+						notes: check.findings.length > 0 ? [count(check.findings.length, 'finding') + (decisions > 0 ? `, ${t('mainProjectCopy.toDecideBelow', { count: decisions })}` : '')] : [],
+						problem: check.error ?? (check.ready ? null : t('mainProjectCopy.findingsToDecide')),
 					});
 					continue;
 				}
@@ -253,48 +254,48 @@ export class ProjectCopies {
 from snout_identity.people u`);
 				if (!counted.ok) {
 					return /does not exist/i.test(counted.error ?? '')
-						? ok("None: sign-in is off on the source")
-						: ok("Not readable", [], `Users could not be read: ${counted.error}`);
+						? ok(t('mainProjectCopy.noSignIn'))
+						: ok(t('mainProjectCopy.notReadable'), [], t('mainProjectCopy.usersUnreadable', { error: counted.error ?? '' }));
 				}
 				const row = counted.rows[0] ?? {};
 				const total = Number(row.total ?? 0);
 				const copied = Number(row.copied ?? 0);
-				const notes = ["A user whose email is already on the target is left as it is."];
+				const notes = [t('mainProjectCopy.userExists')];
 				if (total > copied) {
-					notes.push(`${plural(total - copied, 'user')} without an email (anonymous, phone or deleted) stay behind.`);
+					notes.push(t('mainProjectCopy.usersNoEmail', { count: total - copied }));
 				}
 				if (Number(row.passwords ?? 0) > 0) {
-					notes.push("Passwords come across as they are stored, so people sign in with the ones they have.");
+					notes.push(t('mainProjectCopy.passwordsAcross'));
 				}
 				if (target.kind !== 'local' && copied > 0 && !(await this.cloudServiceOn(target, 'auth'))) {
-					notes.push(`Sign-in is switched on for "${targetLabel}".`);
+					notes.push(t('mainProjectCopy.signInOn', { targetLabel }));
 				}
-				return ok(copied === 0 ? "No users to copy" : plural(copied, 'user'), notes);
+				return ok(copied === 0 ? t('mainProjectCopy.noUsers') : count(copied, 'user'), notes);
 			}
 			if (part === 'files') {
 				const buckets = await access.api(source, { method: 'GET', path: '/v1/files/space' });
 				if (!buckets.ok || !Array.isArray(buckets.body)) {
 					return source.kind === 'cloud' && !(await this.cloudServiceOn(source, 'storage'))
-						? ok("None: storage is off on the source")
-						: ok("Not readable", [], `Files could not be listed: ${buckets.error ?? 'no answer'}`);
+						? ok(t('mainProjectCopy.noStorage'))
+						: ok(t('mainProjectCopy.notReadable'), [], t('mainProjectCopy.filesNotListed', { error: buckets.error ?? t('mainProjectCopy.noAnswer') }));
 				}
 				const list = buckets.body as BucketRow[];
 				const counted = await access.platformSql(source, 'select count(*)::int as files, coalesce(sum((metadata->>\'size\')::bigint), 0)::bigint as bytes from snout_files.files');
 				const files = counted.ok ? Number(counted.rows[0]?.files ?? 0) : null;
 				const bytes = counted.ok ? Number(counted.rows[0]?.bytes ?? 0) : null;
-				const notes = ["A bucket or a file already on the target is left as it is."];
+				const notes = [t('mainProjectCopy.bucketExists')];
 				let problem: string | null = null;
 				if (target.kind !== 'local' && list.length > 0) {
 					const storage = target.kind === 'cloud' ? await this.cloudStorage(target.ref) : null;
 					if (!storage?.enabled) {
-						notes.push(`Storage is switched on for "${targetLabel}".`);
+						notes.push(t('mainProjectCopy.storageOn', { targetLabel }));
 					}
 					if (storage?.max !== null && storage?.max !== undefined && bytes !== null && bytes + (storage.used ?? 0) > storage.max) {
-						problem = `The files are ${megabytes(bytes)} and "${targetLabel}" has room for ${megabytes(Math.max(0, storage.max - (storage.used ?? 0)))} on its plan.`;
+						problem = t('mainProjectCopy.noRoom', { size: megabytes(bytes), targetLabel, room: megabytes(Math.max(0, storage.max - (storage.used ?? 0))) });
 					}
 				}
-				const what = `${plural(list.length, 'bucket')}${files === null ? '' : `, ${plural(files, 'file')}`}${bytes ? ` (${megabytes(bytes)})` : ''}`;
-				return ok(list.length === 0 ? "No buckets" : what, notes, problem);
+				const what = `${count(list.length, 'bucket')}${files === null ? '' : `, ${count(files, 'file')}`}${bytes ? ` (${megabytes(bytes)})` : ''}`;
+				return ok(list.length === 0 ? t('mainProjectCopy.noBuckets') : what, notes, problem);
 			}
 			if (part === 'functions' && source.kind === 'local') {
 				const sources = this.deps.local.functionSources(source.id);
@@ -302,23 +303,23 @@ from snout_identity.people u`);
 				const existing = target.kind === 'cloud' ? await this.cloudFunctionNames(target.ref) : [];
 				const replaced = sources.filter((s) => existing.includes(s.name)).map((s) => s.name);
 				const notes = [
-					...(replaced.length > 0 ? [`Replaces ${replaced.join(', ')} on the target with this computer's version.`] : []),
-					...broken.map((s) => `${s.name} is not sent: ${s.problem}`),
+					...(replaced.length > 0 ? [t('mainProjectCopy.replaces', { list: replaced.join(', ') })] : []),
+					...broken.map((s) => t('mainProjectCopy.notSent', { name: s.name, problem: s.problem ?? '' })),
 				];
-				return ok(sources.length === 0 ? "No functions" : plural(sources.length - broken.length, 'function'), notes);
+				return ok(sources.length === 0 ? t('mainProjectCopy.noFunctions') : count(sources.length - broken.length, 'function'), notes);
 			}
 			if (part === 'secrets' && source.kind === 'local') {
 				const all = this.deps.local.functionSecretValues(source.id);
 				const reserved = all.filter(([name]) => secretReserved(name)).map(([name]) => name);
 				const notes = [
-					"A secret with the same name on the target is replaced. Values go from this computer to SnoutData Cloud and are never shown.",
+					t('mainProjectCopy.secretReplaced'),
 					...(reserved.length > 0 ? [`${reserved.join(', ')} ${reserved.length === 1 ? 'is reserved on SnoutData Cloud and stays' : 'are reserved on SnoutData Cloud and stay'} behind.`] : []),
 				];
-				return ok(all.length === reserved.length ? "No secrets" : plural(all.length - reserved.length, 'secret'), notes);
+				return ok(all.length === reserved.length ? t('mainProjectCopy.noSecrets') : count(all.length - reserved.length, 'secret'), notes);
 			}
 			return { part, available: false, summary: partUnavailable(part, source.kind, 'local') ?? '', notes: [], problem: null };
 		} catch (err) {
-			return ok("Could not be checked", [], errorText(err));
+			return ok(t('mainProjectCopy.notChecked'), [], errorText(err));
 		}
 	}
 
@@ -347,11 +348,11 @@ from snout_identity.people u`);
 
 	async start(request: ProjectCopyRequest, typed: string | undefined): Promise<ProjectCopyStartOutcome> {
 		if (this.runs.get(request.id)?.progress.running) {
-			return { ok: false, error: "This copy is already running." };
+			return { ok: false, error: t('mainProjectCopy.alreadyRunning') };
 		}
 		const parts = PROJECT_COPY_PARTS.filter((p) => request.parts.includes(p));
 		if (parts.length === 0) {
-			return { ok: false, error: "Choose at least one part to copy." };
+			return { ok: false, error: t('mainProjectCopy.chooseOnePart') };
 		}
 		// Checked again here: a review read a minute ago is not a licence to write to a target that
 		// has changed since (the same rule as a Move, for the whole project).
@@ -366,10 +367,10 @@ from snout_identity.people u`);
 			}
 		}
 		if (parts.includes('database') && check.toolsMissing) {
-			return { ok: false, error: "The Postgres tools the database copy runs are not installed yet." };
+			return { ok: false, error: t('mainProjectCopy.toolsMissing') };
 		}
 		if (check.confirmName && typed !== check.confirmName) {
-			return { ok: false, error: `The target is a production project. Type "${check.confirmName}" to start the copy.` };
+			return { ok: false, error: t('mainProjectCopy.typeToConfirm', { confirmName: check.confirmName }) };
 		}
 
 		const run: Run = {
@@ -380,7 +381,7 @@ from snout_identity.people u`);
 				preparing: null,
 				parts: parts
 					.filter((part) => check.parts.find((p) => p.part === part)?.available !== false)
-					.map((part) => ({ part, state: 'waiting', message: "Waiting", done: 0, total: null, failures: [] })),
+					.map((part) => ({ part, state: 'waiting', message: t('mainProjectCopy.waiting'), done: 0, total: null, failures: [] })),
 				moveRunId: null,
 				ok: null,
 				error: null,
@@ -415,7 +416,7 @@ from snout_identity.people u`);
 			preparing: null,
 			ok,
 			error,
-			parts: run.progress.parts.map((p) => (p.state === 'waiting' || p.state === 'running' ? { ...p, state: 'skipped', message: run.controller.signal.aborted ? "Stopped" : "Not reached" } : p)),
+			parts: run.progress.parts.map((p) => (p.state === 'waiting' || p.state === 'running' ? { ...p, state: 'skipped', message: run.controller.signal.aborted ? t('mainProjectCopy.stopped') : t('mainProjectCopy.notReached') } : p)),
 		});
 	}
 
@@ -429,7 +430,7 @@ from snout_identity.people u`);
 		let target: ProjectTarget;
 		if (request.target.kind === 'newCloud') {
 			const name = request.target.name.trim();
-			this.set(run, { preparing: `Creating the SnoutData Cloud project "${name}"` });
+			this.set(run, { preparing: t('mainProjectCopy.creatingProject', { name }) });
 			const { project } = await deps.cloud.create(name, request.target.region);
 			await waitForReady(deps.cloud, project.ref, name, (message) => this.set(run, { preparing: message }), sleep);
 			target = { kind: 'cloud', ref: project.ref };
@@ -448,18 +449,18 @@ from snout_identity.people u`);
 		// Services a part needs, switched on before it runs.
 		if (target.kind === 'cloud') {
 			if (wanted.has('users') && !(await this.cloudServiceOn(target, 'auth'))) {
-				this.set(run, { preparing: `Switching sign-in on for "${check.targetLabel}"` });
+				this.set(run, { preparing: t('mainProjectCopy.switchingSignIn', { targetLabel: check.targetLabel }) });
 				await deps.cloud.request('cloud-project-auth', { ref: target.ref, action: 'enable' });
 			}
 			if (wanted.has('files') && !(await this.cloudServiceOn(target, 'storage'))) {
-				this.set(run, { preparing: `Switching storage on for "${check.targetLabel}"` });
+				this.set(run, { preparing: t('mainProjectCopy.switchingStorage', { targetLabel: check.targetLabel }) });
 				await deps.cloud.request('cloud-project-storage', { ref: target.ref, enable: true });
 			}
 			if (wanted.has('users')) {
-				await this.waitForService(run, target, '/v1/identity/operator/people?page=1&per_page=1', "sign-in", sleep);
+				await this.waitForService(run, target, '/v1/identity/operator/people?page=1&per_page=1', t('mainProjectCopy.whatSignIn'), sleep);
 			}
 			if (wanted.has('files')) {
-				await this.waitForService(run, target, '/v1/files/space', "storage", sleep);
+				await this.waitForService(run, target, '/v1/files/space', t('mainProjectCopy.whatStorage'), sleep);
 			}
 		}
 		this.set(run, { preparing: null });
@@ -469,7 +470,7 @@ from snout_identity.people u`);
 			if (signal.aborted) {
 				break;
 			}
-			this.part(run, part, { state: 'running', message: "Starting" });
+			this.part(run, part, { state: 'running', message: t('mainProjectCopy.starting') });
 			try {
 				const outcome = part === 'users' ? await this.copyUsers(run, source, target)
 					: part === 'database' ? await this.copyDatabase(run, request, check, target, typed)
@@ -482,7 +483,7 @@ from snout_identity.people u`);
 				this.part(run, part, { state: 'failed', message: errorText(err) });
 			}
 		}
-		this.finish(run, allOk && !signal.aborted, signal.aborted ? "Stopped. What was copied before that stays on the target." : null);
+		this.finish(run, allOk && !signal.aborted, signal.aborted ? t('mainProjectCopy.stoppedKept') : null);
 	}
 
 	private async waitForService(run: Run, target: ProjectTarget, path: string, what: string, sleep: (ms: number) => Promise<void>): Promise<void> {
@@ -493,9 +494,9 @@ from snout_identity.people u`);
 				return;
 			}
 			if (Date.now() > deadline || run.controller.signal.aborted) {
-				throw new Error(`The target's ${what} did not answer: ${answer.error ?? `status ${answer.status}`}`);
+				throw new Error(t('mainProjectCopy.serviceSilent', { what, detail: answer.error ?? t('mainProjectCopy.statusN', { status: answer.status }) }));
 			}
-			this.set(run, { preparing: `Waiting for the target's ${what} to start` });
+			this.set(run, { preparing: t('mainProjectCopy.waitingFor', { what }) });
 			await sleep(3000);
 		}
 	}
@@ -513,7 +514,7 @@ from snout_identity.people u`);
 			}
 			const page = await access.platformSql(source, usersPageSql(after, USERS_PAGE), USERS_PAGE);
 			if (!page.ok) {
-				throw new Error(`Users could not be read: ${page.error}`);
+				throw new Error(t('mainProjectCopy.usersUnreadable', { error: page.error ?? '' }));
 			}
 			for (const record of page.rows) {
 				const row = (record.u ?? {}) as AuthUserRow;
@@ -531,17 +532,17 @@ from snout_identity.people u`);
 				} else {
 					failures.push(`${plan.email}: ${answer.error ?? answer.status}`);
 				}
-				this.part(run, 'users', { done: created + there + failures.length, message: `Copying users: ${plural(created, 'created')}` });
+				this.part(run, 'users', { done: created + there + failures.length, message: t('mainProjectCopy.copyingUsers', { count: created }) });
 			}
 			if (page.rows.length < USERS_PAGE) {
 				break;
 			}
 		}
 		const sentence = [
-			plural(created, 'user') + ' copied',
-			there > 0 ? `${there.toLocaleString()} already there` : '',
-			left > 0 ? `${left.toLocaleString()} without an email left behind` : '',
-			failures.length > 0 ? `${failures.length.toLocaleString()} refused` : '',
+			t('mainProjectCopy.usersCopied', { count: created }),
+			there > 0 ? t('mainProjectCopy.alreadyThere', { count: there }) : '',
+			left > 0 ? t('mainProjectCopy.leftBehind', { count: left }) : '',
+			failures.length > 0 ? t('mainProjectCopy.refused', { count: failures.length }) : '',
 		].filter(Boolean).join(', ');
 		this.part(run, 'users', { state: failures.length > 0 ? 'failed' : 'done', message: `${sentence}.`, failures, total: created + there + failures.length });
 		return failures.length === 0;
@@ -551,18 +552,18 @@ from snout_identity.people u`);
 		const { moves } = this.deps;
 		let spec = check.database?.spec;
 		if (!spec) {
-			throw new Error("The database was not checked.");
+			throw new Error(t('mainProjectCopy.notChecked2'));
 		}
 		// A new cloud project exists now: the move writes to it, and is checked against it.
 		if (request.target.kind === 'newCloud' && target.kind === 'cloud') {
 			spec = moves.save({ ...spec, target: { kind: 'cloud', ref: target.ref, driver: 'postgres' } });
 			const again = await moves.check(spec);
 			if (!again.ready) {
-				const first = again.error ?? again.findings.find((f) => f.severity !== 'note' && f.resolvedBy === null)?.sentence ?? "it needs a decision";
-				throw new Error(`The new project was made, but its database needs a look before anything is copied into it: ${first} Open the copy again to decide.`);
+				const first = again.error ?? again.findings.find((f) => f.severity !== 'note' && f.resolvedBy === null)?.sentence ?? t('mainProjectCopy.needsDecision');
+				throw new Error(t('mainProjectCopy.madeNeedsLook', { first }));
 			}
 		}
-		this.part(run, 'database', { message: "Starting the copy" });
+		this.part(run, 'database', { message: t('mainProjectCopy.startingCopy') });
 		const started = await moves.start(spec, { target: typed });
 		if (!started.ok) {
 			throw new Error(started.error);
@@ -572,17 +573,17 @@ from snout_identity.people u`);
 		const tables = result.tables.length;
 		const failures = [
 			...result.failures.map((f) => (f.object ? `${f.object}: ${f.message}` : f.message)),
-			...result.tables.filter((t) => !t.matches).map((t) => `${t.schema}.${t.table}: ${t.sourceRows ?? '?'} rows here, ${t.targetRows ?? 'none'} there`),
+			...result.tables.filter((row) => !row.matches).map((row) => t('mainProjectCopy.rowsMismatch', { schema: row.schema, table: row.table, here: row.sourceRows ?? '?', there: row.targetRows ?? t('mainProjectCopy.none') })),
 		];
 		if (result.status === 'success') {
-			this.part(run, 'database', { state: 'done', message: `${plural(tables, 'table')} copied, row counts match.`, failures });
+			this.part(run, 'database', { state: 'done', message: t('mainProjectCopy.tablesCopied', { count: tables }), failures });
 			return true;
 		}
 		if (result.status === 'partial') {
-			this.part(run, 'database', { state: 'failed', message: `Copied, but ${plural(failures.length, 'thing')} did not come across as it was. The details are below.`, failures });
+			this.part(run, 'database', { state: 'failed', message: t('mainProjectCopy.copiedBut', { count: failures.length }), failures });
 			return false;
 		}
-		this.part(run, 'database', { state: 'failed', message: result.error ?? (result.status === 'cancelled' ? "Stopped" : "The database copy failed."), failures });
+		this.part(run, 'database', { state: 'failed', message: result.error ?? (result.status === 'cancelled' ? t('mainProjectCopy.stopped') : t('mainProjectCopy.dbCopyFailed')), failures });
 		return false;
 	}
 
@@ -590,7 +591,7 @@ from snout_identity.people u`);
 		const { access } = this.deps;
 		const listed = await access.api(source, { method: 'GET', path: '/v1/files/space' });
 		if (!listed.ok || !Array.isArray(listed.body)) {
-			this.part(run, 'files', { state: 'skipped', message: "No buckets to copy." });
+			this.part(run, 'files', { state: 'skipped', message: t('mainProjectCopy.noBucketsToCopy') });
 			return true;
 		}
 		const buckets = listed.body as BucketRow[];
@@ -654,9 +655,9 @@ from snout_identity.people u`);
 			}
 		}
 		const sentence = [
-			`${plural(buckets.length, 'bucket')}, ${plural(copied, 'file')} copied${bytes ? ` (${megabytes(bytes)})` : ''}`,
-			there > 0 ? `${there.toLocaleString()} already there` : '',
-			failures.length > 0 ? `${failures.length.toLocaleString()} refused` : '',
+			t('mainProjectCopy.filesCopied', { buckets: count(buckets.length, 'bucket'), files: count(copied, 'file'), size: bytes ? ` (${megabytes(bytes)})` : '' }),
+			there > 0 ? t('mainProjectCopy.alreadyThere', { count: there }) : '',
+			failures.length > 0 ? t('mainProjectCopy.refused', { count: failures.length }) : '',
 		].filter(Boolean).join(', ');
 		this.part(run, 'files', { state: failures.length > 0 ? 'failed' : 'done', message: `${sentence}.`, failures });
 		return failures.length === 0;
@@ -664,7 +665,7 @@ from snout_identity.people u`);
 
 	private async copyFunctions(run: Run, source: ProjectTarget, target: ProjectTarget): Promise<boolean> {
 		if (source.kind !== 'local' || target.kind !== 'cloud') {
-			this.part(run, 'functions', { state: 'skipped', message: partUnavailable('functions', source.kind, target.kind) ?? "Not copied." });
+			this.part(run, 'functions', { state: 'skipped', message: partUnavailable('functions', source.kind, target.kind) ?? t('mainProjectCopy.notCopied') });
 			return true;
 		}
 		const sources = this.deps.local.functionSources(source.id);
@@ -688,7 +689,7 @@ from snout_identity.people u`);
 		}
 		this.part(run, 'functions', {
 			state: failures.length > 0 ? 'failed' : 'done',
-			message: `${plural(deployed, 'function')} deployed${failures.length > 0 ? `, ${failures.length.toLocaleString()} not` : ''}.`,
+			message: t('mainProjectCopy.fnsDeployed', { count: deployed, rest: failures.length > 0 ? t('mainProjectCopy.fnsNotDeployed', { count: failures.length }) : '' }),
 			done: deployed + failures.length,
 			total: sources.length,
 			failures,
@@ -698,7 +699,7 @@ from snout_identity.people u`);
 
 	private async copySecrets(run: Run, source: ProjectTarget, target: ProjectTarget): Promise<boolean> {
 		if (source.kind !== 'local' || target.kind !== 'cloud') {
-			this.part(run, 'secrets', { state: 'skipped', message: partUnavailable('secrets', source.kind, target.kind) ?? "Not copied." });
+			this.part(run, 'secrets', { state: 'skipped', message: partUnavailable('secrets', source.kind, target.kind) ?? t('mainProjectCopy.notCopied') });
 			return true;
 		}
 		const all = this.deps.local.functionSecretValues(source.id).filter(([name]) => !secretReserved(name));
@@ -716,9 +717,14 @@ from snout_identity.people u`);
 			}
 			this.part(run, 'secrets', { done: set + failures.length, total: all.length, message: `Setting ${name}` });
 		}
-		this.part(run, 'secrets', { state: failures.length > 0 ? 'failed' : 'done', message: `${plural(set, 'secret')} set${failures.length > 0 ? `, ${failures.length.toLocaleString()} refused` : ''}.`, failures });
+		this.part(run, 'secrets', { state: failures.length > 0 ? 'failed' : 'done', message: t('mainProjectCopy.secretsSet', { count: set, rest: failures.length > 0 ? `, ${t('mainProjectCopy.refused', { count: failures.length })}` : '' }), failures });
 		return failures.length === 0;
 	}
+}
+
+/** "3 users", through the catalog's plurals. */
+function count(n: number, noun: 'finding' | 'user' | 'bucket' | 'file' | 'function' | 'secret'): string {
+	return t(`mainProjectCopy.noun_${noun}`, { count: n });
 }
 
 function megabytes(bytes: number): string {

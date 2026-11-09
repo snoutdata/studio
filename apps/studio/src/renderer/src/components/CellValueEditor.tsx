@@ -8,6 +8,7 @@ import { useState } from 'react';
 import { isComposite } from '../../../shared/cellValue';
 import { CellValueTree } from './CellValueTree';
 import { Icon } from './Icon';
+import { useT } from '../i18n';
 
 // DBeaver-style value viewer/editor — opened from the grid's right-click "Edit value…"
 // for long text / JSON cells where the inline input feels cramped. Commits back through
@@ -37,6 +38,7 @@ interface CellValueEditorProps {
 }
 
 export function CellValueEditor({ columnName, value, readOnly = false, raw, dataType, onFormat, formatLabel, onCommit, onClose }: CellValueEditorProps): JSX.Element {
+	const t = useT();
 	const [text, setText] = useState(value ?? '');
 	// The tree reads the driver's own value when the caller passed one, and otherwise the text,
 	// which covers every caller that only ever had the string.
@@ -62,11 +64,11 @@ export function CellValueEditor({ columnName, value, readOnly = false, raw, data
 	return (
 		<div className="modal-backdrop" onClick={onClose}>
 			<div className="modal cell-editor" onClick={(e) => e.stopPropagation()}>
-				<h2>{readOnly ? "View value" : "Edit value"}: {columnName}</h2>
+				<h2>{readOnly ? t('results.cell.viewValue', { column: columnName }) : t('results.cell.editValue', { column: columnName })}</h2>
 				{hasTree && (
 					<div className="tabs cell-editor-tabs" role="tablist">
-						<button type="button" role="tab" aria-selected={tab === 'tree'} className={`tab${tab === 'tree' ? ' active' : ''}`} onClick={() => setTab('tree')}>Tree</button>
-						<button type="button" role="tab" aria-selected={tab === 'text'} className={`tab${tab === 'text' ? ' active' : ''}`} onClick={() => setTab('text')}>Text</button>
+						<button type="button" role="tab" aria-selected={tab === 'tree'} className={`tab${tab === 'tree' ? ' active' : ''}`} onClick={() => setTab('tree')}>{t('results.cell.tree')}</button>
+						<button type="button" role="tab" aria-selected={tab === 'text'} className={`tab${tab === 'text' ? ' active' : ''}`} onClick={() => setTab('text')}>{t('results.cell.text')}</button>
 					</div>
 				)}
 				{hasTree && tab === 'tree' ? (
@@ -86,11 +88,11 @@ export function CellValueEditor({ columnName, value, readOnly = false, raw, data
 				)}
 				<div className="modal-actions">
 					{(!hasTree || tab === 'text') && (
-						<button type="button" className="secondary" onClick={reformat} title={onFormat ? "Reformat the value" : "Try to pretty-print the value as JSON"}><Icon name="json" /> {formatLabel ?? "Format JSON"}</button>
+						<button type="button" className="secondary" onClick={reformat} title={onFormat ? t('results.cell.reformat') : t('results.cell.prettyJson')}><Icon name="json" /> {formatLabel ?? t('results.cell.formatJson')}</button>
 					)}
 					<span className="spacer" />
-					<button type="button" className="secondary" onClick={onClose}><Icon name="close" /> {readOnly ? "Close" : "Cancel"}</button>
-					{!readOnly && <button type="button" onClick={() => { onCommit(text); onClose(); }}><Icon name="save" /> Save</button>}
+					<button type="button" className="secondary" onClick={onClose}><Icon name="close" /> {readOnly ? t('editor.common.close') : t('editor.common.cancel')}</button>
+					{!readOnly && <button type="button" onClick={() => { onCommit(text); onClose(); }}><Icon name="save" /> {t('editor.common.save')}</button>}
 				</div>
 			</div>
 		</div>

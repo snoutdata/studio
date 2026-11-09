@@ -3,6 +3,7 @@
  *  Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { formatLocale, t } from '../../shared/i18n/core';
 import { DB_LAYOUT_SQL, platformSql, type Vocabulary } from '../../shared/ownLayout';
 import { projectKey, type ProjectApiRequest, type ProjectTarget } from '../../shared/projects';
 
@@ -26,7 +27,7 @@ function hasControl(text: string): boolean {
 export function pgLiteral(value: string | number | boolean): string {
 	if (typeof value === 'number') {
 		if (!Number.isFinite(value)) {
-			throw new Error(`${value} cannot be a SQL literal`);
+			throw new Error(t('projects.sql.notLiteral', { value: String(value) }));
 		}
 		return String(value);
 	}
@@ -34,7 +35,7 @@ export function pgLiteral(value: string | number | boolean): string {
 		return value ? 'true' : 'false';
 	}
 	if (hasControl(value)) {
-		throw new Error("That value contains a control character and will not be sent as a literal.");
+		throw new Error(t('projects.sql.control'));
 	}
 	return `'${value.replace(/'/g, "''")}'`;
 }
@@ -42,7 +43,7 @@ export function pgLiteral(value: string | number | boolean): string {
 /** An identifier, always quoted, so case and reserved words survive. */
 export function pgIdent(name: string): string {
 	if (hasControl(name)) {
-		throw new Error("That identifier cannot be used.");
+		throw new Error(t('projects.sql.badIdent'));
 	}
 	return `"${name.replace(/"/g, '""')}"`;
 }
@@ -65,7 +66,7 @@ export function ilikeNeedle(needle: string): string {
 export async function query<T>(target: ProjectTarget, sql: string): Promise<T[]> {
 	const result = await window.sqlApi.project.sql(target, sql);
 	if (!result.ok) {
-		throw new Error(result.error ?? "The statement failed.");
+		throw new Error(result.error ?? t('projects.sql.failed'));
 	}
 	return result.rows as unknown as T[];
 }
@@ -143,8 +144,8 @@ export function bytes(n: number | string | null | undefined): string {
 
 export function when(value: unknown): string {
 	if (value === null || value === undefined || value === '') {
-		return "never";
+		return t('projects.common.neverL');
 	}
 	const date = value instanceof Date ? value : new Date(String(value));
-	return Number.isNaN(date.getTime()) ? String(value) : date.toLocaleString();
+	return Number.isNaN(date.getTime()) ? String(value) : date.toLocaleString(formatLocale());
 }

@@ -1,0 +1,31 @@
+{
+	"change": {
+		"createTable": "Criar a tabela `{name}`",
+		"dropTable": "Excluir a tabela `{name}`",
+		"addColumn": "Adicionar a coluna `{table}`.`{column}`",
+		"alterColumn": "Alterar a coluna `{table}`.`{column}` ({before} → {after})",
+		"dropColumn": "Excluir a coluna `{table}`.`{column}`",
+		"setPrimaryKey": "Alterar a chave primária de `{table}`",
+		"addIndex": "Adicionar o índice `{name}` em `{table}`",
+		"dropIndex": "Excluir o índice `{name}` de `{table}`",
+		"replaceIndex": "Reconstruir o índice `{name}` de `{table}`",
+		"addForeignKey": "Adicionar a chave estrangeira `{name}` em `{table}`",
+		"dropForeignKey": "Excluir a chave estrangeira `{name}` de `{table}`",
+		"replaceForeignKey": "Reconstruir a chave estrangeira `{name}` de `{table}`",
+		"addTrigger": "Adicionar o trigger `{name}` em `{table}`",
+		"dropTrigger": "Excluir o trigger `{name}` de `{table}`",
+		"replaceTrigger": "Substituir o trigger `{name}` de `{table}`",
+		"createView": "Criar a view `{name}`",
+		"dropView": "Excluir a view `{name}`",
+		"replaceView": "Substituir a view `{name}`"
+	},
+	"emit": {
+		"unsupportedDriver": "A sincronização de schema não está disponível para o driver \"{driver}\".",
+		"clickhousePrimaryKey": "O ClickHouse não consegue alterar a chave primária de \"{table}\": ela é a ordem em que os dados são guardados. Crie uma tabela nova com o novo ORDER BY e copie as linhas para ela.",
+		"sqliteAlterColumn": "O SQLite não consegue alterar a coluna \"{table}\".\"{column}\" diretamente (é preciso reconstruir a tabela inteira, o que a sincronização de schema ainda não gera para SQLite).",
+		"sqlitePrimaryKey": "O SQLite não consegue alterar a chave primária de \"{table}\" diretamente (é preciso reconstruir a tabela inteira, o que a sincronização de schema ainda não gera para SQLite).",
+		"sqliteAddForeignKey": "O SQLite não consegue adicionar uma chave estrangeira a \"{table}\" diretamente (é preciso reconstruir a tabela inteira, o que a sincronização de schema ainda não gera para SQLite).",
+		"sqliteDropForeignKey": "O SQLite não consegue excluir uma chave estrangeira de \"{table}\" diretamente (é preciso reconstruir a tabela inteira, o que a sincronização de schema ainda não gera para SQLite).",
+		"sqliteChangeForeignKey": "O SQLite não consegue alterar uma chave estrangeira de \"{table}\" diretamente (é preciso reconstruir a tabela inteira, o que a sincronização de schema ainda não gera para SQLite)."
+	}
+}

@@ -3,6 +3,8 @@
  *  Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { t } from '../../shared/i18n/core';
+
 /*---------------------------------------------------------------------------------------------
  *  Native MongoDB aggregation-pipeline surface helpers. Pure + DOM-free so
  *  they're unit-testable with `node --test`: parse/validate the JSON the user authors in the
@@ -27,20 +29,20 @@ export const MONGO_STAGES = [
 export function parsePipeline(text: string): object[] {
 	const trimmed = text.trim();
 	if (!trimmed) {
-		throw new Error('The pipeline is empty. Add at least one stage, e.g. [ { "$match": {} } ].');
+		throw new Error(t('engineEditing.pipelineEmpty'));
 	}
 	let parsed: unknown;
 	try {
 		parsed = JSON.parse(trimmed);
 	} catch (err) {
-		throw new Error(`Invalid JSON: ${err instanceof Error ? err.message : String(err)}`);
+		throw new Error(t('engineEditing.invalidJson', { message: err instanceof Error ? err.message : String(err) }));
 	}
 	if (!Array.isArray(parsed)) {
-		throw new Error('A pipeline must be a JSON array of stages, e.g. [ { "$match": {} } ].');
+		throw new Error(t('engineEditing.pipelineNotArray'));
 	}
 	parsed.forEach((stage, i) => {
 		if (stage === null || typeof stage !== 'object' || Array.isArray(stage)) {
-			throw new Error(`Stage ${i + 1} must be an object like { "$match": { … } }.`);
+			throw new Error(t('engineEditing.stageNotObject', { stage: i + 1 }));
 		}
 	});
 	return parsed as object[];
@@ -78,10 +80,10 @@ export function buildFindPipeline(spec: FindSpec): object[] {
 		try {
 			filter = JSON.parse(filterText);
 		} catch (err) {
-			throw new Error(`Filter is not valid JSON: ${err instanceof Error ? err.message : String(err)}`);
+			throw new Error(t('engineEditing.filterInvalid', { message: err instanceof Error ? err.message : String(err) }));
 		}
 		if (filter === null || typeof filter !== 'object' || Array.isArray(filter)) {
-			throw new Error('Filter must be a JSON object, e.g. { "status": "active" }.');
+			throw new Error(t('engineEditing.filterNotObject'));
 		}
 		pipeline.push({ $match: filter });
 	}
@@ -176,14 +178,14 @@ export function pipelineFromStages(stages: BuilderStage[]): object[] {
 		}
 		const operator = stage.operator.trim();
 		if (!operator) {
-			throw new Error(`Stage ${i + 1} has no operator (e.g. $match).`);
+			throw new Error(t('engineEditing.stageNoOperator', { stage: i + 1 }));
 		}
 		const text = stage.body.trim() || '{}';
 		let value: unknown;
 		try {
 			value = JSON.parse(text);
 		} catch (err) {
-			throw new Error(`Stage ${i + 1} (${operator}) body is not valid JSON: ${err instanceof Error ? err.message : String(err)}`);
+			throw new Error(t('engineEditing.stageBodyInvalid', { stage: i + 1, operator, message: err instanceof Error ? err.message : String(err) }));
 		}
 		pipeline.push({ [operator]: value });
 	});

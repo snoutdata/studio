@@ -22,6 +22,7 @@
 
 import { literal, quoteName } from './clickhouseOps';
 import { findAtDepth, maskSql, splitAtDepth } from './engine';
+import { t } from './i18n/core';
 
 /** One line of the engine header: `ORDER BY`, `PARTITION BY`, `TTL`. */
 export interface AnatomyClause {
@@ -232,11 +233,11 @@ export function settingsOf(engineFull: string): AnatomyClause[] {
 export const PARTITION_ACTIONS: readonly PartitionAction[] = [
 	{
 		id: 'optimize',
-		label: 'Merge now',
+		get label() { return t('engineShared.chTable.merge'); },
 		icon: 'merge',
 		danger: false,
 		confirm: (table, row) =>
-			`Merge partition ${row.partition} of ${table} into one part now? It holds ${row.parts.toLocaleString()} parts and ${row.rows.toLocaleString()} rows, and merging them reads and rewrites all ${row.diskMb.toLocaleString()} MB. ClickHouse would do this on its own eventually.`,
+			t('engineShared.chTable.mergeConfirm', { partition: row.partition, table, parts: row.parts, rows: row.rows, mb: row.diskMb }),
 		// PARTITION ID '<id>', never the displayed partition expression: the display form of a
 		// tuple partition key is `('gb', 2026)` and quoting that back correctly is a parser we do
 		// not need, while the id is exact and is a plain string.
@@ -244,20 +245,20 @@ export const PARTITION_ACTIONS: readonly PartitionAction[] = [
 	},
 	{
 		id: 'detach',
-		label: 'Detach',
+		get label() { return t('engineShared.chTable.detach'); },
 		icon: 'debug-disconnect',
 		danger: true,
 		confirm: (table, row) =>
-			`Detach partition ${row.partition} of ${table}? Its ${row.rows.toLocaleString()} rows leave the table at once. The files stay on disk under detached/, so ATTACH PARTITION puts them back.`,
+			t('engineShared.chTable.detachConfirm', { partition: row.partition, table, rows: row.rows }),
 		sql: (table, row) => `ALTER TABLE ${table} DETACH PARTITION ID ${literal(row.partitionId)}`,
 	},
 	{
 		id: 'drop',
-		label: 'Drop',
+		get label() { return t('engineShared.chTable.drop'); },
 		icon: 'trash',
 		danger: true,
 		confirm: (table, row) =>
-			`Drop partition ${row.partition} of ${table}? This deletes ${row.rows.toLocaleString()} rows and ${row.diskMb.toLocaleString()} MB, and it cannot be undone.`,
+			t('engineShared.chTable.dropConfirm', { partition: row.partition, table, rows: row.rows, mb: row.diskMb }),
 		sql: (table, row) => `ALTER TABLE ${table} DROP PARTITION ID ${literal(row.partitionId)}`,
 	},
 ];

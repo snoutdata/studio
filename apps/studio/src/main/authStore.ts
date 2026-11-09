@@ -3,6 +3,7 @@
  *  Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { t } from '../shared/i18n/core';
 import { app } from 'electron';
 import type { Person } from '@snoutdata/client';
 
@@ -65,7 +66,7 @@ const RESTORE_SETTLE_TIMEOUT_MS = 6000;
 async function openSignInPage(url: string): Promise<void> {
 	const opened = openExternalIfAllowed(url, { httpsOnly: true });
 	if (!opened) {
-		throw new Error('The sign-in service answered with an address that is not a secure web page, so it was not opened.');
+		throw new Error(t('mainErrors.insecureAddress'));
 	}
 	await opened;
 }
@@ -83,7 +84,7 @@ function withTimeout<T>(p: PromiseLike<T>, ms: number): Promise<T> {
  *  reports its `net::ERR_*`/errno via {@link networkErrorDetail}. */
 function signInFailDetail(err: unknown): string {
 	if (err instanceof Error && err.message === 'timeout') {
-		return `(timed out reaching ${ACCOUNTS_HOST})`;
+		return t('mainErrors.timedOut', { ACCOUNTS_HOST });
 	}
 	return networkErrorDetail(err, ACCOUNTS_HOST) || `(reaching ${ACCOUNTS_HOST})`;
 }
@@ -323,7 +324,7 @@ export class AuthStore {
 			options: { redirectTo: await this.returnUrl(), skipBrowserRedirect: true },
 		});
 		if (error || !data?.url) {
-			throw new Error(error?.message ?? 'Could not start sign-in.');
+			throw new Error(error?.message ?? t('mainErrors.startSignInFailed'));
 		}
 		await openSignInPage(data.url);
 	}
@@ -340,7 +341,7 @@ export class AuthStore {
 	private async startSso(workEmail: string): Promise<void> {
 		const domain = ssoDomainFromEmail(workEmail);
 		if (!domain) {
-			throw new Error("Enter your work email address, for example you@yourcompany.com.");
+			throw new Error(t('mainErrors.workEmail'));
 		}
 		let data, error;
 		try {
@@ -349,11 +350,11 @@ export class AuthStore {
 				SIGN_IN_NETWORK_TIMEOUT_MS,
 			));
 		} catch (err) {
-			throw new Error(`${networkBlockedMessage('the sign-in service', err)} ${signInFailDetail(err)}`);
+			throw new Error(`${networkBlockedMessage(t('mainErrors.theSignInService'), err)} ${signInFailDetail(err)}`);
 		}
 		if (error) {
 			throw new Error(isNetworkError(error)
-				? `${networkBlockedMessage('the sign-in service', error)} ${signInFailDetail(error)}`
+				? `${networkBlockedMessage(t('mainErrors.theSignInService'), error)} ${signInFailDetail(error)}`
 				: ssoFailureMessage(error, domain));
 		}
 		if (!data?.url) {
@@ -395,10 +396,10 @@ export class AuthStore {
 		try {
 			({ data, error } = await withTimeout(getCloudClient().identity.finishProviderSignIn(code), SIGN_IN_NETWORK_TIMEOUT_MS));
 		} catch (err) {
-			throw new Error(`${networkBlockedMessage('the sign-in service', err)} ${signInFailDetail(err)}`);
+			throw new Error(`${networkBlockedMessage(t('mainErrors.theSignInService'), err)} ${signInFailDetail(err)}`);
 		}
 		if (error) {
-			throw new Error(isNetworkError(error) ? `${networkBlockedMessage('the sign-in service', error)} ${signInFailDetail(error)}` : error.message);
+			throw new Error(isNetworkError(error) ? `${networkBlockedMessage(t('mainErrors.theSignInService'), error)} ${signInFailDetail(error)}` : error.message);
 		}
 		this.attempt.end();
 		if (data.session?.person) {

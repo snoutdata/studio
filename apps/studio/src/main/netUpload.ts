@@ -3,6 +3,7 @@
  *  Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { t } from '../shared/i18n/core';
 import { net } from 'electron';
 import { createReadStream } from 'node:fs';
 import { request as httpsRequest } from 'node:https';
@@ -57,7 +58,7 @@ export function uploadFile(url: string, file: string, sent?: (bytes: number) => 
 		stream.on('end', () => {
 			timer = setTimeout(() => {
 				request.abort();
-				fail(new Error('The upload finished but no answer came back in 15 minutes.'));
+				fail(new Error(t('mainErrors.uploadNoAnswer')));
 			}, ANSWER_TIMEOUT_MS);
 		});
 		stream.pipe(request as unknown as NodeJS.WritableStream);

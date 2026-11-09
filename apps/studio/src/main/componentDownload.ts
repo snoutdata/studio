@@ -25,6 +25,7 @@
  *  manifest last); this puts the same idea one level down.
  *--------------------------------------------------------------------------------------------*/
 
+import { t } from '../shared/i18n/core';
 import { createHash } from 'node:crypto';
 import { createReadStream, createWriteStream, existsSync, renameSync, rmSync, statSync } from 'node:fs';
 import { get as httpGet } from 'node:http';
@@ -434,7 +435,7 @@ export function downloadFile(
 export function downloadFailureMessage(err: unknown): string {
 	const message = err instanceof Error ? err.message : String(err);
 	if (/\(HTTP 404\)/.test(message)) {
-		return 'That download is not on our feed yet, so there is nothing here to fetch. Nothing is wrong with this computer or your connection.';
+		return t('mainErrors.notOnFeed');
 	}
 	return message;
 }

@@ -1,0 +1,31 @@
+{
+	"replicaTaking": "A réplica está assumindo o lugar dele",
+	"replicaFailed": "A réplica não conseguiu assumir o lugar dele",
+	"routerDown": "Não responde",
+	"routerStarting": "Iniciando",
+	"routerPaused": "Pausado, acorda na próxima conexão",
+	"routerOk": "Envia cada consulta",
+	"router": "Router",
+	"serves": "Atende sua parte",
+	"serverStarting": "O servidor dele está iniciando",
+	"joinStopped": "A entrada dele parou",
+	"draining": "Movendo os dados para fora",
+	"holdsHome": "Guarda as tabelas não distribuídas",
+	"home": "Principal",
+	"node": "Nó {id}",
+	"queries": "consultas",
+	"newNode": "Novo nó",
+	"replica": "Réplica",
+	"follows": "Acompanha o nó e assume o lugar dele se for perdido",
+	"fromBackup": "Sendo criada a partir do backup",
+	"replicaLine": "réplica",
+	"jobWaiting": "O job {id} ({op}) está aguardando para iniciar: {done} de {steps} etapas. As gravações em um intervalo pausam por um instante quando ele é movido.",
+	"jobState": "O job {id} ({op}) está em {state}: {done} de {steps} etapas. As gravações em um intervalo pausam por um instante quando ele é movido.",
+	"sentenceRouterDown": "O router não responde, então as consultas não chegam aos nós do cluster.",
+	"sentenceJoining": "Um nó está entrando. Ele começa como cópia do nó principal e assume sua parte dos dados depois de entrar.",
+	"sentenceHomeOnly": "Todas as linhas estão no nó principal. Distribua uma tabela para colocar as linhas dela nos nós do cluster.",
+	"sentenceServing": {
+		"one": "O router envia cada consulta ao nó principal ou ao nó que guarda as linhas dela.",
+		"other": "O router envia cada consulta ao nó principal ou aos {count} nós que guardam as linhas dela."
+	}
+}

@@ -7,6 +7,7 @@ import { dialectFor } from '../../shared/engine';
 import type { ColumnInfo, TableInfo } from '../../shared/schema';
 import type { QueryField } from '../../shared/query';
 import { quoteIdent } from './ddl';
+import { t } from '../../shared/i18n/core';
 
 // Pure, driver-aware DML generation for the editable data grid (inline cell editing).
 // Kept free of DOM/React so it stays node-testable, like ddl.ts/sqlGuard. The
@@ -93,13 +94,13 @@ export function defaultAction(column: ColumnInfo | undefined): DefaultAction | n
 	if (column.default !== null && column.default !== undefined) {
 		// Let the database resolve the declared default (handles expression defaults like
 		// nextval()/uuid_generate_v4() too): UPDATE emits `col = DEFAULT`, INSERT omits it.
-		return { label: `Set to default (${column.default})`, value: { sql: 'DEFAULT', display: '(default)', omitOnInsert: true } };
+		return { label: t('engineEditing.setDefault', { value: String(column.default) }), value: { sql: 'DEFAULT', display: '(default)', omitOnInsert: true } };
 	}
 	if (isTemporalType(column.dataType)) {
-		return { label: 'Set to current time', value: { sql: 'CURRENT_TIMESTAMP', display: '(current time)' } };
+		return { label: t('engineEditing.setCurrentTime'), value: { sql: 'CURRENT_TIMESTAMP', display: '(current time)' } };
 	}
 	if (column.nullable) {
-		return { label: 'Set to NULL', value: NULL_VALUE };
+		return { label: t('engineEditing.setNull'), value: NULL_VALUE };
 	}
 	return null;
 }
@@ -219,7 +220,7 @@ export function buildDml(input: DmlInput): { sql: string; statements: string[] }
 	const pkNames = primaryKeyNames(table);
 	const pkIndices = pkNames.map((name) => fields.findIndex((f) => f.name === name));
 	if (needsKey && (pkNames.length === 0 || pkIndices.some((i) => i < 0))) {
-		return { error: "This table has no primary key in the result, so edits and deletes can't be saved safely. Add rows only, or use the SQL editor." };
+		return { error: t('engineEditing.noPrimaryKey') };
 	}
 
 	const whereForRow = (original: unknown[]): string =>
@@ -286,22 +287,22 @@ export function editRefusal(
 		return null;
 	}
 	if (table.kind === 'view') {
-		return 'A view has no rows of its own to change. Edit the tables underneath it.';
+		return t('engineEditing.refuseView');
 	}
 	if (table.kind === 'logGroup') {
-		return 'Log events cannot be changed: the provider has no write path for them.';
+		return t('engineEditing.refuseLog');
 	}
 	if (table.kind === 'dictionary') {
-		return 'A dictionary holds a copy of what its SOURCE returns. Change the source, then reload the dictionary.';
+		return t('engineEditing.refuseDictionary');
 	}
 	if (options.readOnly) {
-		return 'This connection is marked read-only, so nothing here can be written. Change it on the connection.';
+		return t('engineEditing.refuseReadOnly');
 	}
 	if (!options.gridActionsAllowed) {
-		return 'This connection is marked production, so the grid is look-only.';
+		return t('engineEditing.refuseProduction');
 	}
 	if (primaryKeyNames(table as TableInfo).length === 0) {
-		return 'This table has no primary key, so there is no safe way to say which row an edit belongs to. Add one, or write the INSERT yourself in the editor.';
+		return t('engineEditing.refuseNoKey');
 	}
 	return null;
 }

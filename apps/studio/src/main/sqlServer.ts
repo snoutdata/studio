@@ -3,6 +3,7 @@
  *  Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { t } from '../shared/i18n/core';
 import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process';
 import {
 	createMessageConnection,
@@ -242,7 +243,7 @@ export class SqlServer {
 		});
 		connection.onRequest(SnoutProtocol.ConnectionPassword, async (params: ConnectionPasswordParams): Promise<ConnectionPasswordResult> => {
 			if (!this.passwordHandler) {
-				throw new Error("This connection signs in with your SnoutData account, which is not available yet.");
+				throw new Error(t('mainConnections.snoutSignInUnavailable'));
 			}
 			return { password: await this.passwordHandler(params.connectionId) };
 		});

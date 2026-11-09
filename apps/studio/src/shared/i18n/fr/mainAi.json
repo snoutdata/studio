@@ -1,0 +1,21 @@
+{
+	"noLocalModel": "Cette version n'inclut pas de modèle sur cet ordinateur : elle ne peut pas expliquer la revue. Choisissez une autre méthode de revue pour ce dépôt dans Paramètres, Snoutbot.",
+	"signIn": "Connectez-vous pour utiliser l'assistant",
+	"offline": "Hors ligne : passerelle inaccessible {detail}",
+	"usageLimit": "Limite d'utilisation mensuelle atteinte",
+	"noApiKey": "Pas de clé API : ajoutez votre clé {label} ci-dessous",
+	"modelReplied": "Réponse du modèle : {reply}",
+	"connectedEmpty": "Connecté (réponse vide).",
+	"spendLimit": "{provider} indique que votre compte a atteint sa limite de dépenses. Augmentez la limite (ou vérifiez la facturation) chez {provider}, puis réessayez.",
+	"ollamaDown": "Ollama est inaccessible sur {endpoint}. Lancez-le (exécutez \"ollama serve\"), vérifiez que le modèle est téléchargé, puis réessayez.",
+	"cloudRejected": "{provider} a rejeté la requête. Vérifiez la clé API dans Paramètres → IA → Chat. ({message})",
+	"byokRejected": "{provider} a rejeté votre clé API. Vérifiez-la dans Paramètres → IA. ({message})",
+	"addKey": "Ajoutez votre clé API {provider} dans Paramètres → IA pour utiliser ce fournisseur.",
+	"aiNotParsed": "La traduction IA n'a pas pu être lue comme pipeline MongoDB. Reformulez, ou écrivez un pipeline d'agrégation natif.",
+	"aiNotObject": "La traduction IA n'est pas un objet pipeline MongoDB. Reformulez, ou écrivez un pipeline d'agrégation natif.",
+	"aiNoCollection": "Impossible de déterminer la collection à interroger d'après la traduction IA. Écrivez plutôt un pipeline d'agrégation natif.",
+	"aiNoPipeline": "La traduction IA ne contient pas de pipeline d'agrégation valide (un tableau d'étapes). Écrivez plutôt un pipeline d'agrégation natif.",
+	"signInPeriod": "Connectez-vous pour utiliser l'assistant.",
+	"rulesOnly": "Ce dépôt est revu uniquement par les règles. Aucun modèle n'est appelé.",
+	"noByok": "Aucun fournisseur avec votre propre clé n'est configuré. Ajoutez une clé dans Paramètres → IA."
+}

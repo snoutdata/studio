@@ -1,0 +1,107 @@
+{
+	"title": "Snoutbot reviews",
+	"settings": "Settings…",
+	"close": "Close",
+	"waiting": "Waiting",
+	"commentFailed": "The comment could not be posted.",
+	"rerunFailed": "That review could not be run again. Check the connection to the host in Settings.",
+	"poll": {
+		"noRepos": "No repository is being watched. Add one in Settings.",
+		"busy": "Already checking.",
+		"errors": "Could not check {errors}",
+		"repos": {
+			"one": "1 repository",
+			"other": "{count} repositories"
+		},
+		"found": {
+			"zero": "nothing new to review",
+			"one": "reviewed 1 pull request",
+			"other": "reviewed {count} pull requests"
+		},
+		"checked": "Checked {where} at {time}: {found}."
+	},
+	"methods": {
+		"deterministic": "Rules only",
+		"localEngine": "Explained on this computer",
+		"snoutAi": "Explained by SnoutData AI",
+		"byok": "Explained by your own model"
+	},
+	"hints": {
+		"deterministic": "No model. The rules' own words.",
+		"localEngine": "Nothing leaves this computer.",
+		"snoutAi": "Written up on our servers.",
+		"byok": "Your own key or Ollama server."
+	},
+	"check": {
+		"tooltip": "Ask GitHub for new pull requests and mentions now",
+		"tooltipOff": "Turn Snoutbot on in Settings first",
+		"checking": "Checking…",
+		"now": "Check now"
+	},
+	"detail": {
+		"shaTitle": "The commit this review is OF. A review is always of a sha, never of a pull request.",
+		"openOnGithub": "Open on GitHub",
+		"localErrors": "What the database said ({count}), shown only here",
+		"notPostedAs": "Nothing has been posted yet. It goes on the {pullRequest} as **{login}**.",
+		"notPostedYou": "Nothing has been posted yet. It goes on the {pullRequest} as you.",
+		"discard": "Discard",
+		"posting": "Posting…",
+		"post": "Post to {name}",
+		"postedAs": "Posted to the {pullRequest} as {login}.",
+		"posted": "Posted to the {pullRequest}.",
+		"remove": "Remove from this list",
+		"again": "Review this commit again with",
+		"wroteThisTitle": "This is what wrote the review you are reading",
+		"wroteThis": "Wrote this review"
+	},
+	"empty": {
+		"title": "No reviews yet",
+		"connect": "Connect a GitHub or GitLab account and Snoutbot can start watching your repositories.",
+		"addRepo": "Add a repository to watch, and bind it to one of your connections.",
+		"off": "Watching is switched off. Turn it on and Snoutbot will check for pull requests that touch SQL.",
+		"nothing": "Nothing has been reviewed yet. Reviews appear here as they run, and stay for this session.",
+		"openSettings": "Open Snoutbot settings",
+		"note": "Reviews are held in memory while the app runs, not saved to disk. A review is about one commit, and a stale one is worse than none."
+	},
+	"summary": {
+		"blockers": {
+			"one": "{count} blocker",
+			"other": "{count} blockers"
+		},
+		"warnings": {
+			"one": "{count} warning",
+			"other": "{count} warnings"
+		},
+		"notes": {
+			"one": "{count} note",
+			"other": "{count} notes"
+		},
+		"nothing": "nothing to flag"
+	},
+	"depth": {
+		"connected": "Measured against {on}",
+		"connectedBound": "Measured against the bound database",
+		"schema": "Read the schema of {on}, ran no queries",
+		"schemaBound": "Read the schema, ran no queries",
+		"static": "Read the diff only, the database was not consulted"
+	},
+	"notice": {
+		"failed": "Snoutbot could not review {what}",
+		"awaiting": "Snoutbot has a review of {what} for you to read",
+		"awaitingDetail": "{summary}. Nothing is posted to GitHub until you say so.",
+		"blockers": {
+			"one": "Snoutbot found {count} blocker in {what}",
+			"other": "Snoutbot found {count} blockers in {what}"
+		},
+		"postedDetail": "{summary}. The comment has been posted.",
+		"reviewed": "Snoutbot reviewed {what}"
+	},
+	"toast": {
+		"running": "Snoutbot is reviewing this change",
+		"readIt": "Read it",
+		"open": "Open",
+		"dismiss": "Dismiss",
+		"awaiting": "{summary}, waiting for you to post it",
+		"posted": "{summary}, posted"
+	}
+}

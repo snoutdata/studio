@@ -6,11 +6,14 @@
 // FIRST import on purpose: startupPerf's module-eval timestamp is the origin every other startup
 // mark is measured from, so anything imported ahead of it would be invisible to the budget.
 import { mark } from './startupPerf';
+// Before Monaco, which reads its text while it loads.
+import './i18n/monacoNls';
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import * as Sentry from '@sentry/electron/renderer';
 import { App } from './App';
 import { CrashScreen } from './components/CrashScreen';
+import { bootLanguage, I18nProvider, loadLocale } from './i18n';
 import { applyTheme, loadTheme } from './theme';
 import { IGNORED_ERROR_MESSAGES, SENTRY_DSN } from '../../shared/telemetry';
 import '@vscode/codicons/dist/codicon.css';
@@ -43,15 +46,29 @@ const container = document.getElementById('root');
 if (!container) {
 	throw new Error('root element not found');
 }
-mark('render');
-createRoot(container).render(
-	<StrictMode>
-		<CrashScreen>
-			<App />
-		</CrashScreen>
-	</StrictMode>,
-);
+// English is already in the bundle. Another language is one local chunk, read before the first render
+// so a window never paints in the wrong language first.
+const language = bootLanguage();
 
-// Double rAF lands after the browser has actually painted the first frame, which is the number a
-// user experiences as "the app started". Reported by `__snoutStartup()`; budgeted in e2e/startup.spec.ts.
-requestAnimationFrame(() => requestAnimationFrame(() => mark('paint')));
+function render(root: HTMLElement): void {
+	mark('render');
+	createRoot(root).render(
+		<StrictMode>
+			<I18nProvider initial={language}>
+				<CrashScreen>
+					<App />
+				</CrashScreen>
+			</I18nProvider>
+		</StrictMode>,
+	);
+
+	// Double rAF lands after the browser has actually painted the first frame, which is the number a
+	// user experiences as "the app started". Reported by `__snoutStartup()`; budgeted in e2e/startup.spec.ts.
+	requestAnimationFrame(() => requestAnimationFrame(() => mark('paint')));
+}
+
+if (language.locale === 'en') {
+	render(container);
+} else {
+	void loadLocale(language.locale).finally(() => render(container));
+}

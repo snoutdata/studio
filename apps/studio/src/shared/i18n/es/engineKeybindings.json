@@ -1,0 +1,15 @@
+{
+	"reserved": {
+		"copy": "Copiar",
+		"paste": "Pegar",
+		"cut": "Cortar",
+		"selectAll": "Seleccionar todo",
+		"undo": "Deshacer",
+		"redo": "Rehacer",
+		"find": "editor: Buscar",
+		"replace": "editor: Reemplazar",
+		"goToLine": "editor: Ir a la línea",
+		"addNextMatch": "editor: Agregar selección a la siguiente coincidencia",
+		"triggerSuggest": "editor: Activar sugerencias"
+	}
+}

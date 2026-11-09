@@ -1,0 +1,19 @@
+{
+	"noDocker": "Deploy from a folder builds with your own Docker, and none was found on this computer. Install Docker Desktop, or deploy an image from a registry.",
+	"dockerDown": "Docker is installed but not running. Start Docker, then build again.",
+	"dockerStopped": "Docker stopped answering during the build. Start Docker, then build again.",
+	"noArm64Base": "An image the Dockerfile builds FROM has no linux/arm64 version, and SnoutData Cloud runs arm64 only. Use a base image published for arm64 (most official images are).",
+	"buildFailedDetail": "The build failed: {detail}",
+	"buildFailed": "The build failed. Its output is above.",
+	"tooLargeCompressed": "The image is too large to upload. A container's image may be at most 1 GB compressed; a slimmer base (alpine, distroless, -slim) usually fixes it.",
+	"uploadFailed": "The upload failed ({status}). Build again in a moment.",
+	"noUploadLink": "SnoutData Cloud did not hand over an upload link. Try again in a moment.",
+	"noDockerfile": "{folder} has no Dockerfile in it.",
+	"noBuildx": "This Docker has no buildx, which builds for linux/arm64. Update Docker Desktop, or install the buildx plugin.",
+	"building": "Building {folder} for linux/arm64…",
+	"noArchive": "Docker finished but wrote no image archive, so there is nothing to upload.",
+	"tooLargeSized": "The image is {size}, and a container's image may be at most 1 GB compressed. A slimmer base (alpine, distroless, -slim) usually fixes it.",
+	"uploading": "Uploading the image ({size})…",
+	"execFormat": "A build step ran an arm64 program that this computer cannot run. Docker Desktop runs them by emulation. On Linux, set up emulation as Docker's multi-platform guide describes (docs.docker.com/build/building/multi-platform); its usual command runs a third-party image with root-level access, so read it before you run it.",
+	"noContainerd": "This Docker's default builder cannot write an image archive. Turn on the containerd image store (Docker Desktop: Settings, General, \"Use containerd for pulling and storing images\"), or make a builder that can with: docker buildx create --use"
+}

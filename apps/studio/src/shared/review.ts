@@ -8,6 +8,7 @@
 // boundary to the Settings pane and the review view.
 
 import { isLocalHost } from './engine';
+import { t } from './i18n/core';
 import type { ByokProvider, DataBoundary, FlowReader } from './engine';
 
 /**
@@ -100,21 +101,20 @@ export function reviewMethodFromLegacy(mode: ReviewAiMode | undefined): ReviewMe
  * same, `isLocalHost` and all, which is the part that must not fork.
  */
 export function reviewBoundary(method: ReviewMethod): { boundary: DataBoundary; sentence: string } {
-	const leaves = "The changed SQL, and the findings taken from your database, are sent";
 	switch (method.kind) {
 		case 'deterministic':
-			return { boundary: 'local', sentence: "No explanation is written, and no model is called. The findings are the rules' own words." };
+			return { boundary: 'local', sentence: t('engineReview.boundary.rulesOnly') };
 		case 'localEngine':
-			return { boundary: 'local', sentence: "The model runs on this computer, so nothing about the review is sent anywhere. It costs time and power on this machine instead." };
+			return { boundary: 'local', sentence: t('engineReview.boundary.local') };
 		case 'snoutAi':
-			return { boundary: 'ourServers', sentence: `${leaves} to our servers to be written up, and it comes out of your AI allowance.` };
+			return { boundary: 'ourServers', sentence: t('engineReview.boundary.snoutAi') };
 		case 'byok':
 			if (method.provider === 'ollama') {
 				return isLocalHost(method.host)
-					? { boundary: 'local', sentence: "The model runs on this computer, on the Ollama you are running. Nothing about the review is sent anywhere." }
-					: { boundary: 'theirNetwork', sentence: `${leaves} to the Ollama server you named (${method.host}). They do not reach us.` };
+					? { boundary: 'local', sentence: t('engineReview.boundary.ollamaLocal') }
+					: { boundary: 'theirNetwork', sentence: t('engineReview.boundary.ollamaRemote', { host: method.host ?? '' }) };
 			}
-			return { boundary: 'thirdParty', sentence: `${leaves} to ${REVIEW_VENDOR_NAMES[method.provider]} using your own key. They do not reach us.` };
+			return { boundary: 'thirdParty', sentence: t('engineReview.boundary.byok', { vendor: REVIEW_VENDOR_NAMES[method.provider] }) };
 	}
 }
 

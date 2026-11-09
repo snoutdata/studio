@@ -7,6 +7,7 @@ import { useMemo, useState } from 'react';
 
 import { nodePath, valueTree, type ValueNode } from '../../../shared/cellValue';
 import { Icon } from './Icon';
+import { useT, type Translate } from '../i18n';
 
 // One cell's value as a TREE, for the columnar and document types a single grid line cannot show:
 // ClickHouse's Array / Map / Tuple / Nested / JSON / Variant / Dynamic, Postgres arrays and jsonb,
@@ -74,6 +75,7 @@ interface TreeRowProps {
 }
 
 function TreeRow({ node, keys, depth, flipped, copied, onToggle, onCopyPath }: TreeRowProps): JSX.Element {
+	const t = useT();
 	const path = keys.join('\u0000');
 	const children = node.children;
 	const isOpen = children !== undefined && (depth === 0 || node.size <= OPEN_UNDER) !== flipped.has(path);
@@ -82,7 +84,7 @@ function TreeRow({ node, keys, depth, flipped, copied, onToggle, onCopyPath }: T
 		<>
 			<div className="value-row" style={{ paddingLeft: 6 + depth * 14 }} role="treeitem" aria-expanded={children ? isOpen : undefined}>
 				{children ? (
-					<button type="button" className="value-twisty" onClick={() => onToggle(path)} title={isOpen ? "Collapse" : "Expand"}>
+					<button type="button" className="value-twisty" onClick={() => onToggle(path)} title={isOpen ? t('editor.common.collapse') : t('results.cell.expand')}>
 						<Icon name={isOpen ? 'chevron-down' : 'chevron-right'} />
 					</button>
 				) : (
@@ -91,14 +93,14 @@ function TreeRow({ node, keys, depth, flipped, copied, onToggle, onCopyPath }: T
 				<span className="value-key">{node.key}</span>
 				{node.type && <span className="value-type">{node.type}</span>}
 				{children ? (
-					<span className="value-count">{summary(node)}</span>
+					<span className="value-count">{summary(t, node)}</span>
 				) : node.isNull ? (
 					<span className="value-null">NULL</span>
 				) : (
 					<span className="value-leaf">{node.text}</span>
 				)}
 				<span className="spacer" />
-				<button type="button" className="value-copy" title="Copy the path that reads this" onClick={() => onCopyPath(path, keys)}>
+				<button type="button" className="value-copy" title={t('results.cell.copyPath')} onClick={() => onCopyPath(path, keys)}>
 					<Icon name={copied === path ? 'check' : 'copy'} />
 				</button>
 			</div>
@@ -119,10 +121,7 @@ function TreeRow({ node, keys, depth, flipped, copied, onToggle, onCopyPath }: T
 }
 
 /** `3 items` / `2 keys`, said of a branch we have already walked. */
-function summary(node: ValueNode): string {
+function summary(t: Translate, node: ValueNode): string {
 	const count = node.children?.length ?? 0;
-	if (node.kind === 'array') {
-		return count === 1 ? "1 item" : `${count} items`;
-	}
-	return count === 1 ? "1 key" : `${count} keys`;
+	return node.kind === 'array' ? t('results.cell.items', { count: String(count) }) : t('results.cell.keys', { count: String(count) });
 }

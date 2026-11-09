@@ -3,6 +3,7 @@
  *  Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { t } from '../../shared/i18n/core';
 import type { ConnectionConfig } from '../../shared/connection';
 import type { ConnectionFormValues, ImportItemRef, ImportScanResult } from '../../shared/forms';
 import { asRecord, asString } from '../importCommon';
@@ -18,7 +19,9 @@ import { hostEnv, pgadminFiles } from './paths';
 // Browse also takes the `servers.json` pgAdmin writes from Tools → Export servers, which carries the
 // same fields under different names and never a password.
 
-const NO_PASSWORD = "pgAdmin encrypts saved passwords with its master password, so set it after import.";
+function noPassword(): string {
+	return t('mainDiscovery.pgadminEncrypted');
+}
 
 function buildServer(file: string, connId: string, r: {
 	name?: string; host?: string; port?: unknown; database?: string; username?: string; sslmode?: unknown;
@@ -44,7 +47,7 @@ function buildServer(file: string, connId: string, r: {
 			keepAlive: true,
 		};
 	}
-	const notes = host ? credentialNotes(values, false, NO_PASSWORD) : [r.service ? `Uses the libpq service "${r.service}", which cannot be imported.` : "No host saved."];
+	const notes = host ? credentialNotes(values, false, noPassword()) : [r.service ? t('mainDiscovery.libpqService', { service: r.service }) : t('mainDiscovery.noHost')];
 	return {
 		ref: { file, connId },
 		values,

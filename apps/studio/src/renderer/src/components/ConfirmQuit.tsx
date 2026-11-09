@@ -4,6 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { Icon } from './Icon';
+import { useT } from '../i18n';
 
 interface ConfirmQuitProps {
 	dirty: boolean;
@@ -13,22 +14,21 @@ interface ConfirmQuitProps {
 
 /** Quit confirmation. A stronger "edits will be lost" warning when an editor is dirty. */
 export function ConfirmQuit(props: ConfirmQuitProps): JSX.Element {
+	const t = useT();
 	return (
 		<div className="modal-backdrop" onClick={props.onCancel}>
 			<div className="modal confirm" onClick={(e) => e.stopPropagation()}>
 				<h2 className={props.dirty ? 'danger' : undefined}>
 					<Icon name={props.dirty ? 'warning' : 'sign-out'} />
-					Quit SnoutData Studio?
+					{t('shell.confirmQuit.title')}
 				</h2>
 				<p className="confirm-detail">
-					{props.dirty
-						? "You have unsaved query edits. If you quit now, they might be lost."
-						: "Are you sure you want to quit?"}
+					{t(props.dirty ? 'shell.confirmQuit.dirty' : 'shell.confirmQuit.clean')}
 				</p>
 				<div className="modal-actions">
 					<span className="spacer" />
-					<button type="button" className="secondary" onClick={props.onCancel} autoFocus><Icon name="close" /> Cancel</button>
-					<button type="button" className={props.dirty ? 'danger' : ''} onClick={props.onConfirm}><Icon name="sign-out" /> Quit</button>
+					<button type="button" className="secondary" onClick={props.onCancel} autoFocus><Icon name="close" /> {t('shell.common.cancel')}</button>
+					<button type="button" className={props.dirty ? 'danger' : ''} onClick={props.onConfirm}><Icon name="sign-out" /> {t('shell.common.quit')}</button>
 				</div>
 			</div>
 		</div>

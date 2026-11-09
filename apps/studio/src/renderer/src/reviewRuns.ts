@@ -23,6 +23,7 @@
  *      the depth line, and the depth line always names the destination when there was one.
  *--------------------------------------------------------------------------------------------*/
 
+import { t } from '../../shared/i18n/core';
 import type { ReviewRun, ReviewStarted } from '../../shared/review';
 
 /** What a review is worth telling someone, or null when it is not worth telling them anything. */
@@ -36,15 +37,15 @@ export interface ReviewNotice {
 export function findingsSummary(run: Pick<ReviewRun, 'blockers' | 'warnings' | 'notes'>): string {
 	const parts: string[] = [];
 	if (run.blockers > 0) {
-		parts.push(`${run.blockers} blocker${run.blockers === 1 ? '' : 's'}`);
+		parts.push(t('reviews.summary.blockers', { count: run.blockers }));
 	}
 	if (run.warnings > 0) {
-		parts.push(`${run.warnings} warning${run.warnings === 1 ? '' : 's'}`);
+		parts.push(t('reviews.summary.warnings', { count: run.warnings }));
 	}
 	if (run.notes > 0) {
-		parts.push(`${run.notes} note${run.notes === 1 ? '' : 's'}`);
+		parts.push(t('reviews.summary.notes', { count: run.notes }));
 	}
-	return parts.length === 0 ? "nothing to flag" : parts.join(', ');
+	return parts.length === 0 ? t('reviews.summary.nothing') : parts.join(', ');
 }
 
 /**
@@ -58,11 +59,11 @@ export function depthLine(run: Pick<ReviewRun, 'depth' | 'destinationName'>): st
 	const on = run.destinationName;
 	switch (run.depth) {
 		case 'connected':
-			return on ? `Measured against ${on}` : "Measured against the bound database";
+			return on ? t('reviews.depth.connected', { on }) : t('reviews.depth.connectedBound');
 		case 'schema':
-			return on ? `Read the schema of ${on}, ran no queries` : "Read the schema, ran no queries";
+			return on ? t('reviews.depth.schema', { on }) : t('reviews.depth.schemaBound');
 		default:
-			return "Read the diff only, the database was not consulted";
+			return t('reviews.depth.static');
 	}
 }
 
@@ -90,28 +91,28 @@ export function runLabel(run: Pick<ReviewRun, 'repoLabel' | 'prNumber'>): string
 export function reviewNotice(run: ReviewRun): ReviewNotice | null {
 	const what = runLabel(run);
 	if (run.error) {
-		return { severity: 'error', title: `Snoutbot could not review ${what}`, detail: run.error };
+		return { severity: 'error', title: t('reviews.notice.failed', { what }), detail: run.error };
 	}
 	const summary = `${findingsSummary(run)} · ${depthLine(run)}`;
 	if (run.awaitingApproval) {
 		return {
 			severity: 'warn',
-			title: `Snoutbot has a review of ${what} for you to read`,
-			detail: `${summary}. Nothing is posted to GitHub until you say so.`,
+			title: t('reviews.notice.awaiting', { what }),
+			detail: t('reviews.notice.awaitingDetail', { summary }),
 		};
 	}
 	if (run.blockers > 0) {
 		return {
 			severity: 'warn',
-			title: `Snoutbot found ${run.blockers} blocker${run.blockers === 1 ? '' : 's'} in ${what}`,
-			detail: `${summary}. The comment has been posted.`,
+			title: t('reviews.notice.blockers', { count: run.blockers, what }),
+			detail: t('reviews.notice.postedDetail', { summary }),
 		};
 	}
 	if (run.warnings > 0 || run.notes > 0) {
 		return {
 			severity: 'info',
-			title: `Snoutbot reviewed ${what}`,
-			detail: `${summary}. The comment has been posted.`,
+			title: t('reviews.notice.reviewed', { what }),
+			detail: t('reviews.notice.postedDetail', { summary }),
 		};
 	}
 	return null;
@@ -151,14 +152,14 @@ export function finishedToast(run: ReviewRun): ReviewToastState {
 	}
 	const summary = findingsSummary(run);
 	if (run.awaitingApproval) {
-		return { phase: 'done', label, prUrl: run.prUrl, runId: run.id, text: `${summary}, waiting for you to post it`, tone: 'warn', awaiting: true };
+		return { phase: 'done', label, prUrl: run.prUrl, runId: run.id, text: t('reviews.toast.awaiting', { summary }), tone: 'warn', awaiting: true };
 	}
 	return {
 		phase: 'done',
 		label,
 		prUrl: run.prUrl,
 		runId: run.id,
-		text: `${summary}, posted`,
+		text: t('reviews.toast.posted', { summary }),
 		tone: run.blockers > 0 ? 'warn' : 'ok',
 		awaiting: false,
 	};

@@ -22,6 +22,7 @@ import {
 	type EngineAnatomy,
 	type PartitionRow,
 } from '../../../shared/clickhouseTable';
+import { formatLocale, useT } from '../i18n';
 
 // The Storage tab on a ClickHouse table: what the table IS physically, rather than what
 // its columns are.
@@ -71,7 +72,7 @@ interface SkipIndexRow {
 	rawMb: number;
 }
 
-const NUM = new Intl.NumberFormat();
+const NUM = { format: (value: number): string => new Intl.NumberFormat(formatLocale()).format(value) };
 
 function num(value: unknown): number {
 	const n = typeof value === 'number' ? value : Number(value);
@@ -98,6 +99,7 @@ function ratio(disk: number, raw: number): string {
 }
 
 export function ClickHouseTableStorage({ connectionId, schema, table, isProd, readOnly, onRunDdl }: ClickHouseTableStorageProps): JSX.Element {
+	const t = useT();
 	const [anatomy, setAnatomy] = useState<EngineAnatomy | null>(null);
 	const [error, setError] = useState<string | null>(null);
 	const [partitions, setPartitions] = useState<Section<PartitionRow>>({});
@@ -129,7 +131,7 @@ export function ClickHouseTableStorage({ connectionId, schema, table, isProd, re
 			try {
 				const rows = await read(anatomySql(schema, table));
 				if (!rows[0]) {
-					throw new Error(`${name} is not in system.tables on this server.`);
+					throw new Error(t('clickhouse.storage.notInSystem', { name }));
 				}
 				head = readAnatomy(rows[0]);
 			} catch (err) {
@@ -145,7 +147,7 @@ export function ClickHouseTableStorage({ connectionId, schema, table, isProd, re
 			if (!head.isMergeTree) {
 				// A Memory table, a Dictionary, a Distributed table: no parts on disk, so the
 				// three lists below would be empty for a reason that is not "nothing to see".
-				const note = `A ${head.engine} table keeps no parts on disk, so it has no partitions, projections or skip indexes.`;
+				const note = t('clickhouse.storage.noParts', { engine: head.engine });
 				setPartitions({ note });
 				setProjections({ note });
 				setSkipIndexes({ note });
@@ -178,7 +180,7 @@ export function ClickHouseTableStorage({ connectionId, schema, table, isProd, re
 					from: str(row.covers_from),
 					to: str(row.covers_to),
 					modified: str(row.last_written),
-				}), setPartitions, 'This server does not expose system.parts to this user.'),
+				}), setPartitions, t('clickhouse.storage.noSystemParts')),
 				load(projectionsSql(schema, table), (row) => ({
 					name: str(row.name),
 					type: str(row.type),
@@ -187,7 +189,7 @@ export function ClickHouseTableStorage({ connectionId, schema, table, isProd, re
 					rows: num(row.rows),
 					diskMb: num(row.on_disk_mb),
 					query: str(row.query),
-				}), setProjections, 'This server is older than system.projections (ClickHouse 24.x), so projections cannot be listed.'),
+				}), setProjections, t('clickhouse.storage.oldProjections')),
 				load(skipIndexSql(schema, table), (row) => ({
 					name: str(row.name),
 					type: str(row.type),
@@ -195,7 +197,7 @@ export function ClickHouseTableStorage({ connectionId, schema, table, isProd, re
 					granulesPerEntry: num(row.granules_per_entry),
 					diskMb: num(row.on_disk_mb),
 					rawMb: num(row.raw_mb),
-				}), setSkipIndexes, 'This server does not expose system.data_skipping_indices to this user.'),
+				}), setSkipIndexes, t('clickhouse.storage.noSkipIndices')),
 			]);
 		})();
 
@@ -209,7 +211,7 @@ export function ClickHouseTableStorage({ connectionId, schema, table, isProd, re
 		}
 		const sql = action.sql(name, row);
 		const ok = await confirm({
-			title: isProd ? `${action.label} on PRODUCTION?` : `${action.label} partition ${row.partition}?`,
+			title: isProd ? t('clickhouse.storage.confirmProd', { action: action.label }) : t('clickhouse.storage.confirmPartition', { action: action.label, partition: row.partition }),
 			body: (
 				<>
 					<p>{action.confirm(name, row)}</p>
@@ -233,7 +235,7 @@ export function ClickHouseTableStorage({ connectionId, schema, table, isProd, re
 		return <div className="telemetry"><div className="results-error">{error}</div></div>;
 	}
 	if (!anatomy) {
-		return <div className="telemetry"><div className="prop-empty">Reading what {name} is made of…</div></div>;
+		return <div className="telemetry"><div className="prop-empty">{t('clickhouse.storage.readingAnatomy', { name })}</div></div>;
 	}
 
 	const totalRaw = partitions.rows?.reduce((sum, p) => sum + p.rawMb, 0) ?? 0;
@@ -243,10 +245,10 @@ export function ClickHouseTableStorage({ connectionId, schema, table, isProd, re
 		<>
 			<div className="telemetry ch-storage">
 				<div className="telemetry-section">
-					<div className="telemetry-heading">Engine</div>
+					<div className="telemetry-heading">{t('clickhouse.storage.engine')}</div>
 					<div className="ch-anatomy">
 						<div className="ch-anatomy-engine">{anatomy.engine}</div>
-						{anatomy.clauses.length === 0 && <div className="muted small">This engine takes no key, partition or TTL clause.</div>}
+						{anatomy.clauses.length === 0 && <div className="muted small">{t('clickhouse.storage.noClauses')}</div>}
 						{anatomy.clauses.map((clause) => (
 							<div className="ch-anatomy-row" key={clause.label}>
 								<span className="ch-anatomy-label">{clause.label}</span>
@@ -267,54 +269,53 @@ export function ClickHouseTableStorage({ connectionId, schema, table, isProd, re
 						)}
 					</div>
 					<div className="metric-cards">
-						<Metric icon="symbol-numeric" label="Rows" value={anatomy.rows === undefined ? '—' : NUM.format(anatomy.rows)} hint="What the catalog says, which for a MergeTree table is exact." />
-						<Metric icon="database" label="On disk" value={anatomy.bytes === undefined ? '—' : mb(anatomy.bytes / 1048576)} />
+						<Metric icon="symbol-numeric" label={t('clickhouse.storage.rows')} value={anatomy.rows === undefined ? '—' : NUM.format(anatomy.rows)} hint={t('clickhouse.storage.rowsHint')} />
+						<Metric icon="database" label={t('clickhouse.storage.onDisk')} value={anatomy.bytes === undefined ? '—' : mb(anatomy.bytes / 1048576)} />
 						{anatomy.isMergeTree && totalRaw > 0 && (
-							<Metric icon="symbol-ruler" label="Compression" value={ratio(totalDisk, totalRaw)} hint={`${mb(totalRaw)} of data stored in ${mb(totalDisk)}.`} />
+							<Metric icon="symbol-ruler" label={t('clickhouse.storage.compression')} value={ratio(totalDisk, totalRaw)} hint={t('clickhouse.storage.compressionHint', { raw: mb(totalRaw), disk: mb(totalDisk) })} />
 						)}
 						{anatomy.isMergeTree && (
 							<Metric
 								icon="layers"
-								label="Active parts"
+								label={t('clickhouse.storage.activeParts')}
 								value={anatomy.activeParts === undefined ? '—' : NUM.format(anatomy.activeParts)}
-								hint={`Every INSERT writes a part and merges combine them. ${anatomy.parts === anatomy.activeParts ? 'Nothing is waiting to be cleaned up.' : `${NUM.format((anatomy.parts ?? 0) - (anatomy.activeParts ?? 0))} more have been merged away and not yet deleted, which is normal.`}`}
+								hint={`${t('clickhouse.storage.partsIntro')} ${anatomy.parts === anatomy.activeParts ? t('clickhouse.storage.partsClean') : t('clickhouse.storage.partsPending', { n: (anatomy.parts ?? 0) - (anatomy.activeParts ?? 0) })}`}
 							/>
 						)}
 						{anatomy.isMergeTree && (
-							<Metric icon="list-ordered" label="Granules" value={anatomy.marks === undefined ? '—' : NUM.format(anatomy.marks)} hint="A granule is the smallest thing a read can skip; the sort key's index has one entry per granule." />
+							<Metric icon="list-ordered" label={t('clickhouse.storage.granules')} value={anatomy.marks === undefined ? '—' : NUM.format(anatomy.marks)} hint={t('clickhouse.storage.granulesHint')} />
 						)}
-						{anatomy.storagePolicy !== '' && <Metric icon="server-environment" label="Storage policy" value={anatomy.storagePolicy} />}
+						{anatomy.storagePolicy !== '' && <Metric icon="server-environment" label={t('clickhouse.storage.policy')} value={anatomy.storagePolicy} />}
 					</div>
 				</div>
 
 				<div className="telemetry-section">
 					<div className="telemetry-heading">
-						Partitions
+						{t('clickhouse.storage.partitions')}
 						<span className="spacer" />
 						{partitions.rows && partitions.rows.length > 0 && (
-							<span className="muted small">{partitions.rows.length === 1 ? '1 partition' : `${partitions.rows.length} partitions`}</span>
+							<span className="muted small">{t('clickhouse.storage.partitionCount', { count: partitions.rows.length })}</span>
 						)}
 					</div>
 					<div className="muted small ch-storage-blurb">
-						A partition is read and dropped as a unit, and its parts are what merges combine. Too many
-						parts in one partition slows inserts, then refuses them.
+						{t('clickhouse.storage.partitionsBlurb')}
 					</div>
 					{partitions.note && <div className="prop-empty">{partitions.note}</div>}
-					{!partitions.note && !partitions.rows && <div className="prop-empty">Reading…</div>}
+					{!partitions.note && !partitions.rows && <div className="prop-empty">{t('clickhouse.storage.reading')}</div>}
 					{partitions.rows && partitions.rows.length === 0 && (
-						<div className="prop-empty">No parts: this table has no rows on this node yet.</div>
+						<div className="prop-empty">{t('clickhouse.storage.noPartsYet')}</div>
 					)}
 					{partitions.rows && partitions.rows.length > 0 && (
 						<table className="explain-indexes ch-storage-table">
 							<thead>
 								<tr>
-									<th>Partition</th>
-									<th className="explain-num">Parts</th>
-									<th className="explain-num">Rows</th>
-									<th className="explain-num">On disk</th>
-									<th className="explain-num">Raw</th>
-									<th>Covers</th>
-									<th>Last written</th>
+									<th>{t('clickhouse.storage.partition')}</th>
+									<th className="explain-num">{t('clickhouse.storage.parts')}</th>
+									<th className="explain-num">{t('clickhouse.storage.rows')}</th>
+									<th className="explain-num">{t('clickhouse.storage.onDisk')}</th>
+									<th className="explain-num">{t('clickhouse.storage.raw')}</th>
+									<th>{t('clickhouse.storage.covers')}</th>
+									<th>{t('clickhouse.storage.lastWritten')}</th>
 									{!readOnly && <th />}
 								</tr>
 							</thead>
@@ -325,7 +326,7 @@ export function ClickHouseTableStorage({ connectionId, schema, table, isProd, re
 										<td className="explain-num">{NUM.format(row.parts)}</td>
 										<td className="explain-num">{NUM.format(row.rows)}</td>
 										<td className="explain-num">{mb(row.diskMb)}</td>
-										<td className="explain-num" title={ratio(row.diskMb, row.rawMb) === '' ? undefined : `${ratio(row.diskMb, row.rawMb)} smaller on disk`}>{mb(row.rawMb)}</td>
+										<td className="explain-num" title={ratio(row.diskMb, row.rawMb) === '' ? undefined : t('clickhouse.storage.smallerOnDisk', { ratio: ratio(row.diskMb, row.rawMb) })}>{mb(row.rawMb)}</td>
 										<td className="muted">{row.from && row.to ? `${row.from} → ${row.to}` : ''}</td>
 										<td className="muted">{row.modified}</td>
 										{!readOnly && (
@@ -352,26 +353,25 @@ export function ClickHouseTableStorage({ connectionId, schema, table, isProd, re
 				</div>
 
 				<div className="telemetry-section">
-					<div className="telemetry-heading">Projections</div>
+					<div className="telemetry-heading">{t('clickhouse.storage.projections')}</div>
 					<div className="muted small ch-storage-blurb">
-						A projection is a second copy of this table kept in another order, or pre-aggregated.
-						ClickHouse reads it instead of the table when that reads less.
+						{t('clickhouse.storage.projectionsBlurb')}
 					</div>
 					{projections.note && <div className="prop-empty">{projections.note}</div>}
-					{!projections.note && !projections.rows && <div className="prop-empty">Reading…</div>}
+					{!projections.note && !projections.rows && <div className="prop-empty">{t('clickhouse.storage.reading')}</div>}
 					{projections.rows && projections.rows.length === 0 && (
-						<div className="prop-empty">None. A recurring heavy aggregation over this table is usually what one is for.</div>
+						<div className="prop-empty">{t('clickhouse.storage.noneProjections')}</div>
 					)}
 					{projections.rows && projections.rows.length > 0 && (
 						<table className="explain-indexes ch-storage-table">
 							<thead>
 								<tr>
-									<th>Projection</th>
-									<th>Type</th>
-									<th>Ordered by</th>
-									<th className="explain-num">Rows</th>
-									<th className="explain-num">On disk</th>
-									<th>Query</th>
+									<th>{t('clickhouse.storage.projection')}</th>
+									<th>{t('clickhouse.storage.type')}</th>
+									<th>{t('clickhouse.storage.orderedBy')}</th>
+									<th className="explain-num">{t('clickhouse.storage.rows')}</th>
+									<th className="explain-num">{t('clickhouse.storage.onDisk')}</th>
+									<th>{t('clickhouse.storage.query')}</th>
 								</tr>
 							</thead>
 							<tbody>
@@ -391,25 +391,24 @@ export function ClickHouseTableStorage({ connectionId, schema, table, isProd, re
 				</div>
 
 				<div className="telemetry-section">
-					<div className="telemetry-heading">Data-skipping indexes</div>
+					<div className="telemetry-heading">{t('clickhouse.storage.skipHeading')}</div>
 					<div className="muted small ch-storage-blurb">
-						ClickHouse has no B-tree. These hold one summary per group of granules, and a filter on a
-						column outside the sort key skips granules only if one of them says it can.
+						{t('clickhouse.storage.skipBlurb')}
 					</div>
 					{skipIndexes.note && <div className="prop-empty">{skipIndexes.note}</div>}
-					{!skipIndexes.note && !skipIndexes.rows && <div className="prop-empty">Reading…</div>}
+					{!skipIndexes.note && !skipIndexes.rows && <div className="prop-empty">{t('clickhouse.storage.reading')}</div>}
 					{skipIndexes.rows && skipIndexes.rows.length === 0 && (
-						<div className="prop-empty">None. Every filter outside <code>{anatomy.clauses.find((c) => c.label === 'ORDER BY')?.value ?? 'the sort key'}</code> reads every granule.</div>
+						<div className="prop-empty">{t('clickhouse.storage.noneSkipBefore')} <code>{anatomy.clauses.find((c) => c.label === 'ORDER BY')?.value ?? t('clickhouse.storage.theSortKey')}</code> {t('clickhouse.storage.noneSkipAfter')}</div>
 					)}
 					{skipIndexes.rows && skipIndexes.rows.length > 0 && (
 						<table className="explain-indexes ch-storage-table">
 							<thead>
 								<tr>
-									<th>Index</th>
-									<th>Type</th>
-									<th>On</th>
-									<th className="explain-num">Granules each</th>
-									<th className="explain-num">On disk</th>
+									<th>{t('clickhouse.storage.index')}</th>
+									<th>{t('clickhouse.storage.type')}</th>
+									<th>{t('clickhouse.storage.on')}</th>
+									<th className="explain-num">{t('clickhouse.storage.granulesEach')}</th>
+									<th className="explain-num">{t('clickhouse.storage.onDisk')}</th>
 								</tr>
 							</thead>
 							<tbody>

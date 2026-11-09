@@ -6,6 +6,7 @@
 import { Icon } from './Icon';
 import { cellText } from './DataGrid';
 import type { FkPeekData } from '../useFkLookup';
+import { useT } from '../i18n';
 
 // The hover/right-click peek card for a foreign-key cell: shows the referenced row's handful
 // of fields (fetched by PK), a spinner while loading, and an "Open in new tab" action that
@@ -23,6 +24,7 @@ interface FkPeekCardProps {
 }
 
 export function FkPeekCard({ refTable, value, data, onOpen }: FkPeekCardProps): JSX.Element {
+	const t = useT();
 	return (
 		<div className="fk-peek">
 			<div className="fk-peek-head">
@@ -31,7 +33,7 @@ export function FkPeekCard({ refTable, value, data, onOpen }: FkPeekCardProps): 
 				<span className="fk-peek-key">#{cellText(value) ?? ''}</span>
 			</div>
 			{(!data || data.status === 'loading') && (
-				<div className="fk-peek-body fk-peek-loading"><Icon name="loading" className="spin" /> Loading…</div>
+				<div className="fk-peek-body fk-peek-loading"><Icon name="loading" className="spin" /> {t('editor.common.loading')}</div>
 			)}
 			{data?.status === 'error' && (
 				<div className="fk-peek-body fk-peek-error">{data.error}</div>
@@ -50,7 +52,7 @@ export function FkPeekCard({ refTable, value, data, onOpen }: FkPeekCardProps): 
 				</div>
 			)}
 			<button type="button" className="fk-peek-open" onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); onOpen(); }}>
-				<Icon name="link-external" /> Open in new tab
+				<Icon name="link-external" /> {t('results.fk.open')}
 			</button>
 		</div>
 	);

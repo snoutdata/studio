@@ -8,6 +8,7 @@ import { Terminal, type ITheme } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
 
 import { Icon } from './Icon';
+import { useT } from '../i18n';
 import { Splitter } from './Splitter';
 import { AgentCanvas } from './AgentCanvas';
 import type { ChatRunOutcome } from './RenderSurface';
@@ -173,6 +174,7 @@ export function AgentConsolePanel({
 	surfaceInPanel, onOpenSurface, canvasHeight, onResizeCanvas, connectionLabel, isDocument,
 	hasConnection, onInsertSql, onInsertSqlNewTab, onInsertPipeline, onRunSql, runOutcome,
 }: AgentConsolePanelProps): JSX.Element {
+	const t = useT();
 	const [status, setStatus] = useState<AgentConsoleStatus | null>(null);
 	const [busy, setBusy] = useState(false);
 	// What the agent said, kept so we can read it after it exits. The terminal has it on screen,
@@ -434,7 +436,7 @@ export function AgentConsolePanel({
 			<div className="pane-header">
 				<button
 					className="icon-btn"
-					aria-label={collapsed ? "Expand agent console" : "Collapse agent console"}
+					aria-label={collapsed ? t('agents.console.expand') : t('agents.console.collapse')}
 					onClick={onToggleCollapse}
 				>
 					<Icon name={collapsed ? 'chevron-up' : 'chevron-down'} />
@@ -449,25 +451,25 @@ export function AgentConsolePanel({
 						className="agent-console-warn"
 						onClick={onOpenSettings}
 						title={status.handoff === 'manual'
-							? `${descriptor.label} keeps its own list of tools, so connecting it is a one-time command. Open Settings, Agent access.`
-							: "Agent access is off, so this agent has no tools from the app. Open Settings, Agent access."}
+							? t('agents.console.manualTitle', { agent: descriptor.label })
+							: t('agents.console.noToolsTitle')}
 					>
-						<Icon name="warning" /> {status.handoff === 'manual' ? 'tools need setting up' : 'no app tools'}
+						<Icon name="warning" /> {status.handoff === 'manual' ? t('agents.console.manual') : t('agents.console.noTools')}
 					</button>
 				)}
 				{status?.running && status.mcpWired && (
-					<span className="agent-console-ok" title="This agent can query your allowed connections through the app.">
-						<Icon name="plug" /> connected
+					<span className="agent-console-ok" title={t('agents.console.connectedTitle')}>
+						<Icon name="plug" /> {t('agents.console.connected')}
 					</span>
 				)}
 				{showTerminal && (
 					// Zoom lives in the header because a terminal's type size is a per-user reading
 					// choice, not a preference to go hunting for. Same number as Settings, and the
 					// keys and Ctrl+wheel move it too.
-					<span className="agent-console-zoom" title={`Terminal text size (${fontSize}px). Ctrl+plus, Ctrl+minus, Ctrl+0, or Ctrl+scroll over the terminal.`}>
-						<button className="icon-btn" aria-label="Smaller terminal text" disabled={fontSize <= TERMINAL_FONT_MIN} onClick={() => zoom(-1)}><Icon name="zoom-out" /></button>
-						<button className="agent-console-zoom-value" aria-label="Reset terminal text size" onClick={() => zoom('reset')}>{fontSize}</button>
-						<button className="icon-btn" aria-label="Bigger terminal text" disabled={fontSize >= TERMINAL_FONT_MAX} onClick={() => zoom(1)}><Icon name="zoom-in" /></button>
+					<span className="agent-console-zoom" title={t('agents.console.zoomTitle', { size: String(fontSize) })}>
+						<button className="icon-btn" aria-label={t('agents.console.zoomOut')} disabled={fontSize <= TERMINAL_FONT_MIN} onClick={() => zoom(-1)}><Icon name="zoom-out" /></button>
+						<button className="agent-console-zoom-value" aria-label={t('agents.console.zoomReset')} onClick={() => zoom('reset')}>{fontSize}</button>
+						<button className="icon-btn" aria-label={t('agents.console.zoomIn')} disabled={fontSize >= TERMINAL_FONT_MAX} onClick={() => zoom(1)}><Icon name="zoom-in" /></button>
 					</span>
 				)}
 				{!surfaceInPanel && shown > 0 && (
@@ -476,19 +478,19 @@ export function AgentConsolePanel({
 					// nothing" is the bug report we would get.
 					<button
 						className="agent-console-shown"
-						title={`${descriptor.label} has shown you ${shown === 1 ? 'something' : `${shown} things`} in its own tab.`}
+						title={t('agents.console.shownTitle', { agent: descriptor.label, count: shown })}
 						onClick={onOpenSurface}
 					>
-						<Icon name="preview" /> shown in a tab{shown > 1 ? ` (${shown})` : ''}
+						<Icon name="preview" /> {t('agents.console.shown', { count: shown })}
 					</button>
 				)}
 				{installed && status?.running && (
-					<button className="icon-btn" aria-label="Restart" disabled={busy} onClick={() => void restart()}><Icon name="debug-restart" /></button>
+					<button className="icon-btn" aria-label={t('agents.console.restart')} disabled={busy} onClick={() => void restart()}><Icon name="debug-restart" /></button>
 				)}
 				{installed && status?.running && (
-					<button className="icon-btn" aria-label="Stop" disabled={busy} onClick={() => void stop()}><Icon name="debug-stop" /></button>
+					<button className="icon-btn" aria-label={t('agents.console.stop')} disabled={busy} onClick={() => void stop()}><Icon name="debug-stop" /></button>
 				)}
-				<button className="icon-btn" aria-label="Close panel" onClick={onClose}><Icon name="close" /></button>
+				<button className="icon-btn" aria-label={t('agents.console.close')} onClick={onClose}><Icon name="close" /></button>
 			</div>
 			{!collapsed && surfaceInPanel && shown > 0 && (
 				// The agent's own thread, above its terminal, the way the assistant's thread sits above
@@ -521,9 +523,9 @@ export function AgentConsolePanel({
 							<h3>{descriptor.label}</h3>
 							<p>{descriptor.installHint}</p>
 							<div className="agent-console-actions">
-								<button onClick={() => void refresh(kind)}><Icon name="refresh" /> Check again</button>
+								<button onClick={() => void refresh(kind)}><Icon name="refresh" /> {t('agents.console.checkAgain')}</button>
 								<button className="link-btn" onClick={() => window.sqlApi.openExternal(descriptor.installUrl)}>
-									Installation guide
+									{t('agents.console.installGuide')}
 								</button>
 							</div>
 						</div>
@@ -534,12 +536,12 @@ export function AgentConsolePanel({
 							<h3>{descriptor.label}</h3>
 							<p>
 								{status?.lastExit
-									? `The agent exited${status.lastExit.code === null ? '' : ` with code ${status.lastExit.code}`}.`
-									: "Runs on this computer, in your workspace folder. Your database passwords are never given to it."}
+									? (status.lastExit.code === null ? t('agents.console.exited') : t('agents.console.exitedCode', { code: String(status.lastExit.code) }))
+									: t('agents.console.runsHere')}
 							</p>
 							<div className="agent-console-actions">
 								<button className="primary" disabled={busy} onClick={() => void start()}><Icon name="play" /> 
-									{status?.lastExit ? "Start again" : `Start ${descriptor.label}`}
+									{status?.lastExit ? t('agents.console.startAgain') : t('agents.console.start', { agent: descriptor.label })}
 								</button>
 							</div>
 							{status?.install.version && <span className="agent-console-version">{status.install.version}</span>}
@@ -554,11 +556,11 @@ export function AgentConsolePanel({
 									{diagnosis
 										? diagnosis.title
 										: status?.lastExit?.code
-											? `${descriptor.label} exited with code ${status.lastExit.code}. Its last output is above.`
-											: `${descriptor.label} stopped.`}
+											? t('agents.console.exitedLabel', { agent: descriptor.label, code: String(status.lastExit.code) })
+											: t('agents.console.stopped', { agent: descriptor.label })}
 								</span>
 								<span className="spacer" />
-								<button className="primary" disabled={busy} onClick={() => void start()}><Icon name="debug-restart" /> Start again</button>
+								<button className="primary" disabled={busy} onClick={() => void start()}><Icon name="debug-restart" /> {t('agents.console.startAgain')}</button>
 							</div>
 							{diagnosis && (
 								<>

@@ -1,0 +1,52 @@
+{
+	"action": {
+		"title": "{client} quer alterar o aplicativo",
+		"clockTitle": "Recusado automaticamente se você não responder",
+		"seconds": "{n} s",
+		"turnsOn": "Permitir que um agente altere o aplicativo está desligado. Permitir isto liga a opção, e cada ação ainda vai perguntar a você. A chave fica em Configurações, Acesso de agentes, e dizer não aqui interrompe as perguntas.",
+		"allowOnce": "Permitir uma vez",
+		"alwaysTitle": "Não perguntar mais antes de “{title}”. Você pode voltar atrás em Configurações, Acesso de agentes.",
+		"always": "Sempre permitir",
+		"decline": "Recusar"
+	},
+	"canvas": {
+		"shownBy": "Mostrado por {agent}",
+		"clear": "Limpar o que está sendo mostrado",
+		"emptyTitle": "Nada mostrado ainda",
+		"emptyBody": "{agent} mostra as coisas aqui em vez de imprimi-las no terminal: linhas que buscou, uma consulta proposta, um gráfico. Tudo que tem SQL chega como um cartão que você pode inserir ou executar."
+	},
+	"console": {
+		"expand": "Expandir o console do agente",
+		"collapse": "Recolher o console do agente",
+		"manualTitle": "{agent} mantém a própria lista de ferramentas, então conectar é um comando único. Abra Configurações, Acesso de agentes.",
+		"noToolsTitle": "O acesso de agentes está desligado, então este agente não tem ferramentas do aplicativo. Abra Configurações, Acesso de agentes.",
+		"manual": "ferramentas a configurar",
+		"noTools": "sem ferramentas do app",
+		"connectedTitle": "Este agente pode consultar suas conexões permitidas pelo aplicativo.",
+		"connected": "conectado",
+		"zoomTitle": "Tamanho do texto do terminal ({size} px). Ctrl+mais, Ctrl+menos, Ctrl+0 ou Ctrl+rolagem sobre o terminal.",
+		"zoomOut": "Texto do terminal menor",
+		"zoomReset": "Redefinir o tamanho do texto",
+		"zoomIn": "Texto do terminal maior",
+		"shownTitle": {
+			"one": "{agent} mostrou algo na própria aba.",
+			"other": "{agent} mostrou {count} coisas na própria aba."
+		},
+		"shown": {
+			"one": "mostrado em uma aba",
+			"other": "mostrado em uma aba ({count})"
+		},
+		"restart": "Reiniciar",
+		"stop": "Parar",
+		"close": "Fechar painel",
+		"checkAgain": "Verificar de novo",
+		"installGuide": "Guia de instalação",
+		"exited": "O agente encerrou.",
+		"exitedCode": "O agente encerrou com o código {code}.",
+		"runsHere": "Roda neste computador, na pasta do workspace. Suas senhas de banco de dados nunca são passadas a ele.",
+		"startAgain": "Iniciar de novo",
+		"start": "Iniciar {agent}",
+		"exitedLabel": "{agent} encerrou com o código {code}. A última saída está acima.",
+		"stopped": "{agent} parou."
+	}
+}

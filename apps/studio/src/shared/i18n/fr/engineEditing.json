@@ -1,0 +1,23 @@
+{
+	"setDefault": "Mettre la valeur par défaut ({value})",
+	"setCurrentTime": "Mettre l'heure actuelle",
+	"setNull": "Mettre à NULL",
+	"noPrimaryKey": "Cette table n'a pas de clé primaire dans le résultat : modifications et suppressions ne peuvent pas être enregistrées sans risque. Ajoutez seulement des lignes, ou utilisez l'éditeur SQL.",
+	"refuseView": "Une vue n'a pas de lignes propres à modifier. Modifiez les tables sous-jacentes.",
+	"refuseLog": "Les événements de log ne peuvent pas être modifiés : le fournisseur n'offre aucun moyen d'y écrire.",
+	"refuseDictionary": "Un dictionnaire garde une copie de ce que renvoie sa SOURCE. Changez la source, puis rechargez le dictionnaire.",
+	"refuseReadOnly": "Cette connexion est marquée en lecture seule : rien ne peut être écrit ici. Changez-le sur la connexion.",
+	"refuseProduction": "Cette connexion est marquée production : la grille est en consultation seule.",
+	"refuseNoKey": "Cette table n'a pas de clé primaire : impossible de dire sans risque à quelle ligne appartient une modification. Ajoutez-en une, ou écrivez vous-même l'INSERT dans l'éditeur.",
+	"mongoNoId": "Ce document n'a pas de _id : les modifications de champs imbriqués ne peuvent pas être enregistrées. Utilisez plutôt l'éditeur de pipeline.",
+	"mongoNoChanges": "Aucune modification à enregistrer.",
+	"mongoNoIdColumn": "Ce résultat n'a pas de colonne _id : modifications et suppressions ne peuvent pas être enregistrées sans risque. Ajoutez seulement des documents, ou utilisez l'éditeur de pipeline.",
+	"pipelineEmpty": "Le pipeline est vide. Ajoutez au moins une étape, par exemple [ { \"$match\": {} } ].",
+	"invalidJson": "JSON invalide : {message}",
+	"pipelineNotArray": "Un pipeline doit être un tableau JSON d'étapes, par exemple [ { \"$match\": {} } ].",
+	"stageNotObject": "L'étape {stage} doit être un objet comme { \"$match\": { … } }.",
+	"filterInvalid": "Le filtre n'est pas du JSON valide : {message}",
+	"filterNotObject": "Le filtre doit être un objet JSON, par exemple { \"status\": \"active\" }.",
+	"stageNoOperator": "L'étape {stage} n'a pas d'opérateur (par exemple $match).",
+	"stageBodyInvalid": "Le corps de l'étape {stage} ({operator}) n'est pas du JSON valide : {message}"
+}

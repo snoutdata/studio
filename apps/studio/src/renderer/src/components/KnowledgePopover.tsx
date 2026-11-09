@@ -5,6 +5,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { Icon } from './Icon';
+import { rich, useT } from '../i18n';
 import { GLOBAL_CONNECTION, type KnowledgeNote } from '../../../shared/knowledge';
 
 /**
@@ -20,6 +21,7 @@ export function KnowledgePopover(props: {
 	onClose(): void;
 	onChanged(): void;
 }): JSX.Element {
+	const t = useT();
 	const [items, setItems] = useState<KnowledgeNote[] | null>(null);
 	const [draft, setDraft] = useState('');
 	const [everywhere, setEverywhere] = useState(false);
@@ -94,12 +96,12 @@ export function KnowledgePopover(props: {
 	return (
 		<div className="chat-knows-popover" ref={rootRef}>
 			<div className="chat-knows-head">
-				<span><Icon name="lightbulb" /> What I know about “{props.connectionLabel}”</span>
-				<button type="button" className="icon-btn" aria-label="Close" onClick={props.onClose}><Icon name="close" /></button>
+				<span><Icon name="lightbulb" /> {t('chat.knowledge.title', { name: props.connectionLabel })}</span>
+				<button type="button" className="icon-btn" aria-label={t('chat.knowledge.close')} onClick={props.onClose}><Icon name="close" /></button>
 			</div>
 
 			{items === null ? (
-				<div className="muted small chat-knows-empty">Loading…</div>
+				<div className="muted small chat-knows-empty">{t('chat.knowledge.loading')}</div>
 			) : (
 				<div className="chat-knows-body">
 					{suggested.length > 0 && (
@@ -108,11 +110,11 @@ export function KnowledgePopover(props: {
 								<div className="knowledge-item suggested" key={n.id}>
 									<div className="knowledge-item-body">
 										<div className="knowledge-item-text">{n.text}</div>
-										<div className="knowledge-item-meta muted small">Suggested from your chat</div>
+										<div className="knowledge-item-meta muted small">{t('chat.knowledge.suggested')}</div>
 									</div>
 									<div className="knowledge-item-actions">
-										<button type="button" title="Remember this" onClick={() => void after(window.sqlApi.approveKnowledgeNote(n.id))}><Icon name="check" /> Remember</button>
-										<button type="button" className="icon-btn" aria-label="Dismiss" onClick={() => void after(window.sqlApi.dismissKnowledgeNote(n.id))}><Icon name="close" /></button>
+										<button type="button" title={t('chat.knowledge.rememberThis')} onClick={() => void after(window.sqlApi.approveKnowledgeNote(n.id))}><Icon name="check" /> {t('chat.knowledge.remember')}</button>
+										<button type="button" className="icon-btn" aria-label={t('chat.knowledge.dismiss')} onClick={() => void after(window.sqlApi.dismissKnowledgeNote(n.id))}><Icon name="close" /></button>
 									</div>
 								</div>
 							))}
@@ -120,20 +122,20 @@ export function KnowledgePopover(props: {
 					)}
 
 					{active.length === 0 && suggested.length === 0 && (
-						<div className="muted small chat-knows-empty">Nothing yet. Teach me a fact about this database (like “sales live in <code>customer_order</code>, <code>fulfilled_date</code> is the sale date”) and I'll remember it so you don't have to repeat it.</div>
+						<div className="muted small chat-knows-empty">{rich(t('chat.knowledge.emptyHint'))}</div>
 					)}
 
 					{active.map((n) => (
 						<div className={`knowledge-item${n.enabled ? '' : ' disabled'}`} key={n.id}>
-							<label className="knowledge-item-toggle" title={n.enabled ? 'On, I use this' : 'Off, kept but not used'}>
+							<label className="knowledge-item-toggle" title={n.enabled ? t('chat.knowledge.on') : t('chat.knowledge.off')}>
 								<input type="checkbox" checked={n.enabled} onChange={() => void after(window.sqlApi.setKnowledgeNoteEnabled(n.id, !n.enabled))} />
 							</label>
 							<div className="knowledge-item-body">
 								<div className="knowledge-item-text">{n.text}</div>
-								{n.connectionId === GLOBAL_CONNECTION && <div className="knowledge-item-meta muted small"><span className="knowledge-badge">every database</span></div>}
+								{n.connectionId === GLOBAL_CONNECTION && <div className="knowledge-item-meta muted small"><span className="knowledge-badge">{t('chat.knowledge.everyDatabase')}</span></div>}
 							</div>
 							<div className="knowledge-item-actions">
-								<button type="button" className="icon-btn" aria-label="Delete" onClick={() => void after(window.sqlApi.deleteKnowledgeNote(n.id))}><Icon name="trash" /></button>
+								<button type="button" className="icon-btn" aria-label={t('chat.knowledge.delete')} onClick={() => void after(window.sqlApi.deleteKnowledgeNote(n.id))}><Icon name="trash" /></button>
 							</div>
 						</div>
 					))}
@@ -141,16 +143,16 @@ export function KnowledgePopover(props: {
 					<div className="chat-knows-add">
 						<textarea
 							value={draft}
-							placeholder="Teach it something about this database…"
+							placeholder={t('chat.knowledge.placeholder')}
 							rows={2}
 							onChange={(e) => setDraft(e.target.value)}
 							onKeyDown={(e) => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) { e.preventDefault(); void add(); } }}
 						/>
 						<div className="chat-knows-add-row">
-							<label className="muted small" title="Apply this to every connection, not just this one">
-								<input type="checkbox" checked={everywhere} onChange={(e) => setEverywhere(e.target.checked)} /> Applies to every database
+							<label className="muted small" title={t('chat.knowledge.everywhereTitle')}>
+								<input type="checkbox" checked={everywhere} onChange={(e) => setEverywhere(e.target.checked)} /> {t('chat.knowledge.everywhere')}
 							</label>
-							<button type="button" disabled={!draft.trim()} onClick={() => void add()}><Icon name="mortar-board" /> Teach it</button>
+							<button type="button" disabled={!draft.trim()} onClick={() => void add()}><Icon name="mortar-board" /> {t('chat.knowledge.teach')}</button>
 						</div>
 					</div>
 				</div>

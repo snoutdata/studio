@@ -1,0 +1,95 @@
+{
+	"listingPermission": " Lister est une permission à part. Si ces identifiants sont limités à certains {nouns} plutôt qu'au compte entier, nommez-les sur la connexion et elle les lira sans demander la liste.",
+	"armDidNotAnswer": "{label} n'a pas répondu : {message}",
+	"signedInChoose": "Connecté à {label}. Choisissez le {noun} sur la connexion.",
+	"serviceDidNotAnswer": "{label} n'a pas répondu.",
+	"storageAt": "le stockage sur {endpoint}",
+	"connectedNone": "Connecté à {where}. Ce compte n'a encore aucun {nouns}.",
+	"connectedSome": "Connecté à {where}. Visible : {what}.",
+	"storageGone": "Ce compte de stockage n'est plus configuré.",
+	"accountGone": "Ce compte cloud n'est plus configuré.",
+	"notBuilt": "{label} n'est pas encore disponible.",
+	"noFileStorage": "{vendorLabel} n'a pas de stockage de fichiers lisible par cette app.",
+	"noLogService": "{vendorLabel} n'a pas de service de journaux lisible par cette app.",
+	"setRegion": "Définissez d'abord une région : {label} liste ses {nouns} une région à la fois.",
+	"connectedRegionNone": "Connecté à {label} dans {region}. Rien pour l'instant.",
+	"connectedRegionSome": "Connecté à {label} dans {region}. Visible : {what}.",
+	"noun_bucket": {
+		"one": "bucket",
+		"other": "buckets"
+	},
+	"noun_container": {
+		"one": "conteneur",
+		"other": "conteneurs"
+	},
+	"noun_log_group": {
+		"one": "groupe de journaux",
+		"other": "groupes de journaux"
+	},
+	"noun_table": {
+		"one": "table",
+		"other": "tables"
+	},
+	"noun_log": {
+		"one": "journal",
+		"other": "journaux"
+	},
+	"count_bucket": {
+		"one": "Un bucket",
+		"other": "{count} buckets"
+	},
+	"count_container": {
+		"one": "Un conteneur",
+		"other": "{count} conteneurs"
+	},
+	"count_log_group": {
+		"one": "Un groupe de journaux",
+		"other": "{count} groupes de journaux"
+	},
+	"count_table": {
+		"one": "Une table",
+		"other": "{count} tables"
+	},
+	"count_log": {
+		"one": "Un journal",
+		"other": "{count} journaux"
+	},
+	"whatAws": "Fichiers dans S3, événements de journaux dans CloudWatch.",
+	"whatAzure": "Fichiers dans Blob Storage, événements de journaux dans Azure Monitor.",
+	"whatGcp": "Fichiers dans Cloud Storage, événements de journaux dans Cloud Logging.",
+	"s3CompatLabel": "Stockage compatible S3",
+	"whatS3Compat": "Cloudflare R2, MinIO, Backblaze B2, Wasabi, Ceph, ou tout autre service compatible avec l'API S3.",
+	"importsAws": "la CLI AWS",
+	"importsAzure": "la CLI Azure",
+	"importsGcp": "la CLI gcloud",
+	"importsS3Compat": "votre configuration de la CLI AWS, où une clé compatible S3 est généralement stockée",
+	"awsSso": "Connecté via SSO. Cela fonctionne tant que votre session dure, et un flux planifié s'arrête à son expiration jusqu'à votre reconnexion.",
+	"awsAssume": "Endosse un rôle. Cela fonctionne partout où le profil de base fonctionne.",
+	"awsCommand": "Exécute une de vos commandes pour récupérer les identifiants. Cela fonctionne ici tant que cette commande fonctionne.",
+	"awsWebIdentity": "Utilise un fichier de jeton d'identité web.",
+	"awsNoCreds": "Ce profil ne nomme pas d'identifiants propres : il dépend peut-être d'autre chose sur cet ordinateur.",
+	"noun_region": {
+		"one": "région",
+		"other": "régions"
+	},
+	"count_region": {
+		"one": "Une région",
+		"other": "{count} régions"
+	},
+	"noun_workspace_ID": {
+		"one": "ID d'espace de travail",
+		"other": "ID d'espaces de travail"
+	},
+	"count_workspace_ID": {
+		"one": "Un ID d'espace de travail",
+		"other": "{count} ID d'espaces de travail"
+	},
+	"noun_project": {
+		"one": "projet",
+		"other": "projets"
+	},
+	"count_project": {
+		"one": "Un projet",
+		"other": "{count} projets"
+	}
+}

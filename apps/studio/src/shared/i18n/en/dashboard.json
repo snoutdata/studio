@@ -1,0 +1,76 @@
+{
+	"ago": {
+		"days": "{days}d ago",
+		"today": "today",
+		"yesterday": "yesterday"
+	},
+	"errors": {
+		"hosted": "Could not read your hosted databases: {error}",
+		"local": "Could not read your local projects: {error}"
+	},
+	"list": {
+		"cold": "cold: the next start restores it, which takes longer",
+		"coldHint": "Its data is in the bucket rather than on a host",
+		"collapse": "Collapse",
+		"copyToCloud": "Copy this project to SnoutData Cloud",
+		"copyToLocal": "Copy this project to this computer",
+		"dockerHint": "Run the whole SnoutData stack in Docker on this computer",
+		"emptyHint": "Your projects live here: run one in Docker on this computer, or in SnoutData Cloud.",
+		"lastConnected": "last connected {when}",
+		"newCloud": "New cloud project",
+		"newProject": "New project",
+		"overLimit": "Over its plan's storage limit, so the database is refusing writes",
+		"readOnly": "read-only",
+		"setUpLocal": "Set up a local project",
+		"signedIn": "Signed in as {account}.",
+		"silent": "server not answering",
+		"silentHint": "Its server is not answering",
+		"silentLong": "its server is not answering",
+		"starting": "Starting…",
+		"stopping": "Stopping…",
+		"title": "DASHBOARD"
+	},
+	"menu": {
+		"show": "Show in Connections"
+	},
+	"new": {
+		"added": "It is added to your connections as soon as it is created.",
+		"cloud": "In SnoutData Cloud",
+		"creating": "Creating…",
+		"local": "Local, in Docker on this computer",
+		"placeholder": "orders, staging, my side project",
+		"prodHint": "A production project is never paused, whether you ask or the idle policy does. Plus, Pro and Business only.",
+		"signIn": "Sign in to create a cloud project"
+	},
+	"tile": {
+		"delete": "Delete widget",
+		"every": "every {seconds}s",
+		"loadingChart": "Loading chart…",
+		"nextRefresh": "Seconds until the next refresh",
+		"noConn": "No connection",
+		"noData": "No data.",
+		"waiting": "Waiting for the first sample…"
+	},
+	"viz": {
+		"area": "area",
+		"bar": "bar",
+		"line": "line",
+		"number": "number",
+		"table": "table"
+	},
+	"widget": {
+		"add": "Add widget",
+		"chooseConn": "Choose a connection…",
+		"edit": "Edit widget",
+		"keep": "Keep (minutes)",
+		"placeholder": "New queue depth",
+		"refresh": "Refresh (seconds)",
+		"save": "Save widget",
+		"snapshot": "Snapshot (replace each refresh)",
+		"snapshotHint": "Return a result set: the first column is the category axis, the rest are plotted. Re-run replaces the view.",
+		"title": "Title",
+		"trend": "Trend (sample over time)",
+		"trendHint": "Return one number (a scalar metric), or two columns (label, value) for a grouped metric. Each poll adds a point over time.",
+		"viz": "Visualization"
+	}
+}

@@ -18,7 +18,8 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { dialectFor, readOnlyEnforcement } from './index';
-import { lexicalOnly, type ReadOnlyEnforcement } from './readOnly';
+import { CLICKHOUSE_READ_ONLY, DUCKDB_READ_ONLY, lexicalOnly, MYSQL_READ_ONLY, ORACLE_READ_ONLY, POSTGRES_READ_ONLY, REDSHIFT_READ_ONLY, SQLITE_READ_ONLY, SQLSERVER_READ_ONLY, type ReadOnlyEnforcement } from './readOnly';
+import { t } from '../../i18n/core';
 
 export interface Flavor {
 	/** Stored in `ConnectionConfig.flavor`. Never changes once shipped. */
@@ -70,6 +71,27 @@ export function readOnlyEnforcementFor(driver: string | undefined, flavor?: stri
 		return lexicalOnly(found.displayName);
 	}
 	return readOnlyEnforcement(driver);
+}
+
+const READ_ONLY_TEXT = new Map<ReadOnlyEnforcement, string>([
+	[POSTGRES_READ_ONLY, 'postgres'],
+	[REDSHIFT_READ_ONLY, 'redshift'],
+	[MYSQL_READ_ONLY, 'mysql'],
+	[ORACLE_READ_ONLY, 'oracle'],
+	[SQLITE_READ_ONLY, 'sqlite'],
+	[DUCKDB_READ_ONLY, 'duckdb'],
+	[CLICKHOUSE_READ_ONLY, 'clickhouse'],
+	[SQLSERVER_READ_ONLY, 'sqlserver'],
+]);
+
+/** The read-only sentence a person reads, in their language. `.summary` stays English: it also
+ *  goes to an agent over MCP (`readOnlyBy`). */
+export function readOnlyEnforcementText(driver: string | undefined, flavor?: string): string {
+	const enforcement = readOnlyEnforcementFor(driver, flavor);
+	const key = READ_ONLY_TEXT.get(enforcement);
+	return key
+		? t(`engineReadOnly.${key}`)
+		: t('engineReadOnly.lexical', { engine: flavorFor(driver, flavor)?.displayName ?? dialectFor(driver).displayName });
 }
 
 /** What to call the engine behind a connection: the flavor's name, else the driver's. */

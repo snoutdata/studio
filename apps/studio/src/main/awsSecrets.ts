@@ -3,6 +3,7 @@
  *  Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { t } from '../shared/i18n/core';
 import { GetSecretValueCommand, SecretsManagerClient } from '@aws-sdk/client-secrets-manager';
 
 import { awsCredentials } from './aws/credentials';
@@ -55,21 +56,21 @@ async function fetchSecretFields(aws: AwsSecretConfig, secretAccessKey: string |
 		const result = await client.send(new GetSecretValueCommand({ SecretId: aws.secretId }));
 		secretString = result.SecretString;
 	} catch (err) {
-		throw new Error(`AWS Secrets Manager: ${err instanceof Error ? err.message : String(err)}`);
+		throw new Error(t('mainErrors.asmError', { error: err instanceof Error ? err.message : String(err) }));
 	} finally {
 		client.destroy();
 	}
 	if (!secretString) {
-		throw new Error(`AWS Secrets Manager: secret "${aws.secretId}" has no string value (binary secrets are not supported).`);
+		throw new Error(t('mainErrors.asmNoString', { secretId: aws.secretId }));
 	}
 	let parsed: unknown;
 	try {
 		parsed = JSON.parse(secretString);
 	} catch {
-		throw new Error(`AWS Secrets Manager: secret "${aws.secretId}" is not JSON (expected keys like "username" and "password").`);
+		throw new Error(t('mainErrors.asmNotJson', { secretId: aws.secretId }));
 	}
 	if (!parsed || typeof parsed !== 'object') {
-		throw new Error(`AWS Secrets Manager: secret "${aws.secretId}" is not a JSON object.`);
+		throw new Error(t('mainErrors.asmNotObject', { secretId: aws.secretId }));
 	}
 	const record = parsed as Record<string, unknown>;
 	return {
@@ -98,7 +99,7 @@ function sameHost(a: string, b: string): boolean {
  */
 export function mergeSecretFields(config: ConnectionConfig, fields: SecretFields, secretId: string): ConnectionConfig {
 	if (!fields.username && !fields.password) {
-		throw new Error(`AWS Secrets Manager: secret "${secretId}" has no "username" or "password" field.`);
+		throw new Error(t('mainErrors.asmNoFields', { secretId }));
 	}
 	const merged: ConnectionConfig = {
 		...config,
@@ -111,7 +112,7 @@ export function mergeSecretFields(config: ConnectionConfig, fields: SecretFields
 	}
 	const given = config.host?.trim() ?? '';
 	if (given !== '' && !sameHost(given, fields.host)) {
-		throw new Error(`AWS Secrets Manager: secret "${secretId}" is for the database at "${fields.host}", but this connection points at "${given}", so its credentials were not sent. Clear the host on the connection to use the secret's, or set it to "${fields.host}".`);
+		throw new Error(t('mainErrors.asmHostMismatch', { secretId, host: fields.host, given }));
 	}
 	return { ...merged, host: fields.host, port: fields.port || config.port || 0 };
 }

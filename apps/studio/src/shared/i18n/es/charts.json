@@ -1,0 +1,10 @@
+{
+	"view": {
+		"chart": "Gráfico",
+		"loading": "Cargando gráfico…",
+		"save": "Guardar gráfico",
+		"saveCsv": "Guardar datos como CSV",
+		"savePng": "Guardar como PNG",
+		"saveSvg": "Guardar como SVG"
+	}
+}

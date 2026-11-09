@@ -37,7 +37,7 @@ export function formatShortcut(combo: string): string {
  * title-bar menu gets them in that form; this is the one place the two spellings meet.
  */
 export function formatAccelerator(accelerator: string): string {
-	return formatShortcut(accelerator.split('+').map((t) => (t === 'CmdOrCtrl' || t === 'CommandOrControl' ? 'Mod' : t)).join('+'));
+	return formatShortcut(accelerator.split('+').map((key) => (key === 'CmdOrCtrl' || key === 'CommandOrControl' ? 'Mod' : key)).join('+'));
 }
 
 /** The combo split into its display tokens (for UIs that render each key in its own <kbd>,

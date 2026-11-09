@@ -7,6 +7,7 @@ import { Icon } from './Icon';
 import type { ConnectionConfig } from '../../../shared/connection';
 import { engineDisplayName } from '../../../shared/engine';
 import { driverKind } from '../driverKind';
+import { useT } from '../i18n';
 
 // How a connection is marked wherever it is listed: the sidebar's row and the connection pickers
 // draw these same pieces, so a PROD tag or a driver glyph cannot be on one and missing from the
@@ -19,6 +20,7 @@ export function driverTitle(driverId: string, flavor?: string): string {
 
 /** The status dot and, beside it, what KIND of backend this is. */
 export function ConnectionMarks({ config, connected }: { config: ConnectionConfig; connected: boolean }): JSX.Element {
+	const t = useT();
 	const isProd = config.environment === 'prod';
 	return (
 		<>
@@ -27,7 +29,7 @@ export function ConnectionMarks({ config, connected }: { config: ConnectionConfi
 			    stays dim: the dot carries the state and the label carries the identity, and a third
 			    thing competing with either would make the row harder to scan, not easier. */}
 			{config.cloudProjectRef || config.localProjectId
-				? <span className="tree-icon driver-mark" title={`${config.localProjectId ? "SnoutData local project" : "SnoutData Cloud"} (${driverTitle(config.driver, config.flavor)})`}><Icon name="glyph:butterfly" /></span>
+				? <span className="tree-icon driver-mark" title={`${config.localProjectId ? t('editor.conn.localProject') : "SnoutData Cloud"} (${driverTitle(config.driver, config.flavor)})`}><Icon name="glyph:butterfly" /></span>
 				: <span className="tree-icon driver-mark" title={driverTitle(config.driver, config.flavor)}><Icon name={driverKind(config.driver).icon} /></span>}
 		</>
 	);
@@ -35,11 +37,12 @@ export function ConnectionMarks({ config, connected }: { config: ConnectionConfi
 
 /** The environment tag (PROD in its warning colour) and the read-only tag, after the name. */
 export function ConnectionTags({ config }: { config: ConnectionConfig }): JSX.Element {
+	const t = useT();
 	const isProd = config.environment === 'prod';
 	return (
 		<>
 			{config.environment && <span className={`env${isProd ? ' prod' : ''}`}>{config.environment}</span>}
-			{config.readOnly && <span className="env ro" title="Read-only connection. Writes and DDL are blocked.">RO</span>}
+			{config.readOnly && <span className="env ro" title={t('editor.conn.readOnlyTitle')}>RO</span>}
 		</>
 	);
 }

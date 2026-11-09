@@ -1,0 +1,31 @@
+{
+	"replicaTaking": "Su réplica está ocupando su lugar",
+	"replicaFailed": "Su réplica no pudo ocupar su lugar",
+	"routerDown": "No responde",
+	"routerStarting": "Iniciando",
+	"routerPaused": "En pausa, despierta con la próxima conexión",
+	"routerOk": "Envía cada consulta",
+	"router": "Router",
+	"serves": "Sirve su parte",
+	"serverStarting": "Su servidor está iniciando",
+	"joinStopped": "Su incorporación se detuvo",
+	"draining": "Moviendo sus datos fuera",
+	"holdsHome": "Guarda las tablas no repartidas",
+	"home": "Principal",
+	"node": "Nodo {id}",
+	"queries": "consultas",
+	"newNode": "Nodo nuevo",
+	"replica": "Réplica",
+	"follows": "Lo sigue, ocupa su lugar si se pierde",
+	"fromBackup": "Creándose desde su copia de seguridad",
+	"replicaLine": "réplica",
+	"jobWaiting": "El trabajo {id} ({op}) está esperando para empezar: {done} de {steps} pasos. Las escrituras en un rango se pausan un momento cuando se mueve.",
+	"jobState": "El trabajo {id} ({op}) está en {state}: {done} de {steps} pasos. Las escrituras en un rango se pausan un momento cuando se mueve.",
+	"sentenceRouterDown": "El router no responde, así que las consultas no llegan a los nodos del clúster.",
+	"sentenceJoining": "Un nodo se está incorporando. Empieza como copia del nodo principal y toma su parte de los datos cuando se ha unido.",
+	"sentenceHomeOnly": "Todas las filas están en el nodo principal. Reparte una tabla para poner sus filas en los nodos del clúster.",
+	"sentenceServing": {
+		"one": "El router envía cada consulta al nodo principal o al nodo que tiene sus filas.",
+		"other": "El router envía cada consulta al nodo principal o a los {count} nodos que tienen sus filas."
+	}
+}

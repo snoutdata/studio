@@ -1,0 +1,52 @@
+{
+	"action": {
+		"title": "{client} quiere cambiar la aplicación",
+		"clockTitle": "Se rechaza automáticamente si no respondes",
+		"seconds": "{n} s",
+		"turnsOn": "Permitir que un agente cambie la aplicación está desactivado. Si lo permites, se activa, y cada acción te seguirá preguntando. El interruptor está en Configuración, Acceso de agentes, y decir que no aquí detiene las preguntas.",
+		"allowOnce": "Permitir una vez",
+		"alwaysTitle": "No preguntar más antes de «{title}». Puedes revertirlo en Configuración, Acceso de agentes.",
+		"always": "Permitir siempre",
+		"decline": "Rechazar"
+	},
+	"canvas": {
+		"shownBy": "Mostrado por {agent}",
+		"clear": "Borrar lo mostrado",
+		"emptyTitle": "Aún no se muestra nada",
+		"emptyBody": "{agent} muestra aquí lo que antes imprimiría en su terminal: filas obtenidas, una consulta propuesta, un gráfico. Todo lo que tenga SQL llega como una tarjeta que puedes insertar o ejecutar."
+	},
+	"console": {
+		"expand": "Expandir la consola del agente",
+		"collapse": "Contraer la consola del agente",
+		"manualTitle": "{agent} guarda su propia lista de herramientas, así que conectarlo es un comando único. Abre Configuración, Acceso de agentes.",
+		"noToolsTitle": "El acceso de agentes está desactivado, así que este agente no tiene herramientas de la aplicación. Abre Configuración, Acceso de agentes.",
+		"manual": "faltan herramientas",
+		"noTools": "sin herramientas de la app",
+		"connectedTitle": "Este agente puede consultar tus conexiones permitidas a través de la aplicación.",
+		"connected": "conectado",
+		"zoomTitle": "Tamaño del texto del terminal ({size} px). Ctrl+más, Ctrl+menos, Ctrl+0 o Ctrl+rueda sobre el terminal.",
+		"zoomOut": "Texto del terminal más pequeño",
+		"zoomReset": "Restablecer el tamaño del texto",
+		"zoomIn": "Texto del terminal más grande",
+		"shownTitle": {
+			"one": "{agent} te mostró algo en su propia pestaña.",
+			"other": "{agent} te mostró {count} cosas en su propia pestaña."
+		},
+		"shown": {
+			"one": "en una pestaña",
+			"other": "en una pestaña ({count})"
+		},
+		"restart": "Reiniciar",
+		"stop": "Detener",
+		"close": "Cerrar panel",
+		"checkAgain": "Volver a comprobar",
+		"installGuide": "Guía de instalación",
+		"exited": "El agente terminó.",
+		"exitedCode": "El agente terminó con el código {code}.",
+		"runsHere": "Se ejecuta en este equipo, en tu carpeta del espacio de trabajo. Nunca se le dan tus contraseñas de base de datos.",
+		"startAgain": "Iniciar de nuevo",
+		"start": "Iniciar {agent}",
+		"exitedLabel": "{agent} terminó con el código {code}. Su última salida está arriba.",
+		"stopped": "{agent} se detuvo."
+	}
+}

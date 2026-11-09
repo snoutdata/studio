@@ -6,6 +6,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Icon } from './Icon';
 import type { LocalInstallOutcome, LocalProgress, LocalRequirements, LocalSetupForm } from '../../../shared/localStack';
+import { t, useT } from '../i18n';
 
 /**
  * Set up a local project: the whole SnoutData stack in the user's own Docker, the way
@@ -28,19 +29,19 @@ interface LocalSetupViewProps {
 type Step = 'check' | 'project' | 'auth' | 'storage' | 'review' | 'install';
 
 const STEPS: ReadonlyArray<{ id: Step; label: string; icon: string }> = [
-	{ id: 'check', label: "Requirements", icon: 'checklist' },
-	{ id: 'project', label: "Project", icon: 'folder' },
-	{ id: 'auth', label: "Sign-in and mail", icon: 'shield' },
-	{ id: 'storage', label: "Files", icon: 'files' },
-	{ id: 'review', label: "Review", icon: 'eye' },
-	{ id: 'install', label: "Install", icon: 'rocket' },
+	{ id: 'check', get label() { return t('localProjects.setup.stepRequirements'); }, icon: 'checklist' },
+	{ id: 'project', get label() { return t('projects.common.project'); }, icon: 'folder' },
+	{ id: 'auth', get label() { return t('localProjects.setup.stepAuth'); }, icon: 'shield' },
+	{ id: 'storage', get label() { return t('localProjects.common.files'); }, icon: 'files' },
+	{ id: 'review', get label() { return t('localProjects.setup.stepReview'); }, icon: 'eye' },
+	{ id: 'install', get label() { return t('localProjects.setup.stepInstall'); }, icon: 'rocket' },
 ];
 
 const INSTALL_STEPS: ReadonlyArray<{ id: LocalProgress['step']; label: string }> = [
-	{ id: 'download', label: "Download the stack" },
-	{ id: 'keys', label: "Make the keys and passwords" },
-	{ id: 'pull', label: "Download the images" },
-	{ id: 'start', label: "Start the services" },
+	{ id: 'download', get label() { return t('localProjects.setup.downloadStack'); } },
+	{ id: 'keys', get label() { return t('localProjects.setup.makeKeys'); } },
+	{ id: 'pull', get label() { return t('localProjects.setup.downloadImages'); } },
+	{ id: 'start', get label() { return t('localProjects.setup.startServices'); } },
 ];
 
 interface WizardState {
@@ -117,6 +118,7 @@ function hookProgress(): void {
 const MAX_LOG_LINES = 400;
 
 export function LocalSetupView(props: LocalSetupViewProps): JSX.Element {
+	const t = useT();
 	const [state, setStateRaw] = useState<WizardState>(saved);
 	const [requirements, setRequirements] = useState<LocalRequirements | null>(null);
 	const [checking, setChecking] = useState(false);
@@ -209,7 +211,7 @@ export function LocalSetupView(props: LocalSetupViewProps): JSX.Element {
 					clearInterval(pollRef.current);
 					pollRef.current = null;
 				}
-				setEngineNote("Docker has not answered after three minutes. When it says it is running, check again.");
+				setEngineNote(t('localProjects.setup.dockerTimeout'));
 				return;
 			}
 			void check();
@@ -245,26 +247,26 @@ export function LocalSetupView(props: LocalSetupViewProps): JSX.Element {
 	/** What stops "Next" on the current step, or null. */
 	function blocker(step: Step): string | null {
 		switch (step) {
-			case 'check': return ready ? null : "Every requirement must pass first.";
+			case 'check': return ready ? null : t('localProjects.setup.mustPass');
 			case 'project':
 				if (!form.name.trim()) {
-					return "Give the project a name.";
+					return t('localProjects.setup.giveName');
 				}
 				if (!form.folder.trim()) {
-					return "Choose a folder.";
+					return t('localProjects.setup.chooseFolder');
 				}
 				if (form.apiPort === form.dbPort) {
-					return "The API and the database need different ports.";
+					return t('localProjects.setup.diffPorts');
 				}
 				if (portsBusy.includes(form.apiPort) || portsBusy.includes(form.dbPort)) {
-					return "A port is in use. Choose another.";
+					return t('localProjects.setup.portBusy');
 				}
-				return /^https?:\/\/\S+$/.test(form.siteUrl.trim()) ? null : "Site URL must start with http:// or https://.";
+				return /^https?:\/\/\S+$/.test(form.siteUrl.trim()) ? null : t('localProjects.setup.siteUrlBad');
 			case 'auth':
-				return state.smtpOn && (!form.smtp?.host.trim() || !form.smtp.adminEmail.trim()) ? "Give the mail server and the address mail is sent from." : null;
+				return state.smtpOn && (!form.smtp?.host.trim() || !form.smtp.adminEmail.trim()) ? t('localProjects.setup.mailNeeded') : null;
 			case 'storage': {
 				const s3 = form.s3;
-				return !form.bundledStorage && (!s3 || !s3.endpoint.trim() || !s3.bucket.trim() || !s3.accessKey || !s3.secretKey) ? "Give your S3 endpoint, bucket and keys." : null;
+				return !form.bundledStorage && (!s3 || !s3.endpoint.trim() || !s3.bucket.trim() || !s3.accessKey || !s3.secretKey) ? t('localProjects.setup.s3Needed') : null;
 			}
 			default: return null;
 		}
@@ -290,7 +292,7 @@ export function LocalSetupView(props: LocalSetupViewProps): JSX.Element {
 			const busy = await window.sqlApi.local.portsInUse([form.apiPort, form.dbPort]);
 			setPortsBusy(busy);
 			if (busy.length > 0) {
-				setProblem(`Port ${busy.join(" and ")} is in use on this computer. Choose another.`);
+				setProblem(t('localProjects.setup.portBusyLong', { ports: busy.join(t('localProjects.setup.and')) }));
 				return;
 			}
 		}
@@ -316,7 +318,7 @@ export function LocalSetupView(props: LocalSetupViewProps): JSX.Element {
 				<nav className="settings-nav">
 					<div className="cloud-project-nav-head">
 						<Icon name="device-desktop" />
-						<span className="cloud-project-nav-name">{form.name.trim() || "New local project"}</span>
+						<span className="cloud-project-nav-name">{form.name.trim() || t('localProjects.setup.newTitle')}</span>
 					</div>
 					{STEPS.map((s, i) => (
 						<button
@@ -337,12 +339,11 @@ export function LocalSetupView(props: LocalSetupViewProps): JSX.Element {
 					{state.step === 'check' && (
 						<>
 							<p className="field-hint">
-								A local project is the whole SnoutData stack on this computer: Postgres, auth, the data API, storage,
-								Realtime and functions behind one port. It runs in Docker, so that comes first.
+								{t('localProjects.setup.intro')}
 							</p>
 							<fieldset>
-								<legend>This computer</legend>
-								{!requirements && <div className="field-hint">Checking…</div>}
+								<legend>{t('localProjects.setup.thisComputer')}</legend>
+								{!requirements && <div className="field-hint">{t('localProjects.setup.checking')}</div>}
 								{requirements?.items.map((item) => (
 									<div key={item.id} className="local-requirement">
 										<Icon
@@ -354,7 +355,7 @@ export function LocalSetupView(props: LocalSetupViewProps): JSX.Element {
 											{item.advice && <div className="field-hint">{item.advice}</div>}
 											{(item.link || item.canStartEngine) && (
 												<div className="cloud-actions">
-													{item.canStartEngine && <button type="button" onClick={() => void startEngine()}><Icon name="play" /> Start Docker Desktop</button>}
+													{item.canStartEngine && <button type="button" onClick={() => void startEngine()}><Icon name="play" /> {t('localProjects.setup.startDocker')}</button>}
 													{item.link && <button type="button" className="secondary" onClick={() => void window.sqlApi.local.openUrl(item.link?.url ?? '')}>{item.link.label}</button>}
 												</div>
 											)}
@@ -364,7 +365,7 @@ export function LocalSetupView(props: LocalSetupViewProps): JSX.Element {
 								{engineNote && <div className="field-hint">{engineNote}</div>}
 								<div className="cloud-actions">
 									<button type="button" className="secondary" disabled={checking} onClick={() => void check()}>
-										<Icon name={checking ? 'loading' : 'refresh'} className={checking ? 'codicon-modifier-spin' : ''} /> Check again
+										<Icon name={checking ? 'loading' : 'refresh'} className={checking ? 'codicon-modifier-spin' : ''} /> {t('localProjects.setup.checkAgain')}
 									</button>
 								</div>
 							</fieldset>
@@ -374,13 +375,13 @@ export function LocalSetupView(props: LocalSetupViewProps): JSX.Element {
 					{state.step === 'project' && (
 						<>
 							<fieldset>
-								<legend>Project</legend>
+								<legend>{t('projects.common.project')}</legend>
 								<label>
-									Name
+									{t('projects.common.name')}
 									<input value={form.name} onChange={(e) => setForm({ name: e.target.value })} placeholder="my-app" maxLength={60} autoFocus />
 								</label>
 								<label>
-									Folder
+									{t('localProjects.common.folder')}
 									<div className="local-folder-row">
 										<input
 											value={form.folder}
@@ -397,38 +398,38 @@ export function LocalSetupView(props: LocalSetupViewProps): JSX.Element {
 												}
 											}}
 										>
-											<Icon name="folder-opened" /> Browse…
+											<Icon name="folder-opened" /> {t('localProjects.setup.browse')}
 										</button>
 									</div>
 								</label>
-								<p className="field-hint">A new or empty folder. It gets the stack's compose.yaml, a .env with this project's keys, and functions/ for your code. Back up .env with your data: it is the only copy of the keys.</p>
+								<p className="field-hint">{t('localProjects.setup.folderHint')}</p>
 								<label className="check">
-									<input type="checkbox" checked={form.addConnection} onChange={(e) => setForm({ addConnection: e.target.checked })} /> Add the database to Connections
+									<input type="checkbox" checked={form.addConnection} onChange={(e) => setForm({ addConnection: e.target.checked })} /> {t('localProjects.setup.addConnection')}
 								</label>
 							</fieldset>
 							<fieldset>
-								<legend>Network</legend>
+								<legend>{t('localProjects.setup.network')}</legend>
 								<div className="local-port-grid">
 									<label>
-										API port
+										{t('localProjects.setup.apiPort')}
 										<input type="number" min={1024} max={65535} value={form.apiPort} onChange={(e) => setForm({ apiPort: Number(e.target.value) })} onBlur={() => void checkPorts()} />
 									</label>
 									<label>
-										Database port
+										{t('localProjects.setup.dbPort')}
 										<input type="number" min={1024} max={65535} value={form.dbPort} onChange={(e) => setForm({ dbPort: Number(e.target.value) })} onBlur={() => void checkPorts()} />
 									</label>
 								</div>
-								{portsBusy.length > 0 && <div className="form-status warn">Port {portsBusy.join(" and ")} is in use on this computer.</div>}
-								<p className="field-hint">Your app talks to http://localhost:{form.apiPort || "…"}. The database is on this computer only, at 127.0.0.1:{form.dbPort || "…"}.</p>
+								{portsBusy.length > 0 && <div className="form-status warn">{t('localProjects.setup.portBusyShort', { ports: portsBusy.join(t('localProjects.setup.and')) })}</div>}
+								<p className="field-hint">{t('localProjects.setup.portsTalk', { api: form.apiPort || "…", db: form.dbPort || "…" })}</p>
 								<label className="check">
-									<input type="checkbox" checked={form.exposeApi} onChange={(e) => setForm({ exposeApi: e.target.checked })} /> Reachable from other devices on my network
+									<input type="checkbox" checked={form.exposeApi} onChange={(e) => setForm({ exposeApi: e.target.checked })} /> {t('localProjects.setup.lanAccess')}
 								</label>
-								<p className="field-hint">Off, only this computer can call the API. On, a phone or another machine on the same network can, which is what testing a mobile app needs.</p>
+								<p className="field-hint">{t('localProjects.setup.lanHint')}</p>
 								<label>
-									Site URL
+									{t('localProjects.setup.siteUrl')}
 									<input value={form.siteUrl} onChange={(e) => setForm({ siteUrl: e.target.value })} placeholder="http://localhost:3000" />
 								</label>
-								<p className="field-hint">Where your app runs: where a user lands after a sign-in or confirmation link.</p>
+								<p className="field-hint">{t('localProjects.setup.siteHint')}</p>
 							</fieldset>
 						</>
 					)}
@@ -436,49 +437,49 @@ export function LocalSetupView(props: LocalSetupViewProps): JSX.Element {
 					{state.step === 'auth' && (
 						<>
 							<fieldset>
-								<legend>Sign-ups</legend>
+								<legend>{t('localProjects.setup.signups')}</legend>
 								<label className="check">
-									<input type="checkbox" checked={form.autoconfirm} onChange={(e) => setForm({ autoconfirm: e.target.checked })} /> Confirm new users without an email
+									<input type="checkbox" checked={form.autoconfirm} onChange={(e) => setForm({ autoconfirm: e.target.checked })} /> {t('localProjects.setup.autoconfirm')}
 								</label>
-								<p className="field-hint">Recommended on this computer: without a mail server nobody can click a confirmation link, so nobody could sign in.</p>
+								<p className="field-hint">{t('localProjects.setup.autoHint')}</p>
 								<label className="check">
-									<input type="checkbox" checked={form.disableSignup} onChange={(e) => setForm({ disableSignup: e.target.checked })} /> Refuse new sign-ups
+									<input type="checkbox" checked={form.disableSignup} onChange={(e) => setForm({ disableSignup: e.target.checked })} /> {t('localProjects.setup.disableSignup')}
 								</label>
-								<p className="field-hint">Only users you invite or create can sign in.</p>
+								<p className="field-hint">{t('localProjects.setup.inviteOnly')}</p>
 							</fieldset>
 							<fieldset>
-								<legend>Mail</legend>
+								<legend>{t('localProjects.setup.mail')}</legend>
 								<label className="check">
-									<input type="checkbox" checked={state.smtpOn} onChange={(e) => setState({ smtpOn: e.target.checked })} /> Send mail through a mail server
+									<input type="checkbox" checked={state.smtpOn} onChange={(e) => setState({ smtpOn: e.target.checked })} /> {t('localProjects.setup.sendMail')}
 								</label>
-								<p className="field-hint">For confirmation links, password resets and one-time codes. You can add this later in the project's settings.</p>
+								<p className="field-hint">{t('localProjects.setup.mailHint')}</p>
 								{state.smtpOn && form.smtp && (
 									<>
 										<div className="local-port-grid">
 											<label>
-												Server
+												{t('localProjects.common.server')}
 												<input value={form.smtp.host} onChange={(e) => setForm({ smtp: { ...form.smtp!, host: e.target.value } })} placeholder="smtp.example.com" />
 											</label>
 											<label>
-												Port
+												{t('projects.common.port')}
 												<input type="number" value={form.smtp.port} onChange={(e) => setForm({ smtp: { ...form.smtp!, port: Number(e.target.value) } })} />
 											</label>
 										</div>
 										<label>
-											User
+											{t('projects.common.user')}
 											<input value={form.smtp.user} onChange={(e) => setForm({ smtp: { ...form.smtp!, user: e.target.value } })} autoComplete="off" />
 										</label>
 										<label>
-											Password
+											{t('projects.common.password')}
 											<input type="password" value={form.smtp.pass} onChange={(e) => setForm({ smtp: { ...form.smtp!, pass: e.target.value } })} autoComplete="new-password" />
 										</label>
 										<label>
-											Send from
+											{t('localProjects.setup.sendFrom')}
 											<input value={form.smtp.adminEmail} onChange={(e) => setForm({ smtp: { ...form.smtp!, adminEmail: e.target.value } })} placeholder="no-reply@example.com" />
 										</label>
 										<label>
-											Sender name
-											<input value={form.smtp.senderName} onChange={(e) => setForm({ smtp: { ...form.smtp!, senderName: e.target.value } })} placeholder="My App" />
+											{t('localProjects.setup.senderName')}
+											<input value={form.smtp.senderName} onChange={(e) => setForm({ smtp: { ...form.smtp!, senderName: e.target.value } })} placeholder={t('localProjects.setup.myApp')} />
 										</label>
 									</>
 								)}
@@ -488,63 +489,62 @@ export function LocalSetupView(props: LocalSetupViewProps): JSX.Element {
 
 					{state.step === 'storage' && (
 						<fieldset>
-							<legend>Where files are kept</legend>
+							<legend>{t('localProjects.setup.filesWhere')}</legend>
 							<label className="check">
-								<input type="checkbox" checked={form.bundledStorage} onChange={(e) => setForm({ bundledStorage: e.target.checked })} /> Keep files on this computer
+								<input type="checkbox" checked={form.bundledStorage} onChange={(e) => setForm({ bundledStorage: e.target.checked })} /> {t('localProjects.setup.bundled')}
 							</label>
-							<p className="field-hint">The stack brings its own object store, in a Docker volume. Off, files go to an S3 bucket of yours (AWS, R2, MinIO, …), which must exist already.</p>
+							<p className="field-hint">{t('localProjects.setup.bundledHint')}</p>
 							{!form.bundledStorage && form.s3 && (
 								<>
 									<label>
-										Endpoint
+										{t('projects.dataApi.endpoint')}
 										<input value={form.s3.endpoint} onChange={(e) => setForm({ s3: { ...form.s3!, endpoint: e.target.value } })} placeholder="https://s3.us-east-1.amazonaws.com" />
 									</label>
 									<div className="local-port-grid">
 										<label>
-											Bucket
+											{t('projects.ts.bucket')}
 											<input value={form.s3.bucket} onChange={(e) => setForm({ s3: { ...form.s3!, bucket: e.target.value } })} />
 										</label>
 										<label>
-											Region
+											{t('cloudProjects.status.region')}
 											<input value={form.s3.region} onChange={(e) => setForm({ s3: { ...form.s3!, region: e.target.value } })} />
 										</label>
 									</div>
 									<label>
-										Access key
+										{t('localProjects.setup.accessKey')}
 										<input value={form.s3.accessKey} onChange={(e) => setForm({ s3: { ...form.s3!, accessKey: e.target.value } })} autoComplete="off" />
 									</label>
 									<label>
-										Secret key
+										{t('localProjects.setup.secretKey')}
 										<input type="password" value={form.s3.secretKey} onChange={(e) => setForm({ s3: { ...form.s3!, secretKey: e.target.value } })} autoComplete="new-password" />
 									</label>
 								</>
 							)}
 							<label className="check">
-								<input type="checkbox" checked={form.images} onChange={(e) => setForm({ images: e.target.checked })} /> Resize images
+								<input type="checkbox" checked={form.images} onChange={(e) => setForm({ images: e.target.checked })} /> {t('localProjects.setup.resize')}
 							</label>
-							<p className="field-hint">Storage's image transformations (thumbnails, format conversion). Off saves one container.</p>
+							<p className="field-hint">{t('localProjects.setup.resizeHint')}</p>
 						</fieldset>
 					)}
 
 					{state.step === 'review' && (
 						<>
 							<fieldset>
-								<legend>What will be set up</legend>
+								<legend>{t('localProjects.setup.whatSetUp')}</legend>
 								<div className="cloud-facts">
-									<span className="muted">Name</span><span>{form.name}</span>
-									<span className="muted">Folder</span><span className="mono">{form.folder}</span>
-									<span className="muted">API</span><span className="mono">http://localhost:{form.apiPort}{form.exposeApi ? " (and your network)" : ''}</span>
-									<span className="muted">Database</span><span className="mono">127.0.0.1:{form.dbPort}</span>
-									<span className="muted">Site URL</span><span className="mono">{form.siteUrl}</span>
-									<span className="muted">Sign-ups</span><span>{form.disableSignup ? "Refused" : form.autoconfirm ? "Confirmed without email" : "Confirmed by email"}</span>
-									<span className="muted">Mail</span><span>{state.smtpOn ? form.smtp?.host : "None"}</span>
-									<span className="muted">Files</span><span>{form.bundledStorage ? "On this computer" : `${form.s3?.bucket} at ${form.s3?.endpoint}`}{form.images ? ", images resized" : ''}</span>
-									<span className="muted">Connection</span><span>{form.addConnection ? "Added to Connections" : "Not added"}</span>
+									<span className="muted">{t('projects.common.name')}</span><span>{form.name}</span>
+									<span className="muted">{t('localProjects.common.folder')}</span><span className="mono">{form.folder}</span>
+									<span className="muted">API</span><span className="mono">http://localhost:{form.apiPort}{form.exposeApi ? t('localProjects.setup.andNetwork') : ''}</span>
+									<span className="muted">{t('localProjects.common.database')}</span><span className="mono">127.0.0.1:{form.dbPort}</span>
+									<span className="muted">{t('localProjects.setup.siteUrl')}</span><span className="mono">{form.siteUrl}</span>
+									<span className="muted">{t('localProjects.setup.signups')}</span><span>{form.disableSignup ? t('localProjects.setup.refused') : form.autoconfirm ? t('localProjects.setup.confirmedNoEmail') : t('localProjects.setup.confirmedByEmail')}</span>
+									<span className="muted">{t('localProjects.setup.mail')}</span><span>{state.smtpOn ? form.smtp?.host : t('localProjects.setup.none')}</span>
+									<span className="muted">{t('localProjects.common.files')}</span><span>{form.bundledStorage ? t('localProjects.setup.onComputer') : t('localProjects.setup.s3At', { bucket: form.s3?.bucket ?? '', endpoint: form.s3?.endpoint ?? '' })}{form.images ? t('localProjects.setup.imagesResized') : ''}</span>
+									<span className="muted">{t('cloudProjects.conn.title')}</span><span>{form.addConnection ? t('localProjects.setup.addedConn') : t('localProjects.setup.notAdded')}</span>
 								</div>
 							</fieldset>
 							<p className="field-hint">
-								The first setup downloads about 670 MB of images (1.9 GB on disk), which takes a few minutes. Once started it uses about 170 MB of memory idle, and about 360 MB under load.
-								Every key and password is made for this project alone and written to {form.folder}{form.folder.includes('\\') ? '\\' : '/'}.env.
+								{t('localProjects.setup.size', { folder: form.folder, sep: form.folder.includes('\\') ? '\\' : '/' })}
 							</p>
 						</>
 					)}
@@ -552,7 +552,7 @@ export function LocalSetupView(props: LocalSetupViewProps): JSX.Element {
 					{state.step === 'install' && (
 						<>
 							<fieldset>
-								<legend>{done ? "Ready" : state.outcome && !state.outcome.ok ? "It stopped" : "Setting up"}</legend>
+								<legend>{done ? t('localProjects.setup.ready') : state.outcome && !state.outcome.ok ? t('localProjects.setup.stopped') : t('localProjects.setup.settingUp')}</legend>
 								<div className="local-install-steps">
 									{INSTALL_STEPS.map((s) => {
 										const failed = state.failedAt === s.id;
@@ -571,24 +571,24 @@ export function LocalSetupView(props: LocalSetupViewProps): JSX.Element {
 								{state.outcome && <div className={state.outcome.ok ? 'field-hint' : 'form-status error'}>{state.outcome.message}</div>}
 								<div className="cloud-actions">
 									{state.outcome?.id && (
-										<button type="button" onClick={() => props.onOpenProject(state.outcome!.id!, form.name.trim())}><Icon name="arrow-right" /> Open project</button>
+										<button type="button" onClick={() => props.onOpenProject(state.outcome!.id!, form.name.trim())}><Icon name="arrow-right" /> {t('localProjects.setup.openProject')}</button>
 									)}
 									{done && form.addConnection && state.outcome?.id && (
-										<button type="button" className="secondary" onClick={() => props.onOpenDatabase(state.outcome!.id!)}><Icon name="database" /> Open in Connections</button>
+										<button type="button" className="secondary" onClick={() => props.onOpenDatabase(state.outcome!.id!)}><Icon name="database" /> {t('projects.common.openInConnections')}</button>
 									)}
 									<span className="spacer" />
 									{state.outcome && !state.outcome.ok && !state.outcome.id && (
-										<button type="button" className="secondary" onClick={() => setState({ step: 'review', installId: null, outcome: null })}><Icon name="arrow-left" /> Back</button>
+										<button type="button" className="secondary" onClick={() => setState({ step: 'review', installId: null, outcome: null })}><Icon name="arrow-left" /> {t('localProjects.setup.back')}</button>
 									)}
-									{state.outcome && <button type="button" className="secondary" onClick={restart}><Icon name="add" /> Set up another</button>}
+									{state.outcome && <button type="button" className="secondary" onClick={restart}><Icon name="add" /> {t('localProjects.setup.another')}</button>}
 								</div>
 								{state.outcome && !state.outcome.ok && state.outcome.id && (
-									<p className="field-hint">The project is set up in its folder and listed under Local. Start it from there once the problem is fixed.</p>
+									<p className="field-hint">{t('localProjects.setup.fixHint')}</p>
 								)}
 							</fieldset>
 							{state.lines.length > 0 && (
 								<fieldset>
-									<legend>Docker's output</legend>
+									<legend>{t('localProjects.setup.dockerOutput')}</legend>
 									<pre className="local-log" ref={logRef}>{state.lines.slice(-MAX_LOG_LINES).join('\n')}</pre>
 								</fieldset>
 							)}
@@ -599,11 +599,11 @@ export function LocalSetupView(props: LocalSetupViewProps): JSX.Element {
 						<>
 							{problem && <div className="form-status warn">{problem}</div>}
 							<div className="modal-actions">
-								{index > 0 && <button type="button" className="secondary" onClick={() => { setProblem(null); setState({ step: order[index - 1] }); }}><Icon name="arrow-left" /> Back</button>}
+								{index > 0 && <button type="button" className="secondary" onClick={() => { setProblem(null); setState({ step: order[index - 1] }); }}><Icon name="arrow-left" /> {t('localProjects.setup.back')}</button>}
 								<span className="spacer" />
 								{state.step === 'review'
-									? <button type="button" onClick={() => void install()}><Icon name="rocket" /> Set up and start</button>
-									: <button type="button" disabled={state.step === 'check' && !ready} onClick={() => void next()}><Icon name="chevron-right" /> Next</button>}
+									? <button type="button" onClick={() => void install()}><Icon name="rocket" /> {t('localProjects.setup.setUpStart')}</button>
+									: <button type="button" disabled={state.step === 'check' && !ready} onClick={() => void next()}><Icon name="chevron-right" /> {t('localProjects.setup.next')}</button>}
 							</div>
 						</>
 					)}

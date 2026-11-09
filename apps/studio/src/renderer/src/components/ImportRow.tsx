@@ -4,6 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { Icon } from './Icon';
+import { useT } from '../i18n';
 import { flavorFor } from '../../../shared/engine';
 import type { ImportItem } from '../../../shared/forms';
 
@@ -36,7 +37,8 @@ interface ImportRowProps {
 }
 
 export function ImportRow({ item, checked, onToggle, duplicateLabel }: ImportRowProps): JSX.Element {
-	const v = item.values;
+	const t = useT();
+const v = item.values;
 	const fileBased = v.driver === 'sqlite' || v.driver === 'duckdb';
 	return (
 		<label className={`import-row${item.supported ? '' : ' unsupported'}`} title={item.note}>
@@ -44,21 +46,21 @@ export function ImportRow({ item, checked, onToggle, duplicateLabel }: ImportRow
 			<div className="import-row-text">
 				<div className="import-row-name">
 					{item.sourceName}
-					{item.duplicate && <span className="import-tag">{duplicateLabel ?? "already added"}</span>}
-					{item.supported && item.importsPassword && <span className="import-tag" title="Username and password will be imported"><Icon name="key" /> credentials</span>}
-					{item.tentative && <span className="import-tag" title="The port is open but did not say what it is">unconfirmed</span>}
+					{item.duplicate && <span className="import-tag">{duplicateLabel ?? t('connections.import.alreadyAdded')}</span>}
+					{item.supported && item.importsPassword && <span className="import-tag" title={t('connections.import.credentialsTitle')}><Icon name="key" /> {t('connections.import.credentials')}</span>}
+					{item.tentative && <span className="import-tag" title={t('connections.import.unconfirmedTitle')}>{t('connections.import.unconfirmed')}</span>}
 					{v.environment && <span className={`env${v.environment === 'prod' ? ' prod' : ''}`}>{v.environment}</span>}
 				</div>
 				<div className="muted small">
 					{item.supported ? (
 						<>
 							{flavorFor(v.driver, v.flavor)?.displayName ?? DRIVER_LABEL[v.driver] ?? v.driver}
-							{' · '}{fileBased ? (v.database || "(no file)") : `${v.host || "(no host)"}${v.port ? `:${v.port}` : ''}`}
+							{' · '}{fileBased ? (v.database || t('connections.import.noFile')) : `${v.host || t('connections.import.noHost')}${v.port ? `:${v.port}` : ''}`}
 							{!fileBased && v.database ? ` · ${v.database}` : ''}
 							{v.ssh ? ' · SSH' : ''}
 							{item.note ? ` · ${item.note}` : ''}
 						</>
-					) : (item.note ?? "Unsupported.")}
+					) : (item.note ?? t('connections.import.unsupported'))}
 				</div>
 			</div>
 		</label>

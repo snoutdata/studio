@@ -1,0 +1,19 @@
+{
+	"noDocker": "O deploy de uma pasta usa seu próprio Docker, e ele não foi encontrado neste computador. Instale o Docker Desktop ou faça deploy de uma imagem de um registry.",
+	"dockerDown": "O Docker está instalado, mas não está em execução. Inicie o Docker e faça o build de novo.",
+	"dockerStopped": "O Docker parou de responder durante o build. Inicie o Docker e faça o build de novo.",
+	"noArm64Base": "Uma imagem usada em FROM no Dockerfile não tem versão linux/arm64, e o SnoutData Cloud roda só em arm64. Use uma imagem base publicada para arm64 (a maioria das oficiais é).",
+	"buildFailedDetail": "O build falhou: {detail}",
+	"buildFailed": "O build falhou. A saída está acima.",
+	"tooLargeCompressed": "A imagem é grande demais para enviar. A imagem de um contêiner pode ter no máximo 1 GB comprimido; uma base mais leve (alpine, distroless, -slim) geralmente resolve.",
+	"uploadFailed": "O envio falhou ({status}). Faça o build de novo em instantes.",
+	"noUploadLink": "O SnoutData Cloud não forneceu um link de envio. Tente de novo em instantes.",
+	"noDockerfile": "{folder} não tem Dockerfile.",
+	"noBuildx": "Este Docker não tem buildx, que faz build para linux/arm64. Atualize o Docker Desktop ou instale o plugin buildx.",
+	"building": "Fazendo o build de {folder} para linux/arm64…",
+	"noArchive": "O Docker terminou, mas não gravou nenhum arquivo de imagem, então não há nada para enviar.",
+	"tooLargeSized": "A imagem tem {size}, e a imagem de um contêiner pode ter no máximo 1 GB comprimido. Uma base mais leve (alpine, distroless, -slim) geralmente resolve.",
+	"uploading": "Enviando a imagem ({size})…",
+	"execFormat": "Uma etapa do build executou um programa arm64 que este computador não consegue rodar. O Docker Desktop roda esses programas por emulação. No Linux, configure a emulação como descreve o guia multiplataforma do Docker (docs.docker.com/build/building/multi-platform); o comando usual roda uma imagem de terceiros com acesso root, então leia antes de executar.",
+	"noContainerd": "O builder padrão deste Docker não consegue gravar um arquivo de imagem. Ative o armazenamento de imagens containerd (Docker Desktop: Settings, General, \"Use containerd for pulling and storing images\") ou crie um builder que consiga com: docker buildx create --use"
+}

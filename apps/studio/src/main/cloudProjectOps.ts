@@ -3,6 +3,7 @@
  *  Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { t } from '../shared/i18n/core';
 import { CloudRequestError, detailFrom, type CloudApi, type CloudConnectionDetails } from './cloudApi';
 import type {
 	CloudBackups, CloudConnectionFacts, CloudCopyTarget, CloudDomain, CloudExport, CloudFunctions, CloudMaintenanceWindow,
@@ -67,7 +68,7 @@ function handlers(api: CloudApi, host: CloudProjectHost): Handlers {
 			// Not `api.connection`: that is the password read, and this screen does not need it.
 			const project = (await api.list()).find((p) => p.ref === ref);
 			if (!project) {
-				throw new CloudRequestError("This project is not in your account any more.", 404);
+				throw new CloudRequestError(t('mainProjects.notInAccount'), 404);
 			}
 			const facts: CloudConnectionFacts = {
 				host: project.host,
@@ -97,7 +98,7 @@ function handlers(api: CloudApi, host: CloudProjectHost): Handlers {
 
 		async rotateKeys({ ref }) {
 			const answer = await api.request<{ breaks?: string }>('cloud-project-rotate-jwt', { ref });
-			return { breaks: answer.breaks ?? "Every key already in use stops working." };
+			return { breaks: answer.breaks ?? t('mainProjects.keysStopWorking') };
 		},
 
 		async backups({ ref }) {
@@ -140,7 +141,7 @@ function handlers(api: CloudApi, host: CloudProjectHost): Handlers {
 					.then((a) => a.push ? { enabled: a.push.enabled, scheduling: a.push.scheduling } : null)
 					// A control plane older than push has no such function and answers 404: that is
 					// "not available yet", said plainly, not an error to puzzle over.
-					.catch((e) => { errors.push = e instanceof CloudRequestError && e.status === 404 ? "Push is not available on SnoutData Cloud yet." : detailFrom(e); return null; }),
+					.catch((e) => { errors.push = e instanceof CloudRequestError && e.status === 404 ? t('mainProjects.pushUnavailable') : detailFrom(e); return null; }),
 			]);
 			return { auth, storage, dataApi, push, errors };
 		},
@@ -152,7 +153,7 @@ function handlers(api: CloudApi, host: CloudProjectHost): Handlers {
 			}
 			if (service === 'push') {
 				await api.request('cloud-project-push', { ref, enable });
-				return { note: enable ? "Turned on. Push runs beside the database, so the database restarts once, within a minute." : null };
+				return { note: enable ? t('mainProjects.pushRestarts') : null };
 			}
 			await api.request(service === 'storage' ? 'cloud-project-storage' : 'cloud-project-data-api', { ref, enable });
 			return { note: null };
@@ -282,10 +283,10 @@ export function containerListing(answer: unknown): CloudContainers {
 export function deployBody(args: CloudProjectOps['deployContainer']['args']): Record<string, unknown> {
 	const user = args.registryUser?.trim() ?? '';
 	if (args.pushed && args.image) {
-		throw new CloudRequestError("A deploy is an image or a build, not both.", 400);
+		throw new CloudRequestError(t('mainProjects.imageOrBuild'), 400);
 	}
 	if (!args.pushed && !args.image?.trim()) {
-		throw new CloudRequestError("Name the image to deploy.", 400);
+		throw new CloudRequestError(t('mainProjects.nameImage'), 400);
 	}
 	return {
 		ref: args.ref,
@@ -313,7 +314,7 @@ export function copyText(details: CloudConnectionDetails & ProjectKeyFields & { 
 	switch (what) {
 		case 'password':
 			if (details.password === null) {
-				throw new CloudRequestError("You sign in to this project as yourself, so it has no password to copy.", 403);
+				throw new CloudRequestError(t('mainProjects.noPassword'), 403);
 			}
 			return details.password;
 		case 'uri':
@@ -327,7 +328,7 @@ export function copyText(details: CloudConnectionDetails & ProjectKeyFields & { 
 		case 'serverKey': {
 			const key = what === 'appKey' ? details.appKey ?? details.anonKey : details.serverKey ?? details.serviceRoleKey;
 			if (!key) {
-				throw new CloudRequestError("This project has no API keys yet. Try again in a moment.", 409);
+				throw new CloudRequestError(t('mainProjects.noApiKeys'), 409);
 			}
 			return key;
 		}
@@ -344,7 +345,7 @@ export async function runCloudProjectOp<K extends CloudProjectOp>(
 	const table = handlers(api, host);
 	const handler = table[op] as unknown as ((a: CloudProjectOps[K]['args']) => Promise<CloudProjectOps[K]['result']>) | undefined;
 	if (!handler) {
-		return { ok: false, refused: true, message: `Unknown operation: ${String(op)}` };
+		return { ok: false, refused: true, message: t('mainProjects.unknownOp', { op: String(op) }) };
 	}
 	try {
 		return { ok: true, data: await handler(args) };

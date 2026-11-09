@@ -12,8 +12,9 @@ import { errorMessage } from '../errors';
 import type { ConnectionConfig } from '../../../shared/connection';
 import type { QueryResult } from '../../../shared/query';
 import { dialectFor, type ReplicaScope } from '../../../shared/engine';
-import { assessHealth, healthSql, keeperChild, keeperTrail, namedRows, num, OPS_GROUPS, opsSql, opsView, unavailableMessage, viewsIn, type HealthInput, type HealthItem, type OpsViewId } from '../../../shared/clickhouseOps';
+import { assessHealth, healthSql, keeperChild, keeperTrail, namedRows, num, OPS_GROUPS, opsGroupLabel, opsSql, opsView, unavailableMessage, viewsIn, type HealthInput, type HealthItem, type OpsViewId } from '../../../shared/clickhouseOps';
 import { clickhouseStarterMonitor } from '../../../shared/clickhouseMonitor';
+import { formatLocale, useT } from '../i18n';
 
 // ClickHouse Operations: the server's own system tables, read the way someone running ClickHouse
 // reads them when a thing is slow or stuck. The health cards say what needs attention and open the
@@ -132,6 +133,7 @@ function compareCells(a: unknown, b: unknown): number {
 }
 
 export function ClickHouseOpsView({ connections, connectedIds, connectionId, onOpenMonitor }: ClickHouseOpsViewProps): JSX.Element {
+	const t = useT();
 	const [viewId, setViewId] = useState<OpsViewId>('running');
 	const [data, setData] = useState<QueryResult | null>(null);
 	const [error, setError] = useState<string | null>(null);
@@ -304,7 +306,7 @@ export function ClickHouseOpsView({ connections, connectedIds, connectionId, onO
 			return;
 		}
 		const row = namedRows(data.fields, [data.rows[order[rowIndex]]])[0];
-		if (!(await confirm({ title: `${action.label}?`, body: action.confirm(row), confirmLabel: action.label, danger: true }))) {
+		if (!(await confirm({ title: t('clickhouse.ops.confirmTitle', { label: action.label }), body: action.confirm(row), confirmLabel: action.label, danger: true }))) {
 			return;
 		}
 		let res = await window.sqlApi.execute({ connectionId, sql: action.sql(row, currentScope) });
@@ -320,10 +322,10 @@ export function ClickHouseOpsView({ connections, connectedIds, connectionId, onO
 	}
 
 	if (!connectionId || !conn) {
-		return <div className="table-view"><div className="results-message">Select a ClickHouse connection in the sidebar.</div></div>;
+		return <div className="table-view"><div className="results-message">{t('clickhouse.ops.selectConn')}</div></div>;
 	}
 	if (!isClickHouse) {
-		return <div className="table-view"><div className="results-message">Operations reads ClickHouse's own system tables. "{conn.label}" is not a ClickHouse connection.</div></div>;
+		return <div className="table-view"><div className="results-message">{t('clickhouse.ops.notClickHouse', { name: conn.label })}</div></div>;
 	}
 
 	return (
@@ -331,42 +333,42 @@ export function ClickHouseOpsView({ connections, connectedIds, connectionId, onO
 		<div className="table-view ch-ops">
 			<div className="tv-head">
 				<Icon name="server-process" className="tv-head-icon" />
-				<span className="tv-title">ClickHouse Operations</span>
+				<span className="tv-title">{t('clickhouse.ops.title')}</span>
 				<span className="muted">{conn.label}</span>
 				<span className="spacer" />
 				{currentScope && currentScope.replicas > 1 && (
-					<span className={`ch-ops-scope muted small${currentScope.cluster ? '' : ' ch-ops-scope-warn'}`} title={currentScope.limitation ?? `Every view reads each replica with clusterAllReplicas('${currentScope.cluster}', ...), and Stop acts ON CLUSTER.`}>
-						<Icon name={currentScope.cluster ? 'server-environment' : 'warning'} /> {currentScope.cluster ? `All ${currentScope.replicas} replicas` : `1 of ${currentScope.replicas} replicas`}
+					<span className={`ch-ops-scope muted small${currentScope.cluster ? '' : ' ch-ops-scope-warn'}`} title={currentScope.limitation ?? t('clickhouse.ops.scopeHint', { cluster: currentScope.cluster ?? '' })}>
+						<Icon name={currentScope.cluster ? 'server-environment' : 'warning'} /> {currentScope.cluster ? t('clickhouse.ops.allReplicas', { n: currentScope.replicas }) : t('clickhouse.ops.oneOfReplicas', { n: currentScope.replicas })}
 					</span>
 				)}
-				{refreshedAt && <span className="muted small">Updated {refreshedAt.toLocaleTimeString()}</span>}
+				{refreshedAt && <span className="muted small">{t('clickhouse.ops.updated', { time: refreshedAt.toLocaleTimeString(formatLocale()) })}</span>}
 				<button
 					type="button"
 					className={`ch-ops-auto${auto ? ' active' : ''}`}
 					aria-pressed={auto}
-					title={auto ? `Refreshing every ${REFRESH_MS / 1000} s. Click to pause.` : 'Paused. Click to refresh every few seconds.'}
+					title={auto ? t('clickhouse.ops.refreshingEvery', { seconds: REFRESH_MS / 1000 }) : t('clickhouse.ops.pausedHint')}
 					onClick={() => setAuto((on) => !on)}
 				>
-					<Icon name={auto ? 'sync' : 'debug-pause'} /> {auto ? 'Live' : 'Paused'}
+					<Icon name={auto ? 'sync' : 'debug-pause'} /> {auto ? t('clickhouse.ops.live') : t('clickhouse.ops.paused')}
 				</button>
 				{onOpenMonitor && (
 					<button
 						type="button"
 						className="tv-collect"
 						disabled={!connected}
-						title="Make a monitor of these numbers, sampled every minute and kept for a day. This panel says what the server is doing now; a monitor says when it started."
+						title={t('clickhouse.ops.monitorHint')}
 						onClick={() => void openStarterMonitor()}
 					>
-						<Icon name="graph" /> Monitor over time
+						<Icon name="graph" /> {t('clickhouse.ops.monitorOverTime')}
 					</button>
 				)}
 				<button type="button" className="tv-collect" disabled={!connected || loading} onClick={() => setSeq((n) => n + 1)}>
-					<Icon name="refresh" /> Refresh
+					<Icon name="refresh" /> {t('clickhouse.ops.refresh')}
 				</button>
 			</div>
 
 			{!connected ? (
-				<div className="results-message">Connect "{conn.label}" in the sidebar to see what it is doing.</div>
+				<div className="results-message">{t('clickhouse.ops.connectToSee', { name: conn.label })}</div>
 			) : (
 				<>
 					<div className="ch-ops-health">
@@ -383,12 +385,12 @@ export function ClickHouseOpsView({ connections, connectedIds, connectionId, onO
 						))}
 					</div>
 
-					<div className="tabs tv-tabs" role="tablist" aria-label="Area">
+					<div className="tabs tv-tabs" role="tablist" aria-label={t('clickhouse.ops.area')}>
 						{OPS_GROUPS.map((group) => (
-							<button key={group} type="button" role="tab" aria-selected={group === view.group} className={`tab${group === view.group ? ' active' : ''}`} onClick={() => openView(viewsIn(group)[0].id)}>{group}</button>
+							<button key={group} type="button" role="tab" aria-selected={group === view.group} className={`tab${group === view.group ? ' active' : ''}`} onClick={() => openView(viewsIn(group)[0].id)}>{opsGroupLabel(group)}</button>
 						))}
 					</div>
-					<div className="ch-ops-views" role="tablist" aria-label="View">
+					<div className="ch-ops-views" role="tablist" aria-label={t('clickhouse.ops.view')}>
 						{viewsIn(view.group).map((v) => (
 							<button key={v.id} type="button" role="tab" aria-selected={v.id === viewId} className={`ch-ops-view${v.id === viewId ? ' active' : ''}`} onClick={() => openView(v.id)}>{v.label}</button>
 						))}
@@ -406,11 +408,11 @@ export function ClickHouseOpsView({ connections, connectedIds, connectionId, onO
 								value={filter}
 								onChange={(e) => { setData(null); setFilter(e.target.value); }}
 							/>
-							{filter && <button type="button" className="icon-btn" aria-label="Clear" onClick={() => { setData(null); setFilter(''); }}><Icon name="close" /></button>}
+							{filter && <button type="button" className="icon-btn" aria-label={t('clickhouse.ops.clear')} onClick={() => { setData(null); setFilter(''); }}><Icon name="close" /></button>}
 						</div>
 					)}
 					{view.browse && (
-						<div className="ch-ops-crumbs" aria-label="Keeper path">
+						<div className="ch-ops-crumbs" aria-label={t('clickhouse.ops.keeperPath')}>
 							{keeperTrail(path).map((crumb, i) => (
 								<button
 									key={crumb.path}
@@ -430,9 +432,9 @@ export function ClickHouseOpsView({ connections, connectedIds, connectionId, onO
 							: error
 							? <div className="qp-error"><div className="results-error">{error}</div></div>
 							: !data
-								? <div className="results-message">Reading {view.label.toLowerCase()}…</div>
+								? <div className="results-message">{t('clickhouse.ops.reading', { what: view.label.toLowerCase() })}</div>
 								: rows.length === 0
-									? <div className="results-message">{view.browse ? `Nothing is under ${path}.` : view.filter && filter.trim() ? `Nothing in the last day matches "${filter.trim()}".` : view.empty}</div>
+									? <div className="results-message">{view.browse ? t('clickhouse.ops.nothingUnder', { path }) : view.filter && filter.trim() ? t('clickhouse.ops.noMatch', { filter: filter.trim() }) : view.empty}</div>
 									: (
 										<DataGrid
 											fields={fields}
@@ -446,15 +448,15 @@ export function ClickHouseOpsView({ connections, connectedIds, connectionId, onO
 											onCopyRow={(i) => void navigator.clipboard.writeText(fields.map((_f, col) => cellText(rows[order[i]][col]) ?? '').join('\t'))}
 											onViewCell={(i, col) => setViewCell({ value: cellText(rows[order[i]][col]), columnName: fields[col]?.name ?? '' })}
 											rowActions={view.browse
-												? [{ icon: 'folder-opened', title: 'Open', onClick: (i) => descend(i) }]
+												? [{ icon: 'folder-opened', title: t('clickhouse.ops.open'), onClick: (i) => descend(i) }]
 												: view.jump
 													? [{ icon: view.jump.icon, title: view.jump.label, onClick: (i) => jump(i) }]
 													: view.action ? [{ icon: view.action.icon, title: view.action.label, onClick: (i) => void runAction(i) }] : undefined}
-											rowActionsLabel={view.browse ? 'Open' : view.jump?.label ?? view.action?.label}
+											rowActionsLabel={view.browse ? t('clickhouse.ops.open') : view.jump?.label ?? view.action?.label}
 										/>
 									)}
 						<div className="results-footer">
-							<span>{data && rows.length > 0 ? `${rows.length.toLocaleString()} row${rows.length === 1 ? '' : 's'}` : ''}</span>
+							<span>{data && rows.length > 0 ? t('clickhouse.ops.rowCount', { count: rows.length }) : ''}</span>
 							<span className="spacer" />
 						</div>
 					</div>

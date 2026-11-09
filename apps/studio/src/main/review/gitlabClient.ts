@@ -3,6 +3,7 @@
  *  Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { t } from '../../shared/i18n/core';
 import { netFetch, isNetworkError, networkBlockedMessage, networkErrorDetail, type NetFetchInit } from '../netFetch';
 import { cacheable, type ConditionalCache } from './httpCache';
 import {
@@ -92,7 +93,7 @@ export class GitlabClient implements Forge {
 		} catch (err) {
 			if (err instanceof Error && (err.name === 'TimeoutError' || err.name === 'AbortError')) {
 				throw new ForgeError(
-					`GitLab did not answer within ${REQUEST_TIMEOUT_MS / 1000} seconds. It may be slow, or your network may be holding the request.`,
+					t('mainReview.gitlabTimeout', { seconds: REQUEST_TIMEOUT_MS / 1000 }),
 					0,
 					true,
 				);
@@ -163,7 +164,7 @@ export class GitlabClient implements Forge {
 	async openPullRequests(owner: string, name: string, limit = 30): Promise<PullRequestRef[]> {
 		const body = await this.json<GitlabMergeRequest[]>(
 			`/projects/${this.project(owner, name)}/merge_requests?state=opened&order_by=updated_at&sort=desc&per_page=${Math.min(100, limit)}`,
-			`merge requests for ${owner}/${name}`,
+			t('mainReview.mergesFor', { owner, name }),
 		);
 		return body.map(toPullRequest);
 	}
@@ -172,7 +173,7 @@ export class GitlabClient implements Forge {
 		return toPullRequest(
 			await this.json<GitlabMergeRequest>(
 				`/projects/${this.project(owner, name)}/merge_requests/${number}`,
-				`merge request !${number}`,
+				t('mainReview.mergeN', { number }),
 			),
 		);
 	}
@@ -187,7 +188,7 @@ export class GitlabClient implements Forge {
 	async pullRequestDiff(owner: string, name: string, number: number): Promise<string> {
 		const body = await this.json<{ changes?: GitlabChange[] }>(
 			`/projects/${this.project(owner, name)}/merge_requests/${number}/changes`,
-			`the diff for !${number}`,
+			t('mainReview.diffOfMr', { number }),
 		);
 		return assembleDiff(body.changes ?? []);
 	}
@@ -208,7 +209,7 @@ export class GitlabClient implements Forge {
 	async comments(owner: string, name: string, number: number, since?: string): Promise<IssueComment[]> {
 		const body = await this.json<GitlabNote[]>(
 			`/projects/${this.project(owner, name)}/merge_requests/${number}/notes?per_page=100&sort=asc&order_by=created_at`,
-			`notes on !${number}`,
+			t('mainReview.notesOn', { number }),
 		);
 		return body
 			// A system note is GitLab's activity feed ("assigned to @x"), not somebody talking.
@@ -222,7 +223,7 @@ export class GitlabClient implements Forge {
 		return toComment(
 			await this.json<GitlabNote>(
 				`/projects/${this.project(owner, name)}/merge_requests/${number}/notes`,
-				`a comment on !${number}`,
+				t('mainReview.aCommentOnMr', { number }),
 				{
 					method: 'POST',
 					body: JSON.stringify({ body }),
@@ -307,7 +308,7 @@ export class GitlabClient implements Forge {
 				}
 				const users = await this.json<{ id?: number; username?: string }[]>(
 					`/users?username=${encodeURIComponent(author.login)}`,
-					`the user ${author.login}`,
+					t('mainReview.theUser', { login: author.login }),
 				);
 				id = users.find((u) => u.username?.toLowerCase() === author.login.toLowerCase())?.id;
 				if (id === undefined) {
@@ -330,7 +331,7 @@ export class GitlabClient implements Forge {
 		try {
 			const versions = await this.json<GitlabVersion[]>(
 				`/projects/${this.project(owner, name)}/merge_requests/${number}/versions?per_page=100`,
-				`the versions of !${number}`,
+				t('mainReview.versionsOf', { number }),
 			);
 			return gitlabHeadSince(versions, headSha);
 		} catch {
@@ -473,19 +474,19 @@ async function toError(response: Response, what: string): Promise<ForgeError> {
 		// A non-JSON body (an HTML login page from a proxy, say) tells us nothing useful.
 	}
 	if (response.status === 401) {
-		return new ForgeError(`GitLab rejected the token while reading ${what}. It may be expired or revoked.`, 401, false);
+		return new ForgeError(t('mainReview.tokenRejected', { what }), 401, false);
 	}
 	if (response.status === 403) {
-		return new ForgeError(`The token is not allowed to read ${what}. It needs the \`api\` scope.`, 403, false);
+		return new ForgeError(t('mainReview.tokenNotAllowed', { what }), 403, false);
 	}
 	if (response.status === 404) {
-		return new ForgeError(`Could not find ${what}. A private project also reads as missing to a token that cannot see it.`, 404, false);
+		return new ForgeError(t('mainReview.gitlabNotFound', { what }), 404, false);
 	}
 	if (response.status === 429) {
-		return new ForgeError(`GitLab is rate limiting this token. ${detail}`.trim(), 429, true);
+		return new ForgeError(t('mainReview.gitlabRateLimit', { detail }).trim(), 429, true);
 	}
 	return new ForgeError(
-		`GitLab returned ${response.status} for ${what}.${detail ? ` ${detail}` : ''}`,
+		t('mainReview.gitlabReturned', { status: response.status, what, detail: detail ? ` ${detail}` : '' }),
 		response.status,
 		response.status >= 500,
 	);

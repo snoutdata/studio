@@ -1,0 +1,29 @@
+{
+	"gettingStarted": "Premiers pas",
+	"minimize": "Réduire",
+	"dontShowAgain": "Ne plus afficher",
+	"allSet": "Tout est prêt. Bonnes requêtes !",
+	"takeTour": "Faire une visite rapide",
+	"checklist": {
+		"addConnection": {
+			"label": "Ajouter une connexion à une base de données",
+			"hint": "Connectez une base MySQL, Postgres ou SQL Server."
+		},
+		"run": {
+			"label": "Exécuter une requête",
+			"hint": "Saisissez du SQL dans l'éditeur et appuyez sur Exécuter (ou Ctrl/Cmd+Enter)."
+		},
+		"explore": {
+			"label": "Explorer une table",
+			"hint": "Double-cliquez sur une table dans la barre latérale pour parcourir ses données."
+		},
+		"ai": {
+			"label": "Demander à {assistant}",
+			"hint": "Insérez dans l'éditeur le SQL proposé par {assistant}."
+		},
+		"save": {
+			"label": "Enregistrer une requête",
+			"hint": "Gardez une requête à réutiliser plus tard."
+		}
+	}
+}

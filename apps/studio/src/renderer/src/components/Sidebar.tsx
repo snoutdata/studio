@@ -6,6 +6,7 @@
 import { useEffect, useState } from 'react';
 import { formatBytes } from '../formatBytes';
 import { Icon } from './Icon';
+import { formatLocale, t, useT } from '../i18n';
 import { ConnectionMarks, ConnectionTags } from './ConnectionMarks';
 import { ConnectArt } from '../art/Illustrations';
 import type { ConnectionConfig } from '../../../shared/connection';
@@ -114,6 +115,8 @@ function routinesByDatabase(schema: DatabaseSchema): Map<string, RoutineInfo[]> 
 }
 
 export function Sidebar(props: SidebarProps): JSX.Element {
+	// The rows are drawn by plain functions below, which read the plain `t`; this makes a language switch redraw them.
+	useT();
 	const { state, activeId } = props;
 	const [expanded, setExpanded] = useState<Set<string>>(new Set());
 	const [schemas, setSchemas] = useState<Record<string, DatabaseSchema | null>>({});
@@ -216,11 +219,11 @@ export function Sidebar(props: SidebarProps): JSX.Element {
 	return (
 		<div className="sidebar">
 			<div className="sidebar-header">
-				<span>CONNECTIONS</span>
+				<span>{t('shell.sidebar.header')}</span>
 				<span className="spacer" />
-				<button className="icon-btn" aria-label="Add connection" onClick={props.onAdd} data-tour="add-connection"><Icon name="add" /></button>
-				<button className="icon-btn" aria-label="Import connections from DBeaver, DataGrip, pgAdmin and other tools" onClick={props.onImport} data-tour="import-connections"><Icon name="desktop-download" /></button>
-				<button className="icon-btn" aria-label="Collapse" onClick={props.onCollapse}><Icon name="chevron-left" /></button>
+				<button className="icon-btn" aria-label={t('shell.sidebar.addConnection')} onClick={props.onAdd} data-tour="add-connection"><Icon name="add" /></button>
+				<button className="icon-btn" aria-label={t('shell.sidebar.importConnections')} onClick={props.onImport} data-tour="import-connections"><Icon name="desktop-download" /></button>
+				<button className="icon-btn" aria-label={t('shell.sidebar.collapse')} onClick={props.onCollapse}><Icon name="chevron-left" /></button>
 			</div>
 			{state.connections.length > 0 && (
 				<div className="tree-filter">
@@ -228,12 +231,12 @@ export function Sidebar(props: SidebarProps): JSX.Element {
 					<input
 						className="filter-input"
 						type="text"
-						placeholder="Filter tables…"
+						placeholder={t('shell.sidebar.filterTables')}
 						value={filter}
 						onChange={(e) => setFilter(e.target.value)}
 					/>
 					{filter && (
-						<button className="icon-btn" aria-label="Clear filter" onClick={() => setFilter('')}><Icon name="close" /></button>
+						<button className="icon-btn" aria-label={t('shell.sidebar.clearFilter')} onClick={() => setFilter('')}><Icon name="close" /></button>
 					)}
 				</div>
 			)}
@@ -241,8 +244,8 @@ export function Sidebar(props: SidebarProps): JSX.Element {
 				{state.connections.length === 0 && (
 					<div className="tree-empty">
 						<ConnectArt className="tree-empty-art" />
-						<p>No connections yet. Add one to browse its tables and query it.</p>
-						<button type="button" className="ws-empty-cta" onClick={props.onAdd}><Icon name="add" /> Add connection</button>
+						<p>{t('shell.sidebar.empty')}</p>
+						<button type="button" className="ws-empty-cta" onClick={props.onAdd}><Icon name="add" /> {t('shell.sidebar.addConnection')}</button>
 					</div>
 				)}
 				{state.connections.map((config) => {
@@ -269,16 +272,16 @@ export function Sidebar(props: SidebarProps): JSX.Element {
 								<ConnectionTags config={config} />
 								<span className={`row-actions${connectingIds.has(config.id) ? ' busy' : ''}`} onClick={(e) => e.stopPropagation()}>
 									{connectingIds.has(config.id)
-										? <span className="connect-inflight"><span className="icon-btn connecting" aria-label="Connecting…"><Icon name="loading" className="codicon-modifier-spin" /></span><button className="icon-btn cancel-connect" aria-label="Cancel connecting" onClick={() => props.onCancelConnect(config.id)}><Icon name="stop-circle" /></button></span>
+										? <span className="connect-inflight"><span className="icon-btn connecting" aria-label={t('shell.common.connecting')}><Icon name="loading" className="codicon-modifier-spin" /></span><button className="icon-btn cancel-connect" aria-label={t('shell.common.cancelConnecting')} onClick={() => props.onCancelConnect(config.id)}><Icon name="stop-circle" /></button></span>
 										: <>
 											{connected
 												? <>
-													<button className="icon-btn" aria-label="Refresh tables" disabled={refreshingId === config.id} onClick={() => void refresh(config.id)}><Icon name="refresh" className={refreshingId === config.id ? 'codicon-modifier-spin' : undefined} /></button>
-													<button className="icon-btn" aria-label="Disconnect" onClick={() => props.onDisconnect(config.id)}><Icon name="debug-disconnect" /></button>
+													<button className="icon-btn" aria-label={t('shell.sidebar.refreshTables')} disabled={refreshingId === config.id} onClick={() => void refresh(config.id)}><Icon name="refresh" className={refreshingId === config.id ? 'codicon-modifier-spin' : undefined} /></button>
+													<button className="icon-btn" aria-label={t('shell.common.disconnect')} onClick={() => props.onDisconnect(config.id)}><Icon name="debug-disconnect" /></button>
 												</>
-												: <button className="icon-btn" aria-label="Connect" onClick={() => void connect(config.id)}><Icon name="plug" /></button>}
-											<button className="icon-btn" aria-label="Edit" onClick={() => props.onEdit(config)}><Icon name="edit" /></button>
-											<button className="icon-btn" aria-label="Delete" onClick={() => props.onDelete(config)}><Icon name="trash" /></button>
+												: <button className="icon-btn" aria-label={t('shell.common.connect')} onClick={() => void connect(config.id)}><Icon name="plug" /></button>}
+											<button className="icon-btn" aria-label={t('shell.common.edit')} onClick={() => props.onEdit(config)}><Icon name="edit" /></button>
+											<button className="icon-btn" aria-label={t('shell.common.delete')} onClick={() => props.onDelete(config)}><Icon name="trash" /></button>
 										</>}
 								</span>
 							</div>
@@ -292,7 +295,7 @@ export function Sidebar(props: SidebarProps): JSX.Element {
 								<div className="tree-row depth-1" onClick={() => props.onOpenSecurity(config.id)}>
 									<span className="twisty" />
 									<span className="tree-icon"><Icon name="shield" /></span>
-									<span className="tree-label">Users &amp; Privileges</span>
+									<span className="tree-label">{t('shell.tabs.users')}</span>
 								</div>
 							)}
 							{/* The server's own health, beside Users & Privileges and for the same reason: it is
@@ -301,7 +304,7 @@ export function Sidebar(props: SidebarProps): JSX.Element {
 								<div className="tree-row depth-1" onClick={() => props.onOpenClickHouseOps(config.id)}>
 									<span className="twisty" />
 									<span className="tree-icon"><Icon name="server-process" /></span>
-									<span className="tree-label">Operations</span>
+									<span className="tree-label">{t('shell.sidebar.operations')}</span>
 								</div>
 							)}
 							{/* The data that is NOT in this database: a file in a bucket, a page, another
@@ -311,13 +314,13 @@ export function Sidebar(props: SidebarProps): JSX.Element {
 								<div className="tree-row depth-1" onClick={() => props.onOpenClickHouseRemote(config.id)}>
 									<span className="twisty" />
 									<span className="tree-icon"><Icon name="globe" /></span>
-									<span className="tree-label">Remote data</span>
+									<span className="tree-label">{t('shell.tabs.remoteData')}</span>
 								</div>
 							)}
-							{connected && open && schema === undefined && <div className="tree-row depth-1 muted">Loading…</div>}
-							{connected && open && schema === null && <div className="tree-row depth-1 muted">No schema cached.</div>}
-							{connected && open && schema && query && !schema.tables.some((t) => t.name.toLowerCase().includes(query)) && (
-								<div className="tree-row depth-1 muted">No tables match “{filter.trim()}”.</div>
+							{connected && open && schema === undefined && <div className="tree-row depth-1 muted">{t('shell.common.loading')}</div>}
+							{connected && open && schema === null && <div className="tree-row depth-1 muted">{t('shell.sidebar.noSchema')}</div>}
+							{connected && open && schema && query && !schema.tables.some((table) => table.name.toLowerCase().includes(query)) && (
+								<div className="tree-row depth-1 muted">{t('shell.sidebar.noMatch', { filter: filter.trim() })}</div>
 							)}
 							{connected && open && schema && (() => {
 								const byDb = groupByDatabase(schema);
@@ -325,11 +328,11 @@ export function Sidebar(props: SidebarProps): JSX.Element {
 								const dictionariesBy = dictionariesByDatabase(schema);
 								const byRef = tablesByRef(schema);
 								const partitionsOf = partitionsByParent(schema);
-								const childrenOf = (t: TableInfo): TableInfo[] => partitionsOf.get(`${t.schema ?? ''}.${t.name}`) ?? [];
+								const childrenOf = (table: TableInfo): TableInfo[] => partitionsOf.get(`${table.schema ?? ''}.${table.name}`) ?? [];
 								return [...byDb.entries()].map(([database, allTables]) => {
 									// a search for a partition's name finds the table it is folded under
 									const tables = query
-										? allTables.filter((t) => t.name.toLowerCase().includes(query) || childrenOf(t).some((c) => c.name.toLowerCase().includes(query)))
+										? allTables.filter((table) => table.name.toLowerCase().includes(query) || childrenOf(table).some((c) => c.name.toLowerCase().includes(query)))
 										: allTables;
 									const allDictionaries = dictionariesBy.get(database) ?? [];
 									const dictionaries = query ? allDictionaries.filter((d) => d.name.toLowerCase().includes(query)) : allDictionaries;
@@ -399,15 +402,15 @@ function renderTable(
 	const idx = (table.indexes?.length ?? 0) > 0;
 	const trg = (table.triggers?.length ?? 0) > 0;
 	const statsTitle = hasStats
-		? `Open telemetry: ∼${(stats!.rowCount ?? 0).toLocaleString()} rows · ${formatBytes(stats!.dataBytes)} data · ${formatBytes(stats!.indexBytes)} idx`
-		: 'Open telemetry';
+		? t('shell.sidebar.telemetryStats', { rows: (stats!.rowCount ?? 0).toLocaleString(formatLocale()), data: formatBytes(stats!.dataBytes), indexes: formatBytes(stats!.indexBytes) })
+		: t('shell.sidebar.openTelemetry');
 	return (
 		<div key={baseKey}>
 			<div
 				className="tree-row depth-2"
 				onClick={() => toggle(baseKey)}
 				onDoubleClick={() => onOpenTable(connectionId, table)}
-				title="Double-click to open"
+				title={t('shell.sidebar.doubleClickOpen')}
 			>
 				<span className="twisty"><Icon name={tableOpen ? 'chevron-down' : 'chevron-right'} /></span>
 				<span className="tree-icon"><Icon name={tableKindIcon(table.kind)} /></span>
@@ -426,7 +429,7 @@ function renderTable(
 					><Icon name="pulse" /></button>
 				)}
 			</div>
-			{tableOpen && lineageEdges(table.lineage).length > 0 && renderFolder(baseKey + ':lin', `Lineage (${lineageEdges(table.lineage).length})`, 'type-hierarchy', expanded, toggle, () => (
+			{tableOpen && lineageEdges(table.lineage).length > 0 && renderFolder(baseKey + ':lin', t('shell.sidebar.lineage', { count: lineageEdges(table.lineage).length }), 'type-hierarchy', expanded, toggle, () => (
 				<>
 					{lineageEdges(table.lineage).map((edge) => {
 						const target = byRef.get(`${edge.ref.schema}.${edge.ref.name}`);
@@ -434,7 +437,7 @@ function renderTable(
 							<div
 								className="tree-row depth-4"
 								key={`lin:${edge.relation}:${edge.ref.schema}.${edge.ref.name}`}
-								title={target ? `${edge.title}\nDouble-click to open` : edge.title}
+								title={target ? `${edge.title}\n${t('shell.sidebar.doubleClickOpen')}` : edge.title}
 								onDoubleClick={target ? () => onOpenTable(connectionId, target) : undefined}
 							>
 								<span className="twisty" />
@@ -446,7 +449,7 @@ function renderTable(
 					})}
 				</>
 			))}
-			{tableOpen && partitions.length > 0 && renderFolder(baseKey + ':parts', `Partitions (${partitions.length})`, 'layers', expanded, toggle, () => (
+			{tableOpen && partitions.length > 0 && renderFolder(baseKey + ':parts', t('shell.sidebar.partitions', { count: partitions.length }), 'layers', expanded, toggle, () => (
 				<>
 					{partitions.map((part) => {
 						const target = byRef.get(`${part.schema}.${part.name}`);
@@ -454,7 +457,7 @@ function renderTable(
 							<div
 								className="tree-row depth-4"
 								key={'part:' + part.name}
-								title={target ? `${part.title}${part.title ? '\n' : ''}Double-click to open` : part.title}
+								title={target ? `${part.title}${part.title ? '\n' : ''}${t('shell.sidebar.doubleClickOpen')}` : part.title}
 								onDoubleClick={target ? () => onOpenTable(connectionId, target) : undefined}
 							>
 								<span className="twisty" />
@@ -466,17 +469,17 @@ function renderTable(
 					})}
 				</>
 			))}
-			{tableOpen && rollups.length > 0 && renderFolder(baseKey + ':rollups', `Rollups (${rollups.length})`, 'graph-line', expanded, toggle, () => (
+			{tableOpen && rollups.length > 0 && renderFolder(baseKey + ':rollups', t('shell.sidebar.rollups', { count: rollups.length }), 'graph-line', expanded, toggle, () => (
 				<>
 					{onOpenSeriesMonitor && (
 						<div
 							className="tree-row depth-4"
-							title="A monitor of these rollups' recent buckets, read from the database rather than sampled"
+							title={t('shell.sidebar.seriesMonitorTitle')}
 							onClick={() => onOpenSeriesMonitor(connectionId, table)}
 						>
 							<span className="twisty" />
 							<span className="tree-icon"><Icon name="graph-line" /></span>
-							<span className="tree-label">Open as a monitor</span>
+							<span className="tree-label">{t('shell.sidebar.openAsMonitor')}</span>
 						</div>
 					)}
 					{rollups.map((r) => {
@@ -485,42 +488,42 @@ function renderTable(
 							<div
 								className="tree-row depth-4"
 								key={'rollup:' + r.name}
-								title={target ? 'Pre-aggregated by bucket. Double-click to open' : 'Pre-aggregated by bucket'}
+								title={target ? t('shell.sidebar.preAggregatedOpen') : t('shell.sidebar.preAggregated')}
 								onDoubleClick={target ? () => onOpenTable(connectionId, target) : undefined}
 							>
 								<span className="twisty" />
 								<span className="tree-icon"><Icon name="graph-line" /></span>
 								<span className="tree-label">{r.schema === database ? r.name : `${r.schema}.${r.name}`}</span>
-								<span className="muted col-type">{r.bucket} buckets</span>
+								<span className="muted col-type">{t('shell.sidebar.buckets', { bucket: r.bucket })}</span>
 							</div>
 						);
 					})}
 				</>
 			))}
-			{tableOpen && renderFolder(baseKey + ':cols', `Columns (${table.columns.length})`, 'symbol-field', expanded, toggle, () => (
+			{tableOpen && renderFolder(baseKey + ':cols', t('shell.sidebar.columns', { count: table.columns.length }), 'symbol-field', expanded, toggle, () => (
 				<>
 					{table.columns.map((column) => (
 						<div className="tree-row depth-4" key={column.name} title={columnTitle(column)}>
 							<span className="twisty" />
 							<span className="tree-icon"><Icon name={column.isPrimaryKey ? 'key' : column.sortKey ? 'list-ordered' : 'symbol-field'} /></span>
 							<span className="tree-label">{column.name}</span>
-							<span className="muted col-type">{column.dataType}{column.nullable ? '' : ' · not null'}</span>
+							<span className="muted col-type">{column.dataType}{column.nullable ? '' : ` · ${t('shell.sidebar.notNull')}`}</span>
 						</div>
 					))}
 				</>
 			))}
-			{tableOpen && cons && renderFolder(baseKey + ':cons', 'Constraints', 'key', expanded, toggle, () => (
-				<div className="tree-row depth-4" title="Primary key">
+			{tableOpen && cons && renderFolder(baseKey + ':cons', t('shell.sidebar.constraints'), 'key', expanded, toggle, () => (
+				<div className="tree-row depth-4" title={t('shell.sidebar.primaryKey')}>
 					<span className="twisty" />
 					<span className="tree-icon"><Icon name="key" /></span>
 					<span className="tree-label">PRIMARY</span>
 					<span className="muted col-type">{table.primaryKey.join(', ')}</span>
 				</div>
 			))}
-			{tableOpen && fks && renderFolder(baseKey + ':fks', `Foreign Keys (${table.foreignKeys.length})`, 'references', expanded, toggle, () => (
+			{tableOpen && fks && renderFolder(baseKey + ':fks', t('shell.sidebar.foreignKeys', { count: table.foreignKeys.length }), 'references', expanded, toggle, () => (
 				<>
 					{table.foreignKeys.map((fk) => (
-						<div className="tree-row depth-4" key={'fk:' + fk.constraintName} title={'Foreign key ' + fk.constraintName}>
+						<div className="tree-row depth-4" key={'fk:' + fk.constraintName} title={t('shell.sidebar.foreignKeyNamed', { name: fk.constraintName })}>
 							<span className="twisty" />
 							<span className="tree-icon"><Icon name="references" /></span>
 							<span className="tree-label">{fk.columns.join(', ')}</span>
@@ -529,34 +532,34 @@ function renderTable(
 					))}
 				</>
 			))}
-			{tableOpen && idx && renderFolder(baseKey + ':idx', `Indexes (${table.indexes!.length})`, 'list-tree', expanded, toggle, () => (
+			{tableOpen && idx && renderFolder(baseKey + ':idx', t('shell.sidebar.indexes', { count: table.indexes!.length }), 'list-tree', expanded, toggle, () => (
 				<>
 					{table.indexes!.map((ix) => (
-						<div className="tree-row depth-4" key={'idx:' + ix.name} title={'Index ' + ix.name}>
+						<div className="tree-row depth-4" key={'idx:' + ix.name} title={t('shell.sidebar.indexNamed', { name: ix.name })}>
 							<span className="twisty" />
 							<span className="tree-icon"><Icon name="list-tree" /></span>
 							<span className="tree-label">{ix.name}</span>
-							<span className="muted col-type">{ix.unique ? 'unique · ' : ''}{ix.columns.join(', ')}</span>
+							<span className="muted col-type">{ix.unique ? `${t('shell.sidebar.unique')} · ` : ''}{ix.columns.join(', ')}</span>
 						</div>
 					))}
 				</>
 			))}
-			{tableOpen && trg && renderFolder(baseKey + ':trg', `Triggers (${table.triggers!.length})`, 'symbol-event', expanded, toggle, () => (
+			{tableOpen && trg && renderFolder(baseKey + ':trg', t('shell.sidebar.triggers', { count: table.triggers!.length }), 'symbol-event', expanded, toggle, () => (
 				<>
 					{table.triggers!.map((tr) => (
 						<div
 							className="tree-row depth-4"
 							key={'tr:' + tr.name}
-							title="Double-click to open"
+							title={t('shell.sidebar.doubleClickOpen')}
 							onDoubleClick={() => onOpenObject({
 								connectionId,
 								kind: 'trigger',
 								schema: table.schema,
 								name: tr.name,
 								meta: [
-									{ label: 'Table', value: table.name },
-									{ label: 'Timing', value: tr.timing },
-									{ label: 'Event', value: tr.event },
+									{ label: t('shell.sidebar.meta.table'), value: table.name },
+									{ label: t('shell.sidebar.meta.timing'), value: tr.timing },
+									{ label: t('shell.sidebar.meta.event'), value: tr.event },
 								],
 								ddl: tr.statement,
 							})}
@@ -595,16 +598,16 @@ function lineageEdges(lineage: ObjectLineage | undefined): LineageEdge[] {
 	}
 	const edges: LineageEdge[] = [];
 	for (const ref of lineage.readsFrom ?? []) {
-		edges.push({ ref, relation: 'reads from', inbound: true, title: 'Every row inserted into this table runs this view.' });
+		edges.push({ ref, relation: t('shell.sidebar.lineageReadsFrom'), inbound: true, title: t('shell.sidebar.lineageReadsFromTitle') });
 	}
 	if (lineage.writesTo) {
-		edges.push({ ref: lineage.writesTo, relation: 'writes to', inbound: false, title: "The view's rows land in this table." });
+		edges.push({ ref: lineage.writesTo, relation: t('shell.sidebar.lineageWritesTo'), inbound: false, title: t('shell.sidebar.lineageWritesToTitle') });
 	}
 	for (const ref of lineage.feeds ?? []) {
-		edges.push({ ref, relation: 'feeds', inbound: false, title: 'A materialized view that fires on every insert into this table.' });
+		edges.push({ ref, relation: t('shell.sidebar.lineageFeeds'), inbound: false, title: t('shell.sidebar.lineageFeedsTitle') });
 	}
 	for (const ref of lineage.writtenBy ?? []) {
-		edges.push({ ref, relation: 'written by', inbound: true, title: 'A materialized view writes into this table. Its rows are not inserted by hand.' });
+		edges.push({ ref, relation: t('shell.sidebar.lineageWrittenBy'), inbound: true, title: t('shell.sidebar.lineageWrittenByTitle') });
 	}
 	return edges;
 }
@@ -614,15 +617,15 @@ function lineageEdges(lineage: ObjectLineage | undefined): LineageEdge[] {
  *  refreshable one is neither a trigger nor a stored SELECT but a scheduled job. */
 function viewKindLabel(table: TableInfo): string {
 	if (table.viewEngine === 'MaterializedView') {
-		return table.lineage?.refreshable ? 'refreshable view' : 'materialized view';
+		return table.lineage?.refreshable ? t('shell.sidebar.viewRefreshable') : t('shell.sidebar.viewMaterialized');
 	}
 	if (table.viewEngine === 'LiveView') {
-		return 'live view';
+		return t('shell.sidebar.viewLive');
 	}
 	if (table.viewEngine === 'WindowView') {
-		return 'window view';
+		return t('shell.sidebar.viewWindow');
 	}
-	return 'view';
+	return t('shell.sidebar.view');
 }
 
 /**
@@ -651,7 +654,7 @@ function renderDictionaries(
 			<div className="tree-row depth-2 folder" onClick={() => toggle(folderKey)}>
 				<span className="twisty"><Icon name={open ? 'chevron-down' : 'chevron-right'} /></span>
 				<span className="tree-icon"><Icon name="book" /></span>
-				<span className="tree-label">Dictionaries</span>
+				<span className="tree-label">{t('shell.sidebar.dictionaries')}</span>
 				<span className="muted count">{dictionaries.length}</span>
 			</div>
 			{open && dictionaries.map((dict) => {
@@ -675,15 +678,15 @@ function renderDictionaries(
 							{(info?.keyColumns.length ?? 0) > 0 && <span className="muted col-type">{info!.keyColumns.join(', ')}</span>}
 						</div>
 						{dictOpen && (info?.keyColumns ?? []).map((name) => (
-							<div className="tree-row depth-4" key={'dk:' + name} title="The key dictGet looks a row up by.">
+							<div className="tree-row depth-4" key={'dk:' + name} title={t('shell.sidebar.dictKeyTitle')}>
 								<span className="twisty" />
 								<span className="tree-icon"><Icon name="key" /></span>
 								<span className="tree-label">{name}</span>
-								<span className="muted col-type">key</span>
+								<span className="muted col-type">{t('shell.sidebar.key')}</span>
 							</div>
 						))}
 						{dictOpen && (info?.attributes ?? []).map((attr) => (
-							<div className="tree-row depth-4" key={'da:' + attr.name} title="An attribute dictGet can return.">
+							<div className="tree-row depth-4" key={'da:' + attr.name} title={t('shell.sidebar.dictAttrTitle')}>
 								<span className="twisty" />
 								<span className="tree-icon"><Icon name="symbol-field" /></span>
 								<span className="tree-label">{attr.name}</span>
@@ -700,15 +703,15 @@ function renderDictionaries(
 /** A dictionary's hover: where it loads from and how it is held, which is what decides whether a
  *  dictGet is a memory read or a round trip. */
 function dictionaryTitle(info: TableInfo['dictionary']): string {
-	const lines = ['Double-click to open'];
+	const lines = [t('shell.sidebar.doubleClickOpen')];
 	if ((info?.keyColumns.length ?? 0) > 0) {
-		lines.push(`Key: ${info!.keyColumns.join(', ')}`);
+		lines.push(t('shell.sidebar.dictKey', { columns: info!.keyColumns.join(', ') }));
 	}
 	if (info?.sourceKind) {
-		lines.push(`Loaded from: ${info.sourceKind}`);
+		lines.push(t('shell.sidebar.dictLoadedFrom', { source: info.sourceKind }));
 	}
 	if (info?.layout) {
-		lines.push(`Layout: ${info.layout}`);
+		lines.push(t('shell.sidebar.dictLayout', { layout: info.layout }));
 	}
 	return lines.join('\n');
 }
@@ -730,23 +733,23 @@ function renderRoutines(
 			<div className="tree-row depth-2 folder" onClick={() => toggle(key)}>
 				<span className="twisty"><Icon name={open ? 'chevron-down' : 'chevron-right'} /></span>
 				<span className="tree-icon"><Icon name="symbol-method" /></span>
-				<span className="tree-label">Procedures</span>
+				<span className="tree-label">{t('shell.sidebar.procedures')}</span>
 				<span className="muted count">{routines.length}</span>
 			</div>
 			{open && routines.map((r) => (
 				<div
 					className="tree-row depth-3"
 					key={'rt:' + r.kind + ':' + r.name}
-					title="Double-click to open"
+					title={t('shell.sidebar.doubleClickOpen')}
 					onDoubleClick={() => onOpenObject({
 						connectionId,
 						kind: r.kind,
 						schema: r.schema,
 						name: r.name,
 						meta: [
-							{ label: 'Type', value: r.kind },
-							...(r.returnType ? [{ label: 'Returns', value: r.returnType }] : []),
-							...(r.language ? [{ label: 'Language', value: r.language }] : []),
+							{ label: t('shell.sidebar.meta.type'), value: r.kind },
+							...(r.returnType ? [{ label: t('shell.sidebar.meta.returns'), value: r.returnType }] : []),
+							...(r.language ? [{ label: t('shell.sidebar.meta.language'), value: r.language }] : []),
 						],
 						parameters: r.parameters ?? [],
 						ddl: r.definition,
@@ -791,16 +794,16 @@ function renderFolder(
 function columnTitle(column: ColumnInfo): string | undefined {
 	const lines: string[] = [];
 	if (column.sortKey === 'primary') {
-		lines.push('In the sort key and the primary index: a filter on it skips granules.');
+		lines.push(t('shell.sidebar.sortKeyPrimary'));
 	} else if (column.sortKey === 'sort') {
-		lines.push('In the sort key, after the primary index.');
+		lines.push(t('shell.sidebar.sortKeyAfter'));
 	}
 	if (column.codec) {
-		lines.push(`Codec: ${column.codec}`);
+		lines.push(t('shell.sidebar.codec', { codec: column.codec }));
 	}
 	if (column.storedBytes) {
 		const { compressed, uncompressed } = column.storedBytes;
-		lines.push(`On disk: ${formatBytes(compressed)} compressed, ${formatBytes(uncompressed)} raw${compressed > 0 ? ` (${(uncompressed / compressed).toFixed(1)}x)` : ''}`);
+		lines.push(`${t('shell.sidebar.onDisk', { compressed: formatBytes(compressed), raw: formatBytes(uncompressed) })}${compressed > 0 ? ` (${(uncompressed / compressed).toFixed(1)}x)` : ''}`);
 	}
 	return lines.length > 0 ? lines.join('\n') : undefined;
 }

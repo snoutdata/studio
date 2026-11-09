@@ -1,0 +1,209 @@
+{
+	"aiTranslate": {
+		"title": "Traduzir com {assistant}?",
+		"detail": "{assistant} pode transformar esta consulta em um pipeline do MongoDB, o que usa seu orçamento de IA. Ou escreva direto na aba Pipeline.",
+		"always": "Sempre traduzir com {assistant} (não perguntar de novo)",
+		"cancel": "Cancelar",
+		"confirm": "Traduzir com {assistant}"
+	},
+	"attach": {
+		"excerpt": "trecho · {sent} de {total} car.",
+		"chars": "{total} car.",
+		"excerptTitle": "{name} (só um trecho, {coverage}, foi enviado ao assistente)",
+		"remove": "Remover"
+	},
+	"ago": {
+		"seconds": "há {n} s",
+		"minutes": "há {n} min",
+		"hours": "há {n} h",
+		"days": "há {n} d"
+	},
+	"history": {
+		"title": "Histórico de chats",
+		"clearAll": "Limpar tudo",
+		"close": "Fechar",
+		"search": "Buscar título, conexão ou texto da mensagem…",
+		"matches": {
+			"one": "{count} resultado",
+			"other": "{count} resultados"
+		},
+		"empty": "Nenhum chat salvo ainda.",
+		"noMatch": "Nenhum chat corresponde ao filtro.",
+		"untitled": "Chat sem título",
+		"messages": "{count} msg",
+		"tokens": "{count} tok",
+		"delete": "Excluir",
+		"deleteOneTitle": "Excluir este chat?",
+		"deleteBody": "Isso não pode ser desfeito.",
+		"deleteAllTitle": "Excluir todo o histórico?",
+		"deleteAllBody": {
+			"one": "{count} chat salvo será removido. Isso não pode ser desfeito.",
+			"other": "Todos os {count} chats salvos serão removidos. Isso não pode ser desfeito."
+		},
+		"deleteAll": "Excluir tudo",
+		"prev": "Anterior",
+		"next": "Próxima",
+		"range": "{start}-{end} de {total}"
+	},
+	"knowledge": {
+		"title": "O que sei sobre “{name}”",
+		"close": "Fechar",
+		"loading": "Carregando…",
+		"suggested": "Sugerido pelo seu chat",
+		"rememberThis": "Lembrar disto",
+		"remember": "Lembrar",
+		"dismiss": "Dispensar",
+		"on": "Ligado, eu uso isto",
+		"off": "Desligado, guardado mas sem uso",
+		"everyDatabase": "todos os bancos",
+		"delete": "Excluir",
+		"placeholder": "Ensine algo sobre este banco de dados…",
+		"everywhereTitle": "Aplicar a todas as conexões, não só a esta",
+		"everywhere": "Vale para todos os bancos",
+		"teach": "Ensinar",
+		"emptyHint": "Nada ainda. Me ensine um fato sobre este banco (como “as vendas ficam em `customer_order`, `fulfilled_date` é a data da venda”) e eu vou lembrar, para você não precisar repetir."
+	},
+	"model": {
+		"choose": "Escolher o modelo do chat",
+		"none": "nenhum modelo",
+		"reasoningTitle": "Modelo de raciocínio",
+		"empty": "Nenhum modelo. Configure um nas configurações de IA.",
+		"recommended": "Recomendado",
+		"reasoning": "Modelo de raciocínio",
+		"contextM": "Contexto {n} M",
+		"contextK": "Contexto {n} K",
+		"yourKey": "Sua chave",
+		"usesMore": "Consome mais do seu saldo",
+		"uses": "Consome seu saldo",
+		"included": "Incluído"
+	},
+	"releaseNotes": {
+		"empty": "Não há notas desta versão.",
+		"showAfterUpdate": "Mostrar as notas da versão após atualizar",
+		"date": "Data de lançamento: {date}",
+		"whatsNew": "Novidades",
+		"whatsNewHead": "NOVIDADES"
+	},
+	"workspace": {
+		"title": "WORKSPACE",
+		"newFile": "Novo arquivo",
+		"import": "Importar arquivos (este computador ou DBeaver)",
+		"refresh": "Atualizar",
+		"collapse": "Recolher",
+		"rootTitle": "{root}\n(clique para trocar a pasta do workspace)",
+		"search": "Buscar arquivos e conteúdo",
+		"clear": "Limpar",
+		"noMatch": "Nenhum arquivo encontrado.",
+		"empty": "Nenhum arquivo SQL neste workspace ainda.",
+		"matches": "Ocorrências no conteúdo do arquivo",
+		"rename": "Renomear",
+		"delete": "Excluir",
+		"confirmDelete": "Excluir {name}?",
+		"cancel": "Cancelar"
+	},
+	"panel": {
+		"projectAi": "{name}: a IA do próprio projeto",
+		"askAbout": "Pergunte a {assistant} sobre {name}…",
+		"askAnything": "Pergunte o que quiser a {assistant}…  (⏎ enviar · ⇧⏎ nova linha)",
+		"hintConnected": "Peça SQL com base no schema de “{name}”.",
+		"hintNotConnected": "“{name}” não está conectado. Conecte para ter respostas com base no schema, ou faça uma pergunta geral de SQL.",
+		"hintNoConnections": "Nenhuma conexão ainda. Adicione uma no painel Conexões para ter respostas com base no schema. Você ainda pode fazer perguntas gerais de SQL.",
+		"hintChooseBelow": "Escolha uma conexão abaixo para basear as respostas no schema dela, ou faça uma pergunta geral de SQL.",
+		"hintChooseAbove": "Selecione uma conexão acima do editor para basear as respostas no schema dela, ou faça uma pergunta geral de SQL.",
+		"thisConnection": "esta conexão",
+		"theDatabase": "o banco de dados",
+		"connectFailed": "Não foi possível conectar a “{name}”. Verifique as configurações da conexão e tente de novo, ou continue sem conexão.",
+		"you": "Você",
+		"copied": "Copiado",
+		"copyReply": "Copiar esta resposta",
+		"collapse": "Recolher",
+		"sees": "{assistant} vê o que você tem aberto: {context}.",
+		"knows": "O que sei sobre este banco de dados",
+		"newChat": "Novo chat",
+		"chatHistory": "Histórico de chats",
+		"aiSettings": "Configurações de IA",
+		"exitFull": "Sair da tela cheia",
+		"full": "Tela cheia",
+		"restoring": "Restaurando sua conta",
+		"dismiss": "Dispensar"
+	},
+	"busy": {
+		"approval": "Aguardando sua aprovação…",
+		"query": "Executando a consulta…",
+		"tables": "Listando tabelas…",
+		"reading": "Lendo {name}…",
+		"readingTable": "Lendo a tabela…",
+		"columns": "Buscando colunas…",
+		"working": "Trabalhando…",
+		"planning": "Planejando os próximos passos…"
+	},
+	"signin": {
+		"heldTitle": "Entre e {assistant} continua daqui",
+		"heldBody": "Está pronto para olhar isso para você. Entre e ele começa na hora.",
+		"title": "{assistant}, um só assistente para seus dados e o Studio",
+		"body": "Entre para ele escrever SQL, achar respostas nos seus bancos de dados e configurar conexões, monitores, Data Flows e configurações para você.",
+		"signIn": "Entrar",
+		"notNow": "Agora não"
+	},
+	"perf": {
+		"title": "Este chat é dedicado a otimizar uma instrução. Abra um novo chat para outros assuntos.",
+		"heading": "Otimização de consulta",
+		"body": "Ajustado para esta instrução. Abra um novo chat para outras perguntas."
+	},
+	"dataAccess": {
+		"title": "O que a IA pode ver dos seus dados?",
+		"body": "Quanto menos ela vê, mais genéricas são as respostas sobre seus dados.",
+		"saved": "Salvo. Você pode mudar quando quiser nas configurações de IA.",
+		"openSettings": "Abrir configurações"
+	},
+	"planHint": {
+		"body": "Você está no plano Grátis, com uma cota mensal de IA. Os planos pagos têm mais, em todos os modelos.",
+		"view": "Ver planos"
+	},
+	"remember": {
+		"title": "Quer que eu lembre disso?",
+		"body": "Vou guardar isso para “{name}” e acertar da próxima vez.",
+		"remember": "Lembrar"
+	},
+	"connect": {
+		"title": "Conectar a “{name}”?",
+		"body": "Não está conectado. Conecte para o assistente ler o schema e executar consultas somente leitura e dar uma resposta precisa com base nos dados, ou continue sem conexão (só respostas gerais, sem dados ao vivo).",
+		"connect": "Conectar",
+		"continueWithout": "Continuar sem"
+	},
+	"approval": {
+		"runQuery": "O assistente quer executar uma consulta",
+		"run": "Executar",
+		"alwaysTitle": "Não perguntar antes de executar consultas somente leitura em {name}",
+		"always": "Sempre permitir {name}",
+		"skip": "Pular",
+		"wantsTo": "O assistente quer: {action}",
+		"performAction": "realizar uma ação",
+		"allow": "Permitir"
+	},
+	"error": {
+		"retryManaged": "Tentar de novo com créditos",
+		"managePlan": "Gerenciar plano",
+		"openAiSettings": "Abrir configurações de IA"
+	},
+	"tokens": {
+		"title": "Tokens usados neste chat (prompt + resposta)",
+		"total": "{tokens} tokens",
+		"inOut": "{input} entrada · {output} saída"
+	},
+	"composer": {
+		"noConnections": "Nenhuma conexão",
+		"chooseConnection": "Escolha uma conexão",
+		"groundsOn": "Conexão usada por {assistant}",
+		"attachOffPerf": "Anexos ficam desligados em um chat de otimização. Abra um novo chat para anexar um documento.",
+		"attach": "Anexar um documento (txt, md, csv, json; PDF e Word no Windows e macOS) como contexto",
+		"stop": "Parar",
+		"send": "Enviar (Enter)"
+	},
+	"markdown": {
+		"altFrom": "{name} não carregada, de {where}",
+		"imageFrom": "Imagem não carregada, de {where}",
+		"alt": "{name} não carregada",
+		"image": "Imagem não carregada"
+	}
+}

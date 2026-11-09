@@ -1,0 +1,23 @@
+{
+	"setDefault": "Usar el valor por defecto ({value})",
+	"setCurrentTime": "Usar la hora actual",
+	"setNull": "Poner a NULL",
+	"noPrimaryKey": "Esta tabla no tiene clave primaria en el resultado, así que las ediciones y eliminaciones no se pueden guardar con seguridad. Añade solo filas o usa el editor SQL.",
+	"refuseView": "Una vista no tiene filas propias que cambiar. Edita las tablas que tiene debajo.",
+	"refuseLog": "Los eventos de log no se pueden cambiar: el proveedor no ofrece forma de escribirlos.",
+	"refuseDictionary": "Un diccionario guarda una copia de lo que devuelve su SOURCE. Cambia el origen y recarga el diccionario.",
+	"refuseReadOnly": "Esta conexión está marcada como de solo lectura, así que aquí no se puede escribir nada. Cámbialo en la conexión.",
+	"refuseProduction": "Esta conexión está marcada como producción, así que la cuadrícula es solo de consulta.",
+	"refuseNoKey": "Esta tabla no tiene clave primaria, así que no hay forma segura de saber a qué fila pertenece una edición. Añade una o escribe tú el INSERT en el editor.",
+	"mongoNoId": "Este documento no tiene _id, así que no se pueden guardar las ediciones de campos anidados. Usa el editor de pipeline.",
+	"mongoNoChanges": "No hay cambios que guardar.",
+	"mongoNoIdColumn": "Este resultado no tiene columna _id, así que las ediciones y eliminaciones no se pueden guardar con seguridad. Añade solo documentos o usa el editor de pipeline.",
+	"pipelineEmpty": "El pipeline está vacío. Añade al menos una etapa, por ejemplo [ { \"$match\": {} } ].",
+	"invalidJson": "JSON no válido: {message}",
+	"pipelineNotArray": "Un pipeline debe ser un array JSON de etapas, por ejemplo [ { \"$match\": {} } ].",
+	"stageNotObject": "La etapa {stage} debe ser un objeto como { \"$match\": { … } }.",
+	"filterInvalid": "El filtro no es JSON válido: {message}",
+	"filterNotObject": "El filtro debe ser un objeto JSON, por ejemplo { \"status\": \"active\" }.",
+	"stageNoOperator": "La etapa {stage} no tiene operador (por ejemplo $match).",
+	"stageBodyInvalid": "El cuerpo de la etapa {stage} ({operator}) no es JSON válido: {message}"
+}

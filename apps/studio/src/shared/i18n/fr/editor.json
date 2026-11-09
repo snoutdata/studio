@@ -1,0 +1,122 @@
+{
+	"ai": {
+		"completionOff": "La complétion IA est désactivée. Activez-la dans Paramètres → IA.",
+		"noChange": "{assistant} : aucun changement suggéré.",
+		"noSuggestion": "{assistant} : aucune suggestion",
+		"thinking": "{assistant} : réflexion…"
+	},
+	"aiEdit": {
+		"accept": "Accepter",
+		"addToChat": "Ajouter au chat",
+		"applyHint": "⏎ appliquer · ⇧⏎ nouvelle ligne · Esc annuler",
+		"connectFirst": "Connectez-vous à une base de données pour utiliser l'édition rapide.",
+		"editPlaceholder": "Modifier la sélection : décrivez le changement…",
+		"escDismiss": "Esc pour fermer",
+		"generateHint": "⏎ générer · ⇧⏎ nouvelle ligne · Esc annuler",
+		"generatePlaceholder": "Générer du SQL : décrivez ce que vous voulez…",
+		"modelTitle": "Modèle pour cette modification",
+		"processing": "Traitement…",
+		"quickEdit": "Édition rapide",
+		"reject": "Rejeter",
+		"reviewHint": "⏎ accepter · Esc rejeter"
+	},
+	"builder": {
+		"addStage": "Ajouter une étape",
+		"apply": "Appliquer à l'éditeur",
+		"deleteStage": "Supprimer cette étape",
+		"disable": "Désactiver cette étape (conservée, exclue de l'exécution)",
+		"empty": "Aucune étape. Ajoutez-en une pour démarrer le pipeline.",
+		"enable": "Activer cette étape",
+		"moveDown": "Descendre",
+		"moveUp": "Monter",
+		"on": "actif",
+		"operator": "Opérateur de l'étape",
+		"runTo": "Exécuter le pipeline jusqu'à cette étape incluse",
+		"title": "Étapes du pipeline"
+	},
+	"common": {
+		"cancel": "Annuler",
+		"close": "Fermer",
+		"collapse": "Réduire",
+		"delete": "Supprimer",
+		"loading": "Chargement…",
+		"notConnected": "{label} (non connectée)",
+		"refresh": "Actualiser",
+		"revert": "Annuler",
+		"run": "Exécuter",
+		"save": "Enregistrer"
+	},
+	"conn": {
+		"choose": "Choisir une connexion",
+		"filter": "Filtrer les connexions",
+		"localProject": "Projet local SnoutData",
+		"new": "Nouvelle connexion…",
+		"noMatch": "Aucun résultat",
+		"noneYet": "Aucune connexion pour le moment",
+		"readOnlyTitle": "Connexion en lecture seule. Les écritures et le DDL sont bloqués."
+	},
+	"ctx": {
+		"explainSql": "Expliquer le SQL",
+		"optimizeSql": "Optimisation SQL",
+		"pipelineTranslation": "Obtenir la traduction en pipeline",
+		"textToSql": "Texte vers SQL"
+	},
+	"find": {
+		"collectionPlaceholder": "Collection…",
+		"collectionTitle": "Collection à interroger",
+		"fieldsPlaceholder": "Champs, ex. name, email, -_id",
+		"fieldsTitle": "Projection : un nom seul inclut, le préfixe - exclut (ex. -password). Vide : documents entiers.",
+		"filterPlaceholder": "Filtre, ex. { \"status\": \"active\" }",
+		"filterTitle": "Un document de requête Mongo (JSON). Vide : tous les documents.",
+		"find": "Chercher",
+		"limit": "Limite",
+		"limitInvalid": "La limite doit être un nombre positif ou nul.",
+		"limitTitle": "Nombre maximum de documents à renvoyer",
+		"pickCollection": "Choisissez une collection à interroger.",
+		"runTitle": "Exécuter cette recherche (Entrée)",
+		"sortPlaceholder": "Tri, ex. createdAt:-1, name",
+		"sortTitle": "Clés de tri : champ ou champ:dir (1/asc ou -1/desc)."
+	},
+	"history": {
+		"clear": "Effacer l'historique",
+		"clearBody": "Toutes les requêtes enregistrées dans votre historique seront supprimées. Cette action est irréversible.",
+		"clearTitle": "Effacer l'historique des requêtes ?",
+		"daysAgo": "il y a {n} j",
+		"emptyRecent": "Pas encore d'historique. Les requêtes que vous exécutez apparaissent ici.",
+		"emptySaved": "Aucune requête enregistrée. Enregistrez-en une depuis l'éditeur et elle sera conservée ici.",
+		"error": "erreur",
+		"heading": "HISTORIQUE",
+		"hoursAgo": "il y a {n} h",
+		"minutesAgo": "il y a {n} min",
+		"recent": "Récentes",
+		"rowsMs": {
+			"one": "{count} ligne · {ms} ms",
+			"other": "{count} lignes · {ms} ms"
+		},
+		"saved": "Enregistrées",
+		"secondsAgo": "il y a {n} s"
+	},
+	"params": {
+		"detail": "ClickHouse les lie sur le serveur avec leurs types. Saisissez la valeur telle quelle, sans guillemets.",
+		"title": "Paramètres de la requête"
+	},
+	"pipeline": {
+		"collectionTitle": "Collection sur laquelle s'exécute ce pipeline",
+		"explainTitle": "Expliquer ce pipeline : montre le plan de requête (quel index il utilise) sans l'exécuter",
+		"findTitle": "Recherche rapide : filtrer, projeter, trier sans écrire de pipeline",
+		"nativeTitle": "Écrire un pipeline d'agrégation natif (JSON)",
+		"pipeline": "Pipeline",
+		"sqlTitle": "Écrire du SQL (traduit en pipeline d'agrégation)",
+		"stages": "Étapes",
+		"stagesTitle": "Modifier le pipeline en étapes visuelles (ajouter, réordonner, désactiver, prévisualiser chaque étape)",
+		"surface": "Surface de requête MongoDB"
+	},
+	"run": {
+		"explain": "Expliquer",
+		"explainTitle": "Montre comment la base de données exécuterait cette instruction, sans l'exécuter",
+		"more": "Autres options d'exécution",
+		"newTab": "Exécuter dans un nouvel onglet",
+		"script": "Exécuter le script",
+		"scriptTitle": "Exécute chaque instruction de l'éditeur, une à la fois"
+	}
+}

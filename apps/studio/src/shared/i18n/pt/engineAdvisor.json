@@ -1,0 +1,52 @@
+{
+	"sarg": {
+		"leadingWildcard": "`{operator} '%…'` na coluna indexada {column} não consegue usar o índice.",
+		"leadingWildcardWhy": "Um `%` no início impede o uso do índice b-tree desta coluna, então a consulta percorre todas as linhas. Considere um índice de texto completo, um índice de trigramas (Postgres `pg_trgm`) ou ancorar o padrão (`prefix%`).",
+		"typeMismatch": "Comparar a coluna de texto {column} com um literal numérico força uma conversão implícita.",
+		"typeMismatchWhy": "Quando uma coluna de texto é comparada a um número, o motor converte o valor de cada linha para comparar, o que anula o índice desta coluna (uma armadilha comum do MySQL). Coloque o literal entre aspas para os tipos baterem.",
+		"wrapFunction": "`{fn}({name})` não consegue usar o índice de {column}: a função roda em cada linha.",
+		"wrapCast": "`CAST({name} …)` não consegue usar o índice de {column}.",
+		"wrapArith": "Uma conta sobre {column} (`{name} {op} …`) não consegue usar o índice: passe o cálculo para o outro lado.",
+		"wrapWhy": "Envolver uma coluna indexada em uma função ou expressão impede o uso do índice (que guarda o valor original), e a consulta percorre a tabela inteira. Reescreva para deixar a coluna sozinha em um lado da comparação, ou adicione um índice de expressão."
+	},
+	"plan": {
+		"partitionScan": "Lê todas as {leaves} partições de {table} (~{rows} linhas): nada na consulta permite ao banco pular alguma.",
+		"partitionSeriesWhy": "{table} é uma tabela de série particionada por {time}. Filtre por {time} com um intervalo que o planejador consiga comparar diretamente ({time} >= now() - interval '1 day', ou um intervalo literal), nunca com uma função ou cast de {time}, para ler só as partições desse intervalo.",
+		"partitionWhy": "{table} é particionada. Um filtro na chave de partição, comparada diretamente e não por uma função ou cast, permite ao planejador pular as partições de fora.",
+		"sort": "O plano ordena linhas que nenhum índice já ordena (uma ordenação em memória ou em disco).",
+		"sortWhy": "Adicione um índice cujas primeiras colunas batam com o ORDER BY: o motor lê as linhas em ordem em vez de ordená-las.",
+		"filesort": "O plano usa um filesort (as linhas não são lidas na ordem necessária a partir de um índice).",
+		"filesortWhy": "Adicione um índice composto que cubra as colunas de igualdade do WHERE e depois a do ORDER BY: um único índice atende aos dois.",
+		"tempTable": "O plano materializa uma tabela temporária interna.",
+		"tempTableWhy": "Um GROUP BY, DISTINCT ou UNION que não consegue usar índice cria uma tabela temporária; um índice nas colunas de agrupamento costuma eliminá-la.",
+		"filesortTable": "O plano usa um filesort nesta tabela (as linhas não são lidas em ordem a partir de um índice).",
+		"filesortTableWhy": "Adicione um índice composto que cubra as colunas de igualdade do WHERE e depois a do ORDER BY.",
+		"tempTableStep": "O plano materializa uma tabela temporária interna nesta etapa.",
+		"tempTableStepWhy": "Um índice nas colunas de agrupamento ou de join costuma eliminar a tabela temporária.",
+		"final": "FINAL em {table} ({rows} linhas) funde as parts enquanto a consulta as lê.",
+		"finalWhy": "FINAL junta as linhas duplicadas na leitura, o que em uma tabela grande custa muito mais que a própria consulta. Filtre antes para fundir menos, ou deduplique na consulta (argMax(value, version) ... GROUP BY key); do_not_merge_across_partitions_select_final = 1 ajuda quando a chave nunca cruza partições.",
+		"projection": "Respondida pela projeção {name}: {last} de {first} grânulos lidos.",
+		"projectionWhy": "Uma projeção é uma cópia da tabela em outra ordem ou pré-agregada, e o ClickHouse a usou porque lê menos que a tabela. Nada a fazer: a alavanca está funcionando.",
+		"granulesTable": "Leitura completa de {table}: todos os {first} grânulos ({approx}{rows} linhas) foram lidos, nenhum pulado.",
+		"granules": "Leitura completa: todos os {first} grânulos ({approx}{rows} linhas) foram lidos, nenhum pulado.",
+		"granulesWhy": "O ClickHouse pula dados pela chave ORDER BY da tabela e pela chave de partição, não por um índice em uma coluna. Este filtro não reduziu nenhuma das duas, então cada grânulo foi lido. Filtre por uma coluna inicial da chave ORDER BY (a primeira antes) ou pela chave de partição; para uma coluna fora da chave, a alavanca é um índice de pulo (bloom_filter, set, minmax) ou uma projeção ordenada por ela.",
+		"fullScan": "Leitura completa da tabela: nenhum índice reduz as linhas.",
+		"fullScanRows": "Leitura completa da tabela (~{rows} linhas): nenhum índice reduz as linhas.",
+		"fullScanTable": "Leitura completa de {table}: nenhum índice reduz as linhas.",
+		"fullScanTableRows": "Leitura completa de {table} (~{rows} linhas): nenhum índice reduz as linhas.",
+		"fullScanWhy": "O motor lê cada linha porque nenhum índice bate com o filtro ou o join. Adicione um índice nas colunas do WHERE ou do JOIN, ou torne o predicado sargable (veja as dicas no editor), para tocar só as linhas necessárias."
+	},
+	"hazards": {
+		"setIgnored": "Só \"{column}\" é atribuída. {ignored} NÃO será atualizado.",
+		"setBoolean": "Só \"{column}\" é atribuída, e o valor dela é uma expressão booleana, não o valor que parece.",
+		"setWhy": "{operator} não separa atribuições em uma cláusula SET, quem faz isso é a vírgula. Isto é lido como a única atribuição \"{column} = ({value})\": todo o lado direito vira um único valor true/false/NULL, e as outras colunas citadas são só comparadas, não alteradas.",
+		"nullNotEqual": "\"<> NULL\" não corresponde a nenhuma linha, nem às que não são NULL.",
+		"nullEqual": "\"= NULL\" não corresponde a nenhuma linha, nem às que são NULL.",
+		"nullWhy": "Comparar qualquer coisa com NULL dá NULL (desconhecido), nunca verdadeiro, então o predicado descarta tudo. Use {fix} no lugar.",
+		"theTable": "a tabela",
+		"chDelete": "ALTER TABLE ... DELETE reescreve em segundo plano cada part de {table} que tenha uma linha afetada, e não pode ser desfeito.",
+		"chDeleteWhy": "Isto é uma mutação, não uma exclusão de linhas. Um DELETE FROM {table} WHERE ... leve (ClickHouse 23.3 ou mais recente) marca as linhas como excluídas na hora e as remove nos merges normais, o que custa bem menos; ALTER TABLE ... DELETE é para quando o espaço em disco precisa voltar agora. Acompanhe em Operations > Storage > Mutations.",
+		"chUpdate": "ALTER TABLE ... UPDATE reescreve em segundo plano cada coluna alterada em cada part que tenha uma linha afetada, e não pode ser desfeito.",
+		"chUpdateWhy": "Isto é uma mutação, não uma atualização de linhas: em uma tabela grande é uma reescrita longa, e se falhar bloqueia as mutações seguintes na mesma tabela. Restrinja o WHERE o máximo possível e acompanhe em Operations > Storage > Mutations."
+	}
+}

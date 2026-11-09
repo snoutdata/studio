@@ -7,6 +7,7 @@ import { useEffect, useState } from 'react';
 import { Icon } from './Icon';
 import { describeMongoDdl, type MongoDdl } from '../../../shared/engine';
 import type { TableInfo } from '../../../shared/schema';
+import { useI18n } from '../i18n';
 
 // The document-backend analog of TableProperties. A MongoDB collection is
 // schemaless, so there's no column designer / ALTER path: this panel shows the inferred fields
@@ -15,9 +16,9 @@ import type { TableInfo } from '../../../shared/schema';
 // before issuing it through the same guarded `runMongoDdl` path used elsewhere.
 type Section = 'fields' | 'indexes';
 
-const SECTIONS: { id: Section; label: string; icon: string }[] = [
-	{ id: 'fields', label: 'Fields', icon: 'symbol-field' },
-	{ id: 'indexes', label: 'Indexes', icon: 'list-ordered' },
+const SECTIONS: { id: Section; labelKey: string; icon: string }[] = [
+	{ id: 'fields', labelKey: 'tables.coll.fields', icon: 'symbol-field' },
+	{ id: 'indexes', labelKey: 'tables.coll.indexes', icon: 'list-ordered' },
 ];
 
 interface CollectionPropertiesProps {
@@ -41,6 +42,7 @@ function suggestIndexName(fields: string[]): string {
 }
 
 export function CollectionProperties({ connectionId, isProd, readOnly, base, runMongoDdl, onPersisted, onDropped }: CollectionPropertiesProps): JSX.Element {
+	const { t, tr } = useI18n();
 	const [section, setSection] = useState<Section>('fields');
 	// A structure op awaiting confirmation: its title, the ops to run, and whether it drops the
 	// whole collection (so apply closes the tab instead of re-seeding it).
@@ -94,7 +96,7 @@ export function CollectionProperties({ connectionId, isProd, readOnly, base, run
 		const result = await runMongoDdl(connectionId, preview.ops);
 		if (!result.ok) {
 			setApplying(false);
-			setError(result.error ?? 'Failed to apply changes.');
+			setError(result.error ?? t('tables.common.applyFailed'));
 			return;
 		}
 		if (preview.drops) {
@@ -104,7 +106,7 @@ export function CollectionProperties({ connectionId, isProd, readOnly, base, run
 			return;
 		}
 		const fresh = await window.sqlApi.getSchema(connectionId);
-		const found = fresh?.tables.find((t) => t.name === base.name) ?? null;
+		const found = fresh?.tables.find((candidate) => candidate.name === base.name) ?? null;
 		setApplying(false);
 		setPreview(null);
 		resetIndexForm();
@@ -118,11 +120,11 @@ export function CollectionProperties({ connectionId, isProd, readOnly, base, run
 	return (
 		<div className="properties">
 			<div className="prop-header">
-				<label>Collection
+				<label>{t('tables.coll.collection')}
 					<input type="text" value={base.name} readOnly />
 				</label>
-				<label>Documents sampled
-					<input type="text" value={`${base.columns.length} fields inferred`} readOnly />
+				<label>{t('tables.coll.sampled')}
+					<input type="text" value={t('tables.coll.inferred', { count: String(base.columns.length) })} readOnly />
 				</label>
 			</div>
 
@@ -134,7 +136,7 @@ export function CollectionProperties({ connectionId, isProd, readOnly, base, run
 							className={`prop-nav-item${section === s.id ? ' active' : ''}`}
 							onClick={() => setSection(s.id)}
 						>
-							<Icon name={s.icon} /> {s.label}
+							<Icon name={s.icon} /> {t(s.labelKey)}
 						</div>
 					))}
 				</div>
@@ -142,15 +144,15 @@ export function CollectionProperties({ connectionId, isProd, readOnly, base, run
 				<div className="prop-section">
 					{section === 'fields' && (
 						base.columns.length === 0
-							? <div className="prop-empty">No fields inferred (the collection is empty or unsampled).</div>
+							? <div className="prop-empty">{t('tables.coll.noFields')}</div>
 							: (
 								<div className="prop-table">
-									<div className="pt-row pt-head"><span>Field</span><span>Type</span><span>Nullable</span></div>
+									<div className="pt-row pt-head"><span>{t('tables.coll.field')}</span><span>{t('tables.common.type')}</span><span>{t('tables.coll.nullable')}</span></div>
 									{base.columns.map((c) => (
 										<div className="pt-row" key={c.name}>
 											<span>{c.isPrimaryKey ? <><Icon name="key" /> {c.name}</> : c.name}</span>
 											<span>{c.dataType}</span>
-											<span>{c.nullable ? 'yes' : 'no'}</span>
+											<span>{c.nullable ? t('tables.coll.yes') : t('tables.coll.no')}</span>
 										</div>
 									))}
 								</div>
@@ -161,7 +163,7 @@ export function CollectionProperties({ connectionId, isProd, readOnly, base, run
 						<div className="prop-index">
 							{indexes.length > 0 && (
 								<div className="prop-table">
-									<div className="pt-row pt-head"><span>Name</span><span>Unique</span><span>Fields</span><span className="pt-actions" /></div>
+									<div className="pt-row pt-head"><span>{t('tables.common.name')}</span><span>{t('tables.common.unique')}</span><span>{t('tables.coll.fields')}</span><span className="pt-actions" /></div>
 									{indexes.map((ix) => (
 										<div className="pt-row" key={ix.name}>
 											<span>{ix.name}</span>
@@ -169,29 +171,29 @@ export function CollectionProperties({ connectionId, isProd, readOnly, base, run
 											<span>{ix.columns.join(', ')}</span>
 											<span className="pt-actions">
 												{!readOnly && (
-													<button type="button" className="icon-btn" aria-label="Drop index" onClick={() => { setError(null); setPreview({ title: 'Drop index', ops: [{ op: 'dropIndex', collection: base.name, name: ix.name }] }); }}><Icon name="trash" /></button>
+													<button type="button" className="icon-btn" aria-label={t('tables.common.dropIndex')} onClick={() => { setError(null); setPreview({ title: t('tables.common.dropIndex'), ops: [{ op: 'dropIndex', collection: base.name, name: ix.name }] }); }}><Icon name="trash" /></button>
 												)}
 											</span>
 										</div>
 									))}
 								</div>
 							)}
-							{indexes.length === 0 && !addingIndex && <div className="prop-empty">No secondary indexes. The <code>_id</code> field is always indexed.</div>}
+							{indexes.length === 0 && !addingIndex && <div className="prop-empty">{tr('tables.coll.noSecondary')}</div>}
 
 							{!readOnly && (addingIndex ? (
 								<div className="index-form">
-									<label>Index name<input type="text" value={idxName} placeholder={suggestIndexName(idxFields)} onChange={(e) => setIdxName(e.target.value)} /></label>
-									<label className="check"><input type="checkbox" checked={idxUnique} onChange={(e) => setIdxUnique(e.target.checked)} /> Unique</label>
-									<label>Fields to index
+									<label>{t('tables.common.indexName')}<input type="text" value={idxName} placeholder={suggestIndexName(idxFields)} onChange={(e) => setIdxName(e.target.value)} /></label>
+									<label className="check"><input type="checkbox" checked={idxUnique} onChange={(e) => setIdxUnique(e.target.checked)} /> {t('tables.common.unique')}</label>
+									<label>{t('tables.coll.fieldsToIndex')}
 										<span className="index-add-field">
-											<input type="text" value={idxFieldInput} placeholder="field name (e.g. email or address.city)" onChange={(e) => setIdxFieldInput(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addIdxField(idxFieldInput); } }} />
-											<button type="button" className="secondary" disabled={idxFieldInput.trim() === ''} onClick={() => addIdxField(idxFieldInput)}><Icon name="add" /> Add</button>
+											<input type="text" value={idxFieldInput} placeholder={t('tables.coll.fieldPlaceholder')} onChange={(e) => setIdxFieldInput(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addIdxField(idxFieldInput); } }} />
+											<button type="button" className="secondary" disabled={idxFieldInput.trim() === ''} onClick={() => addIdxField(idxFieldInput)}><Icon name="add" /> {t('tables.coll.add')}</button>
 										</span>
 									</label>
 									{idxFields.length > 0 && (
 										<div className="index-chosen">
 											{idxFields.map((f) => (
-												<span className="index-chip" key={f}>{f}<button type="button" className="icon-btn" aria-label="Remove field" onClick={() => toggleIdxField(f)}><Icon name="close" /></button></span>
+												<span className="index-chip" key={f}>{f}<button type="button" className="icon-btn" aria-label={t('tables.coll.removeField')} onClick={() => toggleIdxField(f)}><Icon name="close" /></button></span>
 											))}
 										</div>
 									)}
@@ -206,7 +208,7 @@ export function CollectionProperties({ connectionId, isProd, readOnly, base, run
 										</div>
 									)}
 									<div className="index-form-actions">
-										<button type="button" className="copy" onClick={resetIndexForm}><Icon name="close" /> Cancel</button>
+										<button type="button" className="copy" onClick={resetIndexForm}><Icon name="close" /> {t('editor.common.cancel')}</button>
 										<button type="button" disabled={idxFields.length === 0} onClick={() => {
 											const name = idxName.trim() || suggestIndexName(idxFields);
 											const keys: Record<string, 1 | -1> = {};
@@ -214,12 +216,12 @@ export function CollectionProperties({ connectionId, isProd, readOnly, base, run
 												keys[f] = 1;
 											}
 											setError(null);
-											setPreview({ title: 'Create index', ops: [{ op: 'createIndex', collection: base.name, name, keys, unique: idxUnique }] });
-										}}><Icon name="add" /> Create index</button>
+											setPreview({ title: t('tables.common.createIndex'), ops: [{ op: 'createIndex', collection: base.name, name, keys, unique: idxUnique }] });
+										}}><Icon name="add" /> {t('tables.common.createIndex')}</button>
 									</div>
 								</div>
 							) : (
-								<div className="dg-add"><button type="button" className="secondary" onClick={() => setAddingIndex(true)}><Icon name="add" /> Add index</button></div>
+								<div className="dg-add"><button type="button" className="secondary" onClick={() => setAddingIndex(true)}><Icon name="add" /> {t('tables.common.addIndex')}</button></div>
 							))}
 						</div>
 					)}
@@ -227,11 +229,11 @@ export function CollectionProperties({ connectionId, isProd, readOnly, base, run
 			</div>
 
 			<div className="prop-footer">
-				<span className="muted">MongoDB collection</span>
+				<span className="muted">{t('tables.coll.mongoCollection')}</span>
 				<span className="spacer" />
 				{!readOnly && (
-					<button type="button" className="danger" onClick={() => { setError(null); setPreview({ title: 'Drop collection', ops: [{ op: 'dropCollection', collection: base.name }], drops: true }); }}>
-						<Icon name="trash" /> Drop collection
+					<button type="button" className="danger" onClick={() => { setError(null); setPreview({ title: t('tables.coll.dropCollection'), ops: [{ op: 'dropCollection', collection: base.name }], drops: true }); }}>
+						<Icon name="trash" /> {t('tables.coll.dropCollection')}
 					</button>
 				)}
 			</div>
@@ -240,13 +242,13 @@ export function CollectionProperties({ connectionId, isProd, readOnly, base, run
 				<div className="modal-backdrop" onClick={() => !applying && setPreview(null)}>
 					<div className="modal designer-preview" onClick={(e) => e.stopPropagation()}>
 						<h3>{preview.title}</h3>
-						{isProd && <div className="prod-warning"><Icon name="warning" /> This is a <b>production</b> connection. Review carefully.</div>}
+						{isProd && <div className="prod-warning"><Icon name="warning" /> {tr('tables.common.prodWarning')}</div>}
 						<pre className="ddl-preview">{preview.ops.map(describeMongoDdl).join('\n')}</pre>
 						{error && <div className="results-error">{error}</div>}
 						<div className="modal-actions">
-							<button type="button" className="copy" onClick={() => setPreview(null)} disabled={applying}><Icon name="close" /> Cancel</button>
+							<button type="button" className="copy" onClick={() => setPreview(null)} disabled={applying}><Icon name="close" /> {t('editor.common.cancel')}</button>
 							<button type="button" onClick={() => void apply()} disabled={applying}>
-								<Icon name={applying ? 'loading' : 'play'} className={applying ? 'codicon-modifier-spin' : undefined} /> {applying ? 'Applying…' : 'Run'}
+								<Icon name={applying ? 'loading' : 'play'} className={applying ? 'codicon-modifier-spin' : undefined} /> {applying ? t('tables.common.applying') : t('editor.common.run')}
 							</button>
 						</div>
 					</div>

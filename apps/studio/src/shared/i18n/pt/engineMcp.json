@@ -1,0 +1,14 @@
+{
+	"portInUse": {
+		"title": "Acesso de agentes desativado: a porta {port} está em uso",
+		"detail": "Outro programa neste computador está escutando em 127.0.0.1:{port}, a porta que seus agentes estão configurados para acessar, então o aplicativo não iniciou o servidor de agentes ali e não mudou de porta sozinho. Se você não iniciou esse programa, não deixe um agente enviar seu token para ele. Em Configurações, Acesso de agentes, você pode mudar para a porta {suggested}: isso também substitui o token, e os agentes de código iniciados por este aplicativo recebem o novo endereço. Uma configuração colada em outro lugar precisa da nova.",
+		"detailNoSuggestion": "Outro programa neste computador está escutando em 127.0.0.1:{port}, a porta que seus agentes estão configurados para acessar, então o aplicativo não iniciou o servidor de agentes ali e não mudou de porta sozinho. Se você não iniciou esse programa, não deixe um agente enviar seu token para ele. Em Configurações, Acesso de agentes, você pode mudar para outra porta: isso também substitui o token, e os agentes de código iniciados por este aplicativo recebem o novo endereço. Uma configuração colada em outro lugar precisa da nova."
+	},
+	"lockout": {
+		"title": "O acesso de agentes recusou um programa que insistia em enviar um token errado",
+		"detail": {
+			"one": "{attempts} solicitações com um token errado vieram de {remote}, então o servidor de agentes recusa qualquer outro token errado desse endereço por cerca de {count} minuto. Seus próprios agentes e tudo o que tem o token certo continuam entrando. O token não foi alterado. Se achar que ele vazou, substitua em Configurações, Acesso de agentes.",
+			"other": "{attempts} solicitações com um token errado vieram de {remote}, então o servidor de agentes recusa qualquer outro token errado desse endereço por cerca de {count} minutos. Seus próprios agentes e tudo o que tem o token certo continuam entrando. O token não foi alterado. Se achar que ele vazou, substitua em Configurações, Acesso de agentes."
+		}
+	}
+}

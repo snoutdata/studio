@@ -6,6 +6,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Icon } from './Icon';
 import type { ExportFormat } from '../exportData';
+import { useT } from '../i18n';
 
 /** Which rows to export: the loaded grid, or a fresh full run with no auto-LIMIT. */
 export type ExportSource = 'current' | 'full';
@@ -35,6 +36,7 @@ interface ExportMenuProps {
 /** Results-header dropdown: copy the current grid to the clipboard, or export the current
  *  grid / the full query to a file, as CSV/JSON. */
 export function ExportMenu({ hasResults, canRunFull, onExport, onCopy, serverFormats = [], onServerExport }: ExportMenuProps): JSX.Element {
+	const t = useT();
 	const [open, setOpen] = useState(false);
 	const ref = useRef<HTMLDivElement>(null);
 
@@ -71,25 +73,25 @@ export function ExportMenu({ hasResults, canRunFull, onExport, onCopy, serverFor
 			{/* The server-side group needs a connection and a statement, not rows in the grid: its
 			    whole point is exporting what is too big to have run into the grid. So the trigger
 			    opens for that too, and the items that DO need a loaded result say so themselves. */}
-			<button className="export-trigger" title="Export results" disabled={!hasResults && !(serverFormats.length > 0 && canRunFull)} onClick={() => setOpen((o) => !o)}>
-				<Icon name="cloud-download" /> Export <Icon name="chevron-down" className="caret" />
+			<button className="export-trigger" title={t('results.export.title')} disabled={!hasResults && !(serverFormats.length > 0 && canRunFull)} onClick={() => setOpen((o) => !o)}>
+				<Icon name="cloud-download" /> {t('results.export.export')} <Icon name="chevron-down" className="caret" />
 			</button>
 			{open && (
 				<div className="export-dropdown">
-					<div className="export-group">Copy to clipboard</div>
+					<div className="export-group">{t('results.export.clipboard')}</div>
 					<button type="button" className="export-item" disabled={!hasResults} onClick={() => copy('tsv')}>TSV</button>
 					<button type="button" className="export-item" disabled={!hasResults} onClick={() => copy('csv')}>CSV</button>
-					<div className="export-group">Data in grid</div>
+					<div className="export-group">{t('results.export.gridData')}</div>
 					<button type="button" className="export-item" disabled={!hasResults} onClick={() => pick('csv', 'current')}>CSV</button>
 					<button type="button" className="export-item" disabled={!hasResults} onClick={() => pick('json', 'current')}>JSON</button>
 					<button type="button" className="export-item" disabled={!hasResults} onClick={() => pick('xlsx', 'current')}>Excel</button>
-					<div className="export-group">Full data <span className="muted">- no limit</span></div>
+					<div className="export-group">{t('results.export.fullData')} <span className="muted">{t('results.export.noLimit')}</span></div>
 					<button type="button" className="export-item" disabled={!canRunFull} onClick={() => pick('csv', 'full')}>CSV</button>
 					<button type="button" className="export-item" disabled={!canRunFull} onClick={() => pick('json', 'full')}>JSON</button>
 					<button type="button" className="export-item" disabled={!canRunFull} onClick={() => pick('xlsx', 'full')}>Excel</button>
 					{serverFormats.length > 0 && onServerExport && (
 						<>
-							<div className="export-group">Straight from the server <span className="muted">- any size</span></div>
+							<div className="export-group">{t('results.export.fromServer')} <span className="muted">{t('results.export.anySize')}</span></div>
 							{serverFormats.map((f) => (
 								<button type="button" key={f.id} className="export-item" disabled={!canRunFull} onClick={() => server(f.id)}>{f.label}</button>
 							))}

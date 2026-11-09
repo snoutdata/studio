@@ -3,10 +3,18 @@
  *  Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { Fragment, useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { Icon } from './Icon';
+import { useT } from '../i18n';
 
 // Small pieces every section of a project's tab uses, local or cloud (shared/projects.ts).
+
+/** A catalog sentence with its `code` spans drawn as the tab's .mono spans. */
+export function mono(text: string): ReactNode {
+	return text.split(/(`[^`]+`)/g).map((part, i) => (part.startsWith('`') && part.endsWith('`')
+		? <span key={i} className="mono">{part.slice(1, -1)}</span>
+		: <Fragment key={i}>{part}</Fragment>));
+}
 
 /** What the last action said. `refused`: the app or the control plane stopped it, rather than it failing. */
 export type Said = { ok: boolean; message: string; refused?: boolean } | null;
@@ -67,15 +75,16 @@ export function useLoad<T>(load: () => Promise<T>, deps: unknown[]): { data: T |
  * A list held whole in memory knows how many pages it has, and passes `pages` to say so.
  */
 export function Pager(props: { page: number; hasMore: boolean; pages?: number; onPage(page: number): void }): JSX.Element | null {
+	const t = useT();
 	if (props.page === 0 && !props.hasMore) {
 		return null;
 	}
 	return (
 		<div className="cloud-pager">
-			<span className="muted small">Page {props.page + 1}{props.pages ? ` of ${props.pages}` : ''}</span>
+			<span className="muted small">{props.pages ? t('projects.pager.pageOf', { page: props.page + 1, pages: props.pages }) : t('projects.pager.page', { page: props.page + 1 })}</span>
 			<span className="cloud-pager-steps">
-				<button type="button" className="secondary" aria-label="Previous page" disabled={props.page === 0} onClick={() => props.onPage(props.page - 1)}><Icon name="chevron-left" /> Previous</button>
-				<button type="button" className="secondary" aria-label="Next page" disabled={!props.hasMore} onClick={() => props.onPage(props.page + 1)}>Next <Icon name="chevron-right" /></button>
+				<button type="button" className="secondary" aria-label={t('projects.pager.prev')} disabled={props.page === 0} onClick={() => props.onPage(props.page - 1)}><Icon name="chevron-left" /> {t('projects.pager.previous')}</button>
+				<button type="button" className="secondary" aria-label={t('projects.pager.next')} disabled={!props.hasMore} onClick={() => props.onPage(props.page + 1)}>{t('localProjects.setup.next')} <Icon name="chevron-right" /></button>
 			</span>
 		</div>
 	);

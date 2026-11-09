@@ -5,6 +5,7 @@
 
 import type { CSSProperties } from 'react';
 import { formatBytes } from '../formatBytes';
+import { useT } from '../i18n';
 import type { ClusterMark, ClusterMapModel } from '../../../shared/cloudClusterMap';
 
 /**
@@ -49,11 +50,12 @@ function linePath(from: ClusterMark, to: ClusterMark): { d: string; x: number; y
 }
 
 export function ClusterMap(props: { model: ClusterMapModel; shadeOf(catalogId: number): number }): JSX.Element {
+	const t = useT();
 	const { model } = props;
 	const width = model.columns * SLOT;
 	const height = TOP + (model.rows - 1) * ROW + 96;
 	const byId = new Map(model.marks.map((m) => [m.id, m]));
-	const described = model.marks.map((m) => `${m.label}: ${m.words}${m.bytes !== null ? `, ${formatBytes(m.bytes)} of data` : ''}`).join('. ');
+	const described = model.marks.map((m) => `${m.label}: ${m.words}${m.bytes !== null ? `, ${t('shards.map.ofData', { size: formatBytes(m.bytes) })}` : ''}`).join('. ');
 	return (
 		<div className="cluster-map">
 			<p className="field-hint">{model.sentence}</p>
@@ -85,15 +87,15 @@ export function ClusterMap(props: { model: ClusterMapModel; shadeOf(catalogId: n
 								{words.map((line, i) => (
 									<text key={i} x={x} y={y + r + 31 + i * 13} className="cluster-map-words">{line}</text>
 								))}
-								{mark.bytes !== null && <text x={x} y={y + r + 31 + words.length * 13} className="cluster-map-size">{formatBytes(mark.bytes)} of data</text>}
+								{mark.bytes !== null && <text x={x} y={y + r + 31 + words.length * 13} className="cluster-map-size">{t('shards.map.ofData', { size: formatBytes(mark.bytes) })}</text>}
 							</g>
 						);
 					})}
 				</svg>
 			</div>
 			<div className="cluster-map-legend small muted">
-				<span><svg width="22" height="8" aria-hidden="true"><line x1="0" y1="4" x2="22" y2="4" className="cluster-map-key queries" /></svg>queries from the router</span>
-				<span><svg width="22" height="8" aria-hidden="true"><line x1="0" y1="4" x2="22" y2="4" className="cluster-map-key follows" /></svg>a copy that follows</span>
+				<span><svg width="22" height="8" aria-hidden="true"><line x1="0" y1="4" x2="22" y2="4" className="cluster-map-key queries" /></svg>{t('shards.map.queries')}</span>
+				<span><svg width="22" height="8" aria-hidden="true"><line x1="0" y1="4" x2="22" y2="4" className="cluster-map-key follows" /></svg>{t('shards.map.follows')}</span>
 			</div>
 		</div>
 	);

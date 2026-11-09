@@ -3,6 +3,7 @@
  *  Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { t } from '../shared/i18n/core';
 import { app } from 'electron';
 import { CloudRequestError, cloudTimeoutFor, detailFrom, type CloudActionResult, type CloudApi, type CloudProjectFunction, type CloudConnectionDetails, type CloudExportStatus, type CloudMintedToken, type CloudProjectSummary } from './cloudApi';
 import { accountsAppKeyHeader, ACCOUNTS_IDENTITY_URL, getCloudClient } from './cloudClient';
@@ -21,7 +22,7 @@ import { netFetch } from './netFetch';
 
 function withTimeout<T>(p: PromiseLike<T>, ms: number): Promise<T> {
 	return new Promise<T>((resolve, reject) => {
-		const timer = setTimeout(() => reject(new Error("SnoutData Cloud did not answer in time")), ms);
+		const timer = setTimeout(() => reject(new Error(t('mainErrors.cloudSilent'))), ms);
 		p.then(
 			(value) => { clearTimeout(timer); resolve(value); },
 			(error) => { clearTimeout(timer); reject(error); },
@@ -57,7 +58,7 @@ async function invoke<T>(name: string, body: Record<string, unknown> = {}, metho
 	}
 	const payload = data as (T & { error?: string }) | null;
 	if (!payload || payload.error) {
-		throw new Error(payload?.error ?? "SnoutData Cloud returned nothing");
+		throw new Error(payload?.error ?? t('mainErrors.cloudNothing'));
 	}
 	return payload;
 }
@@ -124,7 +125,7 @@ async function sessionDatabaseToken(ref: string): Promise<DatabaseToken> {
 	const ask = async (): Promise<Response> => {
 		const { data } = await getCloudClient().identity.currentSession();
 		if (!data.session) {
-			throw new CloudRequestError("Sign in to SnoutData to open this database.", 401);
+			throw new CloudRequestError(t('mainErrors.signInToOpen'), 401);
 		}
 		return netFetch(`${ACCOUNTS_IDENTITY_URL}/db/session-token`, {
 			method: 'POST',
@@ -141,7 +142,7 @@ async function sessionDatabaseToken(ref: string): Promise<DatabaseToken> {
 	}
 	const body = (await response.json().catch(() => ({}))) as { access_token?: string; expires_in?: number; message?: string; msg?: string };
 	if (!response.ok || !body.access_token || !body.expires_in) {
-		throw new CloudRequestError(body.message ?? body.msg ?? `SnoutData did not issue a database token (${response.status})`, response.status);
+		throw new CloudRequestError(body.message ?? body.msg ?? t('mainErrors.noDbToken', { status: response.status }), response.status);
 	}
 	return { accessToken: body.access_token, expiresIn: body.expires_in };
 }
@@ -155,7 +156,7 @@ const realCloudApi: CloudApi = {
 		}
 		// An account with no email on its token is still an account; falling back keeps
 		// the import working rather than reporting the user as signed out.
-		return session.person.email ?? "your account";
+		return session.person.email ?? t('mainErrors.yourAccount');
 	},
 
 	async list(): Promise<CloudProjectSummary[]> {

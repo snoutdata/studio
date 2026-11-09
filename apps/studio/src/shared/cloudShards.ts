@@ -9,6 +9,8 @@
 // (cloudProjectOps.ts, op `shards`), and the router decides everything.
 
 /** One range of a keyspace: bounds as exact text (they are 64-bit), and the node that owns it. */
+import { t } from './i18n/core';
+
 export interface ShardRange {
 	lo: string;
 	hi: string;
@@ -149,21 +151,21 @@ export interface DesignCheck {
 /** The check in a sentence: nothing found, or how much of each. */
 export function checkSentence(check: DesignCheck): string {
 	const { errors, warnings, info, tables } = check.summary;
-	const checked = `${tables} ${tables === 1 ? 'table' : 'tables'} checked`;
+	const checked = t('engineCloudShards.check.checked', { count: tables });
 	if (errors + warnings + info === 0) {
-		return `${checked}: every key, foreign key and index is where the cluster needs it.`;
+		return t('engineCloudShards.check.clean', { checked });
 	}
 	const parts = [
-		errors > 0 ? `${errors} to fix` : null,
-		warnings > 0 ? `${warnings} to look at` : null,
-		info > 0 ? `${info} ${info === 1 ? 'suggestion' : 'suggestions'}` : null,
+		errors > 0 ? t('engineCloudShards.check.toFix', { n: errors }) : null,
+		warnings > 0 ? t('engineCloudShards.check.toLookAt', { n: warnings }) : null,
+		info > 0 ? t('engineCloudShards.check.suggestions', { count: info }) : null,
 	].filter((p): p is string => p !== null);
-	return `${checked}: ${parts.join(', ')}.`;
+	return t('engineCloudShards.check.summary', { checked, parts: parts.join(', ') });
 }
 
 /** A finding's severity in the section's words. */
 export function severityWord(severity: CheckFinding['severity']): string {
-	return severity === 'error' ? "Fix" : severity === 'warn' ? "Look at" : "Suggestion";
+	return severity === 'error' ? t('engineCloudShards.severity.fix') : severity === 'warn' ? t('engineCloudShards.severity.worthAlook') : t('engineCloudShards.severity.suggestion');
 }
 
 export interface ShardJob {
@@ -266,7 +268,7 @@ export function slotsSentence(status: Pick<ShardsStatus, 'projectsUsed' | 'maxPr
 	if (status.projectsUsed === null || status.maxProjects === null) {
 		return null;
 	}
-	return `${status.projectsUsed} of ${status.maxProjects} project slots used on the ${status.tier ?? 'current'} plan`;
+	return t('engineCloudShards.slots', { used: status.projectsUsed, max: status.maxProjects, tier: status.tier ?? t('engineCloudShards.tierCurrent') });
 }
 
 const SPAN = 2n ** 64n;
@@ -298,6 +300,14 @@ export function jobFinished(state: string): boolean {
 	return state === 'done' || state === 'failed' || state === 'cancelled';
 }
 
+/** The plan as the section shows it, in the app's language. planSentence stays English for the model. */
+export function planWords(plan: ShardPlan): string {
+	if (plan.moves.length === 0 && plan.cutovers === 0) {
+		return t('engineCloudShards.plan.noMove', { count: plan.steps.length, kinds: plan.steps.map((s) => s.kind).join(', ') || t('engineCloudShards.plan.none') });
+	}
+	return t('engineCloudShards.plan.moves', { count: plan.cutovers, rows: plan.estimated_rows, seconds: Math.max(1, Math.round(plan.estimated_copy_seconds)), ms: plan.expected_pause_ms });
+}
+
 /** A plan in one line a person (or a model) can read. */
 export function planSentence(plan: ShardPlan): string {
 	if (plan.moves.length === 0 && plan.cutovers === 0) {
@@ -310,58 +320,57 @@ export function planSentence(plan: ShardPlan): string {
 export function joinWords(phase: ShardPod['joining']): string {
 	switch (phase) {
 		case 'joining':
-			return "joining the cluster";
+			return t('engineCloudShards.join.joining');
 		case 'spreading':
-			return "taking its share of the data";
+			return t('engineCloudShards.join.spreading');
 		case 'failed':
-			return "stopped";
+			return t('engineCloudShards.join.stopped');
 		default:
-			return "starting as a copy of the home node";
+			return t('engineCloudShards.join.starting');
 	}
 }
 
 /** What a run answered, in a sentence: a job started, a pod made or deleted, clustering on or off. */
 export function ranSentence(answer: Record<string, unknown>): string {
 	if (answer.sharded === false) {
-		return answer.changed === false ? "This project is not a cluster." : "This project is not a cluster any more. The database restarts once while its services move back into its pod.";
+		return answer.changed === false ? t('engineCloudShards.ran.notCluster') : t('engineCloudShards.ran.notClusterAnyMore');
 	}
 	if (typeof answer.joining === 'boolean' && typeof answer.node === 'string') {
-		return answer.joining ? `${answer.node} is joining the cluster again.` : `${answer.node} is left as it is.`;
+		return answer.joining ? t('engineCloudShards.ran.rejoining', { node: answer.node }) : t('engineCloudShards.ran.leftAsIs', { node: answer.node });
 	}
 	if (answer.queue === 'retrying' || answer.queue === 'cleared') {
-		return answer.queue === 'retrying' ? "The cluster is trying that step again." : "The rest of that request was dropped. Nothing else changed.";
+		return answer.queue === 'retrying' ? t('engineCloudShards.ran.retrying') : t('engineCloudShards.ran.dropped');
 	}
 	if (typeof answer.next === 'string' && (typeof answer.job === 'number' || Array.isArray(answer.queued))) {
 		return answer.next;
 	}
 	if (typeof answer.job === 'number') {
-		return `Job ${answer.job} started. Its progress is under Jobs.`;
+		return t('engineCloudShards.ran.jobStarted', { job: String(answer.job) });
 	}
 	if (Array.isArray(answer.created)) {
-		const one = answer.created.length === 1;
 		return answer.joining === true
-			? `${one ? 'A cluster node is' : `${answer.created.length} cluster nodes are`} on the way. ${one ? 'It starts' : 'Each starts'} as a copy of the home node, then joins the cluster and takes its share of the data on its own.`
-			: `${one ? 'A cluster node is' : `${answer.created.length} cluster nodes are`} starting as a copy of the home node. Attach ${one ? 'it' : 'each'} once it is ready.`;
+			? t('engineCloudShards.ran.createdJoining', { count: answer.created.length })
+			: t('engineCloudShards.ran.createdStarting', { count: answer.created.length });
 	}
 	if (answer.deleted === true) {
-		return `The pod of ${String(answer.pod)} is being deleted.`;
+		return t('engineCloudShards.ran.podDeleted', { pod: String(answer.pod) });
 	}
 	if (answer.unchanged === true) {
-		return `The project already has ${String(answer.nodes)} cluster nodes.`;
+		return t('engineCloudShards.ran.alreadyNodes', { nodes: String(answer.nodes) });
 	}
 	if (answer.sharded === true) {
-		return answer.changed === false ? "This project is already a cluster." : "This project is a cluster now. The router and the services start in pods of their own, and the database keeps running.";
+		return answer.changed === false ? t('engineCloudShards.ran.alreadyCluster') : t('engineCloudShards.ran.nowCluster');
 	}
 	if (typeof answer.replica === 'string' && typeof answer.node === 'string') {
-		return `A replica of cluster node ${answer.node} is being made from its backup. It protects the node once it is following it.`;
+		return t('engineCloudShards.ran.replicaMaking', { node: answer.node });
 	}
 	if (typeof answer.changed === 'boolean' && typeof answer.node === 'string') {
-		return answer.changed ? `The replica of cluster node ${answer.node} is being removed, and its project slot freed.` : `Cluster node ${answer.node} has no replica. Nothing changed.`;
+		return answer.changed ? t('engineCloudShards.ran.replicaRemoving', { node: answer.node }) : t('engineCloudShards.ran.noReplica', { node: answer.node });
 	}
 	if (answer.acknowledged === true) {
-		return "Marked as seen. The alert stays open until what it is about is over.";
+		return t('engineCloudShards.ran.marked');
 	}
-	return "Done.";
+	return t('engineCloudShards.ran.done');
 }
 
 /** A plan that is a sentence rather than steps (a replica added or removed): nothing moves, nothing pauses. */
@@ -428,22 +437,24 @@ export function homeReplicaStanding(home: ShardsStatus['home']): ReplicaStanding
 export function replicaWords(standing: ReplicaStanding): string {
 	switch (standing) {
 		case 'protected':
-			return "Protected by a replica";
+			return t('engineCloudShards.replica.protected');
 		case 'making':
-			return "A replica is being made";
+			return t('engineCloudShards.replica.making');
 		case 'none':
-			return "No replica";
+			return t('engineCloudShards.replica.none');
 		case 'failing-over':
-			return "Its replica is taking its place";
+			return t('engineCloudShards.replica.failingOver');
 		case 'failover-failed':
-			return "Its replica could not take its place";
+			return t('engineCloudShards.replica.failoverFailed');
 		default:
 			return '-';
 	}
 }
 
 /** A failover's steps, and which one it is on: 0 stopping the node, 1 the replica taking its place. */
-export const FAILOVER_STEPS = ["The node is stopped", "Its replica takes its place", "A new replica is made"] as const;
+export function failoverSteps(): readonly string[] {
+	return [t('engineCloudShards.failover.stopped'), t('engineCloudShards.failover.replicaTakes'), t('engineCloudShards.failover.newReplica')];
+}
 
 export function failoverStep(pod: ShardPod): number {
 	return pod.failover === 'fence' ? 0 : 1;
@@ -452,10 +463,10 @@ export function failoverStep(pod: ShardPod): number {
 /** Why a replica cannot be added to a node just now, or null when it can. */
 export function replicaBlocked(pod: ShardPod, status: Pick<ShardsStatus, 'projectsUsed' | 'maxProjects'>): string | null {
 	if (pod.hasOwnBackup === false) {
-		return "Its first backup is not finished yet, and a replica is made from it.";
+		return t('engineCloudShards.blocked.firstBackup');
 	}
 	if (status.projectsUsed !== null && status.maxProjects !== null && spareSlots(status) === 0) {
-		return "A replica takes one project slot, and all of your plan's are in use.";
+		return t('engineCloudShards.blocked.noSlot');
 	}
 	return null;
 }

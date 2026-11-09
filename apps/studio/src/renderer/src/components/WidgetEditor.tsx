@@ -6,6 +6,7 @@
 import { useState } from 'react';
 import { Icon } from './Icon';
 import { MIN_INTERVAL_SEC, type MonitorWidget, type WidgetKind, type WidgetViz } from '../../../shared/monitor';
+import { useT } from '../i18n';
 
 // Create/edit one monitor widget. A widget is a SQL query polled on an interval and plotted.
 // `trend` accumulates a metric over time (SQLite-backed); `snapshot` re-runs and replaces the view
@@ -21,6 +22,7 @@ interface WidgetEditorProps {
 const VIZZES: WidgetViz[] = ['line', 'area', 'bar', 'number', 'table'];
 
 export function WidgetEditor({ initial, connections, onSave, onCancel }: WidgetEditorProps): JSX.Element {
+	const t = useT();
 	const [title, setTitle] = useState(initial.title);
 	const [connectionId, setConnectionId] = useState(initial.connectionId);
 	const [kind, setKind] = useState<WidgetKind>(initial.kind);
@@ -54,26 +56,26 @@ export function WidgetEditor({ initial, connections, onSave, onCancel }: WidgetE
 	return (
 		<div className="modal-backdrop">
 			<div className="modal widget-editor">
-				<h2><Icon name="pulse" /> {initial.title ? "Edit widget" : "Add widget"}</h2>
+				<h2><Icon name="pulse" /> {initial.title ? t('dashboard.widget.edit') : t('dashboard.widget.add')}</h2>
 
 				<label className="field">
-					<span>Title</span>
-					<input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="New queue depth" autoFocus />
+					<span>{t('dashboard.widget.title')}</span>
+					<input value={title} onChange={(e) => setTitle(e.target.value)} placeholder={t('dashboard.widget.placeholder')} autoFocus />
 				</label>
 
 				<div className="field-row">
 					<label className="field">
-						<span>Connection</span>
+						<span>{t('cloudProjects.conn.title')}</span>
 						<select value={connectionId} onChange={(e) => setConnectionId(e.target.value)}>
-							<option value="">Choose a connection…</option>
+							<option value="">{t('dashboard.widget.chooseConn')}</option>
 							{connections.map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}
 						</select>
 					</label>
 					<label className="field">
-						<span>Type</span>
+						<span>{t('projects.common.type')}</span>
 						<select value={kind} onChange={(e) => setKind(e.target.value as WidgetKind)}>
-							<option value="trend">Trend (sample over time)</option>
-							<option value="snapshot">Snapshot (replace each refresh)</option>
+							<option value="trend">{t('dashboard.widget.trend')}</option>
+							<option value="snapshot">{t('dashboard.widget.snapshot')}</option>
 						</select>
 					</label>
 				</div>
@@ -91,24 +93,24 @@ export function WidgetEditor({ initial, connections, onSave, onCancel }: WidgetE
 				</label>
 				<p className="field-hint">
 					{kind === 'trend'
-						? "Return one number (a scalar metric), or two columns (label, value) for a grouped metric. Each poll adds a point over time."
-						: "Return a result set: the first column is the category axis, the rest are plotted. Re-run replaces the view."}
+						? t('dashboard.widget.trendHint')
+						: t('dashboard.widget.snapshotHint')}
 				</p>
 
 				<div className="field-row">
 					<label className="field">
-						<span>Visualization</span>
+						<span>{t('dashboard.widget.viz')}</span>
 						<select value={viz} onChange={(e) => setViz(e.target.value as WidgetViz)}>
-							{VIZZES.map((v) => <option key={v} value={v}>{v}</option>)}
+							{VIZZES.map((v) => <option key={v} value={v}>{t(`dashboard.viz.${v}`)}</option>)}
 						</select>
 					</label>
 					<label className="field">
-						<span>Refresh (seconds)</span>
+						<span>{t('dashboard.widget.refresh')}</span>
 						<input type="number" min={MIN_INTERVAL_SEC} value={intervalSec} onChange={(e) => setIntervalSec(e.target.value)} />
 					</label>
 					{kind === 'trend' && (
 						<label className="field">
-							<span>Keep (minutes)</span>
+							<span>{t('dashboard.widget.keep')}</span>
 							<input type="number" min={1} value={retentionMin} onChange={(e) => setRetentionMin(e.target.value)} />
 						</label>
 					)}
@@ -116,8 +118,8 @@ export function WidgetEditor({ initial, connections, onSave, onCancel }: WidgetE
 
 				<div className="modal-actions">
 					<span className="spacer" />
-					<button type="button" className="secondary" onClick={onCancel}><Icon name="close" /> Cancel</button>
-					<button type="button" disabled={!canSave} onClick={save}><Icon name="save" /> Save widget</button>
+					<button type="button" className="secondary" onClick={onCancel}><Icon name="close" /> {t('projects.common.cancel')}</button>
+					<button type="button" disabled={!canSave} onClick={save}><Icon name="save" /> {t('dashboard.widget.save')}</button>
 				</div>
 			</div>
 		</div>

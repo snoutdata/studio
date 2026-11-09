@@ -14,6 +14,7 @@
 
 import type { TableInfo } from '../../schema';
 import type { Advisory, AdvisoryKind } from './types';
+import { t } from '../../i18n/core';
 
 export interface PlanAdvisorOptions {
 	/** Below this estimated-rows floor a scan is too small to be worth flagging. Default 1000. */
@@ -199,10 +200,10 @@ function pushPartitionScan(out: Advisory[], seen: Set<string>, table: string, pl
 	}
 	const time = place.timeColumn;
 	pushKind(out, seen, 'partition-scan', table, rows,
-		`Reads all ${place.leaves} partitions of ${table} (~${formatRows(rows)} rows): nothing in the query lets the database skip one.`,
+		t('engineAdvisor.plan.partitionScan', { leaves: place.leaves, table, rows: formatRows(rows) }),
 		time
-			? `${table} is a series table partitioned by ${time}. Filter on ${time} with a range the planner can compare directly (${time} >= now() - interval '1 day', or a literal range), never on a function or cast of ${time}, so it reads only the partitions in that range.`
-			: `${table} is partitioned. A filter on its partition key, compared directly rather than through a function or cast, lets the planner skip the partitions outside it.`);
+			? t('engineAdvisor.plan.partitionSeriesWhy', { table, time })
+			: t('engineAdvisor.plan.partitionWhy', { table }));
 	return true;
 }
 
@@ -231,8 +232,8 @@ function walkPg(node: PgNode, out: Advisory[], seen: Set<string>, opts: Resolved
 		pushScan(out, seen, relation, read !== undefined ? Math.max(read, rows ?? 0) : rows, opts);
 	} else if (type === 'Sort') {
 		pushKind(out, seen, 'filesort', undefined, rows,
-			'The plan sorts rows that aren\'t already ordered by an index (an in-memory/disk sort).',
-			'Add an index whose leading columns match the ORDER BY so the engine reads rows in order instead of sorting them.');
+			t('engineAdvisor.plan.sort'),
+			t('engineAdvisor.plan.sortWhy'));
 	}
 	for (const child of node.Plans ?? []) {
 		walkPg(child, out, seen, opts, scanned);
@@ -276,13 +277,13 @@ function walkMy(node: unknown, out: Advisory[], seen: Set<string>, opts: Resolve
 		if (op && typeof op === 'object') {
 			if (op.using_filesort === true) {
 				pushKind(out, seen, 'filesort', undefined, undefined,
-					'The plan uses a filesort (rows aren\'t read in the required order from an index).',
-					'Add a composite index whose columns cover the WHERE equality columns then the ORDER BY column, so one index serves both.');
+					t('engineAdvisor.plan.filesort'),
+					t('engineAdvisor.plan.filesortWhy'));
 			}
 			if (op.using_temporary_table === true) {
 				pushKind(out, seen, 'temp-table', undefined, undefined,
-					'The plan materialises an internal temporary table.',
-					'A GROUP BY/DISTINCT/UNION that can\'t use an index builds a temp table; an index matching the grouping columns often removes it.');
+					t('engineAdvisor.plan.tempTable'),
+					t('engineAdvisor.plan.tempTableWhy'));
 			}
 			walkMy(op, out, seen, opts);
 		}
@@ -310,13 +311,13 @@ function inspectMyTable(table: MyTable, out: Advisory[], seen: Set<string>, opts
 	}
 	if (table.using_filesort === true) {
 		pushKind(out, seen, 'filesort', table.table_name, rows,
-			'The plan uses a filesort on this table (rows aren\'t read in order from an index).',
-			'Add a composite index covering the WHERE equality columns then the ORDER BY column.');
+			t('engineAdvisor.plan.filesortTable'),
+			t('engineAdvisor.plan.filesortTableWhy'));
 	}
 	if (table.using_temporary_table === true) {
 		pushKind(out, seen, 'temp-table', table.table_name, rows,
-			'The plan materialises an internal temporary table for this step.',
-			'An index matching the grouping/join columns often removes the temp table.');
+			t('engineAdvisor.plan.tempTableStep'),
+			t('engineAdvisor.plan.tempTableStepWhy'));
 	}
 }
 
@@ -370,8 +371,8 @@ function flagFinal(out: Advisory[], seen: Set<string>, opts: ResolvedOptions, ta
 			continue;
 		}
 		pushKind(out, seen, 'final', table, rows,
-			`FINAL on ${table} (${formatRows(rows)} rows) merges its parts while the query reads them.`,
-			'FINAL collapses duplicate rows at read time, which on a large table costs far more than the query itself. Filter first so less is merged, or deduplicate in the query instead (argMax(value, version) ... GROUP BY key); do_not_merge_across_partitions_select_final = 1 helps when the key never crosses partitions.');
+			t('engineAdvisor.plan.final', { table, rows: formatRows(rows) }),
+			t('engineAdvisor.plan.finalWhy'));
 	}
 }
 
@@ -388,8 +389,8 @@ function walkCh(node: ChNode, out: Advisory[], seen: Set<string>, opts: Resolved
 		}
 		if (fromProjection && typeof first === 'number' && typeof last === 'number') {
 			pushKind(out, seen, 'projection', description, undefined,
-				`Answered from projection ${description}: ${last.toLocaleString()} of ${first.toLocaleString()} granules read.`,
-				'A projection is a copy of the table kept in a different order or pre-aggregated, and ClickHouse used it because it reads less than the table would. Nothing to do: this is the lever working.');
+				t('engineAdvisor.plan.projection', { name: description, last, first }),
+				t('engineAdvisor.plan.projectionWhy'));
 		}
 		if (!fromProjection && typeof first === 'number' && typeof last === 'number' && first > 0 && last >= first) {
 			// Every granule was read, so the whole table was: its own row count is exact.
@@ -398,8 +399,10 @@ function walkCh(node: ChNode, out: Advisory[], seen: Set<string>, opts: Resolved
 			if (rows >= opts.minRowsToWarn) {
 				const large = rows >= opts.largeRowsThreshold;
 				pushKind(out, seen, large ? 'large-scan' : 'full-scan', table, rows,
-					`Full scan${table ? ` of ${table}` : ''}: all ${first.toLocaleString()} granules (${known === undefined ? '~' : ''}${formatRows(rows)} rows) were read, none skipped.`,
-					'ClickHouse skips data by the table\'s ORDER BY key and its partition key, not by an index on any column. This filter narrowed neither, so every granule was read. Filter on a leading column of the ORDER BY key (the first one first), or on the partition key; for a column outside the key, a data-skipping index (bloom_filter, set, minmax) or a projection ordered by it is the lever.');
+					table
+						? t('engineAdvisor.plan.granulesTable', { table, first, approx: known === undefined ? '~' : '', rows: formatRows(rows) })
+						: t('engineAdvisor.plan.granules', { first, approx: known === undefined ? '~' : '', rows: formatRows(rows) }),
+					t('engineAdvisor.plan.granulesWhy'));
 			}
 		}
 	}
@@ -415,11 +418,13 @@ function pushScan(out: Advisory[], seen: Set<string>, table: string | undefined,
 		return; // scanning a small table is fine
 	}
 	const large = rows !== undefined && rows >= opts.largeRowsThreshold;
-	const where = table ? ` of ${table}` : '';
-	const rowsText = rows !== undefined ? ` (~${formatRows(rows)} rows)` : '';
+	const count = rows !== undefined ? formatRows(rows) : undefined;
+	const message = table
+		? (count !== undefined ? t('engineAdvisor.plan.fullScanTableRows', { table, rows: count }) : t('engineAdvisor.plan.fullScanTable', { table }))
+		: (count !== undefined ? t('engineAdvisor.plan.fullScanRows', { rows: count }) : t('engineAdvisor.plan.fullScan'));
 	pushKind(out, seen, large ? 'large-scan' : 'full-scan', table, rows,
-		`Full table scan${where}${rowsText}: no index is used to narrow the rows.`,
-		'The engine reads every row because no index matches the query\'s filter or join. Add an index on the column(s) in the WHERE/JOIN, or make the predicate sargable (see the inline hints), so the query touches only the rows it needs.');
+		message,
+		t('engineAdvisor.plan.fullScanWhy'));
 }
 
 function pushKind(out: Advisory[], seen: Set<string>, kind: AdvisoryKind, table: string | undefined, rows: number | undefined, message: string, rationale: string): void {

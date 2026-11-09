@@ -3,6 +3,7 @@
  *  Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { t } from '../../shared/i18n/core';
 import type { ConnectionConfig } from '../../shared/connection';
 import type { ConnectionFormValues, ImportItemRef, ImportScanResult } from '../../shared/forms';
 import { portFrom, readTextFile, resolveFileSource, scanFileSource, type FileSource, type Found } from './common';
@@ -72,7 +73,7 @@ export function parsePgpass(file: string, text: string): Found[] {
 			sourceName: name,
 			supported: !socket,
 			importsPassword: !socket && Boolean(password),
-			note: socket ? "A Unix socket entry; only TCP connections can be imported." : (database ? undefined : "Any database on this server; the connection opens its default."),
+			note: socket ? t('mainDiscovery.unixSocket') : (database ? undefined : t('mainDiscovery.anyDatabase')),
 		});
 	}
 	return out;

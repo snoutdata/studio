@@ -1,0 +1,14 @@
+{
+	"schema": {
+		"label": "Schéma uniquement",
+		"detail": "Noms de tables et de colonnes, types et relations. Aucune valeur de votre base de données. Les réponses sur les données elles-mêmes seront génériques."
+	},
+	"screen": {
+		"label": "Schéma et ce qui est à l'écran",
+		"detail": "Aussi quelques lignes du résultat que vous regardez, et la cellule ou la ligne sélectionnée. L'IA ne peut pas exécuter ses propres requêtes."
+	},
+	"queries": {
+		"label": "Schéma, écran et requêtes en lecture seule",
+		"detail": "Permet aussi à l'IA d'exécuter des requêtes en lecture seule et de lire leurs lignes, avec votre approbation pour chacune. Les réponses les plus précises."
+	}
+}

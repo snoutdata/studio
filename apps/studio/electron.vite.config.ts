@@ -58,6 +58,29 @@ function contentSecurityPolicy(): Plugin {
 	};
 }
 
+/**
+ * Monaco's ESM build always speaks English: its `localize` is fed the English sentence. So its one
+ * formatter looks that sentence up in the table the renderer set for this language
+ * (src/renderer/src/i18n/monacoNls.ts), and anything not there stays English.
+ */
+function monacoTranslations(): Plugin {
+	const head = 'function _format(message, args) {';
+	return {
+		name: 'snout-monaco-translations',
+		enforce: 'pre',
+		transform(code, id) {
+			if (!id.split('?')[0].endsWith('monaco-editor/esm/vs/nls.js')) {
+				return null;
+			}
+			if (!code.includes(head)) {
+				this.warn('monaco-editor changed its nls.js: the editor will stay in English');
+				return null;
+			}
+			return code.replace(head, `${head}\n    message = globalThis.__snoutMonacoNls?.[message] ?? message;`);
+		},
+	};
+}
+
 // Three build targets: the Electron main process, the preload bridge, and the
 // React renderer. The ported SQL language server is NOT built here — it is bundled
 // separately by esbuild (see esbuild.server.mjs) so it keeps mysql2/pg/ssh2 as
@@ -79,7 +102,7 @@ export default defineConfig({
 	},
 	renderer: {
 		root: resolve(__dirname, 'src/renderer'),
-		plugins: [react(), contentSecurityPolicy()],
+		plugins: [react(), contentSecurityPolicy(), monacoTranslations()],
 		define: PRO_DEFINES,
 		resolve: {
 			alias: { '@snout/review-core': REVIEW_CORE, '@snout/move': MOVE, ...proRendererAliases(PRO_PATHS), ...LIBY_ALIASES },

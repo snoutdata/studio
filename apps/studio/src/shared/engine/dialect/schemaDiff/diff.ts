@@ -17,6 +17,7 @@
 
 import type { ColumnInfo, DatabaseSchema, ForeignKeyInfo, IndexInfo, RoutineInfo, TableInfo, TriggerInfo } from '../../../schema';
 import type { ChangeClass, ObjectType, SchemaChange } from './types';
+import { t } from '../../../i18n/core';
 
 /** Collapse whitespace + strip a trailing semicolon so trivially-formatted bodies compare equal. */
 function normalizeBody(text: string | undefined): string {
@@ -203,41 +204,41 @@ export function computeChanges(source: DatabaseSchema, target: DatabaseSchema): 
 export function describeChange(change: SchemaChange): { description: string; destructive: boolean; changeClass: ChangeClass; objectType: ObjectType; objectName: string } {
 	switch (change.kind) {
 		case 'addTable':
-			return { description: `Create table \`${change.table.name}\``, destructive: false, changeClass: 'add', objectType: 'table', objectName: change.table.name };
+			return { description: t('engineSchemaDiff.change.createTable', { name: change.table.name }), destructive: false, changeClass: 'add', objectType: 'table', objectName: change.table.name };
 		case 'dropTable':
-			return { description: `Drop table \`${change.table.name}\``, destructive: true, changeClass: 'drop', objectType: 'table', objectName: change.table.name };
+			return { description: t('engineSchemaDiff.change.dropTable', { name: change.table.name }), destructive: true, changeClass: 'drop', objectType: 'table', objectName: change.table.name };
 		case 'addColumn':
-			return { description: `Add column \`${change.table}\`.\`${change.column.name}\``, destructive: false, changeClass: 'add', objectType: 'column', objectName: `${change.table}.${change.column.name}` };
+			return { description: t('engineSchemaDiff.change.addColumn', { table: change.table, column: change.column.name }), destructive: false, changeClass: 'add', objectType: 'column', objectName: `${change.table}.${change.column.name}` };
 		case 'alterColumn':
-			return { description: `Alter column \`${change.table}\`.\`${change.after.name}\` (${change.before.dataType} → ${change.after.dataType})`, destructive: false, changeClass: 'alter', objectType: 'column', objectName: `${change.table}.${change.after.name}` };
+			return { description: t('engineSchemaDiff.change.alterColumn', { table: change.table, column: change.after.name, before: change.before.dataType, after: change.after.dataType }), destructive: false, changeClass: 'alter', objectType: 'column', objectName: `${change.table}.${change.after.name}` };
 		case 'dropColumn':
-			return { description: `Drop column \`${change.table}\`.\`${change.column.name}\``, destructive: true, changeClass: 'drop', objectType: 'column', objectName: `${change.table}.${change.column.name}` };
+			return { description: t('engineSchemaDiff.change.dropColumn', { table: change.table, column: change.column.name }), destructive: true, changeClass: 'drop', objectType: 'column', objectName: `${change.table}.${change.column.name}` };
 		case 'setPrimaryKey':
-			return { description: `Change primary key of \`${change.table}\``, destructive: false, changeClass: 'alter', objectType: 'primaryKey', objectName: change.table };
+			return { description: t('engineSchemaDiff.change.setPrimaryKey', { table: change.table }), destructive: false, changeClass: 'alter', objectType: 'primaryKey', objectName: change.table };
 		case 'addIndex':
-			return { description: `Add index \`${change.index.name}\` on \`${change.table}\``, destructive: false, changeClass: 'add', objectType: 'index', objectName: `${change.table}.${change.index.name}` };
+			return { description: t('engineSchemaDiff.change.addIndex', { name: change.index.name, table: change.table }), destructive: false, changeClass: 'add', objectType: 'index', objectName: `${change.table}.${change.index.name}` };
 		case 'dropIndex':
-			return { description: `Drop index \`${change.index.name}\` on \`${change.table}\``, destructive: false, changeClass: 'drop', objectType: 'index', objectName: `${change.table}.${change.index.name}` };
+			return { description: t('engineSchemaDiff.change.dropIndex', { name: change.index.name, table: change.table }), destructive: false, changeClass: 'drop', objectType: 'index', objectName: `${change.table}.${change.index.name}` };
 		case 'replaceIndex':
-			return { description: `Rebuild index \`${change.after.name}\` on \`${change.table}\``, destructive: false, changeClass: 'alter', objectType: 'index', objectName: `${change.table}.${change.after.name}` };
+			return { description: t('engineSchemaDiff.change.replaceIndex', { name: change.after.name, table: change.table }), destructive: false, changeClass: 'alter', objectType: 'index', objectName: `${change.table}.${change.after.name}` };
 		case 'addForeignKey':
-			return { description: `Add foreign key \`${change.fk.constraintName}\` on \`${change.table}\``, destructive: false, changeClass: 'add', objectType: 'foreignKey', objectName: `${change.table}.${change.fk.constraintName}` };
+			return { description: t('engineSchemaDiff.change.addForeignKey', { name: change.fk.constraintName, table: change.table }), destructive: false, changeClass: 'add', objectType: 'foreignKey', objectName: `${change.table}.${change.fk.constraintName}` };
 		case 'dropForeignKey':
-			return { description: `Drop foreign key \`${change.fk.constraintName}\` on \`${change.table}\``, destructive: false, changeClass: 'drop', objectType: 'foreignKey', objectName: `${change.table}.${change.fk.constraintName}` };
+			return { description: t('engineSchemaDiff.change.dropForeignKey', { name: change.fk.constraintName, table: change.table }), destructive: false, changeClass: 'drop', objectType: 'foreignKey', objectName: `${change.table}.${change.fk.constraintName}` };
 		case 'replaceForeignKey':
-			return { description: `Rebuild foreign key \`${change.after.constraintName}\` on \`${change.table}\``, destructive: false, changeClass: 'alter', objectType: 'foreignKey', objectName: `${change.table}.${change.after.constraintName}` };
+			return { description: t('engineSchemaDiff.change.replaceForeignKey', { name: change.after.constraintName, table: change.table }), destructive: false, changeClass: 'alter', objectType: 'foreignKey', objectName: `${change.table}.${change.after.constraintName}` };
 		case 'addTrigger':
-			return { description: `Add trigger \`${change.trigger.name}\` on \`${change.table}\``, destructive: false, changeClass: 'add', objectType: 'trigger', objectName: `${change.table}.${change.trigger.name}` };
+			return { description: t('engineSchemaDiff.change.addTrigger', { name: change.trigger.name, table: change.table }), destructive: false, changeClass: 'add', objectType: 'trigger', objectName: `${change.table}.${change.trigger.name}` };
 		case 'dropTrigger':
-			return { description: `Drop trigger \`${change.trigger.name}\` on \`${change.table}\``, destructive: false, changeClass: 'drop', objectType: 'trigger', objectName: `${change.table}.${change.trigger.name}` };
+			return { description: t('engineSchemaDiff.change.dropTrigger', { name: change.trigger.name, table: change.table }), destructive: false, changeClass: 'drop', objectType: 'trigger', objectName: `${change.table}.${change.trigger.name}` };
 		case 'replaceTrigger':
-			return { description: `Replace trigger \`${change.after.name}\` on \`${change.table}\``, destructive: false, changeClass: 'alter', objectType: 'trigger', objectName: `${change.table}.${change.after.name}` };
+			return { description: t('engineSchemaDiff.change.replaceTrigger', { name: change.after.name, table: change.table }), destructive: false, changeClass: 'alter', objectType: 'trigger', objectName: `${change.table}.${change.after.name}` };
 		case 'addView':
-			return { description: `Create view \`${change.view.name}\``, destructive: false, changeClass: 'add', objectType: 'view', objectName: change.view.name };
+			return { description: t('engineSchemaDiff.change.createView', { name: change.view.name }), destructive: false, changeClass: 'add', objectType: 'view', objectName: change.view.name };
 		case 'dropView':
-			return { description: `Drop view \`${change.view.name}\``, destructive: true, changeClass: 'drop', objectType: 'view', objectName: change.view.name };
+			return { description: t('engineSchemaDiff.change.dropView', { name: change.view.name }), destructive: true, changeClass: 'drop', objectType: 'view', objectName: change.view.name };
 		case 'replaceView':
-			return { description: `Replace view \`${change.after.name}\``, destructive: false, changeClass: 'alter', objectType: 'view', objectName: change.after.name };
+			return { description: t('engineSchemaDiff.change.replaceView', { name: change.after.name }), destructive: false, changeClass: 'alter', objectType: 'view', objectName: change.after.name };
 		case 'addRoutine':
 			return { description: `Create ${change.routine.kind} \`${change.routine.name}\``, destructive: false, changeClass: 'add', objectType: 'routine', objectName: change.routine.name };
 		case 'dropRoutine':

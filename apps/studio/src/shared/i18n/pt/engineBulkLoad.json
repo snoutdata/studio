@@ -1,0 +1,23 @@
+{
+	"labels": {
+		"csvNames": "CSV com linha de cabeçalho",
+		"csv": "CSV, sem linha de cabeçalho",
+		"tsvNames": "Separado por tabulação, com linha de cabeçalho",
+		"tsv": "Separado por tabulação, sem linha de cabeçalho",
+		"json": "JSON, um objeto por linha"
+	},
+	"notes": {
+		"parquet": "Colunar, tipado e o mais rápido de carregar.",
+		"native": "O que o próprio servidor grava. Sem conversão em nenhum dos lados."
+	},
+	"warnings": {
+		"unnamed": "{format} não traz nomes de colunas, então os valores caem na ORDEM das colunas da tabela. Um arquivo com as colunas em outra ordem preenche as erradas, e isso não gera nenhum erro.",
+		"guessed": "O formato foi deduzido do nome do arquivo, não do conteúdo. Se estiver errado, a carga é recusada, normalmente na primeira linha.",
+		"compressed": "O arquivo é enviado comprimido e o servidor o expande ao chegar, então nada é gravado neste computador.",
+		"noTransaction": "Um INSERT não fica dentro de uma transação. Uma carga que falha no meio deixa as linhas já gravadas, e rodar de novo as adiciona uma segunda vez."
+	},
+	"describe": {
+		"byName": "Lido como {format} e associado a {name} pelo nome da coluna.",
+		"byPosition": "Lido como {format} e associado a {name} pela posição da coluna."
+	}
+}

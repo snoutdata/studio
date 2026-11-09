@@ -3,6 +3,7 @@
  *  Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { t } from '../shared/i18n/core';
 import { randomUUID } from 'node:crypto';
 
 import type { ConnectionConfig, SshTunnelConfig } from '../shared/connection';
@@ -60,7 +61,7 @@ const COMPONENT_ONLY_DEV_MODULES: Record<string, string> = { hana: '@sap/hana-cl
  */
 function readOnlyBlock(sql: string, config: ConnectionConfig): string | undefined {
 	const verb = destructiveStatement(sql, config.driver)?.verb ?? readOnlyEscape(sql, config.driver);
-	return verb ? `Connection "${config.label}" is read-only; ${verb} is blocked.` : undefined;
+	return verb ? t('mainConnections.readOnlyVerb', { label: config.label, verb }) : undefined;
 }
 
 /** What {@link ConnectionManager} is handed instead of importing it. */
@@ -90,15 +91,15 @@ export interface SaveOptions {
  * fetches the secret with the user's own AWS credentials, so a person looks at it once first.
  */
 export function unconfirmedAwsSecretMessage(config: Pick<ConnectionConfig, 'label' | 'host' | 'port' | 'awsSecret'>): string {
-	const where = config.host ? ` and sends them to ${config.host}${config.port ? `:${config.port}` : ''}` : '';
-	return `"${config.label}" was imported and fetches its credentials from AWS Secrets Manager (secret "${config.awsSecret?.secretId ?? ''}")${where}. Open it with Edit, check where it connects, and Save it before connecting.`;
+	const where = config.host ? t('mainConnections.sendsTo', { host: `${config.host}${config.port ? `:${config.port}` : ''}` }) : '';
+	return t('mainConnections.awsImported', { label: config.label, secretId: config.awsSecret?.secretId ?? '', where });
 }
 
 /** Why an imported connection that goes through an SSH tunnel does not connect yet: the tunnel's
  *  server and key came from another tool's file, so a person looks at it once first. */
 export function unconfirmedSshTunnelMessage(config: Pick<ConnectionConfig, 'label' | 'sshTunnel'>, tunnel: { host: string; port: number } | undefined): string {
-	const where = tunnel ? ` to ${tunnel.host}:${tunnel.port}` : '';
-	return `"${config.label}" was imported and connects through an SSH tunnel${where}, signing in with your own SSH key. Open it with Edit, check where it connects, and Save it before connecting.`;
+	const where = tunnel ? t('mainConnections.tunnelTo', { host: tunnel.host, port: String(tunnel.port) }) : '';
+	return t('mainConnections.sshImported', { label: config.label, where });
 }
 
 export class ConnectionManager {
@@ -473,10 +474,10 @@ export class ConnectionManager {
 	async connectionPassword(id: string): Promise<string> {
 		const config = this.require(id);
 		if (!config.cloudTokenSignIn || !config.cloudProjectRef) {
-			throw new Error("This connection does not sign in with your SnoutData account.");
+			throw new Error(t('mainConnections.notSnoutSignIn'));
 		}
 		if (!this.databaseToken) {
-			throw new Error("This connection signs in with your SnoutData account, which is not available yet.");
+			throw new Error(t('mainConnections.snoutSignInUnavailable'));
 		}
 		return this.databaseToken(config.cloudProjectRef);
 	}
@@ -512,7 +513,7 @@ export class ConnectionManager {
 			return native;
 		}
 		if (!this.embedder) {
-			throw new Error('Similarity search needs an embeddings model, which this build has no access to yet.');
+			throw new Error(t('mainConnections.similarityNeedsEmbed'));
 		}
 		const { embedText, ...rest } = native.query;
 		const vector = await this.embedder(embedText);
@@ -573,7 +574,7 @@ export class ConnectionManager {
 		const config = this.readConfigs().find((entry) => entry.id === id);
 		const kind = backendKindForDriver(config?.driver);
 		if (kind === 'relational') {
-			return { ok: false, error: 'This connection runs SQL directly, so there is no pipeline translation.' };
+			return { ok: false, error: t('mainConnections.noPipeline') };
 		}
 		const det = compileSqlDeterministic(kind, sql, await this.compileSchema(id));
 		if (det.ok) {
@@ -683,7 +684,7 @@ export class ConnectionManager {
 	async executeNative(id: string, native: NativeQuery, recordHistory = true, priority: QueryPriority = 'interactive'): Promise<ExecuteQueryResult> {
 		const config = this.readConfigs().find((entry) => entry.id === id);
 		if (config?.readOnly && profileFor(backendKindForDriver(config?.driver)).isDestructive(native, config?.driver)) {
-			return { ok: false, error: `Connection "${config.label}" is read-only; this query writes data and is blocked.` };
+			return { ok: false, error: t('mainConnections.readOnlyWrites', { label: config.label }) };
 		}
 		return this.dispatch(id, native, recordHistory, describeNative(native), config, priority);
 	}
@@ -845,7 +846,7 @@ export class ConnectionManager {
 		if (config?.readOnly) {
 			// Not via destructiveStatement: an INSERT is not destructive, and a read-only connection
 			// still may not be written to at all.
-			return { ok: false, error: `Connection "${config.label}" is read-only; loading a file into it is blocked.` };
+			return { ok: false, error: t('mainConnections.readOnlyLoad', { label: config.label }) };
 		}
 		this.markActive();
 		this.queriesRunning++;
@@ -1049,17 +1050,17 @@ export class ConnectionManager {
 		const sourceConfig = this.readConfigs().find((entry) => entry.id === sourceId);
 		const targetConfig = this.readConfigs().find((entry) => entry.id === targetId);
 		if (!sourceConfig || !targetConfig) {
-			return { ok: false, error: 'Source or target connection no longer exists.' };
+			return { ok: false, error: t('mainConnections.syncGone') };
 		}
 		if (sourceConfig.driver !== targetConfig.driver) {
-			return { ok: false, error: `Cannot sync across database types ("${sourceConfig.driver}" → "${targetConfig.driver}"). Source and target must use the same driver.` };
+			return { ok: false, error: t('mainConnections.syncAcross', { driver: sourceConfig.driver, targetDriver: targetConfig.driver }) };
 		}
 		const [source, target] = await Promise.all([this.server.getSchema(sourceId), this.server.getSchema(targetId)]);
 		if (!source) {
-			return { ok: false, error: `Source "${sourceConfig.label}" is not connected.` };
+			return { ok: false, error: t('mainConnections.sourceNotConnected', { label: sourceConfig.label }) };
 		}
 		if (!target) {
-			return { ok: false, error: `Target "${targetConfig.label}" is not connected.` };
+			return { ok: false, error: t('mainConnections.targetNotConnected', { label: targetConfig.label }) };
 		}
 		try {
 			return { ok: true, plan: buildPlan(source, target, targetConfig.driver) };
@@ -1081,7 +1082,7 @@ export class ConnectionManager {
 	async applyMigration(id: string, statements: ApplyStatement[]): Promise<ApplyMigrationResult> {
 		const config = this.readConfigs().find((entry) => entry.id === id);
 		if (config?.readOnly) {
-			return { ok: false, error: `Connection "${config.label}" is read-only; Schema Sync cannot change its schema.`, failedIndex: -1, failedId: '', applied: 0, rolledBack: false };
+			return { ok: false, error: t('mainConnections.readOnlySync', { label: config.label }), failedIndex: -1, failedId: '', applied: 0, rolledBack: false };
 		}
 		const label = config?.label ?? id;
 		const kind = backendKindForDriver(config?.driver);
@@ -1164,8 +1165,8 @@ export class ConnectionManager {
 			return {
 				ok: false,
 				error: required.supported
-					? `This database needs a one-time component download (${required.totalLabel}). Click Connect to install it.`
-					: `This database isn't supported on your operating system yet.`,
+					? t('mainConnections.componentConnect', { totalLabel: required.totalLabel })
+					: t('mainConnections.notSupportedOs'),
 			};
 		}
 		return this.server.test(this.attachHostKey(this.attachRuntime(config)));
@@ -1225,8 +1226,8 @@ export class ConnectionManager {
 			return {
 				ok: false,
 				error: required.supported
-					? `This database needs a one-time component download (${required.totalLabel}). Save the connection and click Connect to install it.`
-					: `This database isn't supported on your operating system yet.`,
+					? t('mainConnections.componentSave', { totalLabel: required.totalLabel })
+					: t('mainConnections.notSupportedOs'),
 			};
 		}
 		return this.server.test(this.attachHostKey(this.attachRuntime(config)));
@@ -1360,7 +1361,7 @@ export class ConnectionManager {
 		}
 		const found = this.cloudAccounts?.(config.cloudAccountId);
 		if (!found) {
-			throw new Error('The cloud account this connection uses no longer exists. Edit the connection and pick one, or add it again in Settings.');
+			throw new Error(t('mainConnections.cloudAccountGone'));
 		}
 		config.cloudAccount = found.account;
 		config.cloudSecret = found.secret;

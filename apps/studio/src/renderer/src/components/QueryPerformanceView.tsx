@@ -6,6 +6,7 @@
 import { ASSISTANT_NAME } from '../../../shared/assistant';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Icon } from './Icon';
+import { useT, type Translate } from '../i18n';
 import { CellValueEditor } from './CellValueEditor';
 import { DataGrid, cellText, computeColumnWidths, type SortState } from './DataGrid';
 import { errorMessage } from '../errors';
@@ -26,7 +27,7 @@ import type { QueryResult } from '../../../shared/query';
 
 const TOP_OPTIONS = [15, 25, 50, 100];
 
-const RANK_LABELS: Record<WorkloadRank, string> = { time: 'Total time', read: 'Data read', memory: 'Peak memory' };
+const RANK_LABELS: Record<WorkloadRank, string> = { time: 'monitors.qp.rank.time', read: 'monitors.qp.rank.read', memory: 'monitors.qp.rank.memory' };
 const DEFAULT_TOP = 25;
 
 interface QueryPerformanceViewProps {
@@ -65,7 +66,8 @@ function compareNonEmpty(a: unknown, b: unknown): number {
 }
 
 export function QueryPerformanceView({ connections, connectedIds, connectionId: connId, keywordCase, onAnalyze, onSuggest }: QueryPerformanceViewProps): JSX.Element {
-	const [top, setTop] = useState(DEFAULT_TOP);
+	const t = useT();
+const [top, setTop] = useState(DEFAULT_TOP);
 	const [rank, setRank] = useState<WorkloadRank>('time');
 	const [data, setData] = useState<QueryResult | null>(null);
 	const [loading, setLoading] = useState(false);
@@ -223,34 +225,34 @@ export function QueryPerformanceView({ connections, connectedIds, connectionId: 
 	// A friendlier nudge for the common "stats view exists but I can't read it" failures, layered on
 	// top of the raw DB error (which we still show verbatim below it).
 	const flavour = dialectFor(driver).aiDisplayName;
-	const hint = error ? degradeHint(error, flavour) : null;
+	const hint = error ? degradeHint(error, flavour, t) : null;
 	// Collect is enabled only when the active connection is live AND its engine exposes a workload view.
 	const canCollect = Boolean(connId && digestSql && connected);
 	const collectTitle = !connId
-		? "Select a connection in the sidebar to analyze"
+		? t('monitors.qp.selectToAnalyze')
 		: !connected
-			? `Connect "${conn?.label ?? 'the database'}" to collect its workload`
+			? t('monitors.qp.connectToCollect', { name: conn?.label ?? t('monitors.qp.theDatabase') })
 			: !digestSql
-				? `${conn?.label ?? 'This database'} exposes no runtime query statistics`
-				: "Collect the heaviest statements";
+				? t('monitors.qp.noStats', { name: conn?.label ?? t('monitors.qp.thisDatabaseCap') })
+				: t('monitors.qp.collectTitle');
 
 	return (
 		<>
 		<div className="table-view">
 			<div className="tv-head">
 				<Icon name="dashboard" className="tv-head-icon" />
-				<span className="tv-title">Query Performance</span>
-				<span className="muted">heaviest statements by {RANK_LABELS[rank].toLowerCase()}, point-in-time</span>
+				<span className="tv-title">{t('monitors.qp.title')}</span>
+				<span className="muted">{t(`monitors.qp.subtitle.${rank}`)}</span>
 				<button type="button" className="tv-collect" disabled={loading || !canCollect} title={collectTitle} onClick={() => collect()}>
-					<Icon name="play" /> {loading ? 'Collecting…' : 'Collect data'}
+					<Icon name="play" /> {loading ? t('monitors.qp.collecting') : t('monitors.qp.collect')}
 				</button>
 				<span className="spacer" />
 			</div>
 
 			{!connId
-				? <div className="results-message">Select a database in the connections sidebar, connect it, then click "Collect data" to see its heaviest queries.</div>
+				? <div className="results-message">{t('monitors.qp.selectDatabase')}</div>
 				: !digestSql
-					? <div className="results-message">{conn?.label ?? 'This database'} exposes no runtime query statistics, so there is no workload to analyze.</div>
+					? <div className="results-message">{t('monitors.qp.noStatsLong', { name: conn?.label ?? t('monitors.qp.thisDatabaseCap') })}</div>
 					: (
 						<div className="qp-grid">
 							{error
@@ -259,13 +261,13 @@ export function QueryPerformanceView({ connections, connectedIds, connectionId: 
 									<div className="results-error">{error}</div>
 								</div>
 								: loading
-									? <div className="results-message">Collecting the heaviest statements…</div>
+									? <div className="results-message">{t('monitors.qp.collectingLong')}</div>
 									: !data
 										? !connected
-											? <div className="results-message">Connect "{conn?.label ?? 'this database'}" in the sidebar to collect its heaviest queries.</div>
-											: <div className="results-message">Click "Collect data" above to load {conn?.label ?? 'this database'}'s heaviest queries.</div>
+											? <div className="results-message">{t('monitors.qp.connectSidebar', { name: conn?.label ?? t('monitors.qp.thisDatabase') })}</div>
+											: <div className="results-message">{t('monitors.qp.clickCollect', { name: conn?.label ?? t('monitors.qp.thisDatabase') })}</div>
 										: rows.length === 0
-											? <div className="results-message">No statements recorded yet. Run some queries against this database, then collect again.</div>
+											? <div className="results-message">{t('monitors.qp.noStatements')}</div>
 											: (
 												<DataGrid
 													fields={fields}
@@ -279,28 +281,28 @@ export function QueryPerformanceView({ connections, connectedIds, connectionId: 
 													onCopyRow={(i) => void navigator.clipboard.writeText(fields.map((_f, col) => cellText(rows[order[i]][col]) ?? '').join('\t'))}
 													onViewCell={(i, col) => setViewCell({ value: cellText(rows[order[i]][col]), columnName: fields[col]?.name ?? '' })}
 													rowActions={connId ? [
-														{ icon: 'sparkle', title: `Analyze this statement with ${ASSISTANT_NAME}`, onClick: (i) => { const sql = cellText(rows[order[i]][qtCol]); if (sql) { onAnalyze(connId, sql); } } },
-														{ icon: 'lightbulb', title: `Suggest an optimization with ${ASSISTANT_NAME}`, onClick: (i) => { const sql = cellText(rows[order[i]][qtCol]); if (sql) { onSuggest(connId, sql); } } },
+														{ icon: 'sparkle', title: t('monitors.qp.analyzeWith', { assistant: ASSISTANT_NAME }), onClick: (i) => { const sql = cellText(rows[order[i]][qtCol]); if (sql) { onAnalyze(connId, sql); } } },
+														{ icon: 'lightbulb', title: t('monitors.qp.suggestWith', { assistant: ASSISTANT_NAME }), onClick: (i) => { const sql = cellText(rows[order[i]][qtCol]); if (sql) { onSuggest(connId, sql); } } },
 													] : undefined}
 												/>
 											)}
 
 							<div className="results-footer">
-								<span>{data && rows.length > 0 ? `${rows.length.toLocaleString()} statement${rows.length === 1 ? '' : 's'}` : ''}</span>
+								<span>{data && rows.length > 0 ? t('monitors.qp.statements', { count: rows.length }) : ''}</span>
 								{scope && scope.replicas > 1 && (
 									<span className={`qp-scope${scope.cluster ? '' : ' ch-ops-scope-warn'}`} title={scope.limitation}>
-										{scope.cluster ? `across all ${scope.replicas} replicas` : `1 of ${scope.replicas} replicas only`}
+										{scope.cluster ? t('monitors.qp.allReplicas', { n: scope.replicas }) : t('monitors.qp.oneReplica', { n: scope.replicas })}
 									</span>
 								)}
 								<span className="spacer" />
 								{rankings.length > 1 && (
-									<label className="page-size">Rank by
+									<label className="page-size">{t('monitors.qp.rankBy')}
 										<select value={rank} onChange={(e) => changeRank(e.target.value as WorkloadRank)}>
-											{rankings.map((r) => <option key={r} value={r}>{RANK_LABELS[r]}</option>)}
+											{rankings.map((r) => <option key={r} value={r}>{t(RANK_LABELS[r])}</option>)}
 										</select>
 									</label>
 								)}
-								<label className="page-size">Top
+								<label className="page-size">{t('monitors.qp.top')}
 									<select value={top} onChange={(e) => changeTop(Number(e.target.value))}>
 										{TOP_OPTIONS.map((n) => <option key={n} value={n}>{n}</option>)}
 									</select>
@@ -314,8 +316,8 @@ export function QueryPerformanceView({ connections, connectedIds, connectionId: 
 				columnName={viewCell.columnName}
 				value={viewCell.value}
 				readOnly
-				formatLabel="Format query"
-				onFormat={(t) => formatSql(t, driver, keywordCase)}
+				formatLabel={t('monitors.qp.formatQuery')}
+				onFormat={(text) => formatSql(text, driver, keywordCase)}
 				onCommit={() => {}}
 				onClose={() => setViewCell(null)}
 			/>
@@ -327,23 +329,23 @@ export function QueryPerformanceView({ connections, connectedIds, connectionId: 
 /** A plain-language nudge for the common, recoverable workload-stats failures (permission denied or
  *  the stats source not enabled), shown above the raw DB error. Returns null for anything else so we
  *  never bury an unexpected error under a wrong guess. */
-function degradeHint(error: string, flavour: string): string | null {
+function degradeHint(error: string, flavour: string, t: Translate): string | null {
 	const e = error.toLowerCase();
 	const denied = e.includes('denied') || e.includes('permission') || e.includes('privilege') || e.includes('access');
 	const missing = e.includes("doesn't exist") || e.includes('does not exist') || e.includes('not found') || e.includes('unknown table');
 	if (flavour === 'MySQL' || flavour === 'MariaDB') {
 		if (denied) {
-			return "This needs SELECT on performance_schema. Ask a DBA to grant it (e.g. GRANT SELECT ON performance_schema.* TO your_user), then collect again.";
+			return t('monitors.qp.hintMysqlDenied');
 		}
 		if (missing) {
-			return "performance_schema appears to be disabled on this server. Enable it (performance_schema=ON) to see the workload.";
+			return t('monitors.qp.hintMysqlMissing');
 		}
 	}
 	if (flavour === 'PostgreSQL' && (missing || e.includes('pg_stat_statements'))) {
-		return "This needs the pg_stat_statements extension. Run CREATE EXTENSION pg_stat_statements (and add it to shared_preload_libraries + restart), then collect again.";
+		return t('monitors.qp.hintPgMissing');
 	}
 	if (denied) {
-		return "Reading this database's query statistics needs extra privileges (e.g. VIEW SERVER STATE on SQL Server, SELECT ANY DICTIONARY on Oracle, or MONITOR on Snowflake). Grant access, then collect again.";
+		return t('monitors.qp.hintDenied');
 	}
 	return null;
 }

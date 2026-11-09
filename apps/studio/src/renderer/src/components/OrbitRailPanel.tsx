@@ -6,6 +6,7 @@
 import { useEffect } from 'react';
 
 import { Icon } from './Icon';
+import { useT } from '../i18n';
 
 /*
  * Orbit's controls, as a docked tool window.
@@ -39,6 +40,7 @@ interface OrbitRailPanelProps {
 }
 
 export function OrbitRailPanel({ open, onOpen, hostRef, onCollapse }: OrbitRailPanelProps): JSX.Element {
+	const t = useT();
 	useEffect(() => {
 		if (!open) {
 			onOpen();
@@ -52,7 +54,7 @@ export function OrbitRailPanel({ open, onOpen, hostRef, onCollapse }: OrbitRailP
 			<div className="sidebar-header">
 				<span>ORBIT</span>
 				<span className="spacer" />
-				<button className="icon-btn" aria-label="Collapse" onClick={onCollapse}><Icon name="chevron-left" /></button>
+				<button className="icon-btn" aria-label={t('orbit.rail.collapse')} onClick={onCollapse}><Icon name="chevron-left" /></button>
 			</div>
 			<div className="orbit-rail-host" ref={hostRef} />
 		</div>

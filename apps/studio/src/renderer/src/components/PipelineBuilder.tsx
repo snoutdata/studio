@@ -6,6 +6,7 @@
 import { useState } from 'react';
 import { Icon } from './Icon';
 import { MONGO_STAGES, pipelineFromStages, stagesFromPipeline, type BuilderStage } from '../pipeline';
+import { useT } from '../i18n';
 
 // The visual staged-aggregation builder: edit a Mongo pipeline as a list of
 // stages you can add, reorder, enable/disable, and edit, over the same pipeline model the JSON editor
@@ -32,6 +33,7 @@ interface Stage extends BuilderStage {
 let stageSeq = 0;
 
 export function PipelineBuilder({ initial, canRun, onRunTo, onApply, onClose }: PipelineBuilderProps): JSX.Element {
+	const t = useT();
 	const [stages, setStages] = useState<Stage[]>(() => stagesFromPipeline(initial).map((s) => ({ ...s, id: ++stageSeq })));
 	const [error, setError] = useState<string | null>(null);
 
@@ -88,11 +90,11 @@ export function PipelineBuilder({ initial, canRun, onRunTo, onApply, onClose }: 
 		<div className="modal-backdrop" onClick={onClose}>
 			<div className="modal pipeline-builder" onClick={(e) => e.stopPropagation()}>
 				<div className="modal-head">
-					<h2>Pipeline stages</h2>
-					<button type="button" className="icon-btn" aria-label="Close" onClick={onClose}><Icon name="close" /></button>
+					<h2>{t('editor.builder.title')}</h2>
+					<button type="button" className="icon-btn" aria-label={t('editor.common.close')} onClick={onClose}><Icon name="close" /></button>
 				</div>
 				<div className="pb-stages">
-					{stages.length === 0 && <div className="pb-empty">No stages. Add one to start the pipeline.</div>}
+					{stages.length === 0 && <div className="pb-empty">{t('editor.builder.empty')}</div>}
 					{stages.map((stage, i) => (
 						<div className={`pb-stage${stage.enabled ? '' : ' disabled'}`} key={stage.id}>
 							<div className="pb-stage-head">
@@ -103,17 +105,17 @@ export function PipelineBuilder({ initial, canRun, onRunTo, onApply, onClose }: 
 									value={stage.operator}
 									spellCheck={false}
 									onChange={(e) => update(stage.id, { operator: e.target.value })}
-									title="Stage operator"
+									title={t('editor.builder.operator')}
 								/>
 								<span className="spacer" />
-								<label className="pb-enable" title={stage.enabled ? 'Disable this stage (kept, excluded from the run)' : 'Enable this stage'}>
+								<label className="pb-enable" title={stage.enabled ? t('editor.builder.disable') : t('editor.builder.enable')}>
 									<input type="checkbox" checked={stage.enabled} onChange={(e) => update(stage.id, { enabled: e.target.checked })} />
-									on
+									{t('editor.builder.on')}
 								</label>
-								<button type="button" className="icon-btn" aria-label="Move up" disabled={i === 0} onClick={() => move(i, -1)}><Icon name="chevron-up" /></button>
-								<button type="button" className="icon-btn" aria-label="Move down" disabled={i === stages.length - 1} onClick={() => move(i, 1)}><Icon name="chevron-down" /></button>
-								<button type="button" className="icon-btn" aria-label="Run the pipeline up to and including this stage" disabled={!canRun || !stage.enabled} onClick={() => runTo(i)}><Icon name="play" /></button>
-								<button type="button" className="icon-btn" aria-label="Delete this stage" onClick={() => remove(stage.id)}><Icon name="trash" /></button>
+								<button type="button" className="icon-btn" aria-label={t('editor.builder.moveUp')} disabled={i === 0} onClick={() => move(i, -1)}><Icon name="chevron-up" /></button>
+								<button type="button" className="icon-btn" aria-label={t('editor.builder.moveDown')} disabled={i === stages.length - 1} onClick={() => move(i, 1)}><Icon name="chevron-down" /></button>
+								<button type="button" className="icon-btn" aria-label={t('editor.builder.runTo')} disabled={!canRun || !stage.enabled} onClick={() => runTo(i)}><Icon name="play" /></button>
+								<button type="button" className="icon-btn" aria-label={t('editor.builder.deleteStage')} onClick={() => remove(stage.id)}><Icon name="trash" /></button>
 							</div>
 							<textarea
 								className="pb-body"
@@ -128,12 +130,12 @@ export function PipelineBuilder({ initial, canRun, onRunTo, onApply, onClose }: 
 						{MONGO_STAGES.map((op) => <option key={op} value={op} />)}
 					</datalist>
 				</div>
-				<button type="button" className="pb-add secondary" onClick={addStage}><Icon name="add" /> Add stage</button>
+				<button type="button" className="pb-add secondary" onClick={addStage}><Icon name="add" /> {t('editor.builder.addStage')}</button>
 				{error && <div className="results-error">{error}</div>}
 				<div className="modal-actions">
-					<button type="button" className="secondary" onClick={onClose}><Icon name="close" /> Cancel</button>
+					<button type="button" className="secondary" onClick={onClose}><Icon name="close" /> {t('editor.common.cancel')}</button>
 					<span className="spacer" />
-					<button type="button" onClick={apply}><Icon name="check" /> Apply to editor</button>
+					<button type="button" onClick={apply}><Icon name="check" /> {t('editor.builder.apply')}</button>
 				</div>
 			</div>
 		</div>

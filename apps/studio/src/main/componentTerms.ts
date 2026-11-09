@@ -16,6 +16,7 @@
  *  enforces it in main; the prompt only asks.
  *--------------------------------------------------------------------------------------------*/
 
+import { t } from '../shared/i18n/core';
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
 
@@ -73,7 +74,7 @@ export class TermsStore {
 		const pending = this.pending(source);
 		if (pending.length > 0) {
 			const vendors = pending.map((t) => t.vendor).join(' and ');
-			throw new Error(`Nothing was downloaded: ${vendors}'s licence terms have not been accepted.`);
+			throw new Error(t('mainErrors.termsNotAccepted', { vendors }));
 		}
 	}
 }

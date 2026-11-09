@@ -7,6 +7,8 @@ import { useCallback, useEffect, useState } from 'react';
 import { Icon } from './Icon';
 import { useConfirm } from './ConfirmDialog';
 import { CLOUD_VOCABULARY, prefix } from '../../../shared/ownLayout';
+import { formatLocale, t, useT } from '../i18n';
+import { mono } from './projectUi';
 import {
 	type CloudActionOutcome, type CloudBackups, type CloudConnectionFacts, type CloudCopyTarget, type CloudDomain,
 	type CloudFunctions, type CloudMaintenanceWindow, type CloudProjectOp, type CloudProjectOps, type CloudProjectRow,
@@ -33,7 +35,7 @@ function Status({ said }: { said: Said }): JSX.Element | null {
 
 function bytes(n: number | null | undefined): string {
 	if (n === null || n === undefined) {
-		return "not measured yet";
+		return t('projects.common.notMeasured');
 	}
 	const units = ['B', 'KB', 'MB', 'GB', 'TB'];
 	let value = n;
@@ -46,7 +48,7 @@ function bytes(n: number | null | undefined): string {
 }
 
 function when(iso: string | null | undefined): string {
-	return iso ? new Date(iso).toLocaleString() : "never";
+	return iso ? new Date(iso).toLocaleString(formatLocale()) : t('projects.common.neverL');
 }
 
 /** Run one operation; answers the data, or puts the refusal in `said` and answers null. */
@@ -80,12 +82,13 @@ function useLoad<T>(load: () => Promise<T | null>): { data: T | null; loading: b
 
 /** A cloud project's state and Start and Stop: the top of its Overview. */
 export function CloudStatus(props: { row: CloudProjectRow | null; projectRef: string; onChanged(): Promise<void> }): JSX.Element {
+	const t = useT();
 	const [said, setSaid] = useState<Said>(null);
 	const [busy, setBusy] = useState(false);
 	const row = props.row;
 
 	if (!row) {
-		return <div className="field-hint">Loading…</div>;
+		return <div className="field-hint">{t('projects.common.loading')}</div>;
 	}
 
 	async function ask(action: 'pause' | 'resume'): Promise<void> {
@@ -100,20 +103,20 @@ export function CloudStatus(props: { row: CloudProjectRow | null; projectRef: st
 
 	return (
 		<fieldset>
-			<legend>Status</legend>
+			<legend>{t('projects.common.status')}</legend>
 			<div className="cloud-facts">
-				<span className="muted">State</span><span>{row.state}{row.desiredState ? ` → ${row.desiredState}` : ''}{row.busy ? " (working)" : ''}</span>
-				<span className="muted">Region</span><span>{row.region}</span>
-				<span className="muted">Size</span><span>{bytes(row.sizeBytes)}{row.readOnly ? " (over the plan's limit, refusing writes)" : ''}</span>
-				<span className="muted">Last connection</span><span>{when(row.lastConnectionAt)}</span>
-				<span className="muted">Created</span><span>{when(row.createdAt)}</span>
-				<span className="muted">Production</span><span>{row.production ? "Yes, never paused" : "No"}</span>
+				<span className="muted">{t('localProjects.running.state')}</span><span>{row.state}{row.desiredState ? ` → ${row.desiredState}` : ''}{row.busy ? t('cloudProjects.status.working') : ''}</span>
+				<span className="muted">{t('cloudProjects.status.region')}</span><span>{row.region}</span>
+				<span className="muted">{t('projects.common.size')}</span><span>{bytes(row.sizeBytes)}{row.readOnly ? t('cloudProjects.status.overLimit') : ''}</span>
+				<span className="muted">{t('cloudProjects.status.lastConn')}</span><span>{when(row.lastConnectionAt)}</span>
+				<span className="muted">{t('projects.common.created')}</span><span>{when(row.createdAt)}</span>
+				<span className="muted">{t('localProjects.prod.title')}</span><span>{row.production ? t('cloudProjects.status.neverPaused') : t('cloudProjects.status.no')}</span>
 			</div>
-			{row.serverSilent && <p className="field-hint">Its server is not answering.</p>}
-			{!row.wakesInstantly && <p className="field-hint">Its data is in the bucket rather than on a host, so the next start is a restore and takes longer.</p>}
+			{row.serverSilent && <p className="field-hint">{t('cloudProjects.status.silent')}</p>}
+			{!row.wakesInstantly && <p className="field-hint">{t('cloudProjects.status.cold')}</p>}
 			<div className="cloud-actions">
-				<button type="button" disabled={!row.canResume || busy} onClick={() => void ask('resume')}><Icon name="play" /> Start</button>
-				<button type="button" disabled={!row.canPause || busy} title={row.pauseRefusal} onClick={() => void ask('pause')}><Icon name="debug-stop" /> Stop</button>
+				<button type="button" disabled={!row.canResume || busy} onClick={() => void ask('resume')}><Icon name="play" /> {t('localProjects.common.start')}</button>
+				<button type="button" disabled={!row.canPause || busy} title={row.pauseRefusal} onClick={() => void ask('pause')}><Icon name="debug-stop" /> {t('localProjects.common.stop')}</button>
 			</div>
 			{row.pauseRefusal && !row.canPause && <p className="field-hint">{row.pauseRefusal}</p>}
 			<Status said={said} />
@@ -123,6 +126,7 @@ export function CloudStatus(props: { row: CloudProjectRow | null; projectRef: st
 
 /** Delete a cloud project: in Settings, where the dashboard keeps it. */
 export function CloudDelete(props: { row: CloudProjectRow | null; onDeleted(): void }): JSX.Element | null {
+	const t = useT();
 	const [said, setSaid] = useState<Said>(null);
 	const [busy, setBusy] = useState(false);
 	const [confirm, confirmDialog] = useConfirm();
@@ -137,8 +141,8 @@ export function CloudDelete(props: { row: CloudProjectRow | null; onDeleted(): v
 		}
 		const ok = await confirm({
 			title: `Delete ${row.name}?`,
-			body: `The project ${row.ref} and its data are deleted. It can be restored for your plan's grace period. Its connection is removed from your list.`,
-			confirmLabel: "Delete",
+			body: t('cloudProjects.delete.confirm', { ref: row.ref }),
+			confirmLabel: t('projects.common.delete'),
 			danger: true,
 		});
 		if (!ok) {
@@ -158,10 +162,10 @@ export function CloudDelete(props: { row: CloudProjectRow | null; onDeleted(): v
 
 	return (
 		<fieldset>
-			<legend>Delete this project</legend>
-			<p className="field-hint">The project and its data are deleted. It can be restored for your plan's grace period.</p>
+			<legend>{t('cloudProjects.delete.title')}</legend>
+			<p className="field-hint">{t('cloudProjects.delete.body')}</p>
 			<div className="cloud-actions">
-				<button type="button" className="danger" disabled={!row.canDelete || busy} onClick={() => void remove()}><Icon name="trash" /> Delete project</button>
+				<button type="button" className="danger" disabled={!row.canDelete || busy} onClick={() => void remove()}><Icon name="trash" /> {t('cloudProjects.delete.button')}</button>
 			</div>
 			<Status said={said} />
 			{confirmDialog}
@@ -171,14 +175,15 @@ export function CloudDelete(props: { row: CloudProjectRow | null; onDeleted(): v
 
 /** How long the old password keeps working after a reset (361), in minutes; an hour by default. */
 const GRACE_CHOICES: { minutes: number; label: string }[] = [
-	{ minutes: 60, label: "An hour" },
-	{ minutes: 15, label: "15 minutes" },
-	{ minutes: 240, label: "4 hours" },
-	{ minutes: 1440, label: "24 hours" },
-	{ minutes: 0, label: "Stops now (a leaked password)" },
+	{ minutes: 60, get label() { return t('cloudProjects.grace.hour'); } },
+	{ minutes: 15, get label() { return t('cloudProjects.grace.m15'); } },
+	{ minutes: 240, get label() { return t('cloudProjects.grace.h4'); } },
+	{ minutes: 1440, get label() { return t('cloudProjects.grace.h24'); } },
+	{ minutes: 0, get label() { return t('cloudProjects.grace.now'); } },
 ];
 
 function Connection({ projectRef, part, onOpenDatabase }: { projectRef: string; part: 'database' | 'keys'; onOpenDatabase?(): void }): JSX.Element {
+	const t = useT();
 	const [said, setSaid] = useState<Said>(null);
 	const [busy, setBusy] = useState(false);
 	const [grace, setGrace] = useState(60);
@@ -190,7 +195,7 @@ function Connection({ projectRef, part, onOpenDatabase }: { projectRef: string; 
 		setBusy(true);
 		try {
 			if (await run('copy', { ref: projectRef, what }, setSaid)) {
-				setSaid({ ok: true, message: `${label} copied. Reading it is recorded on the project's activity log.` });
+				setSaid({ ok: true, message: t('cloudProjects.conn.copied', { label }) });
 			}
 		} finally {
 			setBusy(false);
@@ -199,11 +204,11 @@ function Connection({ projectRef, part, onOpenDatabase }: { projectRef: string; 
 
 	async function reset(): Promise<void> {
 		const ok = await confirm({
-			title: "Reset the password?",
+			title: t('localProjects.password.title'),
 			body: grace === 0
-				? "The old password stops working at once and connections that signed in with it are ended. Your connections in this app are updated to the new user name and password."
-				: `The new password comes with a new user name. The old password keeps working for ${GRACE_CHOICES.find((c) => c.minutes === grace)?.label.toLowerCase() ?? `${grace} minutes`}, so other apps can pick up the new one. Your connections in this app are updated now.`,
-			confirmLabel: "Reset password",
+				? t('cloudProjects.conn.resetNow')
+				: t('cloudProjects.conn.resetGrace', { grace: GRACE_CHOICES.find((c) => c.minutes === grace)?.label.toLowerCase() ?? t('cloudProjects.conn.graceMinutes', { minutes: grace }) }),
+			confirmLabel: t('projects.common.resetPassword'),
 			danger: true,
 		});
 		if (!ok) {
@@ -213,7 +218,7 @@ function Connection({ projectRef, part, onOpenDatabase }: { projectRef: string; 
 		try {
 			const result = await run('resetPassword', { ref: projectRef, graceMinutes: grace }, setSaid);
 			if (result) {
-				setSaid({ ok: true, message: `New password set. It applies ${result.appliesIn}. ${result.updatedConnections === 1 ? "Your connection was updated." : `${result.updatedConnections} connections were updated.`}${result.oldPassword ? ` ${result.oldPassword}` : ''}` });
+				setSaid({ ok: true, message: `${t('cloudProjects.conn.newSet', { applies: result.appliesIn })} ${result.updatedConnections === 1 ? t('cloudProjects.conn.updatedOne') : t('cloudProjects.conn.updatedMany', { count: result.updatedConnections })}${result.oldPassword ? ` ${result.oldPassword}` : ''}` });
 			}
 		} finally {
 			setBusy(false);
@@ -222,9 +227,9 @@ function Connection({ projectRef, part, onOpenDatabase }: { projectRef: string; 
 
 	async function rotate(): Promise<void> {
 		const ok = await confirm({
-			title: "Rotate the API keys?",
-			body: "Both keys are replaced. Every key already pasted into an app, a deployment or a CI secret stops working.",
-			confirmLabel: "Rotate keys",
+			title: t('localProjects.keys.rotateTitle'),
+			body: t('cloudProjects.conn.keysBody'),
+			confirmLabel: t('projects.common.rotateKeys'),
 			danger: true,
 		});
 		if (!ok) {
@@ -234,7 +239,7 @@ function Connection({ projectRef, part, onOpenDatabase }: { projectRef: string; 
 		try {
 			const result = await run('rotateKeys', { ref: projectRef }, setSaid);
 			if (result) {
-				setSaid({ ok: true, message: `New keys issued. ${result.breaks}` });
+				setSaid({ ok: true, message: t('cloudProjects.conn.newKeys', { breaks: result.breaks }) });
 			}
 		} finally {
 			setBusy(false);
@@ -245,41 +250,41 @@ function Connection({ projectRef, part, onOpenDatabase }: { projectRef: string; 
 		<>
 			{part === 'database' && onOpenDatabase && (
 				<fieldset>
-					<legend>Tables and SQL</legend>
-					<p className="field-hint">The database is a connection in your Connections list, marked with the SnoutData butterfly: browse its tables there and open a SQL editor on it.</p>
+					<legend>{t('localProjects.db.title')}</legend>
+					<p className="field-hint">{t('localProjects.db.intro')}</p>
 					<div className="cloud-actions">
-						<button type="button" onClick={onOpenDatabase}><Icon name="plug" /> Open in Connections</button>
+						<button type="button" onClick={onOpenDatabase}><Icon name="plug" /> {t('projects.common.openInConnections')}</button>
 					</div>
 				</fieldset>
 			)}
 			{part === 'database' && <fieldset>
-				<legend>Connection</legend>
-				<label>Host<input readOnly value={data?.host ?? ''} /></label>
-				<label>Port<input readOnly value={data ? String(data.port) : ''} /></label>
-				<label>Database<input readOnly value={data?.database ?? ''} /></label>
-				<label>User<input readOnly value={data?.user ?? ''} /></label>
-				<p className="field-hint">TLS is required. The password is stored for you and goes straight to the clipboard.</p>
-				<label>After a reset, the old password works
+				<legend>{t('cloudProjects.conn.title')}</legend>
+				<label>{t('localProjects.db.host')}<input readOnly value={data?.host ?? ''} /></label>
+				<label>{t('projects.common.port')}<input readOnly value={data ? String(data.port) : ''} /></label>
+				<label>{t('localProjects.common.database')}<input readOnly value={data?.database ?? ''} /></label>
+				<label>{t('projects.common.user')}<input readOnly value={data?.user ?? ''} /></label>
+				<p className="field-hint">{t('cloudProjects.conn.tls')}</p>
+				<label>{t('cloudProjects.conn.afterReset')}
 					<select value={grace} disabled={busy} onChange={(e) => setGrace(Number(e.target.value))}>
 						{GRACE_CHOICES.map((choice) => <option key={choice.minutes} value={choice.minutes}>{choice.label}</option>)}
 					</select>
 				</label>
-				<p className="field-hint">A reset puts the new password on the project&apos;s other owner login, so the user name changes too. Until the old password stops, apps still holding it keep connecting.</p>
+				<p className="field-hint">{t('cloudProjects.conn.resetHint')}</p>
 				<div className="cloud-actions">
-					<button type="button" className="secondary" disabled={busy} onClick={() => void copy('uri', "Connection string")}><Icon name="copy" /> Copy connection string</button>
-					<button type="button" className="secondary" disabled={busy} onClick={() => void copy('password', "Password")}><Icon name="copy" /> Copy password</button>
+					<button type="button" className="secondary" disabled={busy} onClick={() => void copy('uri', t('cloudProjects.conn.string'))}><Icon name="copy" /> {t('localProjects.db.copyString')}</button>
+					<button type="button" className="secondary" disabled={busy} onClick={() => void copy('password', t('projects.common.password'))}><Icon name="copy" /> {t('localProjects.db.copyPassword')}</button>
 					<span className="spacer" />
-					<button type="button" className="danger" disabled={busy} onClick={() => void reset()}><Icon name="key" /> Reset password</button>
+					<button type="button" className="danger" disabled={busy} onClick={() => void reset()}><Icon name="key" /> {t('projects.common.resetPassword')}</button>
 				</div>
 			</fieldset>}
 			{part === 'keys' && <fieldset>
-				<legend>API keys</legend>
-				<p className="field-hint">For <span className="mono">@snoutdata/client</span> and the data API, at <span className="mono">https://{projectRef}.api.snoutdata.com</span>. The server key bypasses row-level security: keep it on a server.</p>
+				<legend>{t('cloudProjects.conn.apiKeys')}</legend>
+				<p className="field-hint">{mono(t('cloudProjects.conn.apiIntro', { ref: projectRef }))}</p>
 				<div className="cloud-actions">
-					<button type="button" className="secondary" disabled={busy} onClick={() => void copy('appKey', "App key")}><Icon name="copy" /> Copy app key</button>
-					<button type="button" className="secondary" disabled={busy} onClick={() => void copy('serverKey', "Server key")}><Icon name="copy" /> Copy server key</button>
+					<button type="button" className="secondary" disabled={busy} onClick={() => void copy('appKey', t('projects.common.appKey'))}><Icon name="copy" /> {t('cloudProjects.conn.copyApp')}</button>
+					<button type="button" className="secondary" disabled={busy} onClick={() => void copy('serverKey', t('projects.common.serverKey'))}><Icon name="copy" /> {t('cloudProjects.conn.copyServer')}</button>
 					<span className="spacer" />
-					<button type="button" className="danger" disabled={busy} onClick={() => void rotate()}><Icon name="key" /> Rotate keys</button>
+					<button type="button" className="danger" disabled={busy} onClick={() => void rotate()}><Icon name="key" /> {t('projects.common.rotateKeys')}</button>
 				</div>
 			</fieldset>}
 			<Status said={said} />
@@ -289,6 +294,7 @@ function Connection({ projectRef, part, onOpenDatabase }: { projectRef: string; 
 }
 
 export function CloudBackupsSection({ projectRef }: { projectRef: string }): JSX.Element {
+	const t = useT();
 	const [said, setSaid] = useState<Said>(null);
 	const [busy, setBusy] = useState(false);
 	const [at, setAt] = useState('');
@@ -301,7 +307,7 @@ export function CloudBackupsSection({ projectRef }: { projectRef: string }): JSX
 		setBusy(true);
 		try {
 			if (await run('requestExport', { ref: projectRef }, setSaid)) {
-				setSaid({ ok: true, message: "Export asked for. It is taken on the host's next tick; refresh to see it." });
+				setSaid({ ok: true, message: t('cloudProjects.backups.asked') });
 				await reload();
 			}
 		} finally {
@@ -317,7 +323,7 @@ export function CloudBackupsSection({ projectRef }: { projectRef: string }): JSX
 		try {
 			const made = await run('restore', { ref: projectRef, at: new Date(at).toISOString(), ...(name.trim() ? { name: name.trim() } : {}) }, setSaid);
 			if (made) {
-				setSaid({ ok: true, message: `Restoring into a new project, ${made.name} (${made.ref}). It is added to your connections.` });
+				setSaid({ ok: true, message: t('cloudProjects.backups.restoring', { name: made.name, ref: made.ref }) });
 			}
 		} finally {
 			setBusy(false);
@@ -335,48 +341,48 @@ export function CloudBackupsSection({ projectRef }: { projectRef: string }): JSX
 	return (
 		<>
 			<fieldset>
-				<legend>Export</legend>
-				<p className="field-hint">A <span className="mono">pg_dump</span> of the whole database, as a download link that lasts a few hours.</p>
-				{loading && <div className="field-hint">Loading…</div>}
+				<legend>{t('localProjects.backups.export')}</legend>
+				<p className="field-hint">{mono(t('cloudProjects.backups.intro'))}</p>
+				{loading && <div className="field-hint">{t('projects.common.loading')}</div>}
 				{exported && (
 					<div className="cloud-facts">
-						<span className="muted">Latest</span>
-						<span>{exported.pending ? "Being taken now" : exported.completedAt ? when(exported.completedAt) : "None yet"}</span>
-						{exported.bytes !== undefined && exported.bytes !== null && <><span className="muted">Size</span><span>{bytes(exported.bytes)}</span></>}
-						{exported.error && <><span className="muted">Error</span><span>{exported.error}</span></>}
+						<span className="muted">{t('cloudProjects.backups.latest')}</span>
+						<span>{exported.pending ? t('cloudProjects.backups.beingTaken') : exported.completedAt ? when(exported.completedAt) : t('cloudProjects.backups.noneYet')}</span>
+						{exported.bytes !== undefined && exported.bytes !== null && <><span className="muted">{t('projects.common.size')}</span><span>{bytes(exported.bytes)}</span></>}
+						{exported.error && <><span className="muted">{t('cloudProjects.backups.error')}</span><span>{exported.error}</span></>}
 					</div>
 				)}
 				<div className="cloud-actions">
-					<button type="button" disabled={busy || exported?.pending === true} onClick={() => void exportNow()}><Icon name="export" /> Export now</button>
-					{exported?.url && <button type="button" className="secondary" onClick={() => void window.sqlApi.openExternal(exported.url!)}><Icon name="cloud-download" /> Download</button>}
+					<button type="button" disabled={busy || exported?.pending === true} onClick={() => void exportNow()}><Icon name="export" /> {t('cloudProjects.backups.exportNow')}</button>
+					{exported?.url && <button type="button" className="secondary" onClick={() => void window.sqlApi.openExternal(exported.url!)}><Icon name="cloud-download" /> {t('projects.common.download')}</button>}
 					<span className="spacer" />
-					<button type="button" className="secondary" disabled={loading} onClick={() => void reload()}><Icon name="refresh" /> Refresh</button>
+					<button type="button" className="secondary" disabled={loading} onClick={() => void reload()}><Icon name="refresh" /> {t('projects.common.refresh')}</button>
 				</div>
 			</fieldset>
 			<fieldset>
-				<legend>Restore to a point in time</legend>
-				{!restore && !loading && <p className="field-hint">The restore window could not be read.</p>}
+				<legend>{t('cloudProjects.backups.pitr')}</legend>
+				{!restore && !loading && <p className="field-hint">{t('cloudProjects.backups.windowFail')}</p>}
 				{restore && !restore.available && (
 					<p className="field-hint">
 						{restore.pitrEnabled
-							? "There is no backup to restore from yet. The first one is taken shortly after the project is created."
-							: `Point-in-time restore is part of the Pro and Business plans, and this project is on ${restore.tier}.`}
+							? t('cloudProjects.backups.noBackup')
+							: t('cloudProjects.backups.pitrPlan', { tier: restore.tier })}
 					</p>
 				)}
 				{restore?.available && (
 					<>
-						<p className="field-hint">The restore goes into a NEW project beside this one, never over it, so a wrong guess costs nothing. It uses one of your plan's project slots.</p>
+						<p className="field-hint">{t('cloudProjects.backups.newProject')}</p>
 						<label>
-							Moment
+							{t('cloudProjects.backups.moment')}
 							<input type="datetime-local" value={at} min={toLocal(restore.earliest)} max={toLocal(restore.latest)} onChange={(e) => setAt(e.target.value)} />
 						</label>
-						<p className="field-hint">Between {when(restore.earliest)} and {when(restore.latest)}.</p>
+						<p className="field-hint">{t('cloudProjects.backups.between', { from: when(restore.earliest), to: when(restore.latest) })}</p>
 						<label>
-							New project name
-							<input value={name} placeholder="Optional" maxLength={60} onChange={(e) => setName(e.target.value)} />
+							{t('cloudProjects.backups.newName')}
+							<input value={name} placeholder={t('cloudProjects.backups.optional')} maxLength={60} onChange={(e) => setName(e.target.value)} />
 						</label>
 						<div className="cloud-actions">
-							<button type="button" disabled={busy || !at} onClick={() => void restoreNow()}><Icon name="history" /> Restore</button>
+							<button type="button" disabled={busy || !at} onClick={() => void restoreNow()}><Icon name="history" /> {t('cloudProjects.backups.restore')}</button>
 						</div>
 					</>
 				)}
@@ -387,6 +393,7 @@ export function CloudBackupsSection({ projectRef }: { projectRef: string }): JSX
 }
 
 export function CloudUsageSection({ projectRef }: { projectRef: string }): JSX.Element {
+	const t = useT();
 	const [said, setSaid] = useState<Said>(null);
 	const { data, loading } = useLoad<CloudUsage>(() => run('usage', { ref: projectRef }, setSaid));
 	const days = [...(data?.days ?? [])].reverse();
@@ -397,16 +404,16 @@ export function CloudUsageSection({ projectRef }: { projectRef: string }): JSX.E
 	return (
 		<>
 			<fieldset>
-				<legend>Storage</legend>
-				{loading && <div className="field-hint">Loading…</div>}
+				<legend>{t('localProjects.settings.storage')}</legend>
+				{loading && <div className="field-hint">{t('projects.common.loading')}</div>}
 				{!loading && (
 					<>
 						<div className="cloud-facts">
-							<span className="muted">Database</span><span>{bytes(latest?.dbBytes)}</span>
-							<span className="muted">Plan limit</span><span>{limit ? `${bytes(limit)} (${data?.limit?.tier})` : "unknown"}</span>
+							<span className="muted">{t('localProjects.common.database')}</span><span>{bytes(latest?.dbBytes)}</span>
+							<span className="muted">{t('cloudProjects.usage.planLimit')}</span><span>{limit ? `${bytes(limit)} (${data?.limit?.tier})` : t('projects.common.unknownL')}</span>
 						</div>
 						{share !== null && (
-							<div className="cloud-meter" title={`${Math.round(share * 100)}% of the plan's storage`}>
+							<div className="cloud-meter" title={t('cloudProjects.usage.share', { percent: Math.round(share * 100) })}>
 								<div className={`cloud-meter-fill${share > 0.9 ? ' warn' : ''}`} style={{ width: `${Math.max(2, share * 100)}%` }} />
 							</div>
 						)}
@@ -414,12 +421,12 @@ export function CloudUsageSection({ projectRef }: { projectRef: string }): JSX.E
 				)}
 			</fieldset>
 			<fieldset>
-				<legend>Last 30 days</legend>
-				{!loading && days.length === 0 && <p className="field-hint">Nothing measured yet. The host samples every 15 minutes.</p>}
+				<legend>{t('cloudProjects.usage.last30')}</legend>
+				{!loading && days.length === 0 && <p className="field-hint">{t('cloudProjects.usage.none')}</p>}
 				{days.length > 0 && (
 					<table className="cloud-table">
 						<thead>
-							<tr><th>Day</th><th>Database</th><th>Backups</th><th>Connections</th><th>Compute</th></tr>
+							<tr><th>{t('cloudProjects.usage.day')}</th><th>{t('localProjects.common.database')}</th><th>{t('cloudProjects.usage.backups')}</th><th>{t('localProjects.glance.connections')}</th><th>{t('cloudProjects.usage.compute')}</th></tr>
 						</thead>
 						<tbody>
 							{days.map((d) => (
@@ -442,14 +449,15 @@ export function CloudUsageSection({ projectRef }: { projectRef: string }): JSX.E
 
 // Each service's path, as a cloud project's door serves it (shared/ownLayout.ts).
 const SERVICE_COPY: Record<'auth' | 'storage' | 'dataApi' | 'push', { legend: string; hint: string; path: string }> = {
-	auth: { legend: "Auth", hint: "Sign-up and sign-in for your app's users, with the project's own keys. Your users live in the auth schema of your database.", path: prefix('identity', CLOUD_VOCABULARY) },
-	storage: { legend: "Storage", hint: "Files for your app, stored in your project's storage.", path: prefix('files', CLOUD_VOCABULARY) },
-	dataApi: { legend: "Data API", hint: "REST and GraphQL over your tables (PostgREST and pg_graphql), for @snoutdata/client or any client that speaks PostgREST.", path: prefix('data', CLOUD_VOCABULARY) },
-	push: { legend: "Push", hint: "Notifications to iPhone, Android and the web. It runs beside your database, and its devices, log and keys stay in your database's push schema. Turning it on restarts the database once.", path: '/push/v1' },
+	auth: { legend: "Auth", get hint() { return t('cloudProjects.svc.authHint'); }, path: prefix('identity', CLOUD_VOCABULARY) },
+	storage: { get legend() { return t('localProjects.settings.storage'); }, get hint() { return t('cloudProjects.svc.storageHint'); }, path: prefix('files', CLOUD_VOCABULARY) },
+	dataApi: { get legend() { return t('projects.common.dataApi'); }, get hint() { return t('cloudProjects.svc.dataHint'); }, path: prefix('data', CLOUD_VOCABULARY) },
+	push: { legend: "Push", get hint() { return t('cloudProjects.svc.pushHint'); }, path: '/push/v1' },
 };
 
 /** A product's switch on the control plane (auth, storage, the data API, push), with what the plan says. */
 export function CloudService({ projectRef, service, onState }: { projectRef: string; service: 'auth' | 'storage' | 'dataApi' | 'push'; onState?(enabled: boolean): void }): JSX.Element {
+	const t = useT();
 	const [said, setSaid] = useState<Said>(null);
 	const [busy, setBusy] = useState(false);
 	const { data, loading, reload } = useLoad<CloudServices>(() => run('services', { ref: projectRef }, setSaid));
@@ -471,7 +479,7 @@ export function CloudService({ projectRef, service, onState }: { projectRef: str
 		try {
 			const result = await run('setService', { ref: projectRef, service, enable }, setSaid);
 			if (result) {
-				setSaid({ ok: true, message: result.note ?? (enable ? "Turned on. It starts on the project's next restart, within a minute." : "Turned off.") });
+				setSaid({ ok: true, message: result.note ?? (enable ? t('cloudProjects.svc.turnedOn') : t('cloudProjects.svc.turnedOff')) });
 				await reload();
 			}
 		} finally {
@@ -484,38 +492,38 @@ export function CloudService({ projectRef, service, onState }: { projectRef: str
 			<fieldset>
 				<legend>{copy.legend}</legend>
 				<p className="field-hint">{copy.hint}</p>
-				{loading && <div className="field-hint">Loading…</div>}
+				{loading && <div className="field-hint">{t('projects.common.loading')}</div>}
 				{readError && <div className="form-status warn">{readError}</div>}
 				{!loading && !readError && (
 					<label className="check">
 						<input type="checkbox" checked={enabled} disabled={busy || refusedByPlan} onChange={(e) => void flip(e.target.checked)} />
-						{enabled ? "On" : "Off"}
+						{enabled ? t('projects.common.on') : t('projects.common.off')}
 					</label>
 				)}
-				{refusedByPlan && <p className="field-hint">The data API is not included in this project&apos;s plan.</p>}
-				{enabled && <p className="field-hint">Served at <span className="mono">https://{projectRef}.api.snoutdata.com{copy.path}</span>.</p>}
+				{refusedByPlan && <p className="field-hint">{t('cloudProjects.svc.dataNotPlan')}</p>}
+				{enabled && <p className="field-hint">{mono(t('cloudProjects.svc.servedAt', { ref: projectRef, path: copy.path }))}</p>}
 				{service === 'storage' && data?.storage && (
 					<div className="cloud-facts">
-						{data.storage.pending && <><span className="muted">State</span><span>Waiting for the host to register it</span></>}
-						<span className="muted">Files</span><span>{data.storage.files ?? "not measured yet"}</span>
-						<span className="muted">Size</span><span>{data.storage.bytes === null ? "not measured yet" : `${bytes(data.storage.bytes)}${data.storage.maxFilesBytes ? ` of ${bytes(data.storage.maxFilesBytes)}` : ''}`}</span>
-							{data.storage.bytes === null && data.storage.maxFilesBytes ? <><span className="muted">Plan limit</span><span>{bytes(data.storage.maxFilesBytes)}</span></> : null}
-						{data.storage.lastError && <><span className="muted">Last error</span><span>{data.storage.lastError}</span></>}
+						{data.storage.pending && <><span className="muted">{t('localProjects.running.state')}</span><span>{t('cloudProjects.svc.waitingHost')}</span></>}
+						<span className="muted">{t('localProjects.common.files')}</span><span>{data.storage.files ?? t('projects.common.notMeasured')}</span>
+						<span className="muted">{t('projects.common.size')}</span><span>{data.storage.bytes === null ? t('projects.common.notMeasured') : `${bytes(data.storage.bytes)}${data.storage.maxFilesBytes ? ` of ${bytes(data.storage.maxFilesBytes)}` : ''}`}</span>
+							{data.storage.bytes === null && data.storage.maxFilesBytes ? <><span className="muted">{t('cloudProjects.usage.planLimit')}</span><span>{bytes(data.storage.maxFilesBytes)}</span></> : null}
+						{data.storage.lastError && <><span className="muted">{t('cloudProjects.svc.lastError')}</span><span>{data.storage.lastError}</span></>}
 					</div>
 				)}
 				{service === 'auth' && data?.auth && enabled && (
 					<div className="cloud-facts">
-						<span className="muted">Google sign-in</span><span>{data.auth.googleEnabled ? "On" : "Off"}</span>
-						<span className="muted">SAML SSO</span><span>{data.auth.samlEnabled ? "On" : "Off"}</span>
+						<span className="muted">{t('cloudProjects.svc.google')}</span><span>{data.auth.googleEnabled ? t('projects.common.on') : t('projects.common.off')}</span>
+						<span className="muted">SAML SSO</span><span>{data.auth.samlEnabled ? t('projects.common.on') : t('projects.common.off')}</span>
 					</div>
 				)}
-				{service === 'auth' && enabled && <p className="field-hint">Providers are set up in the dashboard.</p>}
+				{service === 'auth' && enabled && <p className="field-hint">{t('cloudProjects.svc.providers')}</p>}
 				{service === 'push' && data?.push && enabled && (
 					<div className="cloud-facts">
-						<span className="muted">Scheduled sends</span><span>{data.push.scheduling ? "Included in this plan" : "On paid plans"}</span>
+						<span className="muted">{t('cloudProjects.svc.scheduled')}</span><span>{data.push.scheduling ? t('cloudProjects.svc.included') : t('cloudProjects.svc.onPaid')}</span>
 					</div>
 				)}
-				{service === 'push' && enabled && <p className="field-hint">Apple and Firebase keys are set in the dashboard, or with <span className="mono">snoutdata push credentials</span>. They are checked, then kept in your own database.</p>}
+				{service === 'push' && enabled && <p className="field-hint">{mono(t('cloudProjects.svc.pushKeys'))}</p>}
 			</fieldset>
 			<Status said={said} />
 		</>
@@ -523,6 +531,7 @@ export function CloudService({ projectRef, service, onState }: { projectRef: str
 }
 
 export function CloudFunctionsSection({ projectRef }: { projectRef: string }): JSX.Element {
+	const t = useT();
 	const [said, setSaid] = useState<Said>(null);
 	const [busy, setBusy] = useState(false);
 	const [name, setName] = useState('');
@@ -539,7 +548,7 @@ export function CloudFunctionsSection({ projectRef }: { projectRef: string }): J
 			const rows = await run('setSecret', { ref: projectRef, name: name.trim(), value }, setSaid);
 			if (rows) {
 				setSecrets(rows);
-				setSaid({ ok: true, message: `${name.trim()} set. Functions see it on their next start.` });
+				setSaid({ ok: true, message: t('cloudProjects.fn.secretSet', { name: name.trim() }) });
 				setName('');
 				setValue('');
 			}
@@ -564,21 +573,21 @@ export function CloudFunctionsSection({ projectRef }: { projectRef: string }): J
 	return (
 		<>
 			<fieldset>
-				<legend>Deployed functions</legend>
-				{loading && <div className="field-hint">Loading…</div>}
+				<legend>{t('cloudProjects.fn.deployed')}</legend>
+				{loading && <div className="field-hint">{t('projects.common.loading')}</div>}
 				{/* Only an ANSWER that is empty is "none deployed": a read that failed says so in its
 				    own words below, and used to sit under this sentence. */}
 				{!loading && data && data.functions.length === 0 && (
-					<p className="field-hint">No functions deployed. Deploy one with <span className="mono">snoutdata functions deploy &lt;name&gt;</span>.</p>
+					<p className="field-hint">{mono(t('cloudProjects.fn.none'))}</p>
 				)}
 				{(data?.functions.length ?? 0) > 0 && (
 					<table className="cloud-table">
-						<thead><tr><th>Name</th><th>JWT</th><th>Size</th><th>Memory</th><th>Workers</th><th>Updated</th></tr></thead>
+						<thead><tr><th>{t('projects.common.name')}</th><th>JWT</th><th>{t('projects.common.size')}</th><th>{t('cloudProjects.fn.memory')}</th><th>{t('cloudProjects.fn.workers')}</th><th>{t('projects.common.updated')}</th></tr></thead>
 						<tbody>
 							{data!.functions.map((f) => (
 								<tr key={f.name}>
 									<td className="mono cloud-word">{f.name}</td>
-									<td className="cloud-nowrap">{f.verifyJwt ? "Required" : "Public"}</td>
+									<td className="cloud-nowrap">{f.verifyJwt ? t('cloudProjects.fn.required') : t('projects.common.public')}</td>
 									<td className="cloud-nowrap">{bytes(f.bytes)}</td>
 									<td className="cloud-nowrap">{f.memoryMb == null ? '-' : `${f.memoryMb} MB`}</td>
 									<td className="cloud-nowrap">{f.concurrency ?? '-'}</td>
@@ -588,19 +597,19 @@ export function CloudFunctionsSection({ projectRef }: { projectRef: string }): J
 						</tbody>
 					</table>
 				)}
-				{!loading && (data?.functions.length ?? 0) > 0 && <p className="field-hint">Served at <span className="mono">https://{projectRef}.api.snoutdata.com{prefix('fn', CLOUD_VOCABULARY)}/&lt;name&gt;</span>. Deploy with the CLI.</p>}
+				{!loading && (data?.functions.length ?? 0) > 0 && <p className="field-hint">{mono(t('cloudProjects.fn.servedAt', { ref: projectRef, prefix: prefix('fn', CLOUD_VOCABULARY) }))}</p>}
 				<div className="cloud-actions">
 					<span className="spacer" />
-					<button type="button" className="secondary" disabled={loading} onClick={() => { setSecrets(null); setSized(null); void reload(); }}><Icon name="refresh" /> Refresh</button>
+					<button type="button" className="secondary" disabled={loading} onClick={() => { setSecrets(null); setSized(null); void reload(); }}><Icon name="refresh" /> {t('projects.common.refresh')}</button>
 				</div>
 			</fieldset>
 			{data && <FunctionSizing projectRef={projectRef} view={data} onSized={setSized} setSaid={setSaid} />}
 			<fieldset>
-				<legend>Secrets</legend>
-				<p className="field-hint">Environment variables for your functions. A value goes in and never comes back out: only the names are listed.</p>
+				<legend>{t('projects.common.secrets')}</legend>
+				<p className="field-hint">{t('cloudProjects.fn.secretsIntro')}</p>
 				{shown.length > 0 && (
 					<table className="cloud-table">
-						<thead><tr><th>Name</th><th>Updated</th><th /></tr></thead>
+						<thead><tr><th>{t('projects.common.name')}</th><th>{t('projects.common.updated')}</th><th /></tr></thead>
 						<tbody>
 							{shown.map((s) => (
 								<tr key={s.name}>
@@ -614,10 +623,10 @@ export function CloudFunctionsSection({ projectRef }: { projectRef: string }): J
 						</tbody>
 					</table>
 				)}
-				<label>Name<input value={name} placeholder="STRIPE_KEY" onChange={(e) => setName(e.target.value.toUpperCase())} /></label>
-				<label>Value<input type="password" value={value} onChange={(e) => setValue(e.target.value)} /></label>
+				<label>{t('projects.common.name')}<input value={name} placeholder="STRIPE_KEY" onChange={(e) => setName(e.target.value.toUpperCase())} /></label>
+				<label>{t('localProjects.fn.value')}<input type="password" value={value} onChange={(e) => setValue(e.target.value)} /></label>
 				<div className="cloud-actions">
-					<button type="button" disabled={busy || !name.trim() || !value} onClick={() => void setSecret()}><Icon name="lock" /> Set secret</button>
+					<button type="button" disabled={busy || !name.trim() || !value} onClick={() => void setSecret()}><Icon name="lock" /> {t('cloudProjects.fn.setSecret')}</button>
 				</div>
 			</fieldset>
 			<Status said={said} />
@@ -639,6 +648,7 @@ function FunctionSizing({ projectRef, view, onSized, setSaid }: {
 	onSized: (next: CloudFunctions) => void;
 	setSaid: (s: Said) => void;
 }): JSX.Element | null {
+	const t = useT();
 	const plan = view.plan;
 	const sized = view.functions.filter((f) => f.memoryMb != null && f.concurrency != null);
 	const [name, setName] = useState(sized[0]?.name ?? '');
@@ -665,7 +675,7 @@ function FunctionSizing({ projectRef, view, onSized, setSaid }: {
 			if (next) {
 				onSized(next);
 				const now = next.functions.find((f) => f.name === current!.name);
-				setSaid({ ok: true, message: `${current!.name} runs at ${now?.memoryMb} MB × ${now?.concurrency} from its next request.` });
+				setSaid({ ok: true, message: t('cloudProjects.fn.sized', { name: current!.name, mb: String(now?.memoryMb), workers: String(now?.concurrency) }) });
 			}
 		} finally {
 			setBusy(false);
@@ -674,39 +684,38 @@ function FunctionSizing({ projectRef, view, onSized, setSaid }: {
 
 	return (
 		<fieldset>
-			<legend>Memory and concurrency</legend>
+			<legend>{t('cloudProjects.fn.sizing')}</legend>
 			<p className="field-hint">
-				On the {plan.tier} plan a worker may use up to {plan.functionMemoryMb} MB and a function may run up to {plan.concurrencyMax} workers at once.
-				Memory × workers may not exceed this project&apos;s {plan.podMemoryMb} MB, the RAM its database gets. A function gets a second worker only
-				while every worker it has is busy on CPU; requests that wait on the network share one.
+				{t('cloudProjects.fn.sizingIntro', { tier: plan.tier, memory: plan.functionMemoryMb, max: plan.concurrencyMax, pod: plan.podMemoryMb })}
 			</p>
 			{sized.length > 1 && (
-				<label>Function
+				<label>{t('cloudProjects.fn.function')}
 					<select value={current.name} disabled={busy} onChange={(e) => setName(e.target.value)}>
 						{sized.map((f) => <option key={f.name} value={f.name}>{f.name}</option>)}
 					</select>
 				</label>
 			)}
-			<label>Memory a worker
+			<label>{t('cloudProjects.fn.memoryWorker')}
 				<select value={memoryMb} disabled={busy} onChange={(e) => setMemoryMb(Number(e.target.value))}>
 					{steps.map((mb) => <option key={mb} value={mb} disabled={mb * concurrency > plan.podMemoryMb}>{mb} MB</option>)}
 				</select>
 			</label>
-			<label>Workers
+			<label>{t('cloudProjects.fn.workers')}
 				<select value={concurrency} disabled={busy} onChange={(e) => setConcurrency(Number(e.target.value))}>
 					{Array.from({ length: plan.concurrencyMax }, (_, i) => i + 1).map((n) => <option key={n} value={n} disabled={n * memoryMb > plan.podMemoryMb}>{n}</option>)}
 				</select>
 			</label>
-			<p className={fits ? 'field-hint' : 'form-status error'}>{memoryMb} MB × {concurrency} = {total} MB of {plan.podMemoryMb} MB</p>
+			<p className={fits ? 'field-hint' : 'form-status error'}>{t('cloudProjects.fn.total', { mem: memoryMb, conc: concurrency, total, pod: plan.podMemoryMb })}</p>
 			<div className="cloud-actions">
-				<button type="button" className="secondary" disabled={busy} onClick={() => void save(true)}><Icon name="discard" /> Plan default</button>
-				<button type="button" disabled={busy || !changed || !fits} onClick={() => void save(false)}><Icon name="save" /> Save</button>
+				<button type="button" className="secondary" disabled={busy} onClick={() => void save(true)}><Icon name="discard" /> {t('cloudProjects.fn.planDefault')}</button>
+				<button type="button" disabled={busy || !changed || !fits} onClick={() => void save(false)}><Icon name="save" /> {t('projects.common.save')}</button>
 			</div>
 		</fieldset>
 	);
 }
 
 export function CloudDomainsSection({ projectRef }: { projectRef: string }): JSX.Element {
+	const t = useT();
 	const [said, setSaid] = useState<Said>(null);
 	const [busy, setBusy] = useState(false);
 	const [hostname, setHostname] = useState('');
@@ -720,9 +729,9 @@ export function CloudDomainsSection({ projectRef }: { projectRef: string }): JSX
 				setSaid({
 					ok: true,
 					message: action === 'add'
-						? (result.next ?? `${host} added. Publish its records, then verify.`)
+						? (result.next ?? t('cloudProjects.domains.added', { host }))
 						: action === 'verify'
-							? (result.domain?.verified ? `${host} is verified.` : (result.domain?.verificationError ?? `${host} is not verified yet.`))
+							? (result.domain?.verified ? t('cloudProjects.domains.verified', { host }) : (result.domain?.verificationError ?? t('cloudProjects.domains.notVerifiedYet', { host })))
 							: `${host} removed.`,
 				});
 				if (action === 'add') {
@@ -738,23 +747,23 @@ export function CloudDomainsSection({ projectRef }: { projectRef: string }): JSX
 	return (
 		<>
 			<fieldset>
-				<legend>Your domains</legend>
-				<p className="field-hint">Serve this project's API at your own domain, with a certificate we obtain and renew. Paid plans only.</p>
-				{loading && <div className="field-hint">Loading…</div>}
-				{!loading && data && data.length === 0 && <p className="field-hint">No domains yet.</p>}
+				<legend>{t('cloudProjects.domains.title')}</legend>
+				<p className="field-hint">{t('cloudProjects.domains.intro')}</p>
+				{loading && <div className="field-hint">{t('projects.common.loading')}</div>}
+				{!loading && data && data.length === 0 && <p className="field-hint">{t('cloudProjects.domains.none')}</p>}
 				{(data ?? []).map((d) => (
 					<div key={d.hostname} className="cloud-domain">
 						<div className="cloud-actions">
 							<span className="mono">{d.hostname}</span>
-							<span className={`env${d.verified ? '' : ' warn'}`}>{d.verified ? "verified" : "not verified"}</span>
+							<span className={`env${d.verified ? '' : ' warn'}`}>{d.verified ? t('cloudProjects.domains.verifiedL') : t('cloudProjects.domains.notVerified')}</span>
 							{d.certificate?.state && <span className="muted small">certificate {d.certificate.state}</span>}
 							<span className="spacer" />
-							{!d.verified && <button type="button" className="table-action" disabled={busy} onClick={() => void act('verify', d.hostname)}><Icon name="verified" /> Verify</button>}
+							{!d.verified && <button type="button" className="table-action" disabled={busy} onClick={() => void act('verify', d.hostname)}><Icon name="verified" /> {t('cloudProjects.domains.verify')}</button>}
 							<button type="button" className="icon-btn" aria-label={`Remove ${d.hostname}`} disabled={busy} onClick={() => void act('remove', d.hostname)}><Icon name="trash" /></button>
 						</div>
 						{(d.record || d.certificateRecord) && (
 							<table className="cloud-table">
-								<thead><tr><th>Type</th><th>Name</th><th>Value</th></tr></thead>
+								<thead><tr><th>{t('projects.common.type')}</th><th>{t('projects.common.name')}</th><th>{t('localProjects.fn.value')}</th></tr></thead>
 								<tbody>
 									{d.record && <tr><td>{d.record.type}</td><td className="mono">{d.record.name}</td><td className="mono">{d.record.value}</td></tr>}
 									{d.certificateRecord && <tr><td>{d.certificateRecord.type}</td><td className="mono">{d.certificateRecord.name}</td><td className="mono">{d.certificateRecord.value}</td></tr>}
@@ -768,10 +777,10 @@ export function CloudDomainsSection({ projectRef }: { projectRef: string }): JSX
 				))}
 			</fieldset>
 			<fieldset>
-				<legend>Add a domain</legend>
-				<label>Hostname<input value={hostname} placeholder="api.yourcompany.com" onChange={(e) => setHostname(e.target.value.trim().toLowerCase())} /></label>
+				<legend>{t('cloudProjects.domains.add')}</legend>
+				<label>{t('cloudProjects.domains.hostname')}<input value={hostname} placeholder="api.yourcompany.com" onChange={(e) => setHostname(e.target.value.trim().toLowerCase())} /></label>
 				<div className="cloud-actions">
-					<button type="button" disabled={busy || !hostname} onClick={() => void act('add', hostname)}><Icon name="globe" /> Add domain</button>
+					<button type="button" disabled={busy || !hostname} onClick={() => void act('add', hostname)}><Icon name="globe" /> {t('cloudProjects.domains.addBtn')}</button>
 				</div>
 			</fieldset>
 			<Status said={said} />
@@ -800,15 +809,15 @@ function timezoneNames(): string[] {
 function timezoneSource(from: NonNullable<CloudMaintenanceWindow['window']>['timezoneFrom'], region: string | undefined): string {
 	switch (from) {
 		case 'project':
-			return "This project's own";
+			return t('cloudProjects.tz.projectOwn');
 		case 'owner-owner':
-			return "The owner's, set on their account";
+			return t('cloudProjects.tz.ownerAccount');
 		case 'owner-signin':
-			return "The owner's, from their last sign-in";
+			return t('cloudProjects.tz.ownerSignIn');
 		case 'region':
-			return region ? `The local time of ${region}` : "The project region's local time";
+			return region ? t('cloudProjects.tz.regionOf', { region }) : t('cloudProjects.tz.region');
 		default:
-			return "None";
+			return t('localProjects.setup.none');
 	}
 }
 
@@ -817,11 +826,11 @@ function nextWindow(next: NonNullable<CloudMaintenanceWindow['next']>): string {
 	const starts = new Date(next.startsAt);
 	const ends = new Date(next.endsAt);
 	const time: Intl.DateTimeFormatOptions = { hour: '2-digit', minute: '2-digit' };
-	const until = ends.toLocaleTimeString(undefined, { ...time, timeZoneName: 'short' });
+	const until = ends.toLocaleTimeString(formatLocale(), { ...time, timeZoneName: 'short' });
 	if (starts.getTime() <= Date.now()) {
-		return `Now, until ${until}`;
+		return t('cloudProjects.maint.now', { until });
 	}
-	return `${starts.toLocaleString(undefined, { weekday: 'short', day: 'numeric', month: 'short', ...time })} to ${until}`;
+	return t('cloudProjects.maint.range', { from: starts.toLocaleString(formatLocale(), { weekday: 'short', day: 'numeric', month: 'short', ...time }), to: until });
 }
 
 /**
@@ -829,6 +838,7 @@ function nextWindow(next: NonNullable<CloudMaintenanceWindow['next']>): string {
  * In Settings, as on the dashboard; the same Snout Function, which decides who may change it.
  */
 export function CloudMaintenanceWindow({ projectRef, region }: { projectRef: string; region?: string }): JSX.Element {
+	const t = useT();
 	const [said, setSaid] = useState<Said>(null);
 	const [busy, setBusy] = useState(false);
 	const [start, setStart] = useState(2);
@@ -870,7 +880,7 @@ export function CloudMaintenanceWindow({ projectRef, region }: { projectRef: str
 			const saved = await run('setMaintenanceWindow', args, setSaid);
 			if (saved) {
 				take(saved);
-				setSaid({ ok: true, message: reset ? "Back to the default window." : "Maintenance window saved." });
+				setSaid({ ok: true, message: reset ? t('cloudProjects.maint.backDefault') : t('cloudProjects.maint.saved') });
 			}
 		} finally {
 			setBusy(false);
@@ -884,46 +894,46 @@ export function CloudMaintenanceWindow({ projectRef, region }: { projectRef: str
 
 	return (
 		<fieldset>
-			<legend>Maintenance window</legend>
-			<p className="field-hint">The hours when this database may be moved to another server while it runs. By default, 2 to 6 AM in the owner's timezone.</p>
-			{loading && <div className="field-hint">Loading…</div>}
+			<legend>{t('cloudProjects.maint.title')}</legend>
+			<p className="field-hint">{t('cloudProjects.maint.intro')}</p>
+			{loading && <div className="field-hint">{t('projects.common.loading')}</div>}
 			{w && (
 				<div className="cloud-facts">
-					<span className="muted">Window</span><span>{hourLabel(w.startHour)} to {hourLabel(w.endHour)}{w.timezone ? `, ${w.timezone}` : ''}</span>
-					<span className="muted">Hours</span><span>{own ? "This project's own" : "The default"}</span>
-					<span className="muted">Timezone</span><span>{timezoneSource(w.timezoneFrom, region)}</span>
-					{answer?.next && <><span className="muted">Next window</span><span>{nextWindow(answer.next)}</span></>}
+					<span className="muted">{t('cloudProjects.maint.window')}</span><span>{t('cloudProjects.maint.range', { from: hourLabel(w.startHour), to: hourLabel(w.endHour) })}{w.timezone ? `, ${w.timezone}` : ''}</span>
+					<span className="muted">{t('cloudProjects.maint.hours')}</span><span>{own ? t('cloudProjects.tz.projectOwn') : t('cloudProjects.maint.theDefault')}</span>
+					<span className="muted">{t('cloudProjects.maint.timezone')}</span><span>{timezoneSource(w.timezoneFrom, region)}</span>
+					{answer?.next && <><span className="muted">{t('cloudProjects.maint.next')}</span><span>{nextWindow(answer.next)}</span></>}
 				</div>
 			)}
 			<label>
-				Starts at
+				{t('cloudProjects.maint.startsAt')}
 				<select value={start} disabled={!answer || busy} onChange={(e) => setStart(Number(e.target.value))}>
 					{HOURS.map((h) => <option key={h} value={h}>{hourLabel(h)}</option>)}
 				</select>
 			</label>
 			<label>
-				Ends at
+				{t('cloudProjects.maint.endsAt')}
 				<select value={end} disabled={!answer || busy} onChange={(e) => setEnd(Number(e.target.value))}>
 					{HOURS.map((h) => <option key={h} value={h}>{hourLabel(h)}</option>)}
 				</select>
 			</label>
 			<p className="field-hint">
 				{start === end
-					? "Pick an end hour different from the start."
+					? t('cloudProjects.maint.pickEnd')
 					: end < start
-						? `Runs across midnight, ${hourLabel(start)} to ${hourLabel(end)} the next day.`
+						? t('cloudProjects.maint.crossMidnight', { start: hourLabel(start), end: hourLabel(end) })
 						: `${end - start} hours a day.`}
 			</p>
 			<label>
-				Timezone
+				{t('cloudProjects.maint.timezone')}
 				<select value={timezone} disabled={!answer || busy} onChange={(e) => setTimezone(e.target.value)}>
-					<option value="">The owner's timezone</option>
+					<option value="">{t('cloudProjects.maint.ownerTz')}</option>
 					{choices.map((zone) => <option key={zone} value={zone}>{zone}</option>)}
 				</select>
 			</label>
 			<div className="cloud-actions">
-				<button type="button" disabled={!answer || busy || start === end || unchanged} onClick={() => void save(false)}><Icon name="check" /> Save</button>
-				{own && <button type="button" className="secondary" disabled={busy} onClick={() => void save(true)}><Icon name="history" /> Use the default</button>}
+				<button type="button" disabled={!answer || busy || start === end || unchanged} onClick={() => void save(false)}><Icon name="check" /> {t('projects.common.save')}</button>
+				{own && <button type="button" className="secondary" disabled={busy} onClick={() => void save(true)}><Icon name="history" /> {t('cloudProjects.maint.useDefault')}</button>}
 			</div>
 			<Status said={said} />
 		</fieldset>

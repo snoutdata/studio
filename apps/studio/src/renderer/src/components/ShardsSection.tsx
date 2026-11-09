@@ -8,9 +8,10 @@ import { ClusterMap } from './ClusterMap';
 import { Icon } from './Icon';
 import { Status, type Said } from './projectUi';
 import { formatBytes } from '../formatBytes';
+import { formatLocale, t, useT } from '../i18n';
 import { onShardsProposal, takeShardsProposal } from '../shardsProposal';
 import {
-	FAILOVER_STEPS, failoverStep, jobFinished, joinWords, nextRange, nodePods, nodeShade, planIsSentence, planSentence, proposalFromRequest, rangeShares, ranSentence,
+	failoverSteps, failoverStep, jobFinished, joinWords, nextRange, nodePods, nodeShade, planIsSentence, planWords, proposalFromRequest, rangeShares, ranSentence,
 	homeReplicaStanding, replicaBlocked, replicaPods, replicaStanding, replicaWords, shardsOffered, shortBound, slotsSentence, spareSlots, splitAlerts,
 	checkSentence, severityWord, type CheckFinding, type DesignCheck,
 	type ShardAdvice, type ShardAlert, type ShardJob, type ShardKeyspace, type ShardPlan, type ShardPod, type ShardsRunAction, type ShardsStatus,
@@ -77,32 +78,46 @@ function said(error: unknown): Said {
 const POLL_MS = 3000;
 
 /** The router's word for where a table lives, in the words the rest of this section uses. */
-const TABLE_KIND: Readonly<Record<string, string>> = {
-	sharded: "distributed",
-	reference: "on every cluster node",
-	global: "home node only",
-};
+function tableKindLabel(kind: string): string {
+	switch (kind) {
+		case 'sharded':
+			return t('shards.tableKind.sharded');
+		case 'reference':
+			return t('shards.tableKind.reference');
+		case 'global':
+			return t('shards.tableKind.global');
+		default:
+			return kind;
+	}
+}
 
 /** Operations that change nothing a person would want to stop and think about. */
 const QUIET: ReadonlySet<ShardsRunAction> = new Set(['verify', 'attach', 'add-node', 'keyspace', 'drop-keyspace', 'add-replica']);
 
 const TITLES: Record<ShardsRunAction, string> = {
-	enable: "Make it a cluster", disable: "Turn clustering off", 'add-node': "Add a cluster node", attach: "Attach a cluster node", drain: "Drain a cluster node", remove: "Remove a cluster node",
-	keyspace: "Create a keyspace", 'drop-keyspace': "Drop a keyspace", distribute: "Distribute a table", reference: "Copy a table to every cluster node", global: "Bring a table home",
-	split: "Split a range", merge: "Merge two ranges", move: "Move a range", pin: "Pin a tenant", rebalance: "Rebalance",
-	scale: "Change the number of cluster nodes", verify: "Verify", cleanup: "Clean up", spread: "Spread a table",
-	'add-replica': "Add a replica", 'remove-replica': "Remove a replica",
+	enable: 'shards.titles.enable', disable: 'shards.titles.disable', 'add-node': 'shards.titles.addNode', attach: 'shards.titles.attach', drain: 'shards.titles.drain', remove: 'shards.titles.remove',
+	keyspace: 'shards.titles.keyspace', 'drop-keyspace': 'shards.titles.dropKeyspace', distribute: 'shards.titles.distribute', reference: 'shards.titles.reference', global: 'shards.titles.global',
+	split: 'shards.titles.split', merge: 'shards.titles.merge', move: 'shards.titles.move', pin: 'shards.titles.pin', rebalance: 'shards.titles.rebalance',
+	scale: 'shards.titles.scale', verify: 'shards.titles.verify', cleanup: 'shards.titles.cleanup', spread: 'shards.titles.spread',
+	'add-replica': 'shards.titles.addReplica', 'remove-replica': 'shards.titles.removeReplica',
 };
 
 /** What a replica is, in the words the review opens with. */
-const REPLICA_REASON = "A replica follows this node and takes its place on its own if the node is lost or corrupt. It takes one project slot.";
-const HOME_REPLICA_REASON = "A replica follows the home node and takes its place on its own, on the same address, if the home is lost or corrupt. Without one, a broken home takes the whole cluster down until it is repaired. It takes one project slot.";
+function replicaReason(): string {
+	return t('shards.replicaReason');
+}
+
+function homeReplicaReason(): string {
+	return t('shards.homeReplicaReason');
+}
 
 function review(action: ShardsRunAction, request: Record<string, unknown>, extra: Partial<Review> = {}): Review {
-	return { title: TITLES[action], action, verb: TITLES[action].split(' ')[0], request, danger: !QUIET.has(action), ...extra };
+	const title = t(TITLES[action]);
+	return { title, action, verb: title.split(' ')[0], request, danger: !QUIET.has(action), ...extra };
 }
 
 export function ShardsSection({ projectRef }: { projectRef: string }): JSX.Element {
+	const t = useT();
 	const [status, setStatus] = useState<ShardsStatus | null>(null);
 	const [jobs, setJobs] = useState<ShardJob[] | null>(null);
 	const [advice, setAdvice] = useState<ShardAdvice | null>(null);
@@ -159,7 +174,7 @@ export function ShardsSection({ projectRef }: { projectRef: string }): JSX.Eleme
 		function take(): void {
 			const proposal = takeShardsProposal(projectRef);
 			if (proposal) {
-				setCurrent(review(proposal.action, proposal.request, { reason: proposal.reason ?? "Proposed by the assistant. Nothing runs until you press the button." }));
+				setCurrent(review(proposal.action, proposal.request, { reason: proposal.reason ?? t('shards.proposedByAssistant') }));
 			}
 		}
 		take();
@@ -188,14 +203,14 @@ export function ShardsSection({ projectRef }: { projectRef: string }): JSX.Eleme
 	}, [moving, refresh]);
 
 	if (!status) {
-		return <>{message ? <Status said={message} /> : <div className="field-hint">Loading…</div>}</>;
+		return <>{message ? <Status said={message} /> : <div className="field-hint">{t('shards.loading')}</div>}</>;
 	}
 
 	const cluster = status.cluster;
 	const nodes = cluster?.nodes ?? [];
 	const keyspaces = cluster?.keyspaces ?? [];
 	const tables = cluster?.tables ?? [];
-	const nodeName = (id: number): string => nodes.find((n) => n.id === id)?.name ?? `node ${id}`;
+	const nodeName = (id: number): string => nodes.find((n) => n.id === id)?.name ?? t('shards.nodeFallback', { id: String(id) });
 	const shadeOf = (id: number): number => nodeShade(Math.max(0, nodes.findIndex((n) => n.id === id)));
 	const nodeCount = 1 + nodePods(status.pods).length;
 	const replicas = replicaPods(status.pods);
@@ -227,41 +242,40 @@ export function ShardsSection({ projectRef }: { projectRef: string }): JSX.Eleme
 
 			{!status.sharded && (
 				<fieldset>
-					<legend>One database, several cluster nodes</legend>
+					<legend>{t('shards.legends.intro')}</legend>
 					<p className="field-hint">
-						A cluster spreads a table's rows over several cluster nodes by a column you choose, such as an account id, behind
-						one connection string. Queries that name the column go to one cluster node; the rest are answered across all of them.
+						{t('shards.intro')}
 					</p>
 					{shardsOffered(status) ? (
 						<>
-							<p className="field-hint">Each cluster node uses one of your plan's project slots, and you have {spareSlots(status)} free. Making it a cluster keeps the database running (its services move to pods of their own, which can refuse a request for a few seconds), and nothing moves until you add a cluster node.</p>
+							<p className="field-hint">{t('shards.enableHint', { spare: spareSlots(status) })}</p>
 							<div className="cloud-actions">
-								<button type="button" onClick={() => setCurrent(review('enable', {}, { danger: true, verb: "Make it a cluster" }))}><Icon name="split-horizontal" /> Make it a cluster</button>
+								<button type="button" onClick={() => setCurrent(review('enable', {}, { danger: true, verb: t('shards.makeCluster') }))}><Icon name="split-horizontal" /> {t('shards.makeCluster')}</button>
 							</div>
 						</>
 					) : (
-						<p className="field-hint">{status.maxProjects === null || status.projectsUsed === null ? "Your plan could not be read just now." : `Each cluster node uses one of your plan's project slots, and all ${status.maxProjects} are in use.`}</p>
+						<p className="field-hint">{status.maxProjects === null || status.projectsUsed === null ? t('shards.planUnread') : t('shards.allSlotsUsed', { max: status.maxProjects })}</p>
 					)}
 				</fieldset>
 			)}
 
 			{status.sharded && (
 				<>
-					{status.router === 'starting' && <div className="form-status">The router is starting beside the database, which takes about twenty seconds.</div>}
-					{status.router === 'paused' && <div className="form-status">The project is paused. The router wakes with it on the next connection.</div>}
-					{status.routerError && <div className="form-status warn">The router is not answering: {status.routerError}</div>}
+					{status.router === 'starting' && <div className="form-status">{t('shards.routerStarting')}</div>}
+					{status.router === 'paused' && <div className="form-status">{t('shards.routerPaused')}</div>}
+					{status.routerError && <div className="form-status warn">{t('shards.routerDown', { error: status.routerError })}</div>}
 					{status.automation?.queueError && (
 						<div className="form-status warn">
-							Spreading a table stopped: {status.automation.queueError}
-							<RetryButtons projectRef={projectRef} body={{ queue: true }} dismiss="Drop the rest" onDone={finished} onError={(e) => setMessage(said(e))} />
+							{t('shards.spreadStopped', { error: status.automation.queueError })}
+							<RetryButtons projectRef={projectRef} body={{ queue: true }} dismiss={t('shards.dropRest')} onDone={finished} onError={(e) => setMessage(said(e))} />
 						</div>
 					)}
 					{status.automation && !status.automation.queueError && (status.automation.queue.length > 0 || status.automation.queueJob !== null) && (
-						<div className="form-status">Spreading a table{status.automation.queueJob !== null ? ` (job ${status.automation.queueJob})` : ''}{status.automation.queue.length > 0 ? `; then ${status.automation.queue.join(', ')}` : ''}.</div>
+						<div className="form-status">{t('shards.spreading', { job: status.automation.queueJob !== null ? t('shards.spreadingJob', { job: String(status.automation.queueJob) }) : '', then: status.automation.queue.length > 0 ? t('shards.spreadingThen', { list: status.automation.queue.join(', ') }) : '' })}</div>
 					)}
 					{nodes.length > 0 && (
 						<fieldset>
-							<legend>Cluster map</legend>
+							<legend>{t('shards.legends.map')}</legend>
 							<ClusterMap
 								model={clusterMapModel(status, advice ? new Map(advice.facts.nodes.map((f) => [f.id, f.db_bytes])) : undefined, jobs)}
 								shadeOf={shadeOf}
@@ -269,22 +283,22 @@ export function ShardsSection({ projectRef }: { projectRef: string }): JSX.Eleme
 						</fieldset>
 					)}
 					<fieldset>
-						<legend>Cluster nodes</legend>
+						<legend>{t('shards.legends.nodes')}</legend>
 						<div className="cloud-facts">
-							<span className="muted">Cluster nodes</span><span>{nodeCount}</span>
-							<span className="muted">Project slots</span><span>{slotsSentence(status) ?? "Plan limit unknown"}. Each cluster node{knowsReplicas ? " and replica" : ''} uses one.</span>
-							{knowsReplicas && <><span className="muted">Replicas</span><span>{replicas.length}</span></>}
-							<span className="muted">Keyspaces</span><span>{keyspaces.length}, {keyspaces.reduce((n, k) => n + k.ranges.length, 0)} ranges</span>
+							<span className="muted">{t('shards.legends.nodes')}</span><span>{nodeCount}</span>
+							<span className="muted">{t('shards.facts.projectSlots')}</span><span>{knowsReplicas ? t('shards.slotsEachReplica', { slots: slotsSentence(status) ?? t('shards.planLimitUnknown') }) : t('shards.slotsEachNode', { slots: slotsSentence(status) ?? t('shards.planLimitUnknown') })}</span>
+							{knowsReplicas && <><span className="muted">{t('shards.facts.replicas')}</span><span>{replicas.length}</span></>}
+							<span className="muted">{t('shards.facts.keyspaces')}</span><span>{t('shards.keyspacesFacts', { keyspaces: keyspaces.length, ranges: keyspaces.reduce((n, k) => n + k.ranges.length, 0) })}</span>
 						</div>
 						{nodes.length > 0 && (
 							<table className="cloud-table">
-								<thead><tr><th>Cluster node</th><th>State</th><th>Ranges</th><th>Size</th>{knowsReplicas && <th>Replica</th>}<th /></tr></thead>
+								<thead><tr><th>{t('shards.th.node')}</th><th>{t('shards.th.state')}</th><th>{t('shards.th.ranges')}</th><th>{t('shards.th.size')}</th>{knowsReplicas && <th>{t('shards.th.replica')}</th>}<th /></tr></thead>
 								<tbody>
 									{nodes.map((n) => {
 										const facts = advice?.facts.nodes.find((f) => f.id === n.id);
 										const pod = podOf(n.name);
 										const standing = n.home ? homeReplicaStanding(status.home) : pod ? replicaStanding(pod) : 'unknown';
-										const blocked = pod ? replicaBlocked(pod, status) : n.home && status.projectsUsed !== null && status.maxProjects !== null && spareSlots(status) === 0 ? "A replica takes one project slot, and all of your plan's are in use." : null;
+										const blocked = pod ? replicaBlocked(pod, status) : n.home && status.projectsUsed !== null && status.maxProjects !== null && spareSlots(status) === 0 ? t('shards.replicaFull') : null;
 										// 222: the home is the project, so its replica is asked for by the project's ref.
 										const replicaTarget = n.home ? (status.home ? status.home.ref : null) : pod ? pod.ref : null;
 										const replica = replicas.find((r) => r.replicaOf === n.name);
@@ -293,7 +307,7 @@ export function ShardsSection({ projectRef }: { projectRef: string }): JSX.Eleme
 												<tr>
 													<td>
 														<span className="shards-swatch" style={{ '--shade': `${shadeOf(n.id)}%` } as CSSProperties} aria-hidden="true" />
-														<span className="mono">{n.name}</span>{n.home && <span className="env">home</span>}
+														<span className="mono">{n.name}</span>{n.home && <span className="env">{t('shards.homeBadge')}</span>}
 													</td>
 													<td>{n.state}</td>
 													<td>{n.ranges.length}</td>
@@ -307,13 +321,13 @@ export function ShardsSection({ projectRef }: { projectRef: string }): JSX.Eleme
 														{n.state !== 'removed' && (
 															<span className="shards-row-actions">
 																{replicaTarget && standing === 'none' && (
-																	<button type="button" className="table-action" disabled={blocked !== null} title={blocked ?? undefined} onClick={() => setCurrent(review('add-replica', { node: replicaTarget }, { verb: "Add the replica", reason: n.home ? HOME_REPLICA_REASON : REPLICA_REASON }))}>Add a replica</button>
+																	<button type="button" className="table-action" disabled={blocked !== null} title={blocked ?? undefined} onClick={() => setCurrent(review('add-replica', { node: replicaTarget }, { verb: t('shards.addReplicaVerb'), reason: n.home ? homeReplicaReason() : replicaReason() }))}>{t('shards.addReplica')}</button>
 																)}
 																{replicaTarget && (standing === 'protected' || standing === 'making') && (
-																	<button type="button" className="table-action" onClick={() => setCurrent(review('remove-replica', { node: replicaTarget }, { verb: "Remove the replica", reason: n.home ? "Without a replica, if the home node is lost or corrupt the whole cluster is unavailable until it is restored from its backups. Its project slot is freed." : "Without a replica, if this node is lost or corrupt its share of the data is unavailable until it is restored from its backups. Its project slot is freed." }))}>Remove replica</button>
+																	<button type="button" className="table-action" onClick={() => setCurrent(review('remove-replica', { node: replicaTarget }, { verb: t('shards.removeReplicaVerb'), reason: n.home ? t('shards.removeHomeReplicaReason') : t('shards.removeReplicaReason') }))}>{t('shards.removeReplica')}</button>
 																)}
-																{!n.home && <button type="button" className="table-action" onClick={() => setCurrent(review('drain', { node: n.name }))}>Drain</button>}
-																{!n.home && <button type="button" className="table-action" onClick={() => setCurrent(review('remove', { node: n.name }))}>Remove</button>}
+																{!n.home && <button type="button" className="table-action" onClick={() => setCurrent(review('drain', { node: n.name }))}>{t('shards.drain')}</button>}
+																{!n.home && <button type="button" className="table-action" onClick={() => setCurrent(review('remove', { node: n.name }))}>{t('shards.remove')}</button>}
 															</span>
 														)}
 													</td>
@@ -333,28 +347,28 @@ export function ShardsSection({ projectRef }: { projectRef: string }): JSX.Eleme
 							<PodRow key={p.ref} pod={p} projectRef={projectRef} onAttach={() => setCurrent(review('attach', { node: p.ref }))} onDone={finished} onError={(e) => setMessage(said(e))} />
 						))}
 						<div className="cloud-actions">
-							<button type="button" onClick={() => setCurrent(review('add-node', {}, { verb: "Add", reason: "A new node starts as a copy of the home node, then joins the cluster and takes its share of the distributed tables on its own. Writes to a range pause for a moment when it moves. It uses one of your plan's project slots." }))}><Icon name="add" /> Add a cluster node</button>
-							<button type="button" className="secondary" onClick={() => setCurrent(review('scale', {}, { verb: "Scale", fields: [{ name: 'nodes', label: "Cluster nodes, the home included", kind: 'number', placeholder: String(nodeCount + 1) }] }))}>Scale</button>
-							<button type="button" className="secondary" onClick={() => void refresh()}><Icon name="refresh" /> Refresh</button>
+							<button type="button" onClick={() => setCurrent(review('add-node', {}, { verb: t('shards.addVerb'), reason: t('shards.addReason') }))}><Icon name="add" /> {t('shards.addNode')}</button>
+							<button type="button" className="secondary" onClick={() => setCurrent(review('scale', {}, { verb: t('shards.scale'), fields: [{ name: 'nodes', label: t('shards.nodesIncludingHome'), kind: 'number', placeholder: String(nodeCount + 1) }] }))}>{t('shards.scale')}</button>
+							<button type="button" className="secondary" onClick={() => void refresh()}><Icon name="refresh" /> {t('shards.refresh')}</button>
 						</div>
 					</fieldset>
 
 					{keyspaces.map((keyspace) => (
-						<KeyspaceGroup key={keyspace.name} keyspace={keyspace} nodeName={nodeName} shadeOf={shadeOf} advice={advice} usedBy={tables.filter((t) => t.keyspace === keyspace.name).length} propose={setCurrent} />
+						<KeyspaceGroup key={keyspace.name} keyspace={keyspace} nodeName={nodeName} shadeOf={shadeOf} advice={advice} usedBy={tables.filter((row) => row.keyspace === keyspace.name).length} propose={setCurrent} />
 					))}
 
 					<fieldset>
-						<legend>Tables</legend>
-						{tables.length === 0 && <p className="field-hint">Every table is on the home node. Distribute one to spread its rows over the cluster nodes.</p>}
+						<legend>{t('shards.legends.tables')}</legend>
+						{tables.length === 0 && <p className="field-hint">{t('shards.tablesEmpty')}</p>}
 						{tables.length > 0 && (
 							<table className="cloud-table">
-								<thead><tr><th>Table</th><th>Kind</th><th>Keyspace</th><th>Distribution key</th><th /></tr></thead>
+								<thead><tr><th>{t('shards.th.table')}</th><th>{t('shards.th.kind')}</th><th>{t('shards.th.keyspace')}</th><th>{t('shards.th.distKey')}</th><th /></tr></thead>
 								<tbody>
-									{tables.map((t) => (
-										<tr key={t.table}>
-											<td className="mono">{t.table}</td><td>{TABLE_KIND[t.kind] ?? t.kind}</td><td>{t.keyspace ?? '-'}</td><td className="mono">{t.column ?? '-'}</td>
+									{tables.map((row) => (
+										<tr key={row.table}>
+											<td className="mono">{row.table}</td><td>{tableKindLabel(row.kind)}</td><td>{row.keyspace ?? '-'}</td><td className="mono">{row.column ?? '-'}</td>
 											<td className="cloud-table-action">
-												{t.kind !== 'global' && <button type="button" className="table-action" onClick={() => setCurrent(review('global', { table: t.table }, { verb: "Bring home" }))}>Bring home</button>}
+												{row.kind !== 'global' && <button type="button" className="table-action" onClick={() => setCurrent(review('global', { table: row.table }, { verb: t('shards.bringHome') }))}>{t('shards.bringHome')}</button>}
 											</td>
 										</tr>
 									))}
@@ -363,49 +377,49 @@ export function ShardsSection({ projectRef }: { projectRef: string }): JSX.Eleme
 						)}
 						<div className="cloud-actions">
 							<button type="button" onClick={() => setCurrent(review('spread', {}, {
-								verb: "Spread",
-								reason: "In one go: a keyspace for the column (shared with tables keyed the same way), the table distributed by it, then its ranges spread over the nodes.",
+								verb: t('shards.spread'),
+								reason: t('shards.spreadReason'),
 								fields: [
-									{ name: 'table', label: "Table", kind: 'text', placeholder: 'public.orders' },
-									{ name: 'column', label: "Spread by column", kind: 'text', placeholder: 'account_id', hint: "A primary key or unique constraint must include it." },
-									{ name: 'key_type', label: "Its type", kind: 'text', placeholder: 'bigint', hint: "bigint, int, text, uuid, and the other types the router hashes." },
+									{ name: 'table', label: t('shards.th.table'), kind: 'text', placeholder: 'public.orders' },
+									{ name: 'column', label: t('shards.fields.spreadByColumn'), kind: 'text', placeholder: 'account_id', hint: t('shards.fields.keyHint') },
+									{ name: 'key_type', label: t('shards.fields.itsType'), kind: 'text', placeholder: 'bigint', hint: t('shards.fields.typeHint') },
 								],
-							}))}>Spread a table</button>
-							<button type="button" className="secondary" disabled={keyspaces.length === 0} title={keyspaces.length === 0 ? "Create a keyspace first" : undefined} onClick={() => setCurrent(review('distribute', {}, {
+							}))}>{t('shards.spreadTable')}</button>
+							<button type="button" className="secondary" disabled={keyspaces.length === 0} title={keyspaces.length === 0 ? t('shards.createKeyspaceFirst') : undefined} onClick={() => setCurrent(review('distribute', {}, {
 								fields: [
-									{ name: 'table', label: "Table", kind: 'text', placeholder: 'public.orders' },
-									{ name: 'column', label: "Distribution key column", kind: 'text', placeholder: 'account_id', hint: "A primary key or unique constraint must include it." },
-									{ name: 'keyspace', label: "Keyspace", kind: 'keyspace' },
+									{ name: 'table', label: t('shards.th.table'), kind: 'text', placeholder: 'public.orders' },
+									{ name: 'column', label: t('shards.fields.distKeyColumn'), kind: 'text', placeholder: 'account_id', hint: t('shards.fields.keyHint') },
+									{ name: 'keyspace', label: t('shards.th.keyspace'), kind: 'keyspace' },
 								],
-							}))}>Distribute a table</button>
-							<button type="button" className="secondary" onClick={() => setCurrent(review('reference', {}, { verb: "Copy", fields: [{ name: 'table', label: "Table", kind: 'text', placeholder: 'public.countries' }] }))}>Copy to every cluster node</button>
+							}))}>{t('shards.distributeTable')}</button>
+							<button type="button" className="secondary" onClick={() => setCurrent(review('reference', {}, { verb: t('shards.copy'), fields: [{ name: 'table', label: t('shards.th.table'), kind: 'text', placeholder: 'public.countries' }] }))}>{t('shards.copyEveryNode')}</button>
 							<button type="button" className="secondary" onClick={() => setCurrent(review('keyspace', {}, {
 								fields: [
-									{ name: 'name', label: "Name", kind: 'text', placeholder: 'accounts' },
-									{ name: 'key_type', label: "Distribution key type", kind: 'text', placeholder: 'bigint', hint: "bigint, int, text, uuid, and the other types the router hashes." },
-									{ name: 'ranges', label: "Ranges to start with", kind: 'number', optional: true, placeholder: '1' },
+									{ name: 'name', label: t('shards.fields.name'), kind: 'text', placeholder: 'accounts' },
+									{ name: 'key_type', label: t('shards.fields.distKeyType'), kind: 'text', placeholder: 'bigint', hint: t('shards.fields.typeHint') },
+									{ name: 'ranges', label: t('shards.fields.rangesStart'), kind: 'number', optional: true, placeholder: '1' },
 								],
-							}))}>Create a keyspace</button>
+							}))}>{t('shards.createKeyspace')}</button>
 						</div>
 					</fieldset>
 
 					<JobsGroup projectRef={projectRef} jobs={jobs} onChanged={finished} onError={(e) => setMessage(said(e))} />
 
 					<fieldset>
-						<legend>Design check</legend>
-						<p className="field-hint">Every row lives on the node its distribution key points to. Foreign keys, unique keys and joins work on one node only when they include that key, so this reads the tables, foreign keys and indexes and says what to change.</p>
-						{!check && !checkError && <div className="field-hint">Checking the design…</div>}
+						<legend>{t('shards.legends.check')}</legend>
+						<p className="field-hint">{t('shards.checkIntro')}</p>
+						{!check && !checkError && <div className="field-hint">{t('shards.checking')}</div>}
 						{checkError && <div className="form-status warn">{checkError}</div>}
 						{check && <p className="field-hint">{checkSentence(check)}</p>}
 						{check && <Findings findings={check.findings} onReview={(action, request, reason) => setCurrent(review(action, request, { reason }))} />}
 						<div className="cloud-actions">
-							<button type="button" className="secondary" onClick={() => void askCheck()}>Check again</button>
+							<button type="button" className="secondary" onClick={() => void askCheck()}>{t('shards.checkAgain')}</button>
 						</div>
 					</fieldset>
 
 					<fieldset>
-						<legend>Recommendations</legend>
-						{!advice && <div className="field-hint">Asking the advisor…</div>}
+						<legend>{t('shards.legends.recommendations')}</legend>
+						{!advice && <div className="field-hint">{t('shards.askingAdvisor')}</div>}
 						{advice && <p className="field-hint">{advice.summary}</p>}
 						{advice?.advice.map((one, i) => {
 							const proposal = one.needs.length === 0 ? proposalFromRequest(one.request, one.reason) : null;
@@ -415,28 +429,28 @@ export function ShardsSection({ projectRef }: { projectRef: string }): JSX.Eleme
 										<strong>{one.op}</strong>
 										<span className="env">{one.metric}</span>
 										<span className="spacer" />
-										{proposal && <button type="button" className="table-action" onClick={() => setCurrent(review(proposal.action, proposal.request, { reason: one.reason }))}>Review</button>}
+										{proposal && <button type="button" className="table-action" onClick={() => setCurrent(review(proposal.action, proposal.request, { reason: one.reason }))}>{t('shards.review')}</button>}
 									</div>
 									<p className="field-hint">{one.reason}</p>
-									{one.plan && <p className="field-hint">{planSentence(one.plan)}</p>}
-									{one.needs.length > 0 && <p className="field-hint">Needs {one.needs.join(', ')} before it can be planned.</p>}
+									{one.plan && <p className="field-hint">{planWords(one.plan)}</p>}
+									{one.needs.length > 0 && <p className="field-hint">{t('shards.advisorNeeds', { list: one.needs.join(', ') })}</p>}
 								</div>
 							);
 						})}
 						<div className="cloud-actions">
-							<button type="button" className="secondary" onClick={() => void askAdvisor()}>Measure write rates</button>
+							<button type="button" className="secondary" onClick={() => void askAdvisor()}>{t('shards.measureWrites')}</button>
 						</div>
 					</fieldset>
 
 					<fieldset>
-						<legend>Turn clustering off</legend>
+						<legend>{t('shards.legends.disable')}</legend>
 						<p className="field-hint">
 							{nodeCount > 1
-								? `Scale down to one cluster node first (this cluster has ${nodeCount}), so every row is on the home node.`
-								: "Every row is on the home node, so turning it off moves nothing. The data is checked first, then the router leaves, which restarts the database once."}
+								? t('shards.scaleDownFirst', { nodes: nodeCount })
+								: t('shards.disableBody')}
 						</p>
 						<div className="cloud-actions">
-							<button type="button" className="danger" disabled={nodeCount > 1} onClick={() => setCurrent(review('disable', {}, { verb: "Turn it off", danger: true }))}>Turn clustering off</button>
+							<button type="button" className="danger" disabled={nodeCount > 1} onClick={() => setCurrent(review('disable', {}, { verb: t('shards.turnItOff'), danger: true }))}>{t('shards.legends.disable')}</button>
 						</div>
 					</fieldset>
 				</>
@@ -447,6 +461,7 @@ export function ShardsSection({ projectRef }: { projectRef: string }): JSX.Eleme
 
 /** Design check findings: severity, table, what it is, the fix, the SQL, and Review when a request does it. */
 function Findings(props: { findings: CheckFinding[]; onReview?(action: ShardsRunAction, request: Record<string, unknown>, reason: string): void }): JSX.Element {
+	const t = useT();
 	return (
 		<>
 			{props.findings.map((f, i) => {
@@ -457,7 +472,7 @@ function Findings(props: { findings: CheckFinding[]; onReview?(action: ShardsRun
 							<strong>{f.table}</strong>
 							<span className={`env ${f.severity === 'info' ? '' : f.severity}`}>{severityWord(f.severity)}</span>
 							<span className="spacer" />
-							{proposal && <button type="button" className="table-action" onClick={() => props.onReview?.(proposal.action, proposal.request, f.message)}>Review</button>}
+							{proposal && <button type="button" className="table-action" onClick={() => props.onReview?.(proposal.action, proposal.request, f.message)}>{t('shards.review')}</button>}
 						</div>
 						<p className="field-hint">{f.message}</p>
 						<p className="field-hint">{f.fix}</p>
@@ -474,6 +489,7 @@ function Findings(props: { findings: CheckFinding[]; onReview?(action: ShardsRun
  * then those resolved in the last day, folded away. Seeing one changes nothing in the cluster.
  */
 function AlertsGroup(props: { projectRef: string; alerts: ShardAlert[] | undefined; onDone(text: string): void; onError(e: unknown): void }): JSX.Element | null {
+	const t = useT();
 	const [busy, setBusy] = useState<string | null>(null);
 	const { open, resolved } = splitAlerts(props.alerts);
 	if (open.length === 0 && resolved.length === 0) {
@@ -491,23 +507,23 @@ function AlertsGroup(props: { projectRef: string; alerts: ShardAlert[] | undefin
 	}
 	return (
 		<fieldset>
-			<legend>Alerts</legend>
-			{open.length === 0 && <p className="field-hint">Nothing needs you right now.</p>}
+			<legend>{t('shards.legends.alerts')}</legend>
+			{open.length === 0 && <p className="field-hint">{t('shards.noAlerts')}</p>}
 			{open.map((alert) => (
 				<div key={alert.id} className={`shards-alert ${alert.severity}`} role={alert.severity === 'critical' ? 'alert' : undefined}>
 					<Icon name={alert.severity === 'critical' ? 'error' : alert.severity === 'warning' ? 'warning' : 'info'} />
 					<div className="shards-alert-body">
 						<div>{alert.message}</div>
-						<div className="muted small">Since {whenWords(alert.openedAt)}{alert.acknowledged ? ". Seen" : ''}</div>
+						<div className="muted small">{t('shards.since', { when: whenWords(alert.openedAt) })}{alert.acknowledged ? t('shards.seen') : ''}</div>
 					</div>
 					{!alert.acknowledged && (
-						<button type="button" className="table-action" disabled={busy !== null} onClick={() => void seen(alert)}>{busy === alert.id ? "Marking…" : "Mark as seen"}</button>
+						<button type="button" className="table-action" disabled={busy !== null} onClick={() => void seen(alert)}>{busy === alert.id ? t('shards.marking') : t('shards.markSeen')}</button>
 					)}
 				</div>
 			))}
 			{resolved.length > 0 && (
 				<details className="shards-alerts-resolved">
-					<summary>Resolved in the last day ({resolved.length})</summary>
+					<summary>{t('shards.resolvedDay', { n: resolved.length })}</summary>
 					{resolved.map((alert) => (
 						<div key={alert.id} className="shards-alert resolved">
 							<Icon name="check" />
@@ -530,17 +546,18 @@ function whenWords(at: string): string {
 		return at;
 	}
 	const sameDay = date.toDateString() === new Date().toDateString();
-	return sameDay ? date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : date.toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+	return sameDay ? date.toLocaleTimeString(formatLocale(), { hour: '2-digit', minute: '2-digit' }) : date.toLocaleString(formatLocale(), { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
 }
 
 /** A replica's row, under the node it follows. It is never in the catalog and owns no ranges. */
 function ReplicaRow(props: { pod: ShardPod; of: string; columns: number }): JSX.Element {
+	const t = useT();
 	return (
 		<tr className="shards-replica-row">
 			<td colSpan={props.columns - 1}>
 				<Icon name="mirror" />
 				<span className="mono">{props.pod.ref}</span>
-				<span className="muted small">Replica of node <span className="mono">{props.of}</span>{props.pod.state === 'ready' ? ", following it" : `, ${props.pod.state}`}</span>
+				<span className="muted small">{t('shards.replicaOfNode')} <span className="mono">{props.of}</span>{props.pod.state === 'ready' ? t('shards.followingIt') : `, ${props.pod.state}`}</span>
 			</td>
 			<td />
 		</tr>
@@ -549,6 +566,7 @@ function ReplicaRow(props: { pod: ShardPod; of: string; columns: number }): JSX.
 
 /** A node failing over to its replica: the steps as they happen, or where it stopped. */
 function FailoverRow(props: { pod: ShardPod }): JSX.Element {
+	const t = useT();
 	const { pod } = props;
 	const at = failoverStep(pod);
 	const failed = pod.failover === 'failed' || pod.failover === 'held';
@@ -558,14 +576,14 @@ function FailoverRow(props: { pod: ShardPod }): JSX.Element {
 				<span className="mono">{pod.ref}</span>
 				<span className={failed ? 'form-status error' : 'muted small'}>
 					{pod.failover === 'held'
-						? "Stopped, not replaced: its replica was behind and its last writes could not be copied to it, so nothing was given up. See Alerts."
+						? t('shards.failoverHeld')
 						: failed
-						? `Its replica could not take its place: ${pod.failoverError ?? "see Alerts"}`
-						: "This node was lost or damaged. Its replica is taking its place on its own, and queries that need its data may fail for a moment."}
+						? t('shards.failoverFailed', { error: pod.failoverError ?? t('shards.seeAlerts') })
+						: t('shards.failoverRunning')}
 				</span>
 			</div>
 			<ol className="shards-join-steps">
-				{FAILOVER_STEPS.map((label, i) => (
+				{failoverSteps().map((label, i) => (
 					<li key={label} className={i < at ? 'done' : i === at ? (failed ? 'failed' : 'active') : 'waiting'}>{label}</li>
 				))}
 			</ol>
@@ -587,8 +605,8 @@ function KeyspaceGroup(props: {
 	const owners = [...new Set(keyspace.ranges.map((r) => r.node))];
 	return (
 		<fieldset>
-			<legend>Keyspace {keyspace.name} ({keyspace.key_type})</legend>
-			<div className="shards-bar" role="img" aria-label={`${keyspace.ranges.length} ranges over ${owners.length} cluster nodes`}>
+			<legend>{t('shards.keyspaceLegend', { name: keyspace.name, type: keyspace.key_type })}</legend>
+			<div className="shards-bar" role="img" aria-label={t('shards.rangesOver', { ranges: keyspace.ranges.length, nodes: owners.length })}>
 				{shares.map(({ range, percent }) => (
 					<span
 						key={range.lo}
@@ -603,7 +621,7 @@ function KeyspaceGroup(props: {
 				))}
 			</div>
 			<table className="cloud-table">
-				<thead><tr><th>Range</th><th>Up to</th><th>Cluster node</th><th>Rows</th><th /></tr></thead>
+				<thead><tr><th>{t('shards.th.range')}</th><th>{t('shards.th.upTo')}</th><th>{t('shards.th.node')}</th><th>{t('shards.th.rows')}</th><th /></tr></thead>
 				<tbody>
 					{shares.map(({ range }) => {
 						const facts = props.advice?.facts.ranges.find((f) => f.keyspace === keyspace.name && f.lo === range.lo);
@@ -613,17 +631,17 @@ function KeyspaceGroup(props: {
 								<td className="mono" title={`${keyspace.name}:${range.lo}`}>{shortBound(range.lo)}</td>
 								<td className="mono" title={range.hi}>{shortBound(range.hi)}</td>
 								<td>{nodeName(range.node)}</td>
-								<td>{facts ? facts.rows.toLocaleString() : '-'}</td>
+								<td>{facts ? facts.rows.toLocaleString(formatLocale()) : '-'}</td>
 								<td className="cloud-table-action">
 									<span className="shards-row-actions">
 										<button type="button" className="table-action" onClick={() => propose(review('split', { keyspace: keyspace.name, range: range.lo }, {
 											fields: [
-												{ name: 'at', label: "Split at", kind: 'text', optional: true, hint: "A hash value inside the range. Empty: the middle." },
-												{ name: 'to', label: "Move one half to", kind: 'node', optional: true },
+												{ name: 'at', label: t('shards.splitAt'), kind: 'text', optional: true, hint: t('shards.splitHint') },
+												{ name: 'to', label: t('shards.moveHalfTo'), kind: 'node', optional: true },
 											],
-										}))}>Split</button>
-										<button type="button" className="table-action" onClick={() => propose(review('move', { keyspace: keyspace.name, range: range.lo }, { fields: [{ name: 'to', label: "To cluster node", kind: 'node' }] }))}>Move</button>
-										{next && <button type="button" className="table-action" onClick={() => propose(review('merge', { keyspace: keyspace.name, a: range.lo, b: next.lo }))}>Merge</button>}
+										}))}>{t('shards.split')}</button>
+										<button type="button" className="table-action" onClick={() => propose(review('move', { keyspace: keyspace.name, range: range.lo }, { fields: [{ name: 'to', label: t('shards.toNode'), kind: 'node' }] }))}>{t('shards.move')}</button>
+										{next && <button type="button" className="table-action" onClick={() => propose(review('merge', { keyspace: keyspace.name, a: range.lo, b: next.lo }))}>{t('shards.merge')}</button>}
 									</span>
 								</td>
 							</tr>
@@ -631,17 +649,17 @@ function KeyspaceGroup(props: {
 					})}
 				</tbody>
 			</table>
-			{keyspace.pins.length > 0 && <p className="field-hint">Pinned: {keyspace.pins.map((p) => `${p.value} on ${nodeName(p.node)}`).join(', ')}</p>}
+			{keyspace.pins.length > 0 && <p className="field-hint">{t('shards.pinned', { list: keyspace.pins.map((p) => t('shards.pinItem', { value: String(p.value), node: nodeName(p.node) })).join(', ') })}</p>}
 			<div className="cloud-actions">
-				<button type="button" className="secondary" onClick={() => propose(review('rebalance', { keyspace: keyspace.name }))}>Rebalance</button>
-				<button type="button" className="secondary" disabled={props.usedBy > 0} title={props.usedBy > 0 ? "A table is distributed by it. Bring it home first." : undefined} onClick={() => propose(review('drop-keyspace', { name: keyspace.name }, { verb: "Drop" }))}>Drop</button>
-				<button type="button" className="secondary" onClick={() => propose(review('verify', { keyspace: keyspace.name }))}>Verify</button>
+				<button type="button" className="secondary" onClick={() => propose(review('rebalance', { keyspace: keyspace.name }))}>{t('shards.rebalance')}</button>
+				<button type="button" className="secondary" disabled={props.usedBy > 0} title={props.usedBy > 0 ? t('shards.dropBlocked') : undefined} onClick={() => propose(review('drop-keyspace', { name: keyspace.name }, { verb: t('shards.drop') }))}>{t('shards.drop')}</button>
+				<button type="button" className="secondary" onClick={() => propose(review('verify', { keyspace: keyspace.name }))}>{t('shards.verify')}</button>
 				<button type="button" className="secondary" onClick={() => propose(review('pin', { keyspace: keyspace.name }, {
 					fields: [
-						{ name: 'value', label: "Key value", kind: 'text', placeholder: '42' },
-						{ name: 'node', label: "Cluster node", kind: 'node', optional: true },
+						{ name: 'value', label: t('shards.keyValue'), kind: 'text', placeholder: '42' },
+						{ name: 'node', label: t('shards.th.node'), kind: 'node', optional: true },
 					],
-				}))}>Pin a tenant</button>
+				}))}>{t('shards.pinTenant')}</button>
 			</div>
 		</fieldset>
 	);
@@ -649,22 +667,23 @@ function KeyspaceGroup(props: {
 
 /** A node pod on its way in or out: its join's steps as they happen, or the one thing a person can do. */
 function PodRow(props: { pod: ShardPod; projectRef: string; onAttach(): void; onDone(text: string): void; onError(e: unknown): void }): JSX.Element {
+	const t = useT();
 	const { pod } = props;
 	if (pod.joining) {
-		const steps = ["Starting as a copy of the home node", "Joining the cluster", "Taking its share of the data"];
+		const steps = [t('shards.joinSteps.copy'), t('shards.joinSteps.join'), t('shards.joinSteps.share')];
 		const at = pod.joining === 'copying' ? 0 : pod.joining === 'joining' ? 1 : pod.joining === 'spreading' ? 2 : pod.state === 'ready' ? 1 : 0;
 		return (
 			<div className="shards-join">
 				<div className="cloud-actions">
 					<span className="mono">{pod.ref}</span>
-					<span className="muted small">{pod.joining === 'failed' ? `Stopped: ${pod.joinError ?? 'see the audit log'}` : `Joining on its own: ${joinWords(pod.joining)}.`}</span>
+					<span className="muted small">{pod.joining === 'failed' ? t('shards.joinStopped', { error: pod.joinError ?? t('shards.seeAuditLog') }) : t('shards.joiningOwn', { phase: joinWords(pod.joining) })}</span>
 				</div>
 				<ol className="shards-join-steps">
 					{steps.map((label, i) => (
 						<li key={label} className={i < at ? 'done' : i === at ? (pod.joining === 'failed' ? 'failed' : 'active') : 'waiting'}>{label}</li>
 					))}
 				</ol>
-				{pod.joining === 'failed' && <RetryButtons projectRef={props.projectRef} body={{ node: pod.ref }} dismiss="Leave it" onDone={props.onDone} onError={props.onError} />}
+				{pod.joining === 'failed' && <RetryButtons projectRef={props.projectRef} body={{ node: pod.ref }} dismiss={t('shards.leaveIt')} onDone={props.onDone} onError={props.onError} />}
 			</div>
 		);
 	}
@@ -672,18 +691,19 @@ function PodRow(props: { pod: ShardPod; projectRef: string; onAttach(): void; on
 		<div className="cloud-actions">
 			<span className="mono">{pod.ref}</span>
 			<span className="muted small">
-				{pod.next === 'attach' && "Ready, joining by hand: attach it to give the cluster a node to move a range onto."}
-				{pod.next === 'delete-pod' && "Let go by the cluster; its pod is being deleted."}
-				{pod.next === 'wait' && `Starting as a copy of the home node (${pod.state}).`}
+				{pod.next === 'attach' && t('shards.attachHint')}
+				{pod.next === 'delete-pod' && t('shards.letGo')}
+				{pod.next === 'wait' && t('shards.copyWait', { state: pod.state })}
 			</span>
 			<span className="spacer" />
-			{pod.next === 'attach' && <button type="button" className="table-action" onClick={props.onAttach}>Attach</button>}
+			{pod.next === 'attach' && <button type="button" className="table-action" onClick={props.onAttach}>{t('shards.attach')}</button>}
 		</div>
 	);
 }
 
 /** Retry a stopped step, or let it go. */
 function RetryButtons(props: { projectRef: string; body: Record<string, unknown>; dismiss: string; onDone(text: string): void; onError(e: unknown): void }): JSX.Element {
+	const t = useT();
 	const [busy, setBusy] = useState(false);
 	async function act(action: 'retry' | 'dismiss'): Promise<void> {
 		setBusy(true);
@@ -697,13 +717,14 @@ function RetryButtons(props: { projectRef: string; body: Record<string, unknown>
 	}
 	return (
 		<span className="shards-row-actions">
-			<button type="button" className="table-action" disabled={busy} onClick={() => void act('retry')}>Retry</button>
+			<button type="button" className="table-action" disabled={busy} onClick={() => void act('retry')}>{t('shards.retry')}</button>
 			<button type="button" className="table-action" disabled={busy} onClick={() => void act('dismiss')}>{props.dismiss}</button>
 		</span>
 	);
 }
 
 function JobsGroup(props: { projectRef: string; jobs: ShardJob[] | null; onChanged(text: string): void; onError(e: unknown): void }): JSX.Element {
+	const t = useT();
 	const [busy, setBusy] = useState(false);
 	async function act(job: ShardJob, action: 'cancel' | 'resume'): Promise<void> {
 		setBusy(true);
@@ -718,12 +739,12 @@ function JobsGroup(props: { projectRef: string; jobs: ShardJob[] | null; onChang
 	}
 	return (
 		<fieldset>
-			<legend>Jobs</legend>
-			{props.jobs === null && <div className="field-hint">Loading…</div>}
-			{props.jobs?.length === 0 && <p className="field-hint">No operations have run on this cluster yet.</p>}
+			<legend>{t('shards.legends.jobs')}</legend>
+			{props.jobs === null && <div className="field-hint">{t('shards.loading')}</div>}
+			{props.jobs?.length === 0 && <p className="field-hint">{t('shards.noJobs')}</p>}
 			{props.jobs && props.jobs.length > 0 && (
 				<table className="cloud-table">
-					<thead><tr><th>Job</th><th>Operation</th><th>Progress</th><th /></tr></thead>
+					<thead><tr><th>{t('shards.th.job')}</th><th>{t('shards.th.operation')}</th><th>{t('shards.th.progress')}</th><th /></tr></thead>
 					<tbody>
 						{props.jobs.map((job) => {
 							const percent = job.state === 'done' ? 100 : job.steps > 0 ? Math.round((job.steps_done / job.steps) * 100) : 0;
@@ -736,8 +757,8 @@ function JobsGroup(props: { projectRef: string; jobs: ShardJob[] | null; onChang
 										<div className="shards-meter" role="progressbar" aria-valuenow={percent} aria-valuemin={0} aria-valuemax={100}><span style={{ width: `${percent}%` }} /></div>
 									</td>
 									<td className="cloud-table-action">
-										{!jobFinished(job.state) && job.state !== 'cancelling' && <button type="button" className="table-action" disabled={busy} onClick={() => void act(job, 'cancel')}>Cancel</button>}
-										{job.state === 'failed' && <button type="button" className="table-action" disabled={busy} onClick={() => void act(job, 'resume')}>Resume</button>}
+										{!jobFinished(job.state) && job.state !== 'cancelling' && <button type="button" className="table-action" disabled={busy} onClick={() => void act(job, 'cancel')}>{t('shards.cancel')}</button>}
+										{job.state === 'failed' && <button type="button" className="table-action" disabled={busy} onClick={() => void act(job, 'resume')}>{t('shards.resume')}</button>}
 									</td>
 								</tr>
 							);
@@ -754,6 +775,7 @@ function JobsGroup(props: { projectRef: string; jobs: ShardJob[] | null; onChang
  * is sent until Run is pressed.
  */
 function ReviewSheet(props: { projectRef: string; review: Review; status: ShardsStatus; onCancel(): void; onDone(text: string): void }): JSX.Element {
+	const t = useT();
 	const { review: current } = props;
 	const fields = current.fields ?? [];
 	const [values, setValues] = useState<Record<string, string>>({});
@@ -809,7 +831,7 @@ function ReviewSheet(props: { projectRef: string; review: Review; status: Shards
 					{field.label}{field.optional ? " (optional)" : ''}
 					{field.kind === 'node' || field.kind === 'keyspace' ? (
 						<select value={values[field.name] ?? ''} onChange={(e) => setValues((v) => ({ ...v, [field.name]: e.target.value }))}>
-							<option value="">{field.kind === 'node' ? (field.optional ? "Let the router choose" : "Choose a node") : "Choose a keyspace"}</option>
+							<option value="">{field.kind === 'node' ? (field.optional ? t('shards.letRouterChoose') : t('shards.chooseNode')) : t('shards.chooseKeyspace')}</option>
 							{field.kind === 'node'
 								? nodes.map((n) => <option key={n.id} value={n.name}>{n.name}</option>)
 								: keyspaces.map((k) => <option key={k.name} value={k.name}>{k.name} ({k.key_type})</option>)}
@@ -826,22 +848,22 @@ function ReviewSheet(props: { projectRef: string; review: Review; status: Shards
 					{field.hint && <p className="field-hint">{field.hint}</p>}
 				</label>
 			))}
-			{busy && !plan && <div className="field-hint">Planning…</div>}
+			{busy && !plan && <div className="field-hint">{t('shards.planning')}</div>}
 			{plan && planIsSentence(plan) && <p className="field-hint">{plan.assumptions}</p>}
 			{plan && !planIsSentence(plan) && (
 				<>
 					<div className="cloud-facts">
-						<span className="muted">Steps</span><span>{plan.steps.map((s) => s.kind).join(', ') || "none"}</span>
-						<span className="muted">Cutovers</span><span>{plan.cutovers}</span>
-						<span className="muted">Rows to copy</span><span>about {plan.estimated_rows.toLocaleString()} ({formatBytes(plan.estimated_bytes)})</span>
-						<span className="muted">Writes pause for</span><span>about {plan.expected_pause_ms} ms{plan.max_write_pause_ms > 0 ? `, never more than ${plan.max_write_pause_ms} ms` : ''}</span>
+						<span className="muted">{t('shards.plan.steps')}</span><span>{plan.steps.map((s) => s.kind).join(', ') || t('shards.none')}</span>
+						<span className="muted">{t('shards.plan.cutovers')}</span><span>{plan.cutovers}</span>
+						<span className="muted">{t('shards.plan.rowsToCopy')}</span><span>{t('shards.plan.aboutRows', { rows: plan.estimated_rows, bytes: formatBytes(plan.estimated_bytes) })}</span>
+						<span className="muted">{t('shards.plan.writesPause')}</span><span>{t('shards.plan.pauseAbout', { ms: plan.expected_pause_ms })}{plan.max_write_pause_ms > 0 ? t('shards.plan.pauseNever', { ms: plan.max_write_pause_ms }) : ''}</span>
 					</div>
-					<p className="field-hint">{planSentence(plan)}</p>
+					<p className="field-hint">{planWords(plan)}</p>
 					{plan.warnings.map((w, i) => <div key={i} className="form-status warn">{w}</div>)}
-					{plan.check?.error && <p className="field-hint">The design check could not read the tables: {plan.check.error}</p>}
+					{plan.check?.error && <p className="field-hint">{t('shards.checkReadFailed', { error: plan.check.error })}</p>}
 					{plan.check && !plan.check.error && plan.check.findings.length > 0 && (
 						<>
-							<p className="field-hint"><strong>Design check.</strong> {checkSentence(plan.check)}</p>
+							<p className="field-hint"><strong>{t('shards.designCheckDot')}</strong> {checkSentence(plan.check)}</p>
 							<Findings findings={plan.check.findings} />
 						</>
 					)}
@@ -851,10 +873,10 @@ function ReviewSheet(props: { projectRef: string; review: Review; status: Shards
 			<Status said={error} />
 			<div className="cloud-actions">
 				{!plan
-					? <button type="button" disabled={busy || missing} onClick={() => void send(false)}>Show the plan</button>
-					: <button type="button" className={current.danger ? 'danger' : undefined} disabled={busy} onClick={() => void send(true)}>{busy ? "Working…" : current.verb}</button>}
-				{plan && fields.length > 0 && <button type="button" className="secondary" disabled={busy} onClick={() => setPlan(null)}>Back</button>}
-				<button type="button" className="secondary" disabled={busy} onClick={props.onCancel}>Cancel</button>
+					? <button type="button" disabled={busy || missing} onClick={() => void send(false)}>{t('shards.showPlan')}</button>
+					: <button type="button" className={current.danger ? 'danger' : undefined} disabled={busy} onClick={() => void send(true)}>{busy ? t('shards.working') : current.verb}</button>}
+				{plan && fields.length > 0 && <button type="button" className="secondary" disabled={busy} onClick={() => setPlan(null)}>{t('shards.back')}</button>}
+				<button type="button" className="secondary" disabled={busy} onClick={props.onCancel}>{t('shards.cancel')}</button>
 			</div>
 		</fieldset>
 	);

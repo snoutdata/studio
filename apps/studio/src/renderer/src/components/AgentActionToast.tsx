@@ -6,6 +6,7 @@
 import { useEffect, useState } from 'react';
 
 import { Icon } from './Icon';
+import { useT } from '../i18n';
 import type { AgentActionRequest, AgentApproval } from '../../../shared/agentConsole';
 
 /*
@@ -29,6 +30,7 @@ interface AgentActionToastProps {
 }
 
 export function AgentActionToast({ request, onAnswer }: AgentActionToastProps): JSX.Element {
+	const t = useT();
 	const [remaining, setRemaining] = useState(Math.ceil(request.timeoutMs / 1000));
 
 	// Count down in the card. Main is the authority on the deadline (it declines on its own timer);
@@ -43,9 +45,9 @@ export function AgentActionToast({ request, onAnswer }: AgentActionToastProps): 
 		<div className="agent-action-toast" role="alertdialog" aria-live="assertive">
 			<div className="agent-action-head">
 				<Icon name="shield" />
-				<strong>{request.client} wants to change the app</strong>
+				<strong>{t('agents.action.title', { client: request.client })}</strong>
 				<span className="spacer" />
-				<span className="agent-action-clock" title="Declined automatically if you do not answer">{remaining}s</span>
+				<span className="agent-action-clock" title={t('agents.action.clockTitle')}>{t('agents.action.seconds', { n: String(remaining) })}</span>
 			</div>
 			<p className="agent-action-what">{request.description}</p>
 			{/* The action as a person says it, which is also how Settings' allowed-actions list names
@@ -63,23 +65,22 @@ export function AgentActionToast({ request, onAnswer }: AgentActionToastProps): 
 			    switch is in Settings either way, and a no stops the asking. */}
 			{request.turnsOnAppChanges && (
 				<p className="agent-action-scope">
-					<Icon name="info" /> Letting an agent change the app is switched off. Allowing this turns it on,
-					and each action still asks you. Settings, Agent access has the switch, and saying no here stops the asking.
+					<Icon name="info" /> {t('agents.action.turnsOn')}
 				</p>
 			)}
 			<div className="agent-action-actions">
-				<button className="primary" onClick={() => onAnswer('once')}><Icon name="check" /> Allow once</button>
+				<button className="primary" onClick={() => onAnswer('once')}><Icon name="check" /> {t('agents.action.allowOnce')}</button>
 				{request.allowAlways && (
 					<button
 						className="secondary agent-action-always"
-						title={`Stop asking before "${request.title}". You can take this back in Settings, Agent access.`}
+						title={t('agents.action.alwaysTitle', { title: request.title })}
 						onClick={() => onAnswer('always')}
 					>
-						<Icon name="check-all" /> Always allow this
+						<Icon name="check-all" /> {t('agents.action.always')}
 					</button>
 				)}
 				<span className="spacer" />
-				<button className="secondary agent-action-decline" onClick={() => onAnswer('decline')}><Icon name="circle-slash" /> Decline</button>
+				<button className="secondary agent-action-decline" onClick={() => onAnswer('decline')}><Icon name="circle-slash" /> {t('agents.action.decline')}</button>
 			</div>
 		</div>
 	);

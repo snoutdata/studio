@@ -1,0 +1,76 @@
+{
+	"ago": {
+		"days": "il y a {days} j",
+		"today": "aujourd'hui",
+		"yesterday": "hier"
+	},
+	"errors": {
+		"hosted": "Impossible de lire vos bases de données hébergées : {error}",
+		"local": "Impossible de lire vos projets locaux : {error}"
+	},
+	"list": {
+		"cold": "à froid : le prochain démarrage le restaure, ce qui prend plus de temps",
+		"coldHint": "Ses données sont dans le bucket plutôt que sur un hôte",
+		"collapse": "Réduire",
+		"copyToCloud": "Copier ce projet vers SnoutData Cloud",
+		"copyToLocal": "Copier ce projet sur cet ordinateur",
+		"dockerHint": "Exécuter toute la pile SnoutData dans Docker sur cet ordinateur",
+		"emptyHint": "Vos projets vivent ici : exécutez-en un dans Docker sur cet ordinateur ou dans SnoutData Cloud.",
+		"lastConnected": "dernière connexion : {when}",
+		"newCloud": "Nouveau projet cloud",
+		"newProject": "Nouveau projet",
+		"overLimit": "Au-delà de la limite de stockage de son offre, la base de données refuse donc les écritures",
+		"readOnly": "lecture seule",
+		"setUpLocal": "Configurer un projet local",
+		"signedIn": "Connecté en tant que {account}.",
+		"silent": "le serveur ne répond pas",
+		"silentHint": "Son serveur ne répond pas",
+		"silentLong": "son serveur ne répond pas",
+		"starting": "Démarrage…",
+		"stopping": "Arrêt…",
+		"title": "TABLEAU DE BORD"
+	},
+	"menu": {
+		"show": "Afficher dans Connexions"
+	},
+	"new": {
+		"added": "Il est ajouté à vos connexions dès sa création.",
+		"cloud": "Dans SnoutData Cloud",
+		"creating": "Création…",
+		"local": "Local, dans Docker sur cet ordinateur",
+		"placeholder": "commandes, staging, mon projet perso",
+		"prodHint": "Un projet de production n'est jamais mis en pause, ni à votre demande ni par la politique d'inactivité. Plus, Pro et Business uniquement.",
+		"signIn": "Connectez-vous pour créer un projet cloud"
+	},
+	"tile": {
+		"delete": "Supprimer le widget",
+		"every": "toutes les {seconds} s",
+		"loadingChart": "Chargement du graphique…",
+		"nextRefresh": "Secondes avant la prochaine actualisation",
+		"noConn": "Aucune connexion",
+		"noData": "Aucune donnée.",
+		"waiting": "En attente du premier échantillon…"
+	},
+	"viz": {
+		"area": "aire",
+		"bar": "barres",
+		"line": "ligne",
+		"number": "nombre",
+		"table": "table"
+	},
+	"widget": {
+		"add": "Ajouter un widget",
+		"chooseConn": "Choisir une connexion…",
+		"edit": "Modifier le widget",
+		"keep": "Conserver (minutes)",
+		"placeholder": "Profondeur de la nouvelle file",
+		"refresh": "Actualisation (secondes)",
+		"save": "Enregistrer le widget",
+		"snapshot": "Instantané (remplacé à chaque actualisation)",
+		"snapshotHint": "Renvoyez un jeu de résultats : la première colonne est l'axe des catégories, les autres sont tracées. Une nouvelle exécution remplace la vue.",
+		"title": "Titre",
+		"trend": "Tendance (échantillon dans le temps)",
+		"trendHint": "Renvoyez un nombre (métrique scalaire), ou deux colonnes (libellé, valeur) pour une métrique groupée. Chaque requête ajoute un point dans le temps.",
+		"viz": "Visualisation"
+	}
+}

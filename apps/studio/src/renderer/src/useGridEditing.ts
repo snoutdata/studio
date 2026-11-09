@@ -10,6 +10,7 @@ import { buildMongoWrites } from './mongoDml';
 import { backendKindForDriver, type MongoWrite } from '../../shared/engine';
 import type { QueryField } from '../../shared/query';
 import type { TableInfo } from '../../shared/schema';
+import { useT } from './i18n';
 
 // The inline edit/insert/delete state machine shared by the table-browser ("Data" tab) and
 // the editable query-results grid. Edits, deletes and inserts batch in memory until Save,
@@ -76,6 +77,7 @@ export function useGridEditing(
 	/** Edits clear whenever this changes (a new page/sort/dataset the row indices no longer fit). */
 	resetKey: unknown,
 ): GridEditing {
+	const t = useT();
 	const [edits, setEdits] = useState<Map<string, CellValue>>(new Map()); // "rowIndex:colIndex" → new value
 	const [deletes, setDeletes] = useState<Set<number>>(new Set());
 	const [inserts, setInserts] = useState<{ values: Map<number, CellValue>; after: number | null }[]>([]);
@@ -222,14 +224,14 @@ export function useGridEditing(
 		const updates: RowUpdate[] = [...byRow.entries()].map(([r, set]) => ({ original: rows[r], set }));
 		const deleteRows = [...deletes].map((r) => rows[r]);
 		const insertRows: RowInsert[] = inserts.filter((ins) => ins.values.size > 0);
-		const nothingToSave = 'Nothing to save. Fill in a new row or change a cell first.';
+		const nothingToSave = t('results.edit.nothingToSave');
 
 		if (backendKind === 'telemetry') {
 			// A cloud log service has no write path we expose and none is planned: an event that has
 			// been ingested cannot be edited or deleted through any of these APIs. Refused by name
 			// here rather than left to fall through, where `buildDml` would reject it for the wrong
 			// reason ("no primary key") and imply that a keyed log scope would be editable.
-			setSaveError('Log events cannot be edited: a cloud log service is read-only.');
+			setSaveError(t('results.edit.logEvents'));
 			return;
 		}
 		if (backendKind === 'document') {
@@ -285,7 +287,7 @@ export function useGridEditing(
 		}
 		if (!result.ok) {
 			setSaving(false);
-			setSaveError(result.error ?? 'Failed to save changes.');
+			setSaveError(result.error ?? t('results.edit.saveFailed'));
 			return;
 		}
 		setSaving(false);
@@ -301,7 +303,7 @@ export function useGridEditing(
 	// transactional or single-statement, so no note there).
 	const saveNote =
 		savePlan?.kind === 'mongo' && savePlan.writes.length > 1
-			? 'These changes are applied one at a time, not as a single transaction. If one fails, the earlier changes will already be saved.'
+			? t('results.edit.mongoNote')
 			: null;
 
 	return {

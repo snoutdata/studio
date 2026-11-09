@@ -15,6 +15,7 @@
 import { backendKindForDriver } from '../compile/native';
 import type { SecurityCatalog } from './catalog';
 import type { SecurityEmitter } from './emitter';
+import { t } from '../../i18n/core';
 import { policyKindLabel } from './emitter';
 import { containsSqlSecret } from './redact';
 import type { AccessPolicy, GrantScope, GrantTarget, PolicyKind, PolicyRef, PrincipalKind, PrincipalRef, SecurityChange, SecurityPlan, SecurityStatement } from './types';
@@ -46,14 +47,14 @@ const VENDORS: Record<string, VendorSupport> = {
  * arrive. The engines that DO have accounts and are not yet covered say exactly that instead.
  */
 const UNSUPPORTED: Record<string, { reason: string; hasAccounts: boolean }> = {
-	'sqlite': { reason: 'SQLite has no users or privileges. Access to the database is access to the file.', hasAccounts: false },
-	'duckdb': { reason: 'DuckDB has no users or privileges. Access to the database is access to the file.', hasAccounts: false },
-	'pinecone': { reason: 'Pinecone has no database users. Access is controlled by the API key on the connection.', hasAccounts: false },
-	'mongodb': { reason: 'MongoDB manages users through its own commands rather than SQL. Not supported yet.', hasAccounts: true },
-	'snowflake': { reason: 'Snowflake users and roles are not supported yet.', hasAccounts: true },
-	'redshift': { reason: 'Redshift users and groups are not supported yet.', hasAccounts: true },
-	'db2': { reason: 'Db2 authorities and privileges are not supported yet.', hasAccounts: true },
-	'hana': { reason: 'SAP HANA users and roles are not supported yet.', hasAccounts: true },
+	'sqlite': { get reason() { return t('engineSecurity.unsupported.sqlite'); }, hasAccounts: false },
+	'duckdb': { get reason() { return t('engineSecurity.unsupported.duckdb'); }, hasAccounts: false },
+	'pinecone': { get reason() { return t('engineSecurity.unsupported.pinecone'); }, hasAccounts: false },
+	'mongodb': { get reason() { return t('engineSecurity.unsupported.mongodb'); }, hasAccounts: true },
+	'snowflake': { get reason() { return t('engineSecurity.unsupported.snowflake'); }, hasAccounts: true },
+	'redshift': { get reason() { return t('engineSecurity.unsupported.redshift'); }, hasAccounts: true },
+	'db2': { get reason() { return t('engineSecurity.unsupported.db2'); }, hasAccounts: true },
+	'hana': { get reason() { return t('engineSecurity.unsupported.hana'); }, hasAccounts: true },
 };
 
 /** What the app can do about security on a connection, for the UI to render honestly. */
@@ -89,7 +90,7 @@ export function securitySupport(driverId: string): SecuritySupport {
 			return {
 				supported: false,
 				hasAccounts: false,
-				reason: 'A log service has no database users. Who can read these logs is set by the cloud account this connection uses, in your cloud provider.',
+				reason: t('engineSecurity.unsupported.logs'),
 				principalKinds: [],
 				usesHost: false,
 				grantScopes: [],
@@ -102,7 +103,7 @@ export function securitySupport(driverId: string): SecuritySupport {
 			// An unknown driver is assumed to have accounts: a new SQL engine almost certainly does,
 			// and offering the screen that then explains itself is better than silently hiding it.
 			hasAccounts: known?.hasAccounts ?? true,
-			reason: known?.reason ?? 'Users and privileges are not supported for this connection yet.',
+			reason: known?.reason ?? t('engineSecurity.unsupported.generic'),
 			principalKinds: [],
 			usesHost: false,
 			grantScopes: [],
@@ -144,9 +145,9 @@ export function targetLabel(target: GrantTarget): string {
 	const parts = [target.database, target.schema, target.object].filter((part): part is string => !!part);
 	const path = parts.join('.');
 	switch (target.scope) {
-		case 'global': return 'the whole server';
-		case 'database': return `database ${path}`;
-		case 'schema': return `schema ${path}`;
+		case 'global': return t('engineSecurity.target.global');
+		case 'database': return t('engineSecurity.target.database', { path });
+		case 'schema': return t('engineSecurity.target.schema', { path });
 		case 'column': return target.columns && target.columns.length > 0 ? `${path} (${target.columns.join(', ')})` : path;
 		default: return path;
 	}
@@ -154,47 +155,52 @@ export function targetLabel(target: GrantTarget): string {
 
 /** A policy as a person would name it: the kind, the name, and the table when it has one. */
 export function policyLabel(policy: PolicyRef | AccessPolicy): string {
-	const on = policy.database && policy.object ? ` on ${policy.database}.${policy.object}` : '';
-	return `${policyKindLabel(policy.kind)} ${policy.name}${on}`;
+	const on = policy.database && policy.object ? t('engineSecurity.policyOn', { path: `${policy.database}.${policy.object}` }) : '';
+	return `${t(`engineSecurity.kind.${policyKindKey(policy.kind)}`)} ${policy.name}${on}`;
+}
+
+/** The catalog id of a policy kind (`row-policy` is not a key). */
+function policyKindKey(kind: PolicyRef['kind']): string {
+	return kind === 'row-policy' ? 'rowPolicy' : kind === 'settings-profile' ? 'settingsProfile' : 'quota';
 }
 
 /** Who a policy applies to, as a sentence. "Everyone except the admin" is a real shape and reads
  *  nothing like the list it is built from, which is the whole reason this is not `join(', ')`. */
 export function appliesToLabel(appliesTo: readonly string[], appliesToAll: boolean): string {
 	if (appliesToAll) {
-		return appliesTo.length > 0 ? `everyone except ${appliesTo.join(', ')}` : 'everyone';
+		return appliesTo.length > 0 ? t('engineSecurity.everyoneExcept', { names: appliesTo.join(', ') }) : t('engineSecurity.everyone');
 	}
-	return appliesTo.length > 0 ? appliesTo.join(', ') : 'nobody';
+	return appliesTo.length > 0 ? appliesTo.join(', ') : t('engineSecurity.nobody');
 }
 
 /** One sentence describing a change, addressed to the person approving it. */
 export function describeSecurityChange(change: SecurityChange): string {
 	switch (change.kind) {
 		case 'create-policy':
-			return `Create the ${policyLabel(change.draft)}, applying to ${appliesToLabel(change.draft.appliesTo ?? [], change.draft.appliesToAll ?? false)}.`;
+			return t(`engineSecurity.createPolicy.${policyKindKey(change.draft.kind)}`, { label: policyLabel(change.draft), who: appliesToLabel(change.draft.appliesTo ?? [], change.draft.appliesToAll ?? false) });
 		case 'drop-policy':
-			return `Drop the ${policyLabel(change.policy)}.`;
+			return t(`engineSecurity.dropPolicy.${policyKindKey(change.policy.kind)}`, { label: policyLabel(change.policy) });
 		case 'set-policy-principals':
-			return `Make the ${policyLabel(change.policy)} apply to ${appliesToLabel(change.appliesTo, change.appliesToAll)}.`;
+			return t(`engineSecurity.setPolicy.${policyKindKey(change.policy.kind)}`, { label: policyLabel(change.policy), who: appliesToLabel(change.appliesTo, change.appliesToAll) });
 	}
 	const who = change.kind === 'create-principal' ? principalLabel(change.draft) : principalLabel(change.principal);
 	switch (change.kind) {
 		case 'create-principal':
-			return `Create the ${change.draft.kind} ${who}.`;
+			return t(`engineSecurity.createPrincipal.${change.draft.kind}`, { who });
 		case 'drop-principal':
-			return `Drop the ${change.principalKind} ${who}, and everything granted to it.`;
+			return t(`engineSecurity.dropPrincipal.${change.principalKind}`, { who });
 		case 'set-password':
-			return `Set a new password for ${who}.`;
+			return t('engineSecurity.setPassword', { who });
 		case 'set-enabled':
-			return change.enabled ? `Let ${who} sign in again.` : `Stop ${who} from signing in.`;
+			return change.enabled ? t('engineSecurity.enable', { who }) : t('engineSecurity.disable', { who });
 		case 'grant':
-			return `Grant ${change.privileges.join(', ')} on ${targetLabel(change.target)} to ${who}.`;
+			return t('engineSecurity.grant', { privileges: change.privileges.join(', '), target: targetLabel(change.target), who });
 		case 'revoke':
-			return `Take ${change.privileges.join(', ')} on ${targetLabel(change.target)} away from ${who}.`;
+			return t('engineSecurity.revoke', { privileges: change.privileges.join(', '), target: targetLabel(change.target), who });
 		case 'grant-role':
-			return `Add ${who} to the role ${change.role}.`;
+			return t('engineSecurity.grantRole', { who, role: change.role });
 		case 'revoke-role':
-			return `Remove ${who} from the role ${change.role}.`;
+			return t('engineSecurity.revokeRole', { who, role: change.role });
 	}
 }
 

@@ -16,6 +16,7 @@
  * No model and no MCP call reaches `start`; the review sheet's button is its only caller.
  */
 
+import { t } from '../shared/i18n/core';
 import { randomUUID } from 'node:crypto';
 import { join } from 'node:path';
 import { rootCertificates } from 'node:tls';
@@ -58,7 +59,7 @@ function sleepFor(ms: number): Promise<void> {
  */
 export function pgAccessFor(config: ConnectionConfig, roots: readonly string[]): PgAccess {
 	if (config.sshTunnel || config.sshTunnelRef) {
-		throw new Error(`"${config.label}" connects through an SSH tunnel, and a move cannot use one yet.`);
+		throw new Error(t('mainMove.sshTunnel', { label: config.label }));
 	}
 	const base = {
 		host: config.host,
@@ -87,7 +88,7 @@ export async function waitForReady(cloud: CloudApi, ref: string, label: string, 
 		// asked again, rather than failing a move that was only waiting (seen live, 2026-10-15: 521).
 		const project = (await readThroughBlips(() => cloud.list(), sleep)).find((candidate) => candidate.ref === ref);
 		if (!project) {
-			throw new Error(`SnoutData Cloud does not list "${label}" any more.`);
+			throw new Error(t('mainMove.notListed', { label }));
 		}
 		if (project.state === 'ready') {
 			return;
@@ -96,9 +97,9 @@ export async function waitForReady(cloud: CloudApi, ref: string, label: string, 
 			throw new Error(`"${label}" is ${project.state}${project.stateDetail ? `: ${project.stateDetail}` : ''}.`);
 		}
 		if (Date.now() > deadline) {
-			throw new Error(`"${label}" was still ${project.state} after ${Math.round(timeoutMs / 60_000)} minutes.`);
+			throw new Error(t('mainMove.stillAfter', { label, state: project.state, minutes: Math.round(timeoutMs / 60_000) }));
 		}
-		report(`Waiting for "${label}": ${project.state}${project.stateDetail ? `, ${project.stateDetail}` : ''}`);
+		report(t('mainMove.waitingFor', { label, state: project.state, detail: project.stateDetail ? `, ${project.stateDetail}` : '' }));
 		await sleep(2000);
 	}
 }
@@ -110,7 +111,7 @@ export async function waitForReady(cloud: CloudApi, ref: string, label: string, 
 export async function wakeProject(cloud: CloudApi, ref: string, label: string, report: (message: string) => void, sleep: (ms: number) => Promise<void>): Promise<void> {
 	const project = (await readThroughBlips(() => cloud.list(), sleep)).find((candidate) => candidate.ref === ref);
 	if (!project) {
-		throw new Error(`SnoutData Cloud does not list "${label}" any more.`);
+		throw new Error(t('mainMove.notListed', { label }));
 	}
 	if (project.state === 'ready') {
 		return;
@@ -148,7 +149,7 @@ export class MoveRuns {
 
 	async start(spec: MoveSpec, typed: MoveConfirmations): Promise<MoveStartOutcome> {
 		if (this.active.has(spec.id)) {
-			return { ok: false, error: "This move is already running." };
+			return { ok: false, error: t('mainMove.alreadyRunning') };
 		}
 		let facts;
 		try {
@@ -158,20 +159,20 @@ export class MoveRuns {
 		}
 		const findings = preflight(spec, facts);
 		if (!readyToRun(findings)) {
-			return { ok: false, error: "Something changed since the check. Check both databases again." };
+			return { ok: false, error: t('mainMove.changedSinceCheck') };
 		}
 		const tools = this.deps.toolsDir();
 		if (!tools) {
-			return { ok: false, error: "The Postgres tools this move runs are not installed yet." };
+			return { ok: false, error: t('mainMove.toolsMissing') };
 		}
 		const all = this.deps.connections();
 		const source = connectionFor(spec.source, all);
 		const target = connectionFor(spec.target, all);
 		if (facts.target.production && (!target || typed.target !== target.label)) {
-			return { ok: false, error: `The target is a production database. Type "${target?.label ?? ''}" to start the move.` };
+			return { ok: false, error: t('mainMove.typeTarget', { label: target?.label ?? '' }) };
 		}
 		if (spec.sourceAfter === 'delete' && (!source || typed.source !== source.label)) {
-			return { ok: false, error: `The source is deleted afterwards. Type "${source?.label ?? ''}" to start the move.` };
+			return { ok: false, error: t('mainMove.typeSource', { label: source?.label ?? '' }) };
 		}
 		if (!this.recovered) {
 			this.recovered = true;
@@ -254,7 +255,7 @@ export class MoveRuns {
 			const all = deps.connections();
 			const found = side === 'target' && createdId !== null ? all.find((connection) => connection.id === createdId) : connectionFor(side === 'source' ? spec.source : spec.target, all);
 			if (!found) {
-				throw new Error(`The ${side} is not a saved connection any more.`);
+				throw new Error(t(side === 'source' ? 'mainMove.sourceGone' : 'mainMove.targetGone'));
 			}
 			return found;
 		}
@@ -283,20 +284,20 @@ export class MoveRuns {
 				if (target.kind === 'newDatabase') {
 					const server = deps.connections().find((connection) => connection.id === target.serverConnectionId);
 					if (!server) {
-						throw new Error("The server for the new database is not a saved connection any more.");
+						throw new Error(t('mainMove.serverGone'));
 					}
-					report(`Creating the database "${target.database}"`);
+					report(t('mainMove.creatingDb', { database: target.database }));
 					try {
 						await query(server.id, createDatabaseSql(target.database));
 					} catch (error) {
-						throw new Error(`Could not create the database "${target.database}": ${error instanceof Error ? error.message : String(error)}`);
+						throw new Error(t('mainMove.createFailed', { database: target.database, error: error instanceof Error ? error.message : String(error) }));
 					}
 					const saved = deps.copyForDatabase(server.id, target.database);
 					createdId = saved.id;
 					return { label: saved.label, connectionId: saved.id };
 				}
 				if (target.kind === 'newCloudProject') {
-					report(`Creating the SnoutData Cloud project "${target.name}"`);
+					report(t('mainMove.creatingCloud', { name: target.name }));
 					const { project } = await deps.cloud.create(target.name, target.region);
 					await waitForReady(deps.cloud, project.ref, target.name, report, sleep);
 					const [values] = await resolveSnoutdataCloudImport(deps.cloud, [{ file: 'snoutdata-cloud', connId: project.ref }], deps.connections());
@@ -304,7 +305,7 @@ export class MoveRuns {
 					createdId = saved.id;
 					return { label: saved.label, connectionId: saved.id };
 				}
-				throw new Error("The target already exists, so there is nothing to create.");
+				throw new Error(t('mainMove.targetExists'));
 			},
 			backupTarget: async (report) => {
 				const connection = connectionOf('target');
@@ -312,7 +313,7 @@ export class MoveRuns {
 				if (!ref) {
 					return null;
 				}
-				report(`Saving a copy of "${connection.label}" before replacing it`);
+				report(t('mainMove.savingCopy', { label: connection.label }));
 				let status = await deps.cloud.requestExport(ref);
 				const deadline = Date.now() + EXPORT_TIMEOUT_MS;
 				while (status.pending) {
@@ -320,13 +321,13 @@ export class MoveRuns {
 						return null;
 					}
 					if (Date.now() > deadline) {
-						throw new Error("The copy of the target was still being saved after an hour, so nothing was replaced.");
+						throw new Error(t('mainMove.copyTimeout'));
 					}
 					await sleep(3000);
 					status = await readThroughBlips(() => deps.cloud.exportStatus(ref), sleep);
 				}
 				if (status.error) {
-					throw new Error(`The copy of the target could not be saved, so nothing was replaced: ${status.error}`);
+					throw new Error(t('mainMove.copyFailed', { error: status.error }));
 				}
 				return { url: status.url };
 			},
@@ -338,10 +339,10 @@ export class MoveRuns {
 				}
 				if (action === 'pause') {
 					await deps.cloud.pause(ref);
-					return `"${connection.label}" was paused.`;
+					return t('mainMove.wasPaused', { label: connection.label });
 				}
 				await deps.cloud.remove(ref);
-				return `"${connection.label}" was deleted, and can be recovered for your plan's grace period.`;
+				return t('mainMove.wasDeleted', { label: connection.label });
 			},
 			onProgress: (progress) => {
 				run.progress = progress;

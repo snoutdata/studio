@@ -1,0 +1,209 @@
+{
+	"groups": {
+		"queries": "Queries",
+		"storage": "Storage",
+		"objects": "Objects",
+		"cluster": "Cluster",
+		"server": "Server"
+	},
+	"views": {
+		"running": {
+			"label": "Running queries",
+			"blurb": "What the server is doing right now, longest first. Stop one that should not be running.",
+			"empty": "Nothing is running on this server right now.",
+			"stop": "Stop"
+		},
+		"failed": {
+			"label": "Failed queries",
+			"blurb": "Errors in the last hour, grouped by kind, most frequent first. What is breaking, beside what is slow. Open one in the server log to see every line the query produced, not just the one it was refused with.",
+			"empty": "No query has failed in the last hour."
+		},
+		"serverlog": {
+			"label": "Server log",
+			"blurb": "The server's own log, as rows. Unfiltered it is the problems of the last hour; put a query id in the box and it is every line that query produced, which is the whole answer to \"why did that fail\" rather than the one line the client was sent.",
+			"empty": "Nothing above a warning in the last hour.",
+			"unavailable": "This server does not log to a table. Switch it on with a <text_log> section in the server's config, and it will record its own log as rows from the next restart.",
+			"filterLabel": "Query id or text",
+			"filterPlaceholder": "a query id, or a word from the message"
+		},
+		"parts": {
+			"label": "Parts",
+			"blurb": "Every INSERT writes a part and merges combine them. Too many parts in one partition slows inserts, then refuses them.",
+			"empty": "No MergeTree tables with data on this server."
+		},
+		"merges": {
+			"label": "Merges",
+			"blurb": "Background merges in progress. A mutation (ALTER UPDATE or DELETE) runs as a merge too.",
+			"empty": "No merges are running."
+		},
+		"mutations": {
+			"label": "Mutations",
+			"blurb": "ALTER UPDATE and DELETE that have not finished. One that keeps failing blocks the ones after it on the same table.",
+			"empty": "No mutations are waiting.",
+			"cancel": "Cancel"
+		},
+		"views": {
+			"label": "Materialized views",
+			"blurb": "Each materialized view is an insert trigger: what it reads from, and the table its rows land in.",
+			"empty": "No materialized views on this server."
+		},
+		"refreshes": {
+			"label": "Refreshable views",
+			"blurb": "Materialized views that re-run on a schedule (REFRESH EVERY): when each last succeeded, when it runs next, and why it failed.",
+			"empty": "No refreshable materialized views.",
+			"unavailable": "This server is older than refreshable materialized views.",
+			"now": "Refresh now"
+		},
+		"dictionaries": {
+			"label": "Dictionaries",
+			"blurb": "In-memory lookup tables. A failed one makes every dictGet on it fail, so its last error is shown in full.",
+			"empty": "No dictionaries on this server.",
+			"reload": "Reload"
+		},
+		"disks": {
+			"label": "Disks",
+			"blurb": "Free space on each disk. Merges need room to write the part they produce, so a full disk stops them first.",
+			"empty": "No disks reported."
+		},
+		"detached": {
+			"label": "Detached parts",
+			"blurb": "Parts set aside and no longer read: detached by hand, or by the server because they were broken or unexpected. They still take disk.",
+			"empty": "No detached parts."
+		},
+		"columns": {
+			"label": "Column sizes",
+			"blurb": "The 200 largest columns on disk, and how well each compresses. A poor ratio is often a codec or a LowCardinality away from a big saving.",
+			"empty": "No column holds data yet."
+		},
+		"replication": {
+			"label": "Replication",
+			"blurb": "Replicated tables: how far behind each replica is, and what it still has to do.",
+			"empty": "No replicated tables on this server."
+		},
+		"repqueue": {
+			"label": "Replication queue",
+			"blurb": "What each replica still has to fetch or merge, and why an entry is stuck. A queue that only grows is the failure behind \"the replica is behind\".",
+			"empty": "Every replica has caught up: nothing is waiting to be fetched or merged.",
+			"unavailable": "This server has no replication queue, so it has no replicated tables.",
+			"restart": "Restart replica"
+		},
+		"distqueue": {
+			"label": "Distributed inserts",
+			"blurb": "Rows written to a Distributed table that are still on disk here, waiting to be sent to the shard that owns them. Not lost, not yet arrived.",
+			"empty": "Nothing is waiting to be sent: every Distributed insert has arrived.",
+			"unavailable": "This server has no distribution queue, so it has no Distributed tables.",
+			"send": "Send now"
+		},
+		"keeper": {
+			"label": "Keeper",
+			"blurb": "What the cluster agrees on, read from Keeper itself: every replicated table's log, its replicas and their positions. Read-only, and the last place to look when a queue makes no sense.",
+			"empty": "Nothing is at this path.",
+			"unavailable": "This server has no Keeper configured, so there is no coordination tree to read."
+		},
+		"clusters": {
+			"label": "Clusters",
+			"blurb": "Every node of every cluster this server knows, and how often reaching it has failed. A rising error count is a node going away.",
+			"empty": "This server is not part of a cluster."
+		},
+		"ddl": {
+			"label": "DDL queue",
+			"blurb": "ON CLUSTER statements and how far each host got with them. A host stuck in the queue is behind on schema.",
+			"empty": "Every ON CLUSTER statement has finished on every host.",
+			"unavailable": "This server has no Keeper configured, so there are no ON CLUSTER statements to track."
+		},
+		"crashes": {
+			"label": "Crashes",
+			"blurb": "Signals the server has died on, with the stack it died in. A table that does not exist is the good outcome.",
+			"empty": "No crash has been recorded on this server.",
+			"unavailable": "No crash has ever been recorded on this server: ClickHouse creates that table the first time it dies, and it is not there."
+		},
+		"settings": {
+			"label": "Changed settings",
+			"blurb": "Settings that differ from ClickHouse's defaults for this user: what makes this server behave unlike the documentation.",
+			"empty": "This user runs on ClickHouse's default settings."
+		},
+		"backups": {
+			"label": "Backups",
+			"blurb": "BACKUP and RESTORE since the server started: whether each finished, how big it was, and why one failed.",
+			"empty": "No BACKUP or RESTORE has run since this server started."
+		}
+	},
+	"confirm": {
+		"stop": "Stop query {id} run by {user}? It has been running for {seconds} s.",
+		"cancelMutation": "Cancel mutation {id} on {table}? Parts it already rewrote stay rewritten.",
+		"runNow": "Run {view} now, instead of waiting for {next}?",
+		"reloadDict": "Reload dictionary {dict} from its source now?",
+		"restartReplica": "Restart the replica of {table} on this node? It re-reads the table's state from Keeper and starts its queue again. Reads and writes to that table pause while it does.",
+		"sendNow": "Send the {files} pending file(s) for {table} now? It waits until they have gone."
+	},
+	"health": {
+		"cannotRead": "This user cannot read the system table it needs.",
+		"parts": "Parts",
+		"mutations": "Mutations",
+		"replication": "Replication",
+		"disk": "Disk",
+		"dictionaries": "Dictionaries",
+		"failed": "Failed queries",
+		"running": "Running",
+		"noMergeTree": "No MergeTree data yet.",
+		"tooManyParts": "Too many parts",
+		"tooManyPartsDetail": "{where} has {parts} parts in one partition. Inserts into it are being refused (limit {limit}).",
+		"insertsSlowed": "Inserts slowed",
+		"insertsSlowedDetail": "{where} has {parts} parts in one partition. Inserts are being delayed from {delay}, refused at {limit}.",
+		"partsPiling": "Parts piling up",
+		"partsPilingDetail": "{where} has {parts} parts in one partition, half way to the {delay} where inserts slow down. Batch inserts, or check merges.",
+		"partsOk": "At most {parts} parts in a partition ({where}). Inserts slow at {delay}.",
+		"mutationsFailing": "Mutations failing",
+		"mutationsFailingDetail": "{failing} of {pending} pending mutations keep failing, and they block the ones behind them on the same table.",
+		"mutationsPending": "Mutations pending",
+		"mutationsPendingDetail": {
+			"one": "{count} mutation has not finished yet.",
+			"other": "{count} mutations have not finished yet."
+		},
+		"noneWaiting": "None waiting.",
+		"noReplicated": "No replicated tables on this server.",
+		"replicasReadonly": "Replicas read-only",
+		"replicasReadonlyDetail": {
+			"one": "{count} replicated table is read-only, usually a lost connection to Keeper. Inserts into them fail.",
+			"other": "{count} replicated tables are read-only, usually a lost connection to Keeper. Inserts into them fail."
+		},
+		"replicaLag": "Replica lag",
+		"replicaLagDetail": "A replica is {seconds} s behind.",
+		"replicatedInStep": {
+			"one": "{count} replicated table, in step.",
+			"other": "{count} replicated tables, in step."
+		},
+		"noDisks": "No disks reported.",
+		"diskNearlyFull": "Disk nearly full",
+		"diskNearlyFullDetail": "Disk {name} is {used}% used ({free} free). Merges need room to write, and stop first.",
+		"diskFilling": "Disk filling up",
+		"diskFillingDetail": "Disk {name} is {used}% used ({free} free).",
+		"detachedParts": "Detached parts",
+		"detachedDetail": {
+			"one": "{count} detached part still on disk, no longer read.",
+			"other": "{count} detached parts still on disk, no longer read."
+		},
+		"diskOk": "Disk {name} is {used}% used, {free} free.",
+		"dictFailing": "Dictionary failing",
+		"dictFailingDetail": "{failing} of {total} dictionaries failed to load; every dictGet on them fails.",
+		"noDicts": "No dictionaries.",
+		"dictsLoaded": "{n} loaded without errors.",
+		"refreshFailing": "Refresh failing",
+		"refreshFailingDetail": {
+			"one": "{failing} of {count} refreshable view failed their last refresh and are serving old data.",
+			"other": "{failing} of {count} refreshable views failed their last refresh and are serving old data."
+		},
+		"refreshableViews": "Refreshable views",
+		"refreshingSchedule": "{n} refreshing on schedule.",
+		"noneLastHour": "None in the last hour.",
+		"failedDetail": {
+			"one": "{n} in the last hour, {count} kind of error.",
+			"other": "{n} in the last hour, {count} kinds of error."
+		},
+		"nothingRunning": "Nothing running.",
+		"runningDetail": {
+			"one": "{count} query, the longest for {seconds} s.",
+			"other": "{count} queries, the longest for {seconds} s."
+		}
+	}
+}

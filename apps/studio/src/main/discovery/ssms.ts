@@ -3,6 +3,7 @@
  *  Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { t } from '../../shared/i18n/core';
 import { existsSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 
@@ -92,8 +93,8 @@ export function parseSsmsUserSettings(file: string, xml: string): Found[] {
 				supported: inst.host !== '',
 				importsPassword: false,
 				note: windowsAuth
-					? "Uses Windows authentication, which has no username to import; set a SQL login after import."
-					: "SSMS encrypts saved passwords for this Windows account, so set it after import.",
+					? t('mainDiscovery.windowsNoUser')
+					: t('mainDiscovery.ssmsEncrypted'),
 			});
 		}
 	}

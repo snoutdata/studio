@@ -3,6 +3,7 @@
  *  Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { t } from '../../shared/i18n/core';
 import type { ConnectionConfig } from '../../shared/connection';
 import type { ConnectionFormValues, ImportItemRef, ImportScanResult } from '../../shared/forms';
 import { parseXmlTree, xmlDescendants, type XmlNode } from '../importCommon';
@@ -16,7 +17,9 @@ import { hostEnv, workbenchFiles } from './paths';
 //
 // Passwords live in the OS keychain (or Workbench's own vault), so they are not imported.
 
-const NO_PASSWORD = "MySQL Workbench keeps passwords in your keychain, so set it after import.";
+function noPassword(): string {
+	return t('mainDiscovery.workbenchKeychain');
+}
 
 /** A GRT dict's entries by key: the child `<value>`/`<link>` elements carrying a `key` attribute. */
 function grtDict(node: XmlNode): Map<string, XmlNode> {
@@ -98,9 +101,9 @@ export function parseWorkbenchXml(file: string, xml: string): Found[] {
 				keepAlive: true,
 			};
 		}
-		const notes = credentialNotes(values, false, NO_PASSWORD);
+		const notes = credentialNotes(values, false, noPassword());
 		if (viaSocket) {
-			notes.unshift("Workbench connects over a local socket; this imports it as TCP on port 3306.");
+			notes.unshift(t('mainDiscovery.localSocket'));
 		}
 		return {
 			ref: { file, connId: conn.attrs.id || String(i) },

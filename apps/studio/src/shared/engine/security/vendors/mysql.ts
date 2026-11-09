@@ -22,6 +22,7 @@ import type { CatalogQuery, SecurityCatalog } from '../catalog';
 import type { SecurityEmitter } from '../emitter';
 import { assertSafeName, assertSafePassword, privilegeList, quoteBacktick, quoteBackslashLiteral, refusePolicy } from '../emitter';
 import type { GrantScope, GrantTarget, PrincipalRef, SecurityChange } from '../types';
+import { t } from '../../../i18n/core';
 
 /** Split `'app'@'%'` into its two halves. information_schema stores the pair as one string and
  *  there is no column for either part, so the split happens here rather than in the mapper. */
@@ -100,20 +101,20 @@ FROM information_schema.${view}`;
 const GRANT_QUERIES: CatalogQuery[] = [
 	// MySQL has no schema-vs-database distinction, so a schema privilege IS a database privilege.
 	{ label: 'server-wide privileges', candidates: [grantQuery('USER_PRIVILEGES', 'global', {})] },
-	{ label: 'database privileges', candidates: [grantQuery('SCHEMA_PRIVILEGES', 'database', { database: 'TABLE_SCHEMA' })] },
-	{ label: 'table privileges', candidates: [grantQuery('TABLE_PRIVILEGES', 'table', { database: 'TABLE_SCHEMA', object: 'TABLE_NAME' })] },
-	{ label: 'column privileges', candidates: [grantQuery('COLUMN_PRIVILEGES', 'column', { database: 'TABLE_SCHEMA', object: 'TABLE_NAME', column: 'COLUMN_NAME' })] },
+	{ get label() { return t('engineSecurity.catalog.databasePrivileges'); }, candidates: [grantQuery('SCHEMA_PRIVILEGES', 'database', { database: 'TABLE_SCHEMA' })] },
+	{ get label() { return t('engineSecurity.catalog.tablePrivileges'); }, candidates: [grantQuery('TABLE_PRIVILEGES', 'table', { database: 'TABLE_SCHEMA', object: 'TABLE_NAME' })] },
+	{ get label() { return t('engineSecurity.catalog.columnPrivileges'); }, candidates: [grantQuery('COLUMN_PRIVILEGES', 'column', { database: 'TABLE_SCHEMA', object: 'TABLE_NAME', column: 'COLUMN_NAME' })] },
 ];
 
 export const mysqlCatalog: SecurityCatalog = {
 	driverId: 'mysql-aurora',
-	principals: [{ label: 'accounts', candidates: [MYSQL_PRINCIPALS, PRINCIPALS_FALLBACK] }],
+	principals: [{ get label() { return t('engineSecurity.catalog.accounts'); }, candidates: [MYSQL_PRINCIPALS, PRINCIPALS_FALLBACK] }],
 	grants: GRANT_QUERIES,
 };
 
 export const mariadbCatalog: SecurityCatalog = {
 	driverId: 'mariadb',
-	principals: [{ label: 'accounts and roles', candidates: [MARIADB_PRINCIPALS, PRINCIPALS_FALLBACK] }],
+	principals: [{ get label() { return t('engineSecurity.catalog.accountsAndRoles'); }, candidates: [MARIADB_PRINCIPALS, PRINCIPALS_FALLBACK] }],
 	grants: GRANT_QUERIES,
 };
 

@@ -9,6 +9,7 @@ import { isTableReferenceAt, refreshAdvisorDiagnostics, registerSqlLanguageFeatu
 import { registerAiCompletion, triggerAiCompletion } from '../aiCompletion';
 import { attachSelectionHint, triggerAddToChat, triggerAiEdit, triggerExplainSql, triggerOptimizeSql, triggerPipelineTranslation, triggerTextToSql } from '../aiEdit';
 import { matchesEvent, type ResolvedKeybinding } from '../../../shared/keybindings';
+import { useT } from '../i18n';
 
 interface EditorProps {
 	/** Hand the editor instance back so the app can swap its model per tab. */
@@ -36,7 +37,10 @@ interface EditorProps {
  * Monaco stays imperative and the tab/model bookkeeping lives in App.
  */
 export function Editor(props: EditorProps): JSX.Element {
+	const t = useT();
 	const hostRef = useRef<HTMLDivElement>(null);
+	// The live editor, for the language effect below, which re-registers the menu's labels.
+	const editorRef = useRef<monaco.editor.IStandaloneCodeEditor | null>(null);
 	const onRunRef = useRef(props.onRun);
 	onRunRef.current = props.onRun;
 	const onFormatRef = useRef(props.onFormat);
@@ -84,6 +88,7 @@ export function Editor(props: EditorProps): JSX.Element {
 			// never fetches as-you-type, so this won't call a model on keystrokes.
 			inlineSuggest: { enabled: true },
 		});
+		editorRef.current = editor;
 		// All keyboard shortcuts are dispatched here from the keybinding registry while the editor
 		// is focused, rather than via editor.addCommand: addCommand can't be rebound, and being the
 		// first responder lets us pre-empt Monaco's built-ins. The editor's onKeyDown fires from the
@@ -132,38 +137,6 @@ export function Editor(props: EditorProps): JSX.Element {
 			}
 			onIdentifierClickRef.current?.(word.word);
 		});
-		// Right-click AI actions: pinned to the very top of the context menu. Monaco forces the
-		// 'navigation' group first, so we put them there with low order values. Each runs on the
-		// current selection (or the whole document when nothing is selected) and routes to the
-		// chat panel — see the trigger* functions in aiEdit.ts.
-		editor.addAction({
-			id: 'snout.ai.textToSql',
-			label: 'Text to SQL',
-			contextMenuGroupId: 'navigation',
-			contextMenuOrder: 0.1,
-			run: () => triggerTextToSql(editor),
-		});
-		editor.addAction({
-			id: 'snout.ai.explainSql',
-			label: 'Explain SQL',
-			contextMenuGroupId: 'navigation',
-			contextMenuOrder: 0.2,
-			run: () => triggerExplainSql(editor),
-		});
-		editor.addAction({
-			id: 'snout.ai.optimizeSql',
-			label: 'SQL Optimization',
-			contextMenuGroupId: 'navigation',
-			contextMenuOrder: 0.3,
-			run: () => triggerOptimizeSql(editor),
-		});
-		editor.addAction({
-			id: 'snout.ai.pipelineTranslation',
-			label: 'Get Pipeline Translation',
-			contextMenuGroupId: 'navigation',
-			contextMenuOrder: 0.35,
-			run: () => triggerPipelineTranslation(editor),
-		});
 		// Drop the "Go to Definition" + "Peek" context-menu items. They only exist because we
 		// register a DefinitionProvider for the Ctrl-hover link hint (lspBridge.ts) — the real
 		// table-open is our own Ctrl+click handler above, so the menu entries are dead weight.
@@ -190,9 +163,57 @@ export function Editor(props: EditorProps): JSX.Element {
 				clearTimeout(advisorLintTimer);
 			}
 			editor.dispose();
+			editorRef.current = null;
 		};
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, []);
+
+	// Right-click AI actions: pinned to the very top of the context menu. Monaco forces the
+	// 'navigation' group first, so we put them there with low order values. Each runs on the
+	// current selection (or the whole document when nothing is selected) and routes to the
+	// chat panel — see the trigger* functions in aiEdit.ts. Monaco's action labels are static,
+	// so this effect re-registers them when the language changes.
+	useEffect(() => {
+		const editor = editorRef.current;
+		if (!editor) {
+			return;
+		}
+		const actions = [
+			editor.addAction({
+				id: 'snout.ai.textToSql',
+				label: t('editor.ctx.textToSql'),
+				contextMenuGroupId: 'navigation',
+				contextMenuOrder: 0.1,
+				run: () => triggerTextToSql(editor),
+			}),
+			editor.addAction({
+				id: 'snout.ai.explainSql',
+				label: t('editor.ctx.explainSql'),
+				contextMenuGroupId: 'navigation',
+				contextMenuOrder: 0.2,
+				run: () => triggerExplainSql(editor),
+			}),
+			editor.addAction({
+				id: 'snout.ai.optimizeSql',
+				label: t('editor.ctx.optimizeSql'),
+				contextMenuGroupId: 'navigation',
+				contextMenuOrder: 0.3,
+				run: () => triggerOptimizeSql(editor),
+			}),
+			editor.addAction({
+				id: 'snout.ai.pipelineTranslation',
+				label: t('editor.ctx.pipelineTranslation'),
+				contextMenuGroupId: 'navigation',
+				contextMenuOrder: 0.35,
+				run: () => triggerPipelineTranslation(editor),
+			}),
+		];
+		return () => {
+			for (const action of actions) {
+				action.dispose();
+			}
+		};
+	}, [t]);
 
 	return <div className="editor" ref={hostRef} />;
 }

@@ -3,6 +3,7 @@
  *  Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { t } from '../shared/i18n/core';
 import { readFileSync } from 'node:fs';
 import { rootCertificates } from 'node:tls';
 
@@ -39,7 +40,7 @@ function resolveCa(ssl: SslConfig): string | undefined {
 		try {
 			return readFileSync(ssl.caPath, 'utf8');
 		} catch (err) {
-			throw new Error(`SSL CA certificate: could not read "${ssl.caPath}" (${err instanceof Error ? err.message : String(err)}).`);
+			throw new Error(t('mainErrors.sslCa', { caPath: ssl.caPath, error: err instanceof Error ? err.message : String(err) }));
 		}
 	}
 	return ssl.ca;

@@ -6,6 +6,7 @@
 import { useEffect, useState } from 'react';
 
 import { Icon } from './Icon';
+import { useI18n } from '../i18n';
 import type { CliSignInAnswer, CliSignInRequest } from '../../../shared/mcp';
 
 /*
@@ -39,6 +40,7 @@ interface CliSignInToastProps {
 }
 
 export function CliSignInToast({ request, onAnswer }: CliSignInToastProps): JSX.Element {
+	const { t, tr } = useI18n();
 	const [remaining, setRemaining] = useState(Math.ceil(request.timeoutMs / 1000));
 
 	// Count down in the card. Main is the authority on the deadline (it declines on its own timer);
@@ -53,14 +55,13 @@ export function CliSignInToast({ request, onAnswer }: CliSignInToastProps): JSX.
 		<div className="agent-action-toast" role="alertdialog" aria-live="assertive">
 			<div className="agent-action-head">
 				<Icon name="key" />
-				<strong>Use your SnoutData account?</strong>
+				<strong>{t('shell.cliSignIn.title')}</strong>
 				<span className="spacer" />
-				<span className="agent-action-clock" title="Refused automatically if you do not answer">{remaining}s</span>
+				<span className="agent-action-clock" title={t('shell.cliSignIn.clockTitle')}>{remaining}s</span>
 			</div>
 			{/* The client names itself, so it is shown as a claim (quoted) and never as a fact. */}
 			<p className="agent-action-what">
-				"{request.client}" on {request.machine} is asking for an access token for <strong>{request.email}</strong>
-				{request.command ? <>, to run <code>{request.command}</code></> : null}.
+				{tr(request.command ? 'shell.cliSignIn.askRun' : 'shell.cliSignIn.ask', { client: request.client, machine: request.machine, email: request.email, command: request.command ?? '' })}
 			</p>
 			<span className="agent-action-title">
 				<Icon name="key" /> {request.tokenName}
@@ -68,16 +69,13 @@ export function CliSignInToast({ request, onAnswer }: CliSignInToastProps): JSX.
 			<p className="agent-action-scope">
 				<Icon name="info" />
 				<span>
-					Allowing creates that access token. Your sign-in itself is not handed over, and you can
-					revoke the token any time with <code>snoutdata tokens revoke</code> or from the dashboard.
-					This prompt is a courtesy rather than a lock: any program running as you on this computer
-					can already read what SnoutData Studio keeps here.
+					{tr('shell.cliSignIn.scope')}
 				</span>
 			</p>
 			<div className="agent-action-actions">
-				<button className="primary" onClick={() => onAnswer('allow')}><Icon name="key" /> Create the token</button>
+				<button className="primary" onClick={() => onAnswer('allow')}><Icon name="key" /> {t('shell.cliSignIn.createToken')}</button>
 				<span className="spacer" />
-				<button className="secondary agent-action-decline" onClick={() => onAnswer('decline')}>Not now</button>
+				<button className="secondary agent-action-decline" onClick={() => onAnswer('decline')}>{t('shell.cliSignIn.notNow')}</button>
 			</div>
 		</div>
 	);

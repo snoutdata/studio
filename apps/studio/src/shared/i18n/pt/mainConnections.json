@@ -1,0 +1,22 @@
+{
+	"readOnlyVerb": "A conexão \"{label}\" é somente leitura; {verb} está bloqueado.",
+	"sendsTo": " e os envia para {host}",
+	"awsImported": "\"{label}\" foi importado e busca as credenciais no AWS Secrets Manager (secret \"{secretId}\"){where}. Abra com Editar, verifique onde ele se conecta e salve antes de conectar.",
+	"tunnelTo": " para {host}:{port}",
+	"sshImported": "\"{label}\" foi importado e se conecta por um túnel SSH{where}, usando sua própria chave SSH. Abra com Editar, verifique onde ele se conecta e salve antes de conectar.",
+	"notSnoutSignIn": "Esta conexão não entra com sua conta SnoutData.",
+	"snoutSignInUnavailable": "Esta conexão entra com sua conta SnoutData, que ainda não está disponível.",
+	"noPipeline": "Esta conexão executa SQL diretamente, então não há tradução para pipeline.",
+	"readOnlyWrites": "A conexão \"{label}\" é somente leitura; esta consulta grava dados e foi bloqueada.",
+	"readOnlyLoad": "A conexão \"{label}\" é somente leitura; carregar um arquivo nela está bloqueado.",
+	"syncGone": "A conexão de origem ou destino não existe mais.",
+	"syncAcross": "Não é possível sincronizar entre tipos de banco de dados (\"{driver}\" → \"{targetDriver}\"). Origem e destino devem usar o mesmo driver.",
+	"sourceNotConnected": "A origem \"{label}\" não está conectada.",
+	"targetNotConnected": "O destino \"{label}\" não está conectado.",
+	"readOnlySync": "A conexão \"{label}\" é somente leitura; o Schema Sync não pode alterar o schema dela.",
+	"componentConnect": "Este banco de dados precisa baixar um componente uma única vez ({totalLabel}). Clique em Conectar para instalar.",
+	"notSupportedOs": "Este banco de dados ainda não é compatível com seu sistema operacional.",
+	"componentSave": "Este banco de dados precisa baixar um componente uma única vez ({totalLabel}). Salve a conexão e clique em Conectar para instalar.",
+	"similarityNeedsEmbed": "A busca por similaridade precisa de um modelo de embeddings, ao qual esta versão ainda não tem acesso.",
+	"cloudAccountGone": "A conta de nuvem usada por esta conexão não existe mais. Edite a conexão e escolha uma, ou adicione de novo em Configurações."
+}

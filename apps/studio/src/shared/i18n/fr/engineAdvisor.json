@@ -1,0 +1,52 @@
+{
+	"sarg": {
+		"leadingWildcard": "`{operator} '%…'` sur la colonne indexée {column} ne peut pas utiliser son index.",
+		"leadingWildcardWhy": "Un `%` en tête empêche d'utiliser l'index b-tree de cette colonne : la requête parcourt donc toutes les lignes. Envisagez un index plein texte, un index trigramme (Postgres `pg_trgm`) ou un motif ancré (`prefix%`).",
+		"typeMismatch": "Comparer la colonne texte {column} à un littéral numérique force une conversion implicite.",
+		"typeMismatchWhy": "Quand une colonne texte est comparée à un nombre, le moteur convertit la valeur de chaque ligne pour comparer, ce qui neutralise l'index de cette colonne (un piège classique de MySQL). Mettez le littéral entre guillemets pour que les types correspondent.",
+		"wrapFunction": "`{fn}({name})` ne peut pas utiliser l'index de {column} : la fonction s'exécute sur chaque ligne.",
+		"wrapCast": "`CAST({name} …)` ne peut pas utiliser l'index de {column}.",
+		"wrapArith": "Un calcul sur {column} (`{name} {op} …`) ne peut pas utiliser son index : déplacez le calcul de l'autre côté.",
+		"wrapWhy": "Envelopper une colonne indexée dans une fonction ou une expression empêche d'utiliser l'index (qui stocke la valeur brute), et la requête parcourt toute la table. Réécrivez pour que la colonne seule soit d'un côté de la comparaison, ou ajoutez un index sur l'expression."
+	},
+	"plan": {
+		"partitionScan": "Lit les {leaves} partitions de {table} (~{rows} lignes) : rien dans la requête ne permet à la base d'en ignorer une.",
+		"partitionSeriesWhy": "{table} est une table de série partitionnée par {time}. Filtrez sur {time} avec un intervalle que le planificateur peut comparer directement ({time} >= now() - interval '1 day', ou un intervalle littéral), jamais sur une fonction ou un cast de {time}, pour ne lire que les partitions de cet intervalle.",
+		"partitionWhy": "{table} est partitionnée. Un filtre sur sa clé de partition, comparée directement et non via une fonction ou un cast, permet au planificateur d'ignorer les partitions hors du filtre.",
+		"sort": "Le plan trie des lignes qu'aucun index n'ordonne déjà (un tri en mémoire ou sur disque).",
+		"sortWhy": "Ajoutez un index dont les premières colonnes correspondent à l'ORDER BY : le moteur lira les lignes dans l'ordre au lieu de les trier.",
+		"filesort": "Le plan utilise un filesort (les lignes ne sont pas lues dans l'ordre voulu depuis un index).",
+		"filesortWhy": "Ajoutez un index composite couvrant les colonnes d'égalité du WHERE puis celle de l'ORDER BY : un seul index sert les deux.",
+		"tempTable": "Le plan matérialise une table temporaire interne.",
+		"tempTableWhy": "Un GROUP BY, DISTINCT ou UNION qui ne peut pas utiliser d'index construit une table temporaire ; un index sur les colonnes de regroupement la supprime souvent.",
+		"filesortTable": "Le plan utilise un filesort sur cette table (les lignes ne sont pas lues dans l'ordre depuis un index).",
+		"filesortTableWhy": "Ajoutez un index composite couvrant les colonnes d'égalité du WHERE puis celle de l'ORDER BY.",
+		"tempTableStep": "Le plan matérialise une table temporaire interne pour cette étape.",
+		"tempTableStepWhy": "Un index sur les colonnes de regroupement ou de jointure supprime souvent la table temporaire.",
+		"final": "FINAL sur {table} ({rows} lignes) fusionne ses parts pendant que la requête les lit.",
+		"finalWhy": "FINAL fusionne les lignes en double à la lecture, ce qui sur une grande table coûte bien plus que la requête elle-même. Filtrez d'abord pour fusionner moins, ou dédupliquez dans la requête (argMax(value, version) ... GROUP BY key) ; do_not_merge_across_partitions_select_final = 1 aide quand la clé ne traverse jamais les partitions.",
+		"projection": "Répondu depuis la projection {name} : {last} granules lus sur {first}.",
+		"projectionWhy": "Une projection est une copie de la table gardée dans un autre ordre ou pré-agrégée, et ClickHouse l'a utilisée parce qu'elle lit moins que la table. Rien à faire : le levier fonctionne.",
+		"granulesTable": "Lecture complète de {table} : les {first} granules ({approx}{rows} lignes) ont été lus, aucun ignoré.",
+		"granules": "Lecture complète : les {first} granules ({approx}{rows} lignes) ont été lus, aucun ignoré.",
+		"granulesWhy": "ClickHouse ignore des données selon la clé ORDER BY de la table et sa clé de partition, pas selon un index sur une colonne. Ce filtre n'a réduit ni l'une ni l'autre, donc chaque granule a été lu. Filtrez sur une colonne de tête de la clé ORDER BY (la première d'abord) ou sur la clé de partition ; pour une colonne hors clé, le levier est un index de saut (bloom_filter, set, minmax) ou une projection triée par cette colonne.",
+		"fullScan": "Lecture complète de la table : aucun index ne réduit les lignes.",
+		"fullScanRows": "Lecture complète de la table (~{rows} lignes) : aucun index ne réduit les lignes.",
+		"fullScanTable": "Lecture complète de {table} : aucun index ne réduit les lignes.",
+		"fullScanTableRows": "Lecture complète de {table} (~{rows} lignes) : aucun index ne réduit les lignes.",
+		"fullScanWhy": "Le moteur lit chaque ligne parce qu'aucun index ne correspond au filtre ou à la jointure. Ajoutez un index sur les colonnes du WHERE ou du JOIN, ou rendez le prédicat sargable (voir les indications dans l'éditeur), pour ne toucher que les lignes utiles."
+	},
+	"hazards": {
+		"setIgnored": "Seule \"{column}\" est affectée. {ignored} ne sera PAS mis à jour.",
+		"setBoolean": "Seule \"{column}\" est affectée, et sa valeur est une expression booléenne, pas la valeur qu'elle semble être.",
+		"setWhy": "{operator} ne sépare pas les affectations dans une clause SET, c'est la virgule qui le fait. Ceci se lit comme l'unique affectation \"{column} = ({value})\" : tout le côté droit se réduit à une seule valeur true/false/NULL, et les autres colonnes citées sont seulement comparées, pas modifiées.",
+		"nullNotEqual": "\"<> NULL\" ne correspond à aucune ligne, pas même à celles qui ne sont pas NULL.",
+		"nullEqual": "\"= NULL\" ne correspond à aucune ligne, pas même à celles qui sont NULL.",
+		"nullWhy": "Comparer quoi que ce soit à NULL donne NULL (inconnu), jamais vrai : le prédicat écarte donc tout. Utilisez plutôt {fix}.",
+		"theTable": "la table",
+		"chDelete": "ALTER TABLE ... DELETE réécrit en arrière-plan chaque part de {table} contenant une ligne concernée, et ne peut pas être annulé.",
+		"chDeleteWhy": "C'est une mutation, pas une suppression de lignes. Un DELETE FROM {table} WHERE ... léger (ClickHouse 23.3 et plus) marque les lignes comme supprimées tout de suite et les retire lors des fusions ordinaires, ce qui coûte bien moins ; ALTER TABLE ... DELETE sert quand il faut récupérer l'espace disque maintenant. Suivez-la dans Operations > Storage > Mutations.",
+		"chUpdate": "ALTER TABLE ... UPDATE réécrit en arrière-plan chaque colonne modifiée dans chaque part contenant une ligne concernée, et ne peut pas être annulé.",
+		"chUpdateWhy": "C'est une mutation, pas une mise à jour de lignes : sur une grande table, c'est une longue réécriture, et si elle échoue, elle bloque les mutations suivantes sur la même table. Réduisez le WHERE au maximum et suivez-la dans Operations > Storage > Mutations."
+	}
+}

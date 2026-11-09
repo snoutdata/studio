@@ -14,6 +14,7 @@
  *  transcriber takes over — not yet wired, so for now we surface a friendly message.
  *--------------------------------------------------------------------------------------------*/
 
+import { t } from '../shared/i18n/core';
 import { CompileError, SqlSyntaxError, sqlToLogs, sqlToMongo, sqlToPinecone, UnsupportedQueryError, type BackendKind, type NativeQuery } from '../shared/engine';
 import type { DatabaseSchema } from '../shared/schema';
 
@@ -36,12 +37,12 @@ export type AiTranscriber = () => Promise<NativeQuery>;
  *  to use one sends them looking for a surface that is not there. */
 export function transcribeHint(kind: BackendKind): string {
 	if (kind === 'document') {
-		return 'Try a simpler SELECT/WHERE/LIMIT, or write it in the Pipeline tab.';
+		return t('mainErrors.simplerSelect');
 	}
 	if (kind === 'telemetry') {
-		return 'Try a plain SELECT over one log scope, with WHERE, GROUP BY, ORDER BY and LIMIT.';
+		return t('mainErrors.plainSelectLogs');
 	}
-	return 'Try a simpler SELECT/WHERE/LIMIT.';
+	return t('mainErrors.simplerSelectShort');
 }
 
 /**
@@ -101,7 +102,7 @@ export function compileSqlDeterministic(kind: BackendKind, sql: string, schema?:
 				// subset (Logs Insights, KQL, a Cloud Logging filter), so this flips back to `true` the
 				// day `transcribeToNative` learns to write one; until then the honest answer is the
 				// compiler's own reason.
-				return { ok: false, aiRecoverable: false, message: `This SQL can't be auto-translated to a log query (${err.message}).` };
+				return { ok: false, aiRecoverable: false, message: t('mainErrors.sqlToLogFailed', { message: err.message }) };
 			}
 			throw err;
 		}
@@ -128,12 +129,12 @@ export function compileSqlDeterministic(kind: BackendKind, sql: string, schema?:
 				return { ok: false, aiRecoverable: false, message: err.message };
 			}
 			if (err instanceof UnsupportedQueryError) {
-				return { ok: false, aiRecoverable: kind === 'document', message: `This SQL can't be auto-translated to a ${nativeName} (${err.message}).` };
+				return { ok: false, aiRecoverable: kind === 'document', message: t('mainErrors.sqlToNativeFailed', { nativeName, message: err.message }) };
 			}
 			throw err;
 		}
 	}
-	return { ok: false, aiRecoverable: false, message: `The '${kind}' backend doesn't support SQL queries yet.` };
+	return { ok: false, aiRecoverable: false, message: t('mainErrors.backendNoSql', { kind }) };
 }
 
 /**

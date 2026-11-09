@@ -5,6 +5,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { Icon } from './Icon';
+import { useT, type Translate } from '../i18n';
 import { useConfirm } from './ConfirmDialog';
 import type { McpLogEntry } from '../../../shared/mcp';
 
@@ -14,20 +15,20 @@ interface McpLogPanelProps {
 	onCollapse(): void;
 }
 
-function relativeTime(ts: number): string {
+function relativeTime(ts: number, t: Translate): string {
 	const seconds = Math.round((Date.now() - ts) / 1000);
 	if (seconds < 60) {
-		return `${seconds}s ago`;
+		return t('logs.mcp.agoSeconds', { n: seconds });
 	}
 	const minutes = Math.round(seconds / 60);
 	if (minutes < 60) {
-		return `${minutes}m ago`;
+		return t('logs.mcp.agoMinutes', { n: minutes });
 	}
 	const hours = Math.round(minutes / 60);
 	if (hours < 24) {
-		return `${hours}h ago`;
+		return t('logs.mcp.agoHours', { n: hours });
 	}
-	return `${Math.round(hours / 24)}d ago`;
+	return t('logs.mcp.agoDays', { n: Math.round(hours / 24) });
 }
 
 /** A refusal is its own outcome: the app stopped it, which is different from it going wrong. */
@@ -38,12 +39,12 @@ function outcomeClass(entry: McpLogEntry): string {
 	return entry.outcome.refused ? 'warn' : 'error';
 }
 
-function outcomeLabel(entry: McpLogEntry): string {
+function outcomeLabel(entry: McpLogEntry, t: Translate): string {
 	if (!entry.outcome.ok) {
-		return entry.outcome.refused ? 'refused' : 'error';
+		return entry.outcome.refused ? t('logs.mcp.refused') : t('logs.mcp.error');
 	}
-	const rows = entry.outcome.rowCount === undefined ? '' : `${entry.outcome.rowCount} rows · `;
-	return `${rows}${entry.outcome.durationMs} ms`;
+	const rows = entry.outcome.rowCount === undefined ? '' : `${t('logs.mcp.rows', { rows: entry.outcome.rowCount })} · `;
+	return `${rows}${t('logs.mcp.ms', { ms: entry.outcome.durationMs })}`;
 }
 
 function preview(sql: string): string {
@@ -59,7 +60,8 @@ function preview(sql: string): string {
  * kind, delete each, clear all; a row with SQL opens it in a tab. Shown while agent access is on.
  */
 export function McpLogPanel(props: McpLogPanelProps): JSX.Element {
-	const [entries, setEntries] = useState<McpLogEntry[]>([]);
+	const t = useT();
+const [entries, setEntries] = useState<McpLogEntry[]>([]);
 	const [query, setQuery] = useState('');
 	const [kind, setKind] = useState<'all' | 'query' | 'app'>('all');
 	const [confirm, confirmDialog] = useConfirm();
@@ -73,7 +75,7 @@ export function McpLogPanel(props: McpLogPanelProps): JSX.Element {
 	}, []);
 
 	async function clearAll(): Promise<void> {
-		if (!(await confirm({ title: "Clear the agent log?", body: "Every query an agent ran over MCP will be removed from this log. This cannot be undone.", confirmLabel: "Clear log", danger: true }))) {
+		if (!(await confirm({ title: t('logs.mcp.clearTitle'), body: t('logs.mcp.clearBody'), confirmLabel: t('logs.mcp.clearLog'), danger: true }))) {
 			return;
 		}
 		await window.sqlApi.mcp.logsClear();
@@ -98,26 +100,26 @@ export function McpLogPanel(props: McpLogPanelProps): JSX.Element {
 	return (
 		<div className="sidebar">
 			<div className="sidebar-header">
-				<span>AGENT LOG</span>
+				<span>{t('logs.mcp.header')}</span>
 				<span className="spacer" />
-				<button className="icon-btn" aria-label="Refresh" onClick={() => void refresh()}><Icon name="refresh" /></button>
+				<button className="icon-btn" aria-label={t('logs.mcp.refresh')} onClick={() => void refresh()}><Icon name="refresh" /></button>
 				{entries.length > 0 && (
-					<button className="icon-btn" aria-label="Clear log" onClick={() => void clearAll()}><Icon name="clear-all" /></button>
+					<button className="icon-btn" aria-label={t('logs.mcp.clearLog')} onClick={() => void clearAll()}><Icon name="clear-all" /></button>
 				)}
-				<button className="icon-btn" aria-label="Collapse" onClick={props.onCollapse}><Icon name="chevron-left" /></button>
+				<button className="icon-btn" aria-label={t('logs.collapse')} onClick={props.onCollapse}><Icon name="chevron-left" /></button>
 			</div>
 			<div className="ws-search">
 				<Icon name="search" />
 				<input
 					type="text"
-					placeholder="Search the agent log"
+					placeholder={t('logs.mcp.search')}
 					value={query}
 					onChange={(e) => setQuery(e.target.value)}
 				/>
-				{query && <button className="icon-btn" aria-label="Clear" onClick={() => setQuery('')}><Icon name="close" /></button>}
+				{query && <button className="icon-btn" aria-label={t('logs.mcp.clear')} onClick={() => setQuery('')}><Icon name="close" /></button>}
 			</div>
 			<div className="agent-log-kinds" role="tablist">
-				{([['all', 'Everything'], ['query', 'Databases'], ['app', 'The app']] as const).map(([id, label]) => (
+				{([['all', t('logs.mcp.kindAll')], ['query', t('logs.mcp.kindQuery')], ['app', t('logs.mcp.kindApp')]] as const).map(([id, label]) => (
 					<button
 						key={id}
 						role="tab"
@@ -128,14 +130,14 @@ export function McpLogPanel(props: McpLogPanelProps): JSX.Element {
 				))}
 			</div>
 			<div className="queries-list">
-				{entries.length === 0 && <div className="muted pad">Nothing yet. Everything an external agent does through SnoutData Studio, queries and app actions alike, appears here.</div>}
-				{entries.length > 0 && filtered.length === 0 && <div className="muted pad">No entries match the filter.</div>}
+				{entries.length === 0 && <div className="muted pad">{t('logs.mcp.empty')}</div>}
+				{entries.length > 0 && filtered.length === 0 && <div className="muted pad">{t('logs.mcp.noMatch')}</div>}
 				{filtered.map((entry) => (
 					<div
 						className="query-row"
 						key={entry.id}
 						onClick={() => { if (entry.sql) { props.onPick(entry.sql); } }}
-						title={entry.sql ? "Open in a new tab" : undefined}
+						title={entry.sql ? t('logs.mcp.openTab') : undefined}
 					>
 						<div className={entry.sql ? 'query-sql' : 'agent-log-what'}>
 							{entry.sql ? preview(entry.sql) : (entry.summary ?? entry.tool)}
@@ -145,14 +147,14 @@ export function McpLogPanel(props: McpLogPanelProps): JSX.Element {
 							{entry.client && <span className="muted">{entry.client}</span>}
 							{entry.connectionLabel && <span>{entry.connectionLabel}</span>}
 							{entry.environment && <span className={`env${entry.environment === 'prod' ? ' prod' : ''}`}>{entry.environment}</span>}
-							{entry.mutates && <span className="agent-log-changes" title="This call changed something">changes</span>}
-							<span className="muted">{relativeTime(entry.timestamp)}</span>
-							<span className={outcomeClass(entry)}>{outcomeLabel(entry)}</span>
+							{entry.mutates && <span className="agent-log-changes" title={t('logs.mcp.changesTitle')}>{t('logs.mcp.changes')}</span>}
+							<span className="muted">{relativeTime(entry.timestamp, t)}</span>
+							<span className={outcomeClass(entry)}>{outcomeLabel(entry, t)}</span>
 							<span className="spacer" />
 							<button
 								type="button"
 								className="icon-btn"
-								aria-label="Delete entry"
+								aria-label={t('logs.mcp.deleteEntry')}
 								onClick={(e) => { e.stopPropagation(); void remove(entry.id); }}
 							><Icon name="trash" /></button>
 						</div>

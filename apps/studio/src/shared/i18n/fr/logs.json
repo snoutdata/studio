@@ -1,0 +1,62 @@
+{
+	"aroundIn": "Autour de cet événement dans",
+	"around": "Autour de cet événement",
+	"readingAround": "Lecture des événements autour…",
+	"noEarlier": "Aucun événement antérieur dans la journée précédente",
+	"loadEarlier": "Charger les précédents",
+	"collapse": "Réduire",
+	"expand": "Développer",
+	"showLine": "Afficher toute la ligne",
+	"noLater": "Pas encore d'événements suivants",
+	"loadLater": "Charger les suivants",
+	"chip": {
+		"stream": "flux",
+		"request": "requête",
+		"loggedAt": "journalisé à",
+		"ingested": "ingéré",
+		"event": "événement"
+	},
+	"surroundingTitle": "Afficher les événements enregistrés juste avant et après celui-ci, dans le même flux",
+	"hideSurrounding": "Masquer autour",
+	"surrounding": "Événements autour",
+	"copyTitle": "Copier le message tel que le service l'a stocké",
+	"copied": "Copié",
+	"copy": "Copier",
+	"noMessage": "Cet événement n'a pas de message.",
+	"script": {
+		"done": "Terminé : {ok} réussies, {failed} échouées sur {total}",
+		"running": "Exécution {n} sur {total}…",
+		"rows": {
+			"one": "{count} ligne",
+			"other": "{count} lignes"
+		},
+		"seconds": "{value} s",
+		"skipped": "ignorée"
+	},
+	"mcp": {
+		"agoSeconds": "il y a {n} s",
+		"agoMinutes": "il y a {n} min",
+		"agoHours": "il y a {n} h",
+		"agoDays": "il y a {n} j",
+		"refused": "refusé",
+		"error": "erreur",
+		"rows": "{rows} lignes",
+		"ms": "{ms} ms",
+		"clearTitle": "Effacer le journal de l'agent ?",
+		"clearBody": "Toutes les requêtes exécutées par un agent via MCP seront retirées de ce journal. Cette action est irréversible.",
+		"clearLog": "Effacer le journal",
+		"header": "JOURNAL DE L'AGENT",
+		"refresh": "Actualiser",
+		"search": "Rechercher dans le journal de l'agent",
+		"clear": "Effacer",
+		"kindAll": "Tout",
+		"kindQuery": "Bases de données",
+		"kindApp": "L'application",
+		"empty": "Rien pour le moment. Tout ce qu'un agent externe fait via SnoutData Studio, requêtes comme actions dans l'application, apparaît ici.",
+		"noMatch": "Aucune entrée ne correspond au filtre.",
+		"openTab": "Ouvrir dans un nouvel onglet",
+		"changesTitle": "Cet appel a modifié quelque chose",
+		"changes": "modifie",
+		"deleteEntry": "Supprimer l'entrée"
+	}
+}

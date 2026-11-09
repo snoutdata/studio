@@ -19,23 +19,24 @@ import { PART_TITLE, PROJECT_COPY_PARTS, partUnavailable, type PartState, type P
 import type { ProjectTarget } from '../../../shared/projects';
 import { formatBytes } from '../formatBytes';
 import { Icon } from './Icon';
+import { t, useT } from '../i18n';
 import { FIX_LABEL, MoveProgressPanel, MoveRoute, SEVERITY, type RouteEnd } from './MoveView';
 
 type Step = 'choose' | 'check' | 'review' | 'copying';
 
 const STEPS: readonly { step: Step; chip: string }[] = [
-	{ step: 'choose', chip: "Choose" },
-	{ step: 'check', chip: "Check" },
-	{ step: 'review', chip: "Review" },
-	{ step: 'copying', chip: "Copy" },
+	{ step: 'choose', get chip() { return t('move.steps.choose'); } },
+	{ step: 'check', get chip() { return t('move.steps.check'); } },
+	{ step: 'review', get chip() { return t('move.steps.review'); } },
+	{ step: 'copying', get chip() { return t('move.steps.copy'); } },
 ];
 
 const PART_WHAT: Record<ProjectCopyPart, { icon: string; what: string }> = {
-	users: { icon: 'account', what: "Everyone who can sign in, with their passwords, so they sign in there as they do here." },
-	database: { icon: 'database', what: "Your schemas, tables, data, functions and policies, checked like any move." },
-	files: { icon: 'file-media', what: "Every bucket and the files in it." },
-	functions: { icon: 'symbol-event', what: "The functions folder, deployed to the cloud project." },
-	secrets: { icon: 'key', what: "The functions' secrets. Values go straight from this computer and are never shown." },
+	users: { icon: 'account', get what() { return t('move.copy.users'); } },
+	database: { icon: 'database', get what() { return t('move.copy.database'); } },
+	files: { icon: 'file-media', get what() { return t('move.copy.files'); } },
+	functions: { icon: 'symbol-event', get what() { return t('move.copy.functions'); } },
+	secrets: { icon: 'key', get what() { return t('move.copy.secrets'); } },
 };
 
 const STATE_ICON: Record<PartState, string> = {
@@ -68,6 +69,7 @@ export interface ProjectCopyViewProps {
 }
 
 export function ProjectCopyView(props: ProjectCopyViewProps): JSX.Element {
+	const t = useT();
 	const { source } = props;
 	const toCloud = source.kind === 'local';
 	const idRef = useRef<string>(crypto.randomUUID());
@@ -94,7 +96,7 @@ export function ProjectCopyView(props: ProjectCopyViewProps): JSX.Element {
 					return;
 				}
 				setOptions(view.projects.map((p) => ({ value: p.ref, label: `${p.name}${p.production ? " (production)" : ''}`, target: { kind: 'cloud', ref: p.ref } })));
-				setOptionsNote(view.unavailable ?? (view.account ? null : "Sign in to copy a project to SnoutData Cloud."));
+				setOptionsNote(view.unavailable ?? (view.account ? null : t('move.copy.signIn')));
 			}).catch((err: unknown) => setOptionsNote(err instanceof Error ? err.message : String(err)));
 		} else {
 			void window.sqlApi.local.list().then((view) => {
@@ -148,13 +150,13 @@ export function ProjectCopyView(props: ProjectCopyViewProps): JSX.Element {
 		: chosen?.target ?? null;
 	const request: ProjectCopyRequest | null = destination ? { id: idRef.current, source, target: destination, parts: PROJECT_COPY_PARTS.filter((p) => parts.has(p)) } : null;
 	const sourceEnd: RouteEnd = { label: props.sourceName, icon: toCloud ? 'device-desktop' : 'cloud' };
-	const targetEnd: RouteEnd = { label: creating ? newName.trim() || "New cloud project" : chosen?.label ?? "Choose a project", icon: toCloud ? 'cloud' : 'device-desktop' };
+	const targetEnd: RouteEnd = { label: creating ? newName.trim() || t('move.newCloudProject') : chosen?.label ?? t('move.copy.chooseProject'), icon: toCloud ? 'cloud' : 'device-desktop' };
 
 	async function runCheck(): Promise<void> {
 		if (!request) {
 			return;
 		}
-		setBusy("Checking both projects");
+		setBusy(t('move.copy.checkingBoth'));
 		setError(null);
 		try {
 			const answer = await window.sqlApi.projectCopy.check(request);
@@ -192,11 +194,11 @@ export function ProjectCopyView(props: ProjectCopyViewProps): JSX.Element {
 	}
 
 	async function installTools(): Promise<void> {
-		setBusy("Downloading the Postgres tools");
+		setBusy(t('move.downloadingTools'));
 		try {
 			const outcome = await window.sqlApi.moves.installTools();
 			if (!outcome.ok) {
-				setError(outcome.error ?? "The tools could not be downloaded.");
+				setError(outcome.error ?? t('move.copy.toolsFailed'));
 			}
 		} finally {
 			setBusy(null);
@@ -208,7 +210,7 @@ export function ProjectCopyView(props: ProjectCopyViewProps): JSX.Element {
 		if (!request) {
 			return;
 		}
-		setBusy("Checking everything once more");
+		setBusy(t('move.copy.checkingOnceMore'));
 		setError(null);
 		try {
 			const outcome = await window.sqlApi.projectCopy.start(request, check?.confirmName ? typed : undefined);
@@ -246,7 +248,7 @@ export function ProjectCopyView(props: ProjectCopyViewProps): JSX.Element {
 	return (
 		<div className="flow-wizard move-view">
 			<div className="flow-wizard-head">
-				<span className="flow-wizard-title"><Icon name={toCloud ? 'cloud-upload' : 'cloud-download'} /> {toCloud ? `Copy ${props.sourceName} to SnoutData Cloud` : `Copy ${props.sourceName} to this computer`}</span>
+				<span className="flow-wizard-title"><Icon name={toCloud ? 'cloud-upload' : 'cloud-download'} /> {toCloud ? t('move.copy.titleToCloud', { name: props.sourceName }) : t('move.copy.titleToComputer', { name: props.sourceName })}</span>
 				<div className="flow-wizard-steps">
 					{STEPS.map((entry, index) => (
 						<span key={entry.step} className={`flow-wizard-step${entry.step === step ? ' active' : ''}${stepIndex > index ? ' done' : ''}`}>
@@ -255,7 +257,7 @@ export function ProjectCopyView(props: ProjectCopyViewProps): JSX.Element {
 					))}
 				</div>
 				<div className="flow-wizard-head-spacer" />
-				<button type="button" className="icon-btn" aria-label="Close" onClick={props.onClose}><Icon name="close" /></button>
+				<button type="button" className="icon-btn" aria-label={t('move.close')} onClick={props.onClose}><Icon name="close" /></button>
 			</div>
 
 			<div className="flow-wizard-body">
@@ -265,27 +267,27 @@ export function ProjectCopyView(props: ProjectCopyViewProps): JSX.Element {
 					<div className="flow-wizard-pane move-pane">
 						<p className="flow-wizard-lead">
 							{toCloud
-								? "Copy this project into SnoutData Cloud: its users, its database, its files, its functions and their secrets. This project is left as it is, and nothing is written until you start it on the last step."
-								: "Copy this cloud project onto this computer: its users, its database and its files. The cloud project is left as it is, and nothing is written until you start it on the last step."}
+								? t('move.copy.introToCloud')
+								: t('move.copy.introToComputer')}
 						</p>
 						<MoveRoute source={sourceEnd} target={targetEnd} running={false} />
 						<div className="move-ends">
 							<div className="move-end">
-								<span className="move-end-label"><Icon name="arrow-up" /> From</span>
+								<span className="move-end-label"><Icon name="arrow-up" /> {t('move.from')}</span>
 								<span>{props.sourceName}</span>
-								<span className="move-end-hint">{toCloud ? "On this computer" : "In SnoutData Cloud"}</span>
+								<span className="move-end-hint">{toCloud ? t('move.copy.onComputer') : t('move.copy.inCloud')}</span>
 							</div>
 							<span />
 							<label className="move-end">
-								<span className="move-end-label"><Icon name="arrow-down" /> To</span>
+								<span className="move-end-label"><Icon name="arrow-down" /> {t('move.to')}</span>
 								{options === null && !optionsNote ? (
-									<span className="move-end-hint">Loading…</span>
+									<span className="move-end-hint">{t('move.copy.loading')}</span>
 								) : (
 									<select value={targetValue} onChange={(event) => setTargetValue(event.target.value)}>
-										{!toCloud && <option value="">Choose a local project</option>}
-										{toCloud && <option value={NEW_CLOUD}>New SnoutData Cloud project</option>}
+										{!toCloud && <option value="">{t('move.copy.chooseLocal')}</option>}
+										{toCloud && <option value={NEW_CLOUD}>{t('move.newCloudOption')}</option>}
 										{(options ?? []).length > 0 && (
-											<optgroup label={toCloud ? "Your cloud projects" : "Your local projects"}>
+											<optgroup label={toCloud ? t('move.copy.yourCloud') : t('move.copy.yourLocal')}>
 												{(options ?? []).map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
 											</optgroup>
 										)}
@@ -293,21 +295,21 @@ export function ProjectCopyView(props: ProjectCopyViewProps): JSX.Element {
 								)}
 								{creating && (
 									<>
-										<input className="move-new-name" value={newName} placeholder="Project name" aria-label="New project name" maxLength={60} spellCheck={false} onChange={(event) => setNewName(event.target.value)} />
-										<span className="move-end-hint">{`Created in ${NEW_CLOUD_REGION} when the copy starts.`}</span>
+										<input className="move-new-name" value={newName} placeholder={t('move.projectName')} aria-label={t('move.newProjectName')} maxLength={60} spellCheck={false} onChange={(event) => setNewName(event.target.value)} />
+										<span className="move-end-hint">{t('move.copy.createdInRegion', { region: NEW_CLOUD_REGION })}</span>
 									</>
 								)}
 								{optionsNote && <span className="move-end-hint">{optionsNote}</span>}
 								{!toCloud && options !== null && options.length === 0 && (
 									<span className="move-end-hint">
-										There is no local project yet.{' '}
-										<button type="button" className="link-btn" onClick={props.onSetupLocal}>Set one up</button>, then come back.
+										{t('move.copy.noLocal')}{' '}
+										<button type="button" className="link-btn" onClick={props.onSetupLocal}>{t('move.copy.setOneUp')}</button>{t('move.copy.thenBack')}
 									</span>
 								)}
 							</label>
 						</div>
 
-						<h3 className="move-heading">What to copy</h3>
+						<h3 className="move-heading">{t('move.copy.whatToCopy')}</h3>
 						<fieldset className="copy-parts">
 							{PROJECT_COPY_PARTS.map((part) => {
 								const unavailable = partUnavailable(part, source.kind, toCloud ? 'cloud' : 'local');
@@ -344,10 +346,10 @@ export function ProjectCopyView(props: ProjectCopyViewProps): JSX.Element {
 									{p.notes.map((note) => <span key={note} className="flow-wizard-dim">{note}</span>)}
 									{p.part === 'database' && check.toolsMissing && (
 										<span className="move-finding-fixes">
-											<span className="flow-wizard-dim">The database is copied with Postgres's own tools, which are not on this computer yet.</span>
+											<span className="flow-wizard-dim">{t('move.copy.toolsMissing')}</span>
 											{tools?.supported && tools.published ? (
 												<button type="button" disabled={busy !== null} onClick={() => void installTools()}>
-													<Icon name="cloud-download" /> {`Download them (${formatBytes(tools.downloadBytes ?? 0)})`}
+													<Icon name="cloud-download" /> {t('move.downloadThem', { size: formatBytes(tools.downloadBytes ?? 0) })}
 												</button>
 											) : null}
 										</span>
@@ -358,13 +360,13 @@ export function ProjectCopyView(props: ProjectCopyViewProps): JSX.Element {
 
 						{databaseFindings.length > 0 && (
 							<>
-								<h3 className="move-heading">The database</h3>
+								<h3 className="move-heading">{t('move.copy.theDatabase')}</h3>
 								<ul className="move-findings">
 									{databaseFindings.map((finding) => (
 										<li key={finding.key} className={`move-finding ${finding.severity}${finding.resolvedBy ? ' resolved' : ''}`}>
 											<span className="move-finding-head">
 												<Icon name={finding.resolvedBy ? 'pass' : SEVERITY[finding.severity].icon} />
-												<span className="move-finding-chip">{finding.resolvedBy ? `Decided: ${FIX_LABEL[finding.resolvedBy]}` : SEVERITY[finding.severity].chip}</span>
+												<span className="move-finding-chip">{finding.resolvedBy ? t('move.decided', { fix: FIX_LABEL[finding.resolvedBy] }) : SEVERITY[finding.severity].chip}</span>
 											</span>
 											<span className="move-finding-sentence">{finding.sentence}</span>
 											{finding.fixes.length > 0 && !finding.resolvedBy && (
@@ -384,21 +386,21 @@ export function ProjectCopyView(props: ProjectCopyViewProps): JSX.Element {
 
 				{step === 'review' && check && (
 					<div className="flow-wizard-pane move-pane">
-						<p className="flow-wizard-lead">Nothing has run yet. This is exactly what will happen, in this order.</p>
+						<p className="flow-wizard-lead">{t('move.copy.nothingYetOrder')}</p>
 						<MoveRoute source={sourceEnd} target={targetEnd} running={false} />
 						<ol className="copy-review">
-							{destination?.kind === 'newCloud' && <li><Icon name="add" /> {`Create the SnoutData Cloud project "${destination.name}" in ${destination.region}.`}</li>}
+							{destination?.kind === 'newCloud' && <li><Icon name="add" /> {t('move.copy.createProject', { name: destination.name, region: destination.region })}</li>}
 							{chosenChecks.filter((p) => p.available).map((p) => (
 								<li key={p.part}><Icon name={PART_WHAT[p.part].icon} /> <strong>{PART_TITLE[p.part]}:</strong> {p.summary}</li>
 							))}
 						</ol>
-						<h3 className="move-heading">Not copied</h3>
+						<h3 className="move-heading">{t('move.copy.notCopied')}</h3>
 						<ul className="copy-review not">
 							{check.notCopied.map((line) => <li key={line}>{line}</li>)}
 						</ul>
 						{check.confirmName && (
 							<label className="move-confirm">
-								<span>The target is a production project. Type <strong>{check.confirmName}</strong> to confirm.</span>
+								<span>{t('move.copy.prodTarget')} {t('move.typeBefore')} <strong>{check.confirmName}</strong> {t('move.typeAfter')}</span>
 								<input value={typed} onChange={(event) => setTyped(event.target.value)} spellCheck={false} />
 							</label>
 						)}
@@ -420,7 +422,7 @@ export function ProjectCopyView(props: ProjectCopyViewProps): JSX.Element {
 									)}
 									{p.failures.length > 0 && (
 										<details className="move-result-failure copy-failures">
-											<summary>{`${p.failures.length.toLocaleString()} did not copy`}</summary>
+											<summary>{t('move.copy.didNotCopy', { n: p.failures.length })}</summary>
 											<ul>{p.failures.slice(0, 200).map((f) => <li key={f}>{f}</li>)}</ul>
 										</details>
 									)}
@@ -432,9 +434,9 @@ export function ProjectCopyView(props: ProjectCopyViewProps): JSX.Element {
 							<div className={`move-result ${progress.ok ? 'success' : 'partial'}`} role="status">
 								<div className="move-result-head">
 									<Icon name={progress.ok ? 'pass' : 'warning'} />
-									<span>{progress.ok ? `Copied. "${check?.targetLabel}" has everything above.` : progress.error ?? "Copied, except what is listed above."}</span>
+									<span>{progress.ok ? t('move.copy.copied', { name: check?.targetLabel ?? '' }) : progress.error ?? t('move.copy.copiedExcept')}</span>
 								</div>
-								<p className="flow-wizard-dim">Point your app at the new project's URL and app key: each project has its own.</p>
+								<p className="flow-wizard-dim">{t('move.copy.pointApp')}</p>
 							</div>
 						)}
 					</div>
@@ -451,38 +453,38 @@ export function ProjectCopyView(props: ProjectCopyViewProps): JSX.Element {
 			<div className="flow-wizard-foot">
 				{(step === 'check' || step === 'review') && (
 					<button type="button" className="secondary" disabled={busy !== null} onClick={() => setStep(step === 'review' ? 'check' : 'choose')}>
-						<Icon name="arrow-left" /> Back
+						<Icon name="arrow-left" /> {t('move.back')}
 					</button>
 				)}
 				<div className="flow-wizard-head-spacer" />
 				{step === 'choose' && (
 					<button type="button" disabled={!request || request.parts.length === 0 || busy !== null} onClick={() => void runCheck()}>
-						Check both projects <Icon name="arrow-right" />
+						{t('move.copy.checkBoth')} <Icon name="arrow-right" />
 					</button>
 				)}
 				{step === 'check' && (
 					<>
-						<button type="button" className="secondary" disabled={busy !== null} onClick={() => void runCheck()}><Icon name="refresh" /> Check again</button>
-						<button type="button" disabled={!readyToReview || busy !== null} onClick={() => setStep('review')}>Review <Icon name="arrow-right" /></button>
+						<button type="button" className="secondary" disabled={busy !== null} onClick={() => void runCheck()}><Icon name="refresh" /> {t('move.checkAgain')}</button>
+						<button type="button" disabled={!readyToReview || busy !== null} onClick={() => setStep('review')}>{t('move.review')} <Icon name="arrow-right" /></button>
 					</>
 				)}
 				{step === 'review' && (
 					<button type="button" disabled={!confirmed || busy !== null} onClick={() => void start()}>
-						<Icon name="play" /> {confirmed ? "Start the copy" : "Type the name above to start"}
+						<Icon name="play" /> {confirmed ? t('move.copy.start') : t('move.copy.typeNameToStart')}
 					</button>
 				)}
 				{step === 'copying' && progress?.running && (
 					<button type="button" className="secondary" onClick={() => void window.sqlApi.projectCopy.cancel(idRef.current)}>
-						<Icon name="debug-stop" /> Stop the copy
+						<Icon name="debug-stop" /> {t('move.copy.stop')}
 					</button>
 				)}
 				{step === 'copying' && finished && progress.target && (
 					<button type="button" className="secondary" onClick={() => props.onOpenProject(progress.target as ProjectTarget, check?.targetLabel ?? '')}>
-						<Icon name="arrow-right" /> Open {check?.targetLabel}
+						<Icon name="arrow-right" /> {t('move.copy.open', { name: check?.targetLabel ?? '' })}
 					</button>
 				)}
 				{step === 'copying' && finished && (
-					<button type="button" onClick={props.onClose}><Icon name="close" /> Close</button>
+					<button type="button" onClick={props.onClose}><Icon name="close" /> {t('move.close')}</button>
 				)}
 			</div>
 		</div>

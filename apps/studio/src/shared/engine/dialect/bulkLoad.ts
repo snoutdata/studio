@@ -24,6 +24,7 @@
  *    - Identifiers go through the dialect's `quoteIdent`, exactly as `insert.ts` does.
  *--------------------------------------------------------------------------------------------*/
 
+import { t } from '../../i18n/core';
 import type { BulkFormat } from './bulkFormats';
 import { explainTarget } from './explain';
 import { readOnlyError } from '../context/tools';
@@ -229,15 +230,15 @@ export function emitBulkLoad(driverId: string, target: BulkLoadTarget, format: B
 export function bulkLoadWarnings(format: BulkFormat, encoding: BulkEncoding | undefined, guessed: boolean): string[] {
 	const warnings: string[] = [];
 	if (!format.named) {
-		warnings.push(`${format.label} carries no column names, so the values land in the table's column ORDER. A file whose columns are in another order fills the wrong ones, and nothing about that is an error.`);
+		warnings.push(t('engineBulkLoad.warnings.unnamed', { format: format.label }));
 	}
 	if (guessed) {
-		warnings.push(`The format was read off the file's name, not its contents. If it is wrong the load refuses, usually on the first row.`);
+		warnings.push(t('engineBulkLoad.warnings.guessed'));
 	}
 	if (encoding) {
-		warnings.push(`The file is sent compressed and the server expands it as it arrives, so nothing is written to this computer.`);
+		warnings.push(t('engineBulkLoad.warnings.compressed'));
 	}
-	warnings.push(`An INSERT is not inside a transaction. A load that fails part way through leaves the rows it had already written, and running it again adds them a second time.`);
+	warnings.push(t('engineBulkLoad.warnings.noTransaction'));
 	return warnings;
 }
 
@@ -245,6 +246,6 @@ export function bulkLoadWarnings(format: BulkFormat, encoding: BulkEncoding | un
 export function describeBulkLoad(target: BulkLoadTarget, format: BulkFormat): string {
 	const name = target.schema ? `${target.schema}.${target.table}` : target.table;
 	return format.named
-		? `Read as ${format.label} and matched to ${name} by column name.`
-		: `Read as ${format.label} and matched to ${name} by column position.`;
+		? t('engineBulkLoad.describe.byName', { format: format.label, name })
+		: t('engineBulkLoad.describe.byPosition', { format: format.label, name });
 }

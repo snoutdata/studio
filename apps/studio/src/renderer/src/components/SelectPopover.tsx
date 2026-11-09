@@ -6,6 +6,7 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Icon } from './Icon';
+import { useT } from '../i18n';
 
 // Every <select> in the app opens OUR list instead of the operating system's. Mounted once, like
 // IconButtonTips.
@@ -77,6 +78,7 @@ function choose(select: HTMLSelectElement, index: number): void {
 const isMac = typeof navigator !== 'undefined' && /Mac/i.test(navigator.platform);
 
 export function SelectPopover(): JSX.Element | null {
+	const t = useT();
 	const [select, setSelect] = useState<HTMLSelectElement | null>(null);
 	const [items, setItems] = useState<Item[]>([]);
 	const [filter, setFilter] = useState('');
@@ -171,8 +173,8 @@ export function SelectPopover(): JSX.Element | null {
 			return;
 		}
 		function onDown(e: MouseEvent): void {
-			const t = e.target as Node;
-			if (t !== select && !menuRef.current?.contains(t)) {
+			const target = e.target as Node;
+			if (target !== select && !menuRef.current?.contains(target)) {
 				close(false);
 			}
 		}
@@ -319,15 +321,15 @@ export function SelectPopover(): JSX.Element | null {
 					<input
 						ref={filterRef}
 						value={filter}
-						placeholder="Filter"
-						aria-label="Filter"
+						placeholder={t('shell.common.filter')}
+						aria-label={t('shell.common.filter')}
 						onMouseDown={(e) => e.stopPropagation()}
 						onChange={(e) => { setFilter(e.target.value); setCursor(0); }}
 					/>
 				</div>
 			)}
 			<div ref={listRef} className="conn-picker-list" role="listbox" tabIndex={-1} aria-activedescendant={rows[cursor] ? `select-pop-${cursor}` : undefined}>
-				{rows.length === 0 && <div className="conn-picker-empty">Nothing matches</div>}
+				{rows.length === 0 && <div className="conn-picker-empty">{t('shell.common.nothingMatches')}</div>}
 				{rows.map((item, row) => {
 					const heading = item.group !== undefined && item.group !== lastGroup ? item.group : undefined;
 					lastGroup = item.group;

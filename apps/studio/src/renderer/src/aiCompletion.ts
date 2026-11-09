@@ -7,6 +7,7 @@ import { ASSISTANT_NAME } from '../../shared/assistant';
 import { monaco } from './monaco';
 import { isCompletionPosition } from '../../shared/engine';
 import type { CompletionOutcome, InlineCompletionMode } from '../../shared/ai';
+import { t } from './i18n';
 
 // AI completion: a Monaco inline-completions provider that renders the model's suggestion
 // as ghost text (accept with Tab, dismiss with Esc). Deliberately separate from the
@@ -107,7 +108,7 @@ export function registerAiCompletion(): void {
 			if (!ctx.enabled) {
 				// Only nag on an explicit trigger; stay silent for as-you-type calls.
 				if (explicit) {
-					ctx.onStatus('AI completion is off. Enable it under Settings → AI.');
+					ctx.onStatus(t('editor.ai.completionOff'));
 				}
 				return empty;
 			}
@@ -129,7 +130,7 @@ export function registerAiCompletion(): void {
 				return empty;
 			}
 			if (explicit) {
-				ctx.onStatus(`${ASSISTANT_NAME}: thinking…`);
+				ctx.onStatus(t('editor.ai.thinking', { assistant: ASSISTANT_NAME }));
 			}
 			const result = await window.sqlApi.aiComplete({ connectionId: ctx.getConnectionId(), prefix, suffix });
 			if (token.isCancellationRequested) {
@@ -148,7 +149,7 @@ export function registerAiCompletion(): void {
 				return empty;
 			}
 			if (explicit) {
-				ctx.onStatus(result.text ? '' : `${ASSISTANT_NAME}: no suggestion`);
+				ctx.onStatus(result.text ? '' : t('editor.ai.noSuggestion', { assistant: ASSISTANT_NAME }));
 			}
 			if (!result.text) {
 				// A suggestion the guard emptied never reaches the user — record that as its outcome

@@ -1,0 +1,41 @@
+{
+	"noVault": {
+		"title": "Passwords are saved without a password vault",
+		"detail": "This computer has no password vault (keyring), so Studio saves your database passwords in a file only your user account can read. Anyone who can use your account could read them. To keep them in a vault, install one, such as GNOME Keyring, and restart Studio."
+	},
+	"signInFailed": "Sign-in failed",
+	"connectionFailed": "Connection failed",
+	"applyFailed": "Apply changes failed",
+	"exportFailed": "Export failed",
+	"serverNoReason": "The server did not say why.",
+	"queryFailed": "Query failed",
+	"reconnectFailed": "Reconnect failed",
+	"countFailed": "Count failed",
+	"fetchMoreFailed": "Fetch more failed",
+	"fetchMoreColumns": "The next rows came back with a different set of columns, so they weren't added. Re-run the query.",
+	"from": "From {name}",
+	"ask": "Ask {assistant}",
+	"askTitle": "Ask {assistant} about this",
+	"viewAll": "View all",
+	"center": {
+		"title": "Notifications",
+		"clearAll": "Clear all",
+		"clearAllTooltip": "Clear all notifications",
+		"clearAllTitle": "Clear all notifications?",
+		"clearAllBody": {
+			"one": "All {count} notification will be removed. This cannot be undone.",
+			"other": "All {count} notifications will be removed. This cannot be undone."
+		},
+		"deleteTitle": "Delete this notification?",
+		"deleteBody": "This cannot be undone.",
+		"empty": "No notifications. Errors and notable events will show up here.",
+		"secondsAgo": "{count}s ago",
+		"minutesAgo": "{count}m ago",
+		"hoursAgo": "{count}h ago",
+		"daysAgo": "{count}d ago",
+		"less": "Less",
+		"details": "Details",
+		"prev": "Prev",
+		"range": "{start}-{end} of {total}"
+	}
+}

@@ -6,6 +6,7 @@
 import { useEffect } from 'react';
 import type { StatementHazard } from '../../../shared/engine';
 import { Icon } from './Icon';
+import { useT } from '../i18n';
 
 interface ConfirmRunProps {
 	label: string;
@@ -24,6 +25,7 @@ interface ConfirmRunProps {
 
 /** Production write confirmation: shown before a destructive statement runs on prod. */
 export function ConfirmRun(props: ConfirmRunProps): JSX.Element {
+	const t = useT();
 	const { onConfirm, onCancel } = props;
 	const hazards = props.hazards ?? [];
 	// A hazard means the statement almost certainly isn't the one that was meant, so Enter must not
@@ -42,16 +44,18 @@ export function ConfirmRun(props: ConfirmRunProps): JSX.Element {
 	}, [onConfirm, onCancel, enterConfirms]);
 
 	const target = `${props.label}${props.database ? ` / ${props.database}` : ''}`;
-	const detail = props.unfiltered
-		? `This ${props.verb} filters nothing (no WHERE clause, or one that is always true), so it will affect EVERY row on the production database "${target}".`
-		: `This runs a ${props.verb} statement on the production database "${target}".`;
+	// `verb` is a SQL keyword, or the two words the app passes for a whole script or a write. Those get whole
+	// sentences, because "script" and "write" are worded differently around them in each language.
+	const statement = props.verb === 'script' ? t('shell.confirmRun.statementScript', { target }) : props.verb === 'write' ? t('shell.confirmRun.statementWrite', { target }) : t('shell.confirmRun.statement', { verb: props.verb, target });
+	const detail = props.unfiltered ? t('shell.confirmRun.unfiltered', { verb: props.verb, target }) : statement;
+	const title = props.verb === 'script' ? t('shell.confirmRun.titleScript') : props.verb === 'write' ? t('shell.confirmRun.titleWrite') : t('shell.confirmRun.title', { verb: props.verb });
 	const canCorrect = props.corrected !== undefined && props.onRunCorrected !== undefined;
 	return (
 		<div className="modal-backdrop" onClick={props.onCancel}>
 			<div className="modal confirm" onClick={(e) => e.stopPropagation()}>
 				<h2 className="danger">
 					<Icon name="warning" />
-					Run {props.verb} on PRODUCTION?
+					{title}
 				</h2>
 				<p className="confirm-detail">{detail}</p>
 				{hazards.length > 0 && (
@@ -72,21 +76,21 @@ export function ConfirmRun(props: ConfirmRunProps): JSX.Element {
 				)}
 				<div className="modal-actions">
 					<span className="spacer" />
-					<button type="button" className="secondary" onClick={props.onCancel} autoFocus><Icon name="close" /> Cancel</button>
+					<button type="button" className="secondary" onClick={props.onCancel} autoFocus><Icon name="close" /> {t('shell.common.cancel')}</button>
 					{canCorrect
 						? (
 							<>
-								<button type="button" className="secondary" onClick={props.onConfirm}><Icon name="play" /> Run as written</button>
+								<button type="button" className="secondary" onClick={props.onConfirm}><Icon name="play" /> {t('shell.confirmRun.runAsWritten')}</button>
 								{/* The correction is only the DEFAULT action when the statement is filtered. On an
 								    unfiltered UPDATE the corrected form is the more destructive of the two (it
 								    assigns every column the user listed, across every row), so it stays a plain
 								    secondary: fixing the typo must not be a one-click way to widen the blast radius. */}
 								<button type="button" className={props.unfiltered ? 'secondary' : undefined} onClick={props.onRunCorrected}>
-									<Icon name="play" /> Run corrected statement
+									<Icon name="play" /> {t('shell.confirmRun.runCorrected')}
 								</button>
 							</>
 						)
-						: <button type="button" className="danger" onClick={props.onConfirm}><Icon name="warning" /> Run on Production</button>}
+						: <button type="button" className="danger" onClick={props.onConfirm}><Icon name="warning" /> {t('shell.confirmRun.runOnProduction')}</button>}
 				</div>
 			</div>
 		</div>

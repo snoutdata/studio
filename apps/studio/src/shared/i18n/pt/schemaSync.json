@@ -1,0 +1,106 @@
+{
+	"class": {
+		"add": "Adicionar",
+		"alter": "Modificar",
+		"drop": "Excluir"
+	},
+	"confirm": {
+		"target": "o destino",
+		"title": {
+			"one": "Aplicar {count} instrução em {target}?",
+			"other": "Aplicar {count} instruções em {target}?"
+		},
+		"apply": "Aplicar",
+		"changes": "Isto altera",
+		"including": ", incluindo",
+		"destructive": {
+			"one": "{count} alteração destrutiva",
+			"other": "{count} alterações destrutivas"
+		},
+		"canLose": "que podem perder dados",
+		"transactional": "Roda em uma única transação (tudo ou nada).",
+		"oneByOne": "As instruções são aplicadas uma a uma; uma falha pode ser corrigida e retomada."
+	},
+	"title": "Sincronização de schema",
+	"pick": {
+		"heading": "Sincronizar um schema de banco de dados",
+		"intro": "A **origem** define o schema desejado; o **destino** é alterado para corresponder. Os dois devem estar conectados e usar o mesmo tipo de banco.",
+		"needTwo": "Conecte pelo menos dois bancos do mesmo tipo para sincronizar.",
+		"source": "Origem (estado desejado)",
+		"selectConnection": "Selecione uma conexão…",
+		"target": "Destino (será alterado)",
+		"readOnlyTarget": "(somente leitura, não pode ser alterado)",
+		"comparing": "Comparando…",
+		"compare": "Comparar schemas"
+	},
+	"inSync": "Sincronizado",
+	"inSyncBody": "O destino já corresponde à origem. Nenhuma alteração necessária.",
+	"chooseOther": "Escolher outros bancos",
+	"close": "Fechar",
+	"chip": {
+		"dropTitle": "Exclui objetos que só existem no destino. Oculte para sincronizar de forma aditiva, sem remover nada.",
+		"toggle": {
+			"add": "Mostrar ou ocultar as adições",
+			"alter": "Mostrar ou ocultar as modificações",
+			"drop": "Mostrar ou ocultar as exclusões"
+		},
+		"noKeys": "Nenhuma alteração de chave, índice ou chave estrangeira neste diff.",
+		"keysTitle": "Chaves, índices e chaves estrangeiras podem falhar quando o destino tem linhas duplicadas ou órfãs (um problema de dados, não de schema). Oculte-os para sincronizar o resto e adicione-os quando os dados estiverem limpos.",
+		"keys": "Chaves e índices"
+	},
+	"selected": {
+		"one": "{count} selecionado",
+		"other": "{count} selecionados"
+	},
+	"unselectAll": "Desmarcar tudo",
+	"selectAll": "Selecionar tudo",
+	"filter": "Filtrar alterações…",
+	"clearFilter": "Limpar filtro",
+	"applied": {
+		"one": "{count} instrução aplicada.",
+		"other": "{count} instruções aplicadas."
+	},
+	"stillDiffer": {
+		"one": "{count} alteração ainda difere.",
+		"other": "{count} alterações ainda diferem."
+	},
+	"additive": "Sincronização aditiva: nada será removido do destino.",
+	"noMatch": "Nenhuma alteração corresponde a \"{query}\".",
+	"cardTitle": "Clique para incluir ou excluir, Shift+clique para selecionar um intervalo",
+	"canLoseData": "Pode perder dados",
+	"migrationSql": "SQL da migração",
+	"statements": {
+		"one": "{count} instrução",
+		"other": "{count} instruções"
+	},
+	"copyScript": "Copiar o script inteiro",
+	"back": "Voltar",
+	"selectedOf": "{n} de {total} selecionados",
+	"destructiveCount": {
+		"one": "{count} destrutiva",
+		"other": "{count} destrutivas"
+	},
+	"applyProd": "Aplicar em PRODUÇÃO",
+	"applyBtn": "Aplicar",
+	"applying": "Aplicando a migração…",
+	"runningAgainst": "Executando em {name}.",
+	"statementFailed": "Instrução {n} de {total} falhou",
+	"migrationStopped": "Migração interrompida",
+	"rolledBack": "transação revertida",
+	"correctedStatement": "Instrução corrigida",
+	"editRetry": "edite e depois Tentar de novo",
+	"sentTo": "Enviado para {assistant}. Leia a correção no chat, cole a instrução corrigida acima e depois Tentar de novo.",
+	"stoppedBody": "A migração parou antes de ser possível apontar uma instrução específica. Volte às alterações ou recalcule o diff com o banco em produção.",
+	"askFix": "Pedir a {assistant} para corrigir",
+	"resyncTitle": "Reinspecionar o destino e refazer o diff (use depois de corrigir a causa, ex.: limpar linhas duplicadas).",
+	"resync": "Ressincronizar",
+	"backToChanges": "Voltar às alterações",
+	"stop": "Parar",
+	"retry": "Tentar de novo",
+	"applied2": "Migração aplicada",
+	"appliedBody": {
+		"one": "{count} instrução aplicada em {target}. Os bancos estão sincronizados.",
+		"other": "{count} instruções aplicadas em {target}. Os bancos estão sincronizados."
+	},
+	"done": "Concluído"
+}

@@ -1,0 +1,64 @@
+{
+	"advisory": {
+		"performance": "Conseils de performance",
+		"notes": "Notes sur la requête",
+		"askTitle": "Demander à {assistant} de suggérer un index ou une réécriture",
+		"askFix": "Demander à {assistant} de corriger",
+		"dismiss": "Ignorer"
+	},
+	"newMonitor": "Nouveau moniteur",
+	"renameHint": "Double-cliquer pour renommer",
+	"addWidget": "Ajouter un widget",
+	"deleteConfirm": "Supprimer \"{name}\" ?",
+	"delete": "Supprimer",
+	"cancel": "Annuler",
+	"deleteMonitor": "Supprimer le moniteur",
+	"close": "Fermer",
+	"emptyTitle": "Aucun moniteur pour le moment",
+	"emptyBody": "Un moniteur est un ensemble de widgets SQL en direct, interrogés à intervalle régulier et tracés dans le temps.",
+	"monitorEmpty": "{name} est vide",
+	"monitorEmptyBody": "Ajoutez un widget : une requête SQL interrogée toutes les quelques secondes et tracée. Une tendance échantillonne un nombre dans le temps ; un instantané relance une requête et remplace le graphique.",
+	"qp": {
+		"rank": {
+			"time": "Temps total",
+			"read": "Données lues",
+			"memory": "Pic de mémoire"
+		},
+		"selectToAnalyze": "Sélectionnez une connexion dans la barre latérale pour analyser",
+		"theDatabase": "la base",
+		"connectToCollect": "Connectez \"{name}\" pour collecter sa charge de travail",
+		"thisDatabaseCap": "Cette base",
+		"noStats": "{name} n'expose pas de statistiques de requêtes à l'exécution",
+		"collectTitle": "Collecter les instructions les plus lourdes",
+		"title": "Performance des requêtes",
+		"subtitle": {
+			"time": "instructions les plus lourdes par temps total, à un instant donné",
+			"read": "instructions les plus lourdes par données lues, à un instant donné",
+			"memory": "instructions les plus lourdes par pic de mémoire, à un instant donné"
+		},
+		"collecting": "Collecte…",
+		"collect": "Collecter les données",
+		"selectDatabase": "Sélectionnez une base dans la barre latérale des connexions, connectez-la, puis cliquez sur \"Collecter les données\" pour voir ses requêtes les plus lourdes.",
+		"noStatsLong": "{name} n'expose pas de statistiques de requêtes à l'exécution : il n'y a donc pas de charge de travail à analyser.",
+		"collectingLong": "Collecte des instructions les plus lourdes…",
+		"thisDatabase": "cette base",
+		"connectSidebar": "Connectez \"{name}\" dans la barre latérale pour collecter ses requêtes les plus lourdes.",
+		"clickCollect": "Cliquez sur \"Collecter les données\" ci-dessus pour charger les requêtes les plus lourdes de {name}.",
+		"noStatements": "Aucune instruction enregistrée pour le moment. Exécutez des requêtes sur cette base, puis collectez à nouveau.",
+		"analyzeWith": "Analyser cette instruction avec {assistant}",
+		"suggestWith": "Suggérer une optimisation avec {assistant}",
+		"statements": {
+			"one": "{count} instruction",
+			"other": "{count} instructions"
+		},
+		"allReplicas": "sur les {n} réplicas",
+		"oneReplica": "1 réplica sur {n} seulement",
+		"rankBy": "Classer par",
+		"top": "Top",
+		"formatQuery": "Mettre en forme la requête",
+		"hintMysqlDenied": "Il faut SELECT sur performance_schema. Demandez-le à un DBA (par ex. GRANT SELECT ON performance_schema.* TO your_user), puis collectez à nouveau.",
+		"hintMysqlMissing": "performance_schema semble désactivé sur ce serveur. Activez-le (performance_schema=ON) pour voir la charge de travail.",
+		"hintPgMissing": "Il faut l'extension pg_stat_statements. Exécutez CREATE EXTENSION pg_stat_statements (et ajoutez-la à shared_preload_libraries + redémarrage), puis collectez à nouveau.",
+		"hintDenied": "Lire les statistiques de requêtes de cette base demande des privilèges supplémentaires (par ex. VIEW SERVER STATE sur SQL Server, SELECT ANY DICTIONARY sur Oracle ou MONITOR sur Snowflake). Accordez l'accès, puis collectez à nouveau."
+	}
+}

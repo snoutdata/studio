@@ -1,0 +1,95 @@
+{
+	"listingPermission": " Listar es un permiso aparte. Si estas credenciales se limitan a {nouns} concretos en vez de a toda la cuenta, nómbralos en la conexión y los leerá sin pedir la lista.",
+	"armDidNotAnswer": "{label} no respondió: {message}",
+	"signedInChoose": "Sesión iniciada en {label}. Elige el {noun} en la conexión.",
+	"serviceDidNotAnswer": "{label} no respondió.",
+	"storageAt": "el almacenamiento en {endpoint}",
+	"connectedNone": "Conectado a {where}. Esta cuenta aún no tiene {nouns}.",
+	"connectedSome": "Conectado a {where}. Visibles: {what}.",
+	"storageGone": "Esa cuenta de almacenamiento ya no está configurada.",
+	"accountGone": "Esa cuenta de nube ya no está configurada.",
+	"notBuilt": "{label} aún no está disponible.",
+	"noFileStorage": "{vendorLabel} no tiene almacenamiento de archivos que esta app pueda leer.",
+	"noLogService": "{vendorLabel} no tiene servicio de logs que esta app pueda leer.",
+	"setRegion": "Define primero una región: {label} lista sus {nouns} de región en región.",
+	"connectedRegionNone": "Conectado a {label} en {region}. Aún no hay nada.",
+	"connectedRegionSome": "Conectado a {label} en {region}. Visibles: {what}.",
+	"noun_bucket": {
+		"one": "bucket",
+		"other": "buckets"
+	},
+	"noun_container": {
+		"one": "contenedor",
+		"other": "contenedores"
+	},
+	"noun_log_group": {
+		"one": "grupo de logs",
+		"other": "grupos de logs"
+	},
+	"noun_table": {
+		"one": "tabla",
+		"other": "tablas"
+	},
+	"noun_log": {
+		"one": "log",
+		"other": "logs"
+	},
+	"count_bucket": {
+		"one": "Un bucket",
+		"other": "{count} buckets"
+	},
+	"count_container": {
+		"one": "Un contenedor",
+		"other": "{count} contenedores"
+	},
+	"count_log_group": {
+		"one": "Un grupo de logs",
+		"other": "{count} grupos de logs"
+	},
+	"count_table": {
+		"one": "Una tabla",
+		"other": "{count} tablas"
+	},
+	"count_log": {
+		"one": "Un log",
+		"other": "{count} logs"
+	},
+	"whatAws": "Archivos en S3, eventos de logs en CloudWatch.",
+	"whatAzure": "Archivos en Blob Storage, eventos de logs en Azure Monitor.",
+	"whatGcp": "Archivos en Cloud Storage, eventos de logs en Cloud Logging.",
+	"s3CompatLabel": "Almacenamiento compatible con S3",
+	"whatS3Compat": "Cloudflare R2, MinIO, Backblaze B2, Wasabi, Ceph o cualquier otro servicio compatible con la API de S3.",
+	"importsAws": "la CLI de AWS",
+	"importsAzure": "la CLI de Azure",
+	"importsGcp": "la CLI de gcloud",
+	"importsS3Compat": "tu configuración de la CLI de AWS, donde suele guardarse una clave compatible con S3",
+	"awsSso": "Sesión iniciada por SSO. Funciona mientras dure tu sesión, y un flujo programado se detiene cuando caduca hasta que vuelvas a iniciar sesión.",
+	"awsAssume": "Asume un rol. Funciona donde funcione el perfil en el que se basa.",
+	"awsCommand": "Ejecuta un comando tuyo para obtener credenciales. Funciona aquí mientras ese comando funcione.",
+	"awsWebIdentity": "Usa un archivo de token de identidad web.",
+	"awsNoCreds": "Este perfil no nombra credenciales propias, así que puede depender de otra cosa en este equipo.",
+	"noun_region": {
+		"one": "región",
+		"other": "regiones"
+	},
+	"count_region": {
+		"one": "Una región",
+		"other": "{count} regiones"
+	},
+	"noun_workspace_ID": {
+		"one": "ID de espacio de trabajo",
+		"other": "ID de espacios de trabajo"
+	},
+	"count_workspace_ID": {
+		"one": "Un ID de espacio de trabajo",
+		"other": "{count} ID de espacios de trabajo"
+	},
+	"noun_project": {
+		"one": "proyecto",
+		"other": "proyectos"
+	},
+	"count_project": {
+		"one": "Un proyecto",
+		"other": "{count} proyectos"
+	}
+}

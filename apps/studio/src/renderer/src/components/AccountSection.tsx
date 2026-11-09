@@ -10,8 +10,9 @@ import { AssistantArt } from '../art/Illustrations';
 import type { AuthProviderId, AuthState, Tier } from '../../../shared/auth';
 import { ssoDomainFromEmail } from '../../../shared/auth';
 import type { AiBudgetStatus, AiModelInfo } from '../../../shared/ai';
+import { formatLocale, useT } from '../i18n';
 
-const TIER_LABEL: Record<Tier, string> = { free: 'Free', plus: 'Plus', pro: 'Pro', business: 'Business' };
+const TIER_LABEL: Record<Tier, string> = { free: 'account.tiers.free', plus: 'Plus', pro: 'Pro', business: 'Business' };
 
 // Plan comparison shown to every signed-in user. What a plan unlocks is
 // decided by the tier (main/entitlements.ts); what it COSTS, and which models it serves, change on
@@ -22,10 +23,10 @@ const TIER_LABEL: Record<Tier, string> = { free: 'Free', plus: 'Plus', pro: 'Pro
 // Business is bought by a company for its people, so it is the one row here nobody can buy from
 // this screen. Enterprise is deliberately absent: it is quote-only, and the pricing page carries it.
 const PLANS: { tier: Tier; perks: string[] }[] = [
-	{ tier: 'free', perks: ['Monthly AI credits, on us', 'Full SQL assistant'] },
-	{ tier: 'plus', perks: ['Premium cloud models', 'A bigger monthly AI-credit balance', 'AI audit logging'] },
-	{ tier: 'pro', perks: ['Everything in Plus', '3x the monthly AI credits of Plus'] },
-	{ tier: 'business', perks: ['Everything in Pro, for everyone on the team', 'SAML single sign-on, included and not an add-on', 'Per seat, bought by your company'] },
+	{ tier: 'free', perks: ['account.perks.freeCredits', 'account.perks.freeAssistant'] },
+	{ tier: 'plus', perks: ['account.perks.plusModels', 'account.perks.plusBalance', 'account.perks.plusAudit'] },
+	{ tier: 'pro', perks: ['account.perks.proEverything', 'account.perks.proCredits'] },
+	{ tier: 'business', perks: ['account.perks.businessEverything', 'account.perks.businessSso', 'account.perks.businessSeats'] },
 ];
 
 /** Prices, and what each plan includes today, live on the website. */
@@ -58,6 +59,7 @@ function formatUsd(amount: number): string {
 
 /** One model in the Account screen's breakdown: friendly name + speed/power label + blurb. */
 function ModelRow({ model }: { model: AiModelInfo }): JSX.Element {
+	const t = useT();
 	return (
 		<div className="account-model-row">
 			<span className="account-model-id">
@@ -65,7 +67,7 @@ function ModelRow({ model }: { model: AiModelInfo }): JSX.Element {
 				{model.description && <span className="muted small">{model.description}</span>}
 			</span>
 			{model.label && <span className="model-picker-label">{model.label}</span>}
-			{model.recommended && <span className="model-picker-tag">Recommended</span>}
+			{model.recommended && <span className="model-picker-tag">{t('settingsAi.recommended')}</span>}
 		</div>
 	);
 }
@@ -76,7 +78,7 @@ function resetLabel(iso: string): string | null {
 	if (Number.isNaN(when.getTime())) {
 		return null;
 	}
-	return when.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+	return when.toLocaleDateString(formatLocale(), { month: 'short', day: 'numeric' });
 }
 
 /** Format the account-creation timestamp as month + year, e.g. "May 2026". */
@@ -85,7 +87,7 @@ function memberSince(iso: string): string | null {
 	if (Number.isNaN(when.getTime())) {
 		return null;
 	}
-	return when.toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
+	return when.toLocaleDateString(formatLocale(), { month: 'long', year: 'numeric' });
 }
 
 interface AccountSectionProps {
@@ -107,7 +109,10 @@ interface AccountSectionProps {
  *  models included vs. metered, and the plan comparison (Pro's incentive: more usage). Renders
  *  bare sections that flow inside the Settings content column. */
 export function AccountSection(props: AccountSectionProps): JSX.Element {
+	const t = useT();
 	const { user, tier } = props.auth;
+	// A tier other than Free is a brand name; Free is translated.
+	const tierLabel = (value: Tier): string => (value === 'free' ? t(TIER_LABEL.free) : TIER_LABEL[value]);
 	const [budget, setBudget] = useState<AiBudgetStatus | null>(null);
 	const [models, setModels] = useState<AiModelInfo[]>([]);
 	const [refreshing, setRefreshing] = useState(false);
@@ -230,11 +235,11 @@ export function AccountSection(props: AccountSectionProps): JSX.Element {
 		return (
 			<div className="account-signin">
 				<AssistantArt className="account-signin-art" />
-				<h3 className="account-section-title">Sign in to SnoutData</h3>
-				<p className="confirm-detail">Sign in to unlock {ASSISTANT_INTRO}, and every feature, completely free. The SQL editor works without an account.</p>
+				<h3 className="account-section-title">{t('account.signInTitle')}</h3>
+				<p className="confirm-detail">{t('account.signInBody', { intro: ASSISTANT_INTRO.startsWith(ASSISTANT_NAME) ? t('settings.assistantIntro.named', { assistant: ASSISTANT_NAME }) : t('settings.assistantIntro.unnamed') })}</p>
 				<div className="account-providers">
-					<button type="button" disabled={props.busy} onClick={() => props.onSignIn('github')}><Icon name="github" /> Continue with GitHub</button>
-					<button type="button" disabled={props.busy} onClick={() => props.onSignIn('google')}><Icon name="account" /> Continue with Google</button>
+					<button type="button" disabled={props.busy} onClick={() => props.onSignIn('github')}><Icon name="github" /> {t('account.continueGithub')}</button>
+					<button type="button" disabled={props.busy} onClick={() => props.onSignIn('google')}><Icon name="account" /> {t('account.continueGoogle')}</button>
 					{ssoOpen ? (
 						<form
 							className="account-sso"
@@ -245,7 +250,7 @@ export function AccountSection(props: AccountSectionProps): JSX.Element {
 								}
 							}}
 						>
-							<label className="account-sso-label" htmlFor="account-sso-email">Work email</label>
+							<label className="account-sso-label" htmlFor="account-sso-email">{t('account.workEmail')}</label>
 							<input
 								id="account-sso-email"
 								type="email"
@@ -258,21 +263,21 @@ export function AccountSection(props: AccountSectionProps): JSX.Element {
 								onChange={(e) => setSsoEmail(e.target.value)}
 							/>
 							<div className="account-sso-actions">
-								<button type="button" className="secondary" disabled={props.busy} onClick={() => setSsoOpen(false)}><Icon name="arrow-left" /> Back</button>
-								<button type="submit" disabled={props.busy || !ssoDomain}>Continue <Icon name="arrow-right" /></button>
+								<button type="button" className="secondary" disabled={props.busy} onClick={() => setSsoOpen(false)}><Icon name="arrow-left" /> {t('account.back')}</button>
+								<button type="submit" disabled={props.busy || !ssoDomain}>{t('account.continue')} <Icon name="arrow-right" /></button>
 							</div>
 							{props.signInError && !props.busy
 								? <div className="form-status warn">{props.signInError}</div>
 								: (
 									<span className="muted small">
 										{ssoDomain
-											? `We will look for the single sign-on set up for ${ssoDomain}.`
-											: "Only the domain of this address is sent, to find your company's identity provider."}
+											? t('account.ssoLookup', { domain: ssoDomain })
+											: t('account.ssoDomainOnly')}
 									</span>
 								)}
 						</form>
 					) : (
-						<button type="button" className="secondary" disabled={props.busy} onClick={() => setSsoOpen(true)}><Icon name="organization" /> Continue with SSO</button>
+						<button type="button" className="secondary" disabled={props.busy} onClick={() => setSsoOpen(true)}><Icon name="organization" /> {t('account.continueSso')}</button>
 					)}
 				</div>
 				{/* A GitHub or Google sign-in that could not start: said here, where it was asked. The SSO
@@ -280,11 +285,11 @@ export function AccountSection(props: AccountSectionProps): JSX.Element {
 				{props.signInError && !props.busy && !ssoOpen && <div className="form-status warn">{props.signInError}</div>}
 				{props.busy ? (
 					<div className="account-waiting">
-						<span className="muted small">Waiting for the browser sign-in to finish…</span>
-						<button type="button" className="link-btn" onClick={props.onCancelSignIn}>Cancel</button>
+						<span className="muted small">{t('account.waiting')}</span>
+						<button type="button" className="link-btn" onClick={props.onCancelSignIn}>{t('settings.common.cancel')}</button>
 					</div>
 				) : (
-					<div className="muted small">A browser window opens to complete sign-in, then returns to the app.</div>
+					<div className="muted small">{t('account.browserNote')}</div>
 				)}
 			</div>
 		);
@@ -295,17 +300,17 @@ export function AccountSection(props: AccountSectionProps): JSX.Element {
 			<section className="account-section account-profile">
 				<Avatar url={user.avatarUrl} />
 				<div className="account-id">
-					<div className="account-name">{user.name ?? user.email ?? 'Signed in'}</div>
+					<div className="account-name">{user.name ?? user.email ?? t('account.signedIn')}</div>
 					{user.email && user.name && <div className="muted small">{user.email}</div>}
-					{since && <div className="muted small">Member since {since}</div>}
-					{fromTeam && <div className="muted small">On your team's plan, not a personal subscription.</div>}
+					{since && <div className="muted small">{t('account.memberSince', { date: since })}</div>}
+					{fromTeam && <div className="muted small">{t('account.onTeamPlan')}</div>}
 				</div>
 				<span className="spacer" />
-				<span className={`tier-badge ${tier}`}>{TIER_LABEL[tier]}</span>
+				<span className={`tier-badge ${tier}`}>{tierLabel(tier)}</span>
 			</section>
 
 			<div className="account-tabs" role="tablist">
-				{([['usage', 'Usage'], ['plans', 'Plans'], ['models', 'Models']] as const).map(([id, label]) => (
+				{([['usage', t('account.tabs.usage')], ['plans', t('account.tabs.plans')], ['models', t('account.tabs.models')]] as const).map(([id, label]) => (
 					<button
 						key={id}
 						type="button"
@@ -322,40 +327,40 @@ export function AccountSection(props: AccountSectionProps): JSX.Element {
 			{accountTab === 'usage' && (
 				<>
 					{!budget && !paid && (
-						<div className="muted small">Your AI usage will appear here once you have asked {ASSISTANT_NAME} something.</div>
+						<div className="muted small">{t('account.usageSoon', { assistant: ASSISTANT_NAME })}</div>
 					)}
 					{budget && (
 				<section className="account-section">
-					<h3 className="account-section-title">AI usage</h3>
+					<h3 className="account-section-title">{t('account.aiUsage')}</h3>
 					<div className="account-usage">
 						{budget.metered ? (
 							<>
 								<div className="usage-head">
-									<span className="muted small">This billing period</span>
+									<span className="muted small">{t('account.billingPeriod')}</span>
 									<span className="spacer" />
-									{budget.resetAt && resetLabel(budget.resetAt) && <span className="muted small">resets {resetLabel(budget.resetAt)}</span>}
+									{budget.resetAt && resetLabel(budget.resetAt) && <span className="muted small">{t('account.resets', { date: resetLabel(budget.resetAt) ?? '' })}</span>}
 								</div>
 								<div className={`usage-bar ${nearLimit ? 'warn' : ''}`}>
 									<div className="usage-fill" style={{ width: `${budget.percentUsed ?? 0}%` }} />
 								</div>
 								<div className="usage-detail">
-									<span>{Math.round((budget.percentUsed ?? 0) * 10) / 10}% used</span>
+									<span>{t('account.percentUsed', { percent: Math.round((budget.percentUsed ?? 0) * 10) / 10 })}</span>
 									<span className="spacer" />
-									<span className="muted">{Math.round((100 - (budget.percentUsed ?? 0)) * 10) / 10}% left</span>
+									<span className="muted">{t('account.percentLeft', { percent: Math.round((100 - (budget.percentUsed ?? 0)) * 10) / 10 })}</span>
 								</div>
 								{nearLimit && (
 									<div className="usage-note muted small">
-										You're near your monthly limit. Once it runs out, AI usage pauses until it resets.
+										{t('account.nearLimit')}
 										{/* A team seat is not this person's to upgrade, so say nothing about upgrading rather than
 										    send them to a checkout their admin owns. */}
-										{fromTeam ? '' : paid ? ' Upgrade for a bigger balance, or buy extra credits that never expire.' : ' Upgrade anytime for a bigger balance.'}
+										{fromTeam ? '' : ` ${paid ? t('account.upgradePaid') : t('account.upgradeFree')}`}
 									</div>
 								)}
 							</>
 						) : (
 							<div className="usage-head unlimited">
 								<Icon name="check" />
-								<span className="feature-label">Unlimited AI usage</span>
+								<span className="feature-label">{t('account.unlimited')}</span>
 								<span className="feature-state included">SnoutData Cloud</span>
 							</div>
 						)}
@@ -365,21 +370,21 @@ export function AccountSection(props: AccountSectionProps): JSX.Element {
 
 			{paid && (
 				<section className="account-section">
-					<h3 className="account-section-title">Extra credits</h3>
+					<h3 className="account-section-title">{t('account.extraCredits')}</h3>
 					{hasCredits && credits && (
 						<div className="account-usage">
 							<div className="usage-head">
-								<span className="muted small">Pay-as-you-go credits</span>
+								<span className="muted small">{t('account.payg')}</span>
 								<span className="spacer" />
-								<span className="muted small">never expire</span>
+								<span className="muted small">{t('account.neverExpire')}</span>
 							</div>
 							<div className="usage-bar">
 								<div className="usage-fill" style={{ width: `${creditsPercentUsed}%` }} />
 							</div>
 							<div className="usage-detail">
-								<span>{formatUsd(credits.spend)} used</span>
+								<span>{t('account.usedAmount', { amount: formatUsd(credits.spend) })}</span>
 								<span className="spacer" />
-								<span className="muted">{formatUsd(credits.balance)} left of {formatUsd(credits.purchasedTotal)}</span>
+								<span className="muted">{t('account.leftOf', { left: formatUsd(credits.balance), total: formatUsd(credits.purchasedTotal) })}</span>
 							</div>
 							<label className="account-credits-toggle">
 								<input
@@ -388,21 +393,19 @@ export function AccountSection(props: AccountSectionProps): JSX.Element {
 									disabled={togglingCredits}
 									onChange={(e) => void toggleCredits(e.target.checked)}
 								/>
-								<span>Use credits after my monthly limit</span>
+								<span>{t('account.useCreditsToggle')}</span>
 							</label>
 							<div className="muted small">
-								{creditsEnabled
-									? "When your monthly balance runs out, the assistant keeps going on your credits until they're gone."
-									: 'Off: when your monthly balance runs out, AI pauses and your credits are saved until next month.'}
+								{creditsEnabled ? t('account.creditsOn') : t('account.creditsOff')}
 							</div>
 						</div>
 					)}
 					<div className="account-credits-buy">
 						{CREDIT_PACKS.map((pack) => (
-							<button type="button" className="secondary" key={pack} onClick={() => buyCredits(pack)}><Icon name="credit-card" /> Buy {formatUsd(pack)}</button>
+							<button type="button" className="secondary" key={pack} onClick={() => buyCredits(pack)}><Icon name="credit-card" /> {t('account.buy', { amount: formatUsd(pack) })}</button>
 						))}
 					</div>
-					<div className="muted small">Credits never expire and are spent only after your monthly balance, and only when the toggle above is on. Purchased securely at <a href={BUY_CREDITS_URL} onClick={(e) => { e.preventDefault(); buyCredits(); }}>snoutdata.com</a>.</div>
+					<div className="muted small">{t('account.creditsNote')} <a href={BUY_CREDITS_URL} onClick={(e) => { e.preventDefault(); buyCredits(); }}>snoutdata.com</a>.</div>
 				</section>
 			)}
 				</>
@@ -410,14 +413,14 @@ export function AccountSection(props: AccountSectionProps): JSX.Element {
 
 			{accountTab === 'models' && models.length > 0 && (
 				<section className="account-section">
-					<h3 className="account-section-title">Models</h3>
+					<h3 className="account-section-title">{t('account.models')}</h3>
 					<div className="account-models">
 						{includedModels.length > 0 && (
 							<div className="account-model-group">
 								<div className="account-model-group-head">
 									<Icon name="check" />
-									<span>Included</span>
-									<span className="muted small">never touches your balance</span>
+									<span>{t('account.included')}</span>
+									<span className="muted small">{t('account.neverBalance')}</span>
 								</div>
 								{includedModels.map((m) => <ModelRow key={m.model} model={m} />)}
 							</div>
@@ -426,53 +429,53 @@ export function AccountSection(props: AccountSectionProps): JSX.Element {
 							<div className="account-model-group">
 								<div className="account-model-group-head">
 									<Icon name="dashboard" />
-									<span>Included in your plan</span>
-									<span className="muted small">each request draws from your monthly AI credits</span>
+									<span>{t('account.includedInPlan')}</span>
+									<span className="muted small">{t('account.drawsCredits')}</span>
 								</div>
 								{meteredModels.map((m) => <ModelRow key={m.model} model={m} />)}
 							</div>
 						)}
 					</div>
 					<div className="muted small">
-						Every request draws from your monthly AI credits. When they run out, AI usage pauses until your balance resets.
-						{fromTeam ? " Your balance comes with your team seat." : <> Upgrade anytime at <a href="https://snoutdata.com" onClick={(e) => { e.preventDefault(); void window.sqlApi.openExternal('https://snoutdata.com'); }}>snoutdata.com</a> for a bigger balance.</>}
+						{t('account.everyRequest')}
+						{fromTeam ? ` ${t('account.balanceFromSeat')}` : <> {t('account.upgradeAt')} <a href="https://snoutdata.com" onClick={(e) => { e.preventDefault(); void window.sqlApi.openExternal('https://snoutdata.com'); }}>snoutdata.com</a> {t('account.upgradeAtTail')}</>}
 					</div>
 				</section>
 			)}
 
 			{accountTab === 'plans' && (
 			<section className="account-section">
-				<h3 className="account-section-title">Plans</h3>
+				<h3 className="account-section-title">{t('account.plans')}</h3>
 				<div className="account-plans">
 					{PLANS.map((p) => (
 						<div className={`account-plan${p.tier === tier ? ' current' : ''}`} key={p.tier}>
 							<div className="account-plan-head">
-								<span className={`tier-badge ${p.tier}`}>{TIER_LABEL[p.tier]}</span>
+								<span className={`tier-badge ${p.tier}`}>{tierLabel(p.tier)}</span>
 								<span className="spacer" />
-								{p.tier === tier && <span className="feature-state included">{fromTeam ? 'Your team' : 'Current'}</span>}
+								{p.tier === tier && <span className="feature-state included">{fromTeam ? t('account.yourTeam') : t('account.current')}</span>}
 							</div>
 							<ul className="account-plan-perks">
 								{p.perks.map((perk) => (
-									<li key={perk}><Icon name="check" /> {perk}</li>
+									<li key={perk}><Icon name="check" /> {t(perk)}</li>
 								))}
 							</ul>
 						</div>
 					))}
 				</div>
 				{fromTeam ? (
-					<div className="muted small">Your seat is part of your team's plan, so the plan and the billing are your team admin's to change, not yours. Single sign-on is included.</div>
+					<div className="muted small">{t('account.seatNote')}</div>
 				) : (
-					<div className="muted small">Pro gives you 3x the monthly AI credits of Plus, for heavier days, plus first access to new models. Change your plan anytime at <a href="https://snoutdata.com" onClick={(e) => { e.preventDefault(); void window.sqlApi.openExternal('https://snoutdata.com'); }}>snoutdata.com</a>.</div>
+					<div className="muted small">{t('account.proPitch')} <a href="https://snoutdata.com" onClick={(e) => { e.preventDefault(); void window.sqlApi.openExternal('https://snoutdata.com'); }}>snoutdata.com</a>.</div>
 				)}
-				<div className="muted small">Prices, and the models each plan includes, are on <a href={PRICING_URL} onClick={(e) => { e.preventDefault(); void window.sqlApi.openExternal(PRICING_URL); }}>snoutdata.com/pricing</a>.</div>
+				<div className="muted small">{t('account.pricingNote')} <a href={PRICING_URL} onClick={(e) => { e.preventDefault(); void window.sqlApi.openExternal(PRICING_URL); }}>snoutdata.com/pricing</a>.</div>
 			</section>
 			)}
 
 			<section className="account-section account-actions">
-				<button type="button" className="secondary" onClick={() => void window.sqlApi.openExternal('https://snoutdata.com')}><Icon name="link-external" /> Manage plan</button>
-				<button type="button" className="secondary" disabled={refreshing} onClick={() => void refresh()}><Icon name="refresh" /> {refreshing ? 'Refreshing…' : 'Refresh plan'}</button>
+				<button type="button" className="secondary" onClick={() => void window.sqlApi.openExternal('https://snoutdata.com')}><Icon name="link-external" /> {t('account.managePlan')}</button>
+				<button type="button" className="secondary" disabled={refreshing} onClick={() => void refresh()}><Icon name="refresh" /> {refreshing ? t('account.refreshing') : t('account.refreshPlan')}</button>
 				<span className="spacer" />
-				<button type="button" className="secondary" disabled={props.busy} onClick={props.onSignOut}><Icon name="sign-out" /> Sign out</button>
+				<button type="button" className="secondary" disabled={props.busy} onClick={props.onSignOut}><Icon name="sign-out" /> {t('account.signOut')}</button>
 			</section>
 		</>
 	);

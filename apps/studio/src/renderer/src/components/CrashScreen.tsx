@@ -6,6 +6,8 @@
 import { Component, type ErrorInfo, type ReactNode } from 'react';
 
 import { Icon } from './Icon';
+// The plain `t`: a class component has no hooks, and English is in the bundle before any of this can throw.
+import { t } from '../i18n';
 
 /*
  * The last thing between a renderer exception and a black window.
@@ -46,20 +48,16 @@ export class CrashScreen extends Component<{ children: ReactNode }, CrashScreenS
 			<div className="crash-screen">
 				<div className="crash-card">
 					<Icon name="error" />
-					<h2>The interface stopped drawing</h2>
-					<p>
-						Something in the window threw an error, so it was taken down rather than left half
-						painted. Your connections, queries and files are untouched: they live in the app, not
-						in this window.
-					</p>
+					<h2>{t('shell.crash.title')}</h2>
+					<p>{t('shell.crash.body')}</p>
 					<pre className="crash-detail">{stack || error.message}</pre>
 					<div className="crash-actions">
-						<button className="primary" type="button" onClick={() => window.location.reload()}><Icon name="refresh" /> Reload the window</button>
+						<button className="primary" type="button" onClick={() => window.location.reload()}><Icon name="refresh" /> {t('shell.crash.reload')}</button>
 						<button
 							type="button"
 							onClick={() => void navigator.clipboard.writeText(stack || error.message)}
 						>
-							<Icon name="copy" /> Copy the details
+							<Icon name="copy" /> {t('shell.crash.copyDetails')}
 						</button>
 					</div>
 				</div>

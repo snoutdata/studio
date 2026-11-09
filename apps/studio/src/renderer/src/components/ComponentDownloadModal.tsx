@@ -7,6 +7,7 @@ import { useEffect, useState } from 'react';
 
 import type { ComponentInstallProgress, ComponentRequirement } from '../../../shared/components';
 import { Icon } from './Icon';
+import { useI18n, type Translate } from '../i18n';
 
 interface ComponentDownloadModalProps {
 	/** Driver being connected (e.g. 'db2'), used to drive the install. */
@@ -21,19 +22,24 @@ interface ComponentDownloadModalProps {
 	onInstalled(): void;
 }
 
-const COMPONENT_LABEL: Record<string, string> = {
-	node22: 'runtime',
-	db2: 'IBM Db2 client',
-	hana: 'SAP HANA client',
-};
+function componentLabel(id: string, t: Translate): string {
+	switch (id) {
+		case 'node22': return t('shell.componentDownload.runtime');
+		case 'db2': return t('shell.componentDownload.db2Client');
+		case 'hana': return t('shell.componentDownload.hanaClient');
+		default: return id;
+	}
+}
 
-const PHASE_LABEL: Record<ComponentInstallProgress['phase'], string> = {
-	download: 'Downloading',
-	verify: 'Verifying',
-	extract: 'Extracting',
-	done: 'Done',
-	error: 'Failed',
-};
+function phaseText(phase: ComponentInstallProgress['phase'], component: string, t: Translate): string {
+	switch (phase) {
+		case 'download': return t('shell.componentDownload.phaseDownload', { component });
+		case 'verify': return t('shell.componentDownload.phaseVerify', { component });
+		case 'extract': return t('shell.componentDownload.phaseExtract', { component });
+		case 'done': return t('shell.componentDownload.phaseDone', { component });
+		case 'error': return t('shell.componentDownload.phaseError', { component });
+	}
+}
 
 /**
  * One-time download prompt for a native-driver component (e.g. Db2's ibm_db sidecar runtime). Shown
@@ -41,13 +47,14 @@ const PHASE_LABEL: Record<ComponentInstallProgress['phase'], string> = {
  * files on first use: prompt → progress → the caller retries the connect.
  */
 export function ComponentDownloadModal({ driver, driverLabel, requirement, onClose, onInstalled }: ComponentDownloadModalProps): JSX.Element {
+	const { t, tr } = useI18n();
 	const [stage, setStage] = useState<'prompt' | 'installing' | 'error'>('prompt');
 	const [progress, setProgress] = useState<ComponentInstallProgress | null>(null);
 	const [error, setError] = useState('');
 	/** The vendor licences the person has switched to accepted in this prompt, by id. */
 	const [accepted, setAccepted] = useState<ReadonlySet<string>>(new Set());
 	const terms = requirement.terms ?? [];
-	const allAccepted = terms.every((t) => accepted.has(t.id));
+	const allAccepted = terms.every((term) => accepted.has(term.id));
 
 	useEffect(() => {
 		// Only the prompt stage is dismissable with Escape; a download in flight shouldn't vanish.
@@ -85,7 +92,7 @@ export function ComponentDownloadModal({ driver, driverLabel, requirement, onClo
 		setError('');
 		// Main refuses a vendor's file until its licence is recorded as accepted, so this goes first.
 		if (terms.length > 0) {
-			await window.sqlApi.componentsAcceptTerms(terms.map((t) => t.id));
+			await window.sqlApi.componentsAcceptTerms(terms.map((term) => term.id));
 		}
 		const result = await window.sqlApi.componentsInstallFor(driver);
 		if (result.ok) {
@@ -99,9 +106,9 @@ export function ComponentDownloadModal({ driver, driverLabel, requirement, onClo
 	const pct = progress && progress.totalBytes && progress.receivedBytes !== undefined
 		? Math.min(100, Math.round((progress.receivedBytes / progress.totalBytes) * 100))
 		: undefined;
-	const phaseText = progress
-		? `${PHASE_LABEL[progress.phase]} ${COMPONENT_LABEL[progress.id] ?? progress.id}${pct !== undefined && progress.phase === 'download' ? ` · ${pct}%` : '…'}`
-		: 'Starting…';
+	const statusLine = progress
+		? `${phaseText(progress.phase, componentLabel(progress.id, t), t)}${pct !== undefined && progress.phase === 'download' ? ` · ${pct}%` : '…'}`
+		: t('shell.componentDownload.starting');
 
 	return (
 		<div className="modal-backdrop" onClick={stage === 'installing' ? undefined : onClose}>
@@ -109,49 +116,49 @@ export function ComponentDownloadModal({ driver, driverLabel, requirement, onClo
 				<div className="about-head">
 					<Icon name="cloud-download" className="about-logo" />
 					<div>
-						<h2>Download {driverLabel} support</h2>
-						<div className="about-tagline">A one-time component download</div>
+						<h2>{t('shell.componentDownload.title', { driver: driverLabel })}</h2>
+						<div className="about-tagline">{t('shell.componentDownload.tagline')}</div>
 					</div>
 				</div>
 
 				{stage === 'prompt' && (
 					<>
 						<p>
-							Connecting to {driverLabel} needs a one-time download of its database client
-							{requirement.supported ? <> (about <strong>{requirement.totalLabel}</strong>)</> : null}. It's
-							saved on this computer, so you'll only do this once.
+							{requirement.supported
+								? tr('shell.componentDownload.neededSize', { driver: driverLabel, size: requirement.totalLabel })
+								: t('shell.componentDownload.needed', { driver: driverLabel })}
 						</p>
 						{(requirement.notices ?? []).map((notice) => (
 							<p key={notice} className="field-hint">{notice}</p>
 						))}
-						{requirement.supported && terms.map((t) => (
-							<div key={t.id} className="component-terms" data-terms={t.id}>
+						{requirement.supported && terms.map((term) => (
+							<div key={term.id} className="component-terms" data-terms={term.id}>
 								<p>
-									{t.vendor}'s licence applies:{' '}
-									<a href={t.url} onClick={(e) => { e.preventDefault(); void window.sqlApi.openExternal(t.url); }}>{t.title}</a>
-									{t.file ? <>, also in the download as <code>{t.file}</code></> : null}.
+									{t('shell.componentDownload.licenceApplies', { vendor: term.vendor })}{' '}
+									<a href={term.url} onClick={(e) => { e.preventDefault(); void window.sqlApi.openExternal(term.url); }}>{term.title}</a>
+									{term.file ? <>{t('shell.componentDownload.alsoInDownload')} <code>{term.file}</code></> : null}.
 								</p>
 								<label className="check">
 									<input
 										type="checkbox"
-										checked={accepted.has(t.id)}
-										onChange={(e) => toggleTerms(t.id, e.target.checked)}
+										checked={accepted.has(term.id)}
+										onChange={(e) => toggleTerms(term.id, e.target.checked)}
 									/>
-									I accept {t.vendor}'s terms
+									{t('shell.componentDownload.accept', { vendor: term.vendor })}
 								</label>
 							</div>
 						))}
 						{requirement.supported && !allAccepted && (
-							<p className="field-hint">Nothing is downloaded until you accept {terms.length === 1 ? `${terms[0].vendor}'s terms` : 'each licence'}.</p>
+							<p className="field-hint">{terms.length === 1 ? t('shell.componentDownload.nothingUntilVendor', { vendor: terms[0].vendor }) : t('shell.componentDownload.nothingUntilEach')}</p>
 						)}
 						{!requirement.supported && (
-							<p className="form-status error">This database isn't supported on your operating system yet.</p>
+							<p className="form-status error">{t('shell.componentDownload.unsupportedOs')}</p>
 						)}
 						<div className="modal-actions">
 							<span className="spacer" />
-							<button type="button" className="secondary" onClick={onClose}><Icon name="close" /> Cancel</button>
+							<button type="button" className="secondary" onClick={onClose}><Icon name="close" /> {t('shell.common.cancel')}</button>
 							<button type="button" disabled={!requirement.supported || !allAccepted} onClick={() => void start()}>
-								<Icon name="cloud-download" /> Download
+								<Icon name="cloud-download" /> {t('shell.common.download')}
 							</button>
 						</div>
 					</>
@@ -159,7 +166,7 @@ export function ComponentDownloadModal({ driver, driverLabel, requirement, onClo
 
 				{stage === 'installing' && (
 					<>
-						<p>{phaseText}</p>
+						<p>{statusLine}</p>
 						<div className="progress-track">
 							<div
 								className="progress-fill"
@@ -168,7 +175,7 @@ export function ComponentDownloadModal({ driver, driverLabel, requirement, onClo
 						</div>
 						<div className="modal-actions">
 							<span className="spacer" />
-							<button type="button" disabled>Downloading…</button>
+							<button type="button" disabled>{t('shell.componentDownload.downloading')}</button>
 						</div>
 					</>
 				)}
@@ -178,8 +185,8 @@ export function ComponentDownloadModal({ driver, driverLabel, requirement, onClo
 						<p className="form-status error">{error}</p>
 						<div className="modal-actions">
 							<span className="spacer" />
-							<button type="button" className="secondary" onClick={onClose}><Icon name="close" /> Close</button>
-							<button type="button" onClick={() => void start()}><Icon name="refresh" /> Try again</button>
+							<button type="button" className="secondary" onClick={onClose}><Icon name="close" /> {t('shell.common.close')}</button>
+							<button type="button" onClick={() => void start()}><Icon name="refresh" /> {t('shell.common.tryAgain')}</button>
 						</div>
 					</>
 				)}

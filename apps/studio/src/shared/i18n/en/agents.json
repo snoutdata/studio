@@ -1,0 +1,52 @@
+{
+	"action": {
+		"title": "{client} wants to change the app",
+		"clockTitle": "Declined automatically if you do not answer",
+		"seconds": "{n}s",
+		"turnsOn": "Letting an agent change the app is switched off. Allowing this turns it on, and each action still asks you. Settings, Agent access has the switch, and saying no here stops the asking.",
+		"allowOnce": "Allow once",
+		"alwaysTitle": "Stop asking before \"{title}\". You can take this back in Settings, Agent access.",
+		"always": "Always allow this",
+		"decline": "Decline"
+	},
+	"canvas": {
+		"shownBy": "Shown by {agent}",
+		"clear": "Clear what is shown",
+		"emptyTitle": "Nothing shown yet",
+		"emptyBody": "{agent} shows things here instead of printing them into its terminal: rows it fetched, a query it is proposing, a chart. Anything with SQL in it arrives as a card you can insert or run."
+	},
+	"console": {
+		"expand": "Expand agent console",
+		"collapse": "Collapse agent console",
+		"manualTitle": "{agent} keeps its own list of tools, so connecting it is a one-time command. Open Settings, Agent access.",
+		"noToolsTitle": "Agent access is off, so this agent has no tools from the app. Open Settings, Agent access.",
+		"manual": "tools need setting up",
+		"noTools": "no app tools",
+		"connectedTitle": "This agent can query your allowed connections through the app.",
+		"connected": "connected",
+		"zoomTitle": "Terminal text size ({size}px). Ctrl+plus, Ctrl+minus, Ctrl+0, or Ctrl+scroll over the terminal.",
+		"zoomOut": "Smaller terminal text",
+		"zoomReset": "Reset terminal text size",
+		"zoomIn": "Bigger terminal text",
+		"shownTitle": {
+			"one": "{agent} has shown you something in its own tab.",
+			"other": "{agent} has shown you {count} things in its own tab."
+		},
+		"shown": {
+			"one": "shown in a tab",
+			"other": "shown in a tab ({count})"
+		},
+		"restart": "Restart",
+		"stop": "Stop",
+		"close": "Close panel",
+		"checkAgain": "Check again",
+		"installGuide": "Installation guide",
+		"exited": "The agent exited.",
+		"exitedCode": "The agent exited with code {code}.",
+		"runsHere": "Runs on this computer, in your workspace folder. Your database passwords are never given to it.",
+		"startAgain": "Start again",
+		"start": "Start {agent}",
+		"exitedLabel": "{agent} exited with code {code}. Its last output is above.",
+		"stopped": "{agent} stopped."
+	}
+}

@@ -5,6 +5,7 @@
 
 import { hideToTrayDetail } from '../hideToTray';
 import { Icon } from './Icon';
+import { useT } from '../i18n';
 
 interface HideToTrayNoticeProps {
 	/** Whether this build has Data Flows, whose schedules are what keeps running. */
@@ -21,19 +22,20 @@ interface HideToTrayNoticeProps {
  * reads as an app that quit, and the next thing the user does is launch it again.
  */
 export function HideToTrayNotice(props: HideToTrayNoticeProps): JSX.Element {
+	const t = useT();
 	const mac = /mac/i.test(navigator.platform || navigator.userAgent);
 	return (
 		<div className="modal-backdrop" onClick={props.onHide}>
 			<div className="modal confirm" onClick={(e) => e.stopPropagation()}>
 				<h2>
 					<Icon name="pulse" />
-					SnoutData Studio keeps running
+					{t('shell.hideToTray.title')}
 				</h2>
 				<p className="confirm-detail">{hideToTrayDetail({ mac, flows: props.flows })}</p>
 				<div className="modal-actions">
 					<span className="spacer" />
-					<button type="button" className="secondary" onClick={props.onQuit}>Quit Instead</button>
-					<button type="button" onClick={props.onHide} autoFocus>Got It</button>
+					<button type="button" className="secondary" onClick={props.onQuit}>{t('shell.hideToTray.quitInstead')}</button>
+					<button type="button" onClick={props.onHide} autoFocus>{t('shell.hideToTray.gotIt')}</button>
 				</div>
 			</div>
 		</div>

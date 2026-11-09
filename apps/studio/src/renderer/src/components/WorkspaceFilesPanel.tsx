@@ -5,6 +5,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Icon } from './Icon';
+import { useT, type Translate } from '../i18n';
 import { WorkspaceArt } from '../art/Illustrations';
 import type { WorkspaceFile, WorkspaceSearchHit } from '../../../shared/workspace';
 
@@ -20,20 +21,20 @@ interface WorkspaceFilesPanelProps {
 	onCollapse(): void;
 }
 
-function relativeTime(ts: number): string {
+function relativeTime(ts: number, t: Translate): string {
 	const seconds = Math.round((Date.now() - ts) / 1000);
 	if (seconds < 60) {
-		return `${seconds}s ago`;
+		return t('chat.ago.seconds', { n: String(seconds) });
 	}
 	const minutes = Math.round(seconds / 60);
 	if (minutes < 60) {
-		return `${minutes}m ago`;
+		return t('chat.ago.minutes', { n: String(minutes) });
 	}
 	const hours = Math.round(minutes / 60);
 	if (hours < 24) {
-		return `${hours}h ago`;
+		return t('chat.ago.hours', { n: String(hours) });
 	}
-	return `${Math.round(hours / 24)}d ago`;
+	return t('chat.ago.days', { n: String(Math.round(hours / 24)) });
 }
 
 function formatSize(bytes: number): string {
@@ -58,6 +59,7 @@ function folderName(root: string): string {
  * its workspace capabilities, so anything here is also reachable from chat.
  */
 export function WorkspaceFilesPanel(props: WorkspaceFilesPanelProps): JSX.Element {
+	const t = useT();
 	const { onOpen } = props;
 	const [root, setRoot] = useState<string>('');
 	const [files, setFiles] = useState<WorkspaceFile[]>([]);
@@ -150,15 +152,15 @@ export function WorkspaceFilesPanel(props: WorkspaceFilesPanelProps): JSX.Elemen
 	return (
 		<div className="sidebar">
 			<div className="sidebar-header">
-				<span>WORKSPACE</span>
+				<span>{t('chat.workspace.title')}</span>
 				<span className="spacer" />
-				<button className="icon-btn" aria-label="New file" onClick={() => { setCreating(true); setNewName(''); }}><Icon name="new-file" /></button>
-				<button className="icon-btn" aria-label="Import files (this computer or DBeaver)" onClick={props.onImport}><Icon name="cloud-download" /></button>
-				<button className="icon-btn" aria-label="Refresh" onClick={() => void refresh()}><Icon name="refresh" /></button>
-				<button className="icon-btn" aria-label="Collapse" onClick={props.onCollapse}><Icon name="chevron-left" /></button>
+				<button className="icon-btn" aria-label={t('chat.workspace.newFile')} onClick={() => { setCreating(true); setNewName(''); }}><Icon name="new-file" /></button>
+				<button className="icon-btn" aria-label={t('chat.workspace.import')} onClick={props.onImport}><Icon name="cloud-download" /></button>
+				<button className="icon-btn" aria-label={t('chat.workspace.refresh')} onClick={() => void refresh()}><Icon name="refresh" /></button>
+				<button className="icon-btn" aria-label={t('chat.workspace.collapse')} onClick={props.onCollapse}><Icon name="chevron-left" /></button>
 			</div>
 
-			<button className="ws-root" title={`${root}\n(click to change the workspace folder)`} onClick={() => void changeFolder()}>
+			<button className="ws-root" title={t('chat.workspace.rootTitle', { root })} onClick={() => void changeFolder()}>
 				<Icon name="folder" />
 				<span className="ws-root-name">{root ? folderName(root) : "…"}</span>
 			</button>
@@ -167,11 +169,11 @@ export function WorkspaceFilesPanel(props: WorkspaceFilesPanelProps): JSX.Elemen
 				<Icon name="search" />
 				<input
 					type="text"
-					placeholder="Search files and contents"
+					placeholder={t('chat.workspace.search')}
 					value={query}
 					onChange={(e) => setQuery(e.target.value)}
 				/>
-				{query && <button className="icon-btn" aria-label="Clear" onClick={() => setQuery('')}><Icon name="close" /></button>}
+				{query && <button className="icon-btn" aria-label={t('chat.workspace.clear')} onClick={() => setQuery('')}><Icon name="close" /></button>}
 			</div>
 
 			<div className="queries-list">
@@ -196,8 +198,8 @@ export function WorkspaceFilesPanel(props: WorkspaceFilesPanelProps): JSX.Elemen
 				{!creating && displayed.length === 0 && (
 					<div className="ws-empty">
 						{q ? <Icon name="search" /> : <WorkspaceArt className="ws-empty-art" />}
-						<p>{q ? "No matching files." : "No SQL files in this workspace yet."}</p>
-						{!q && <button className="ws-empty-cta" onClick={() => { setCreating(true); setNewName(''); }}><Icon name="new-file" /> New file</button>}
+						<p>{q ? t('chat.workspace.noMatch') : t('chat.workspace.empty')}</p>
+						{!q && <button className="ws-empty-cta" onClick={() => { setCreating(true); setNewName(''); }}><Icon name="new-file" /> {t('chat.workspace.newFile')}</button>}
 					</div>
 				)}
 
@@ -223,17 +225,17 @@ export function WorkspaceFilesPanel(props: WorkspaceFilesPanelProps): JSX.Elemen
 								<div className="ws-file-main" onClick={() => onOpen(file.path)}>
 									<Icon name="file" />
 									<span className="ws-file-name">{file.name}</span>
-									{contentMatches.length > 0 && <span className="ws-badge" title="Matches in file contents">{contentMatches.length}</span>}
+									{contentMatches.length > 0 && <span className="ws-badge" title={t('chat.workspace.matches')}>{contentMatches.length}</span>}
 									<span className="spacer" />
 									<span className="ws-file-actions">
-										<button className="icon-btn" aria-label="Rename" onClick={(e) => { e.stopPropagation(); setRenaming(file.path); setRenameName(file.name); }}><Icon name="edit" /></button>
-										<button className="icon-btn" aria-label="Delete" onClick={(e) => { e.stopPropagation(); setConfirmDelete(file.path); }}><Icon name="trash" /></button>
+										<button className="icon-btn" aria-label={t('chat.workspace.rename')} onClick={(e) => { e.stopPropagation(); setRenaming(file.path); setRenameName(file.name); }}><Icon name="edit" /></button>
+										<button className="icon-btn" aria-label={t('chat.workspace.delete')} onClick={(e) => { e.stopPropagation(); setConfirmDelete(file.path); }}><Icon name="trash" /></button>
 									</span>
 								</div>
 							)}
 
 							<div className="ws-meta" onClick={() => onOpen(file.path)}>
-								<span className="muted">{relativeTime(file.modifiedAt)}</span>
+								<span className="muted">{relativeTime(file.modifiedAt, t)}</span>
 								<span className="muted">{formatSize(file.size)}</span>
 							</div>
 
@@ -246,10 +248,10 @@ export function WorkspaceFilesPanel(props: WorkspaceFilesPanelProps): JSX.Elemen
 
 							{confirmDelete === file.path && (
 								<div className="ws-confirm">
-									<span>Delete {file.name}?</span>
+									<span>{t('chat.workspace.confirmDelete', { name: file.name })}</span>
 									<span className="spacer" />
-									<button className="ws-confirm-no" onClick={() => setConfirmDelete(null)}><Icon name="close" /> Cancel</button>
-									<button className="ws-confirm-yes" onClick={() => void doDelete(file.path)}><Icon name="trash" /> Delete</button>
+									<button className="ws-confirm-no" onClick={() => setConfirmDelete(null)}><Icon name="close" /> {t('chat.workspace.cancel')}</button>
+									<button className="ws-confirm-yes" onClick={() => void doDelete(file.path)}><Icon name="trash" /> {t('chat.workspace.delete')}</button>
 								</div>
 							)}
 						</div>

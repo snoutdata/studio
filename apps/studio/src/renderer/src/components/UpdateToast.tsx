@@ -6,6 +6,7 @@
 import type { CSSProperties } from 'react';
 import { updateFailureIcon, type UpdateStatus } from '../../../shared/update';
 import { Icon } from './Icon';
+import { useT, type Translate } from '../i18n';
 
 interface UpdateToastProps {
 	status: UpdateStatus;
@@ -27,20 +28,21 @@ interface UpdateToastProps {
  *  On the "ready to install" card it offers a "Release Notes" link to the per-version notes
  *  document (when this build ships notes); the notes also auto-open after the restart. */
 export function UpdateToast({ status, style, onInstall, onDismiss, onReleaseNotes }: UpdateToastProps): JSX.Element {
+	const t = useT();
 	return (
 		<div className={`update-toast update-toast-${status.state}`} role="status" style={style}>
 			<Icon name={iconFor(status)} className={`update-toast-icon${status.state === 'checking' ? ' spin' : ''}`} />
 			{/* The detail is a tooltip rather than a second line: what it says ("HttpError: 504") is
 			    for whoever is diagnosing this, and the sentence is for whoever is using the app. */}
-			<span className="update-toast-text" title={status.state === 'error' ? status.detail : undefined}>{textFor(status)}</span>
+			<span className="update-toast-text" title={status.state === 'error' ? status.detail : undefined}>{textFor(status, t)}</span>
 			{status.state === 'downloaded' ? (
 				<span className="update-toast-actions">
-					{onReleaseNotes && <button className="update-toast-later" type="button" onClick={onReleaseNotes}><Icon name="book" /> Release Notes</button>}
-					<button className="update-toast-later" type="button" onClick={onDismiss}>Later</button>
-					<button className="update-toast-action" type="button" onClick={onInstall}><Icon name="debug-restart" /> Restart</button>
+					{onReleaseNotes && <button className="update-toast-later" type="button" onClick={onReleaseNotes}><Icon name="book" /> {t('shell.tabs.releaseNotes')}</button>}
+					<button className="update-toast-later" type="button" onClick={onDismiss}>{t('shell.updates.later')}</button>
+					<button className="update-toast-action" type="button" onClick={onInstall}><Icon name="debug-restart" /> {t('shell.updates.restart')}</button>
 				</span>
 			) : (
-				<button className="update-toast-close" type="button" onClick={onDismiss} title="Dismiss">
+				<button className="update-toast-close" type="button" onClick={onDismiss} title={t('shell.common.dismiss')}>
 					<Icon name="close" />
 				</button>
 			)}
@@ -59,16 +61,14 @@ function iconFor(status: UpdateStatus): string {
 	}
 }
 
-/** A build from the open-source tree has no update feed. */
-const FROM_SOURCE_TEXT = "This build was made from source and does not update itself. Build it again from the latest source to update.";
-
-function textFor(status: UpdateStatus): string {
+function textFor(status: UpdateStatus, t: Translate): string {
 	switch (status.state) {
-		case 'checking': return 'Checking for updates…';
-		case 'available': return `Update found (v${status.version}), downloading…`;
-		case 'downloading': return status.preparing ? 'Preparing update…' : 'Downloading update…';
-		case 'downloaded': return `Update ready · v${status.version}`;
-		case 'not-available': return status.fromSource ? FROM_SOURCE_TEXT : `You're up to date (v${status.version})`;
+		case 'checking': return t('shell.updates.checking');
+		case 'available': return t('shell.updates.available', { version: status.version });
+		case 'downloading': return t(status.preparing ? 'shell.statusBar.preparing' : 'shell.updates.downloading');
+		case 'downloaded': return t('shell.updates.ready', { version: status.version });
+		// A build from the open-source tree has no update feed.
+		case 'not-available': return status.fromSource ? t('shell.updates.fromSource') : t('shell.updates.upToDate', { version: status.version });
 		// Already a sentence by the time it gets here (shared/update.ts), and deliberately not
 		// prefixed with "Update check failed": that is what the message says.
 		case 'error': return status.message;

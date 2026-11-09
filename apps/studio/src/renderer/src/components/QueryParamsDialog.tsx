@@ -6,6 +6,7 @@
 import { useState } from 'react';
 import { Icon } from './Icon';
 import type { QueryParameter } from '../../../shared/engine';
+import { useT } from '../i18n';
 
 interface QueryParamsDialogProps {
 	parameters: readonly QueryParameter[];
@@ -17,29 +18,29 @@ interface QueryParamsDialogProps {
 
 /** An example value in the form a type's parameter is written, shown until the person types. */
 function example(type: string): string {
-	const t = type.replace(/^(?:Nullable|LowCardinality)\((.*)\)$/, '$1');
-	if (/^Array\(/.test(t)) {
-		return /String|UUID|Date/.test(t) ? "['a', 'b']" : '[1, 2, 3]';
+	const base = type.replace(/^(?:Nullable|LowCardinality)\((.*)\)$/, '$1');
+	if (/^Array\(/.test(base)) {
+		return /String|UUID|Date/.test(base) ? "['a', 'b']" : '[1, 2, 3]';
 	}
-	if (/^Map\(/.test(t)) {
+	if (/^Map\(/.test(base)) {
 		return "{'key': 1}";
 	}
-	if (/^Tuple\(/.test(t)) {
+	if (/^Tuple\(/.test(base)) {
 		return "(1, 'a')";
 	}
-	if (/^DateTime/.test(t)) {
+	if (/^DateTime/.test(base)) {
 		return '2026-01-31 12:00:00';
 	}
-	if (/^Date/.test(t)) {
+	if (/^Date/.test(base)) {
 		return '2026-01-31';
 	}
-	if (/^U?Int|^Float|^Decimal/.test(t)) {
+	if (/^U?Int|^Float|^Decimal/.test(base)) {
 		return '42';
 	}
-	if (t === 'Bool') {
+	if (base === 'Bool') {
 		return 'true';
 	}
-	if (t === 'Identifier') {
+	if (base === 'Identifier') {
 		return 'table_name';
 	}
 	return '';
@@ -51,6 +52,7 @@ function example(type: string): string {
  * the server with their types rather than pasting them into the SQL.
  */
 export function QueryParamsDialog({ parameters, initial, onRun, onCancel }: QueryParamsDialogProps): JSX.Element {
+	const t = useT();
 	const [values, setValues] = useState<Record<string, string>>(() => Object.fromEntries(parameters.map((p) => [p.name, initial[p.name] ?? ''])));
 
 	function submit(e: React.FormEvent): void {
@@ -61,8 +63,8 @@ export function QueryParamsDialog({ parameters, initial, onRun, onCancel }: Quer
 	return (
 		<div className="modal-backdrop" onClick={onCancel} onKeyDown={(e) => { if (e.key === 'Escape') { onCancel(); } }}>
 			<form className="modal query-params" onClick={(e) => e.stopPropagation()} onSubmit={submit}>
-				<h2><Icon name="symbol-parameter" /> Query parameters</h2>
-				<p className="confirm-detail">ClickHouse binds these on the server with their types. Type the value itself, without quotes.</p>
+				<h2><Icon name="symbol-parameter" /> {t('editor.params.title')}</h2>
+				<p className="confirm-detail">{t('editor.params.detail')}</p>
 				<fieldset>
 					{parameters.map((p, i) => (
 						<label key={p.name} className="query-param">
@@ -81,8 +83,8 @@ export function QueryParamsDialog({ parameters, initial, onRun, onCancel }: Quer
 				</fieldset>
 				<div className="modal-actions">
 					<span className="spacer" />
-					<button type="button" className="secondary" onClick={onCancel}><Icon name="close" /> Cancel</button>
-					<button type="submit"><Icon name="play" /> Run</button>
+					<button type="button" className="secondary" onClick={onCancel}><Icon name="close" /> {t('editor.common.cancel')}</button>
+					<button type="submit"><Icon name="play" /> {t('editor.common.run')}</button>
 				</div>
 			</form>
 		</div>

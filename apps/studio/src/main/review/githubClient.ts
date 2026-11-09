@@ -3,6 +3,7 @@
  *  Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { t } from '../../shared/i18n/core';
 import { app } from 'electron';
 import { netFetch, isNetworkError, networkBlockedMessage, networkErrorDetail, type NetFetchInit } from '../netFetch';
 import { cacheable, type ConditionalCache } from './httpCache';
@@ -89,7 +90,7 @@ async function toError(response: Response, what: string): Promise<ForgeError> {
 		const reset = Number(response.headers.get('x-ratelimit-reset') ?? 0) * 1000;
 		const minutes = reset > 0 ? Math.max(1, Math.round((reset - Date.now()) / 60_000)) : undefined;
 		return new ForgeError(
-			`GitHub rate limit reached${minutes ? `; it resets in about ${minutes} minute${minutes === 1 ? '' : 's'}` : ''}.`,
+			t('mainReview.rateLimit', { reset: minutes ? t('mainReview.rateResets', { count: minutes }) : '' }),
 			response.status,
 			true,
 		);
@@ -99,13 +100,13 @@ async function toError(response: Response, what: string): Promise<ForgeError> {
 	}
 	if (response.status === 404) {
 		return new ForgeError(
-			`${what} was not found. For a private repository the token also needs access to it, not just the right scopes.`,
+			t('mainReview.notFound', { what }),
 			404,
 			false,
 		);
 	}
 	return new ForgeError(
-		`GitHub returned ${response.status} for ${what}${detail ? `: ${detail}` : ''}`,
+		t('mainReview.githubReturned', { status: response.status, what, detail: detail ? `: ${detail}` : '' }),
 		response.status,
 		response.status >= 500 || response.status === 429,
 	);
@@ -171,7 +172,7 @@ export class GithubClient implements Forge {
 			// blocked — so it gets its own sentence rather than the proxy/firewall one below.
 			if (err instanceof Error && (err.name === 'TimeoutError' || err.name === 'AbortError')) {
 				throw new ForgeError(
-					`GitHub did not answer within ${REQUEST_TIMEOUT_MS / 1000} seconds. It may be slow, or your network may be holding the request.`,
+					t('mainReview.githubTimeout', { seconds: REQUEST_TIMEOUT_MS / 1000 }),
 					0,
 					true,
 				);
@@ -273,14 +274,14 @@ export class GithubClient implements Forge {
 	async openPullRequests(owner: string, repo: string, limit = 30): Promise<PullRequestRef[]> {
 		const body = await this.json<GithubPull[]>(
 			`/repos/${owner}/${repo}/pulls?state=open&sort=updated&direction=desc&per_page=${Math.min(100, limit)}`,
-			`pull requests for ${owner}/${repo}`,
+			t('mainReview.pullsFor', { owner, repo }),
 		);
 		return body.map(toPullRequest);
 	}
 
 	async pullRequest(owner: string, repo: string, number: number): Promise<PullRequestRef> {
 		return toPullRequest(
-			await this.json<GithubPull>(`/repos/${owner}/${repo}/pulls/${number}`, `pull request #${number}`),
+			await this.json<GithubPull>(`/repos/${owner}/${repo}/pulls/${number}`, t('mainReview.pullN', { number })),
 		);
 	}
 
@@ -298,7 +299,7 @@ export class GithubClient implements Forge {
 			'application/vnd.github.diff',
 		);
 		if (!response.ok) {
-			throw await toError(response, `the diff for #${number}`);
+			throw await toError(response, t('mainReview.diffOf', { number }));
 		}
 		return await response.text();
 	}
@@ -326,14 +327,14 @@ export class GithubClient implements Forge {
 		const query = since ? `?since=${encodeURIComponent(since)}&per_page=100` : '?per_page=100';
 		const body = await this.json<GithubComment[]>(
 			`/repos/${owner}/${repo}/issues/${number}/comments${query}`,
-			`comments on #${number}`,
+			t('mainReview.commentsOn', { number }),
 		);
 		return body.map(toComment);
 	}
 
 	async createComment(owner: string, repo: string, number: number, body: string): Promise<IssueComment> {
 		return toComment(
-			await this.json<GithubComment>(`/repos/${owner}/${repo}/issues/${number}/comments`, `a comment on #${number}`, {
+			await this.json<GithubComment>(`/repos/${owner}/${repo}/issues/${number}/comments`, t('mainReview.aCommentOn', { number }), {
 				method: 'POST',
 				body: JSON.stringify({ body }),
 				headers: { 'Content-Type': 'application/json' },

@@ -3,6 +3,7 @@
  *  Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { t } from '../shared/i18n/core';
 import type { CloudProjectRow } from '../shared/cloudProjects';
 import type { ConnectionConfig } from '../shared/connection';
 import type { LocalProjectRow } from '../shared/localStack';
@@ -197,23 +198,23 @@ export interface TrayInput {
 export function dueLabel(due: Date, now: number): string {
 	const minutes = Math.round((due.getTime() - now) / 60_000);
 	if (!Number.isFinite(minutes) || minutes <= 0) {
-		return "due now";
+		return t('mainTray.dueNow');
 	}
 	if (minutes < 60) {
-		return `in ${minutes}m`;
+		return t('mainTray.inMinutes', { minutes });
 	}
 	const hours = Math.round(minutes / 60);
-	return hours < 24 ? `in ${hours}h` : `in ${Math.round(hours / 24)}d`;
+	return hours < 24 ? t('mainTray.inHours', { hours }) : t('mainTray.inDays', { days: Math.round(hours / 24) });
 }
 
 /** `1 flow` / `2 flows`. A count a person reads has to agree with its noun. */
 function flowCount(n: number): string {
-	return `${n} flow${n === 1 ? '' : 's'}`;
+	return t('mainTray.flowCount', { count: n });
 }
 
 /** `1 review` / `2 reviews`. */
 function reviewCount(n: number): string {
-	return `${n} review${n === 1 ? '' : 's'}`;
+	return t('mainTray.reviewCount', { count: n });
 }
 
 /** "free" -> "Free". The tier is stored lower-case and read here by a person. */
@@ -235,16 +236,16 @@ export function trayModel(input: TrayInput): TrayModel {
 		status: status(flows, running, scheduled, input),
 		account: account(input),
 		flows: flows.slice(0, MAX_ITEMS),
-		flowsEmpty: flows.length === 0 && input.flowsAvailable ? "No scheduled flows" : null,
+		flowsEmpty: flows.length === 0 && input.flowsAvailable ? t('mainTray.noFlows') : null,
 		flowsOverflow: Math.max(0, flows.length - MAX_ITEMS),
 		connections: connections.slice(0, MAX_ITEMS),
-		connectionsEmpty: connections.length === 0 ? "No connections yet" : null,
+		connectionsEmpty: connections.length === 0 ? t('mainTray.noConnections') : null,
 		connectionsOverflow: Math.max(0, connections.length - MAX_ITEMS),
 		update: updateLine(input.update, input.now),
 		review: reviewLine(input.review),
 		localProjects: localShown,
 		cloudProjects: cloudShown,
-		projectsEmpty: local.length + cloud.length === 0 ? "No projects yet" : null,
+		projectsEmpty: local.length + cloud.length === 0 ? t('mainTray.noProjects') : null,
 		projectsOverflow: local.length + cloud.length - localShown.length - cloudShown.length,
 		schedules: schedulesLine(input),
 		flowsAvailable: input.flowsAvailable,
@@ -255,12 +256,12 @@ export function trayModel(input: TrayInput): TrayModel {
  *  work), so a build without Data Flows names only the reviews, and only once there are any. */
 function schedulesLine(input: TrayInput): TrayModel['schedules'] {
 	if (input.flowsAvailable) {
-		return { label: input.paused ? "Resume Scheduled Flows" : "Pause Scheduled Flows", paused: input.paused };
+		return { label: input.paused ? t('mainTray.resumeFlows') : t('mainTray.pauseFlows'), paused: input.paused };
 	}
 	if (reviewLine(input.review) === null) {
 		return null;
 	}
-	return { label: input.paused ? "Resume Reviews" : "Pause Reviews", paused: input.paused };
+	return { label: input.paused ? t('mainTray.resumeReviews') : t('mainTray.pauseReviews'), paused: input.paused };
 }
 
 /** The flows worth listing, and how many of them are on a schedule (which is not the same number:
@@ -307,13 +308,13 @@ function flowItems(input: TrayInput): { items: TrayFlowItem[]; scheduled: number
  *  will try again, because both are things the person reading this menu needs. */
 function detail(running: boolean, failed: boolean, held: boolean, due: Date | null, now: number): string {
 	if (running) {
-		return "running";
+		return t('mainTray.running');
 	}
-	const when = !due ? '' : held ? "paused" : dueLabel(due, now);
+	const when = !due ? '' : held ? t('mainTray.paused') : dueLabel(due, now);
 	if (!failed) {
 		return when;
 	}
-	return when ? `failed, ${when}` : "failed";
+	return when ? t('mainTray.failedWhen', { when }) : t('mainTray.failed');
 }
 
 function connectionItems(input: TrayInput): TrayConnectionItem[] {
@@ -324,7 +325,7 @@ function connectionItems(input: TrayInput): TrayConnectionItem[] {
 			return {
 				id: config.id,
 				label: config.label,
-				detail: [prod ? "PROD" : '', connected ? "connected" : ''].filter(Boolean).join(', '),
+				detail: [prod ? "PROD" : '', connected ? t('mainTray.connected') : ''].filter(Boolean).join(', '),
 				connected,
 				// A live production connection is the one thing in this menu worth a colour of its own:
 				// it is what the app's guardrails are about, and this is where a user sees it while the
@@ -356,7 +357,7 @@ function localProjectItems(input: TrayInput): TrayProjectItem[] {
 	return input.projects.local
 		.map((project): TrayProjectItem => {
 			const working = input.projects.busy.has(projectKey({ kind: 'local', id: project.id }));
-			const [state, dot]: [string, TrayDot] = working ? ["working", 'busy'] : localState(project.state);
+			const [state, dot]: [string, TrayDot] = working ? [t('mainTray.working'), 'busy'] : localState(project.state);
 			return {
 				kind: 'local',
 				id: project.id,
@@ -364,8 +365,8 @@ function localProjectItems(input: TrayInput): TrayProjectItem[] {
 				detail: projectDetail(project.production, state),
 				dot,
 				actions: [
-					{ verb: 'start', label: "Start", enabled: !working && project.state !== 'running' && project.state !== 'missing' },
-					{ verb: 'stop', label: "Stop", enabled: !working && project.state !== 'stopped' && project.state !== 'missing' && project.state !== 'unknown' },
+					{ verb: 'start', label: t('mainTray.start'), enabled: !working && project.state !== 'running' && project.state !== 'missing' },
+					{ verb: 'stop', label: t('mainTray.stop'), enabled: !working && project.state !== 'stopped' && project.state !== 'missing' && project.state !== 'unknown' },
 				],
 			};
 		})
@@ -374,12 +375,12 @@ function localProjectItems(input: TrayInput): TrayProjectItem[] {
 
 function localState(state: LocalProjectRow['state']): [string, TrayDot] {
 	switch (state) {
-		case 'running': return ["running", 'ok'];
-		case 'starting': return ["starting", 'busy'];
-		case 'partial': return ["some services are down", 'error'];
-		case 'missing': return ["its folder is gone", 'error'];
-		case 'unknown': return ["Docker is not running", 'idle'];
-		default: return ["stopped", 'idle'];
+		case 'running': return [t('mainTray.running'), 'ok'];
+		case 'starting': return [t('mainTray.starting'), 'busy'];
+		case 'partial': return [t('mainTray.partial'), 'error'];
+		case 'missing': return [t('mainTray.missing'), 'error'];
+		case 'unknown': return [t('mainTray.dockerDown'), 'idle'];
+		default: return [t('mainTray.stopped'), 'idle'];
 	}
 }
 
@@ -395,7 +396,7 @@ function cloudProjectItems(input: TrayInput): TrayProjectItem[] {
 	return input.projects.cloud
 		.map((project): TrayProjectItem => {
 			const working = input.projects.busy.has(projectKey({ kind: 'cloud', ref: project.ref }));
-			const [state, dot]: [string, TrayDot] = working ? ["asking", 'busy'] : cloudState(project);
+			const [state, dot]: [string, TrayDot] = working ? [t('mainTray.asking'), 'busy'] : cloudState(project);
 			const paused = project.state === 'paused' || project.desiredState === 'paused';
 			return {
 				kind: 'cloud',
@@ -403,11 +404,11 @@ function cloudProjectItems(input: TrayInput): TrayProjectItem[] {
 				name: project.name,
 				// Its server not answering is said BESIDE the state, never instead of it: the state is
 				// what the server last reported, and the silence does not change it (2026-10-31).
-				detail: [projectDetail(project.production, state), project.serverSilent ? "server not answering" : ''].filter(Boolean).join(', '),
+				detail: [projectDetail(project.production, state), project.serverSilent ? t('mainTray.serverSilent') : ''].filter(Boolean).join(', '),
 				dot,
 				actions: [paused
-					? { verb: 'resume', label: "Resume", enabled: !working && project.canResume }
-					: { verb: 'pause', label: "Pause", enabled: !working && project.canPause }],
+					? { verb: 'resume', label: t('mainTray.resume'), enabled: !working && project.canResume }
+					: { verb: 'pause', label: t('mainTray.pause'), enabled: !working && project.canPause }],
 			};
 		})
 		.sort(byRunningThenName);
@@ -415,34 +416,34 @@ function cloudProjectItems(input: TrayInput): TrayProjectItem[] {
 
 function cloudState(project: TrayCloudProjectInput): [string, TrayDot] {
 	if (project.state === 'error') {
-		return ["error", 'error'];
+		return [t('mainTray.error'), 'error'];
 	}
 	if (project.busy) {
 		// `ready` on its way to `paused` is pausing, and the other way is starting; a state that is
 		// already a verb (creating, restoring) says so itself.
 		const word = CLOUD_IN_FLIGHT.has(project.state)
 			? project.state
-			: project.desiredState === 'paused' ? "pausing" : project.desiredState === 'deleted' ? "deleting" : "starting";
+			: project.desiredState === 'paused' ? t('mainTray.pausing') : project.desiredState === 'deleted' ? t('mainTray.deleting') : t('mainTray.starting');
 		return [word, 'busy'];
 	}
 	// `ready` is the control plane's word for a database that is up; a person reads "running".
-	return project.state === 'ready' ? ["running", 'ok'] : [project.state, 'idle'];
+	return project.state === 'ready' ? [t('mainTray.running'), 'ok'] : [project.state, 'idle'];
 }
 
 function status(listed: TrayFlowItem[], running: TrayFlowItem[], scheduled: number, input: TrayInput): TrayStatus {
 	if (running.length === 1) {
-		return { label: `Running "${running[0].name}"`, dot: 'busy' };
+		return { label: t('mainTray.runningFlow', { name: running[0].name }), dot: 'busy' };
 	}
 	if (running.length > 1) {
-		return { label: `Running ${flowCount(running.length)}`, dot: 'busy' };
+		return { label: t('mainTray.runningFlows', { flows: flowCount(running.length) }), dot: 'busy' };
 	}
 	// A failure outranks everything except work in flight: it is the reason to look at the app.
 	const failed = listed.filter((item) => item.dot === 'error');
 	if (failed.length === 1) {
-		return { label: `Last run of "${failed[0].name}" failed`, dot: 'error' };
+		return { label: t('mainTray.lastRunFailed', { name: failed[0].name }), dot: 'error' };
 	}
 	if (failed.length > 1) {
-		return { label: `${flowCount(failed.length)} failed`, dot: 'error' };
+		return { label: t('mainTray.flowsFailed', { flows: flowCount(failed.length) }), dot: 'error' };
 	}
 	// The reviewer sits between the flows and the standing states: work in flight is worth saying,
 	// and a review nobody has read yet is a thing WAITING ON THE USER, which outranks a switch the
@@ -451,38 +452,38 @@ function status(listed: TrayFlowItem[], running: TrayFlowItem[], scheduled: numb
 		return { label: input.review.activity, dot: 'busy' };
 	}
 	if (input.review.awaiting > 0) {
-		return { label: `${reviewCount(input.review.awaiting)} waiting for you`, dot: 'warn' };
+		return { label: t('mainTray.waitingForYou', { reviews: reviewCount(input.review.awaiting) }), dot: 'warn' };
 	}
 	if (input.paused) {
-		return { label: input.flowsAvailable ? "Scheduled flows are paused" : "Reviews are paused", dot: 'warn' };
+		return { label: input.flowsAvailable ? t('mainTray.flowsPaused') : t('mainTray.reviewsPaused'), dot: 'warn' };
 	}
 	if (scheduled > 0 && !input.entitled) {
-		return { label: "Scheduled flows need a paid plan", dot: 'warn' };
+		return { label: t('mainTray.flowsNeedPlan'), dot: 'warn' };
 	}
 	if (scheduled > 0) {
-		return { label: `SnoutData Studio is running, ${flowCount(scheduled)} scheduled`, dot: 'ok' };
+		return { label: t('mainTray.runningScheduled', { flows: flowCount(scheduled) }), dot: 'ok' };
 	}
-	return { label: "SnoutData Studio is running", dot: 'ok' };
+	return { label: t('mainTray.isRunning'), dot: 'ok' };
 }
 
 /** "Downloading update…", plus how it is going once there is something to say about that. */
 function downloadLine(status: UpdateStatus & { state: 'downloading' }, now: number): string {
 	if (status.preparing) {
-		return "Preparing update…";
+		return t('mainTray.preparing');
 	}
 	if (status.percent !== undefined) {
-		return `Downloading update… ${status.percent}%`;
+		return t('mainTray.downloadingPct', { percent: status.percent });
 	}
 	const detail = updateProgressDetail(status, now, false);
-	return detail ? `Downloading update, ${detail}…` : "Downloading update…";
+	return detail ? t('mainTray.downloadingDetail', { detail }) : t('mainTray.downloading');
 }
 
 function account(input: TrayInput): TrayAccount {
 	if (input.account.restoring) {
-		return { label: "Signing in…", signedIn: false };
+		return { label: t('mainTray.signingIn'), signedIn: false };
 	}
 	if (!input.account.email) {
-		return { label: "Sign In / Sign Up", signedIn: false };
+		return { label: t('mainTray.signIn'), signedIn: false };
 	}
 	const tier = tierLabel(input.account.tier);
 	return { label: tier ? `${input.account.email} (${tier})` : input.account.email, signedIn: true };
@@ -491,7 +492,7 @@ function account(input: TrayInput): TrayAccount {
 function updateLine(status: UpdateStatus | null, now: number): TrayUpdate {
 	switch (status?.state) {
 		case 'available':
-			return { label: `Download Update (${status.version})`, action: 'download', dot: 'info', pending: true };
+			return { label: t('mainTray.downloadUpdate', { version: status.version }), action: 'download', dot: 'info', pending: true };
 		case 'downloading':
 			return {
 				// No clock here, unlike the status bar: this menu is rebuilt on an interval rather
@@ -503,13 +504,13 @@ function updateLine(status: UpdateStatus | null, now: number): TrayUpdate {
 				pending: true,
 			};
 		case 'downloaded':
-			return { label: `Restart & Update (${status.version})`, action: 'install', dot: 'info', pending: true };
+			return { label: t('mainTray.restartUpdate', { version: status.version }), action: 'install', dot: 'info', pending: true };
 		case 'checking':
 			// Checking is not pending: badging here would flash the badge on every launch and every
 			// four-hourly poll, on the machines that turn out to have nothing to install.
-			return { label: "Checking for updates…", action: 'none', dot: null, pending: false };
+			return { label: t('mainTray.checking'), action: 'none', dot: null, pending: false };
 		default:
-			return { label: "Check for Updates…", action: 'check', dot: null, pending: false };
+			return { label: t('mainMenu.checkUpdates'), action: 'check', dot: null, pending: false };
 	}
 }
 
@@ -526,40 +527,40 @@ function reviewLine(input: TrayReviewInput): TrayReview | null {
 		return null;
 	}
 	if (!input.enabled) {
-		return { label: "Snoutbot is off", dot: 'idle' };
+		return { label: t('mainTray.snoutbotOff'), dot: 'idle' };
 	}
 	if (input.awaiting > 0) {
-		return { label: `Snoutbot: ${reviewCount(input.awaiting)} to read`, dot: 'warn' };
+		return { label: t('mainTray.snoutbotToRead', { reviews: reviewCount(input.awaiting) }), dot: 'warn' };
 	}
 	if (input.activity) {
 		return { label: `Snoutbot: ${input.activity}`, dot: 'busy' };
 	}
 	if (input.watching === 0) {
-		return { label: "Snoutbot: no repositories yet", dot: 'idle' };
+		return { label: t('mainTray.snoutbotNoRepos'), dot: 'idle' };
 	}
-	return { label: `Snoutbot: watching ${input.watching} repositor${input.watching === 1 ? 'y' : 'ies'}`, dot: 'ok' };
+	return { label: t('mainTray.snoutbotWatching', { count: input.watching }), dot: 'ok' };
 }
 
 function tooltip(running: TrayFlowItem[], scheduled: number, input: TrayInput): string {
 	const parts: string[] = ["SnoutData Studio"];
 	if (running.length === 1) {
-		parts.push(`Running "${running[0].name}"`);
+		parts.push(t('mainTray.runningFlow', { name: running[0].name }));
 	} else if (running.length > 1) {
-		parts.push(`Running ${flowCount(running.length)}`);
+		parts.push(t('mainTray.runningFlows', { flows: flowCount(running.length) }));
 	}
 	if (scheduled > 0) {
 		parts.push(input.paused || !input.entitled
-			? `${flowCount(scheduled)} scheduled, paused`
-			: `${flowCount(scheduled)} scheduled`);
+			? t('mainTray.scheduledPaused', { flows: flowCount(scheduled) })
+			: t('mainTray.scheduled', { flows: flowCount(scheduled) }));
 	}
 	const connected = input.connections.filter((config) => input.connectedIds.has(config.id)).length;
 	if (connected > 0) {
-		parts.push(`${connected} connection${connected === 1 ? '' : 's'} open`);
+		parts.push(t('mainTray.connectionsOpen', { count: connected }));
 	}
 	// Only the waiting ones. The tooltip is what a person reads without clicking anything, so it
 	// carries the thing that needs them and not the reviewer's idle state.
 	if (input.review.awaiting > 0) {
-		parts.push(`${reviewCount(input.review.awaiting)} waiting to post`);
+		parts.push(t('mainTray.waitingToPost', { reviews: reviewCount(input.review.awaiting) }));
 	}
 	const text = parts.join('\n');
 	return text.length > MAX_TOOLTIP ? `${text.slice(0, MAX_TOOLTIP - 1)}…` : text;

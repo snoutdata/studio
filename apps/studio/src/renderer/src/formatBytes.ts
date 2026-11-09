@@ -3,6 +3,8 @@
  *  Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { formatLocale } from '../../shared/i18n/core';
+
 /** Compact bytes formatter ("12.3 MB"). `missing` is what an unknown size shows as. */
 export function formatBytes(n: number | undefined, missing = '?'): string {
 	if (n === undefined || !Number.isFinite(n)) {
@@ -18,5 +20,5 @@ export function formatBytes(n: number | undefined, missing = '?'): string {
 		v /= 1024;
 		i += 1;
 	}
-	return `${v < 10 ? v.toFixed(1) : Math.round(v)} ${units[i]}`;
+	return `${v < 10 ? v.toLocaleString(formatLocale(), { minimumFractionDigits: 1, maximumFractionDigits: 1 }) : Math.round(v)} ${units[i]}`;
 }

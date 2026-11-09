@@ -7,6 +7,7 @@ import { useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import { updateProgressDetail, type UpdateStatus } from '../../../shared/update';
 import { Icon } from './Icon';
+import { useT } from '../i18n';
 
 interface StatusBarProps {
 	/** The connection the active tab points at (label + state); undefined when none. */
@@ -73,17 +74,18 @@ function UpdatingStatus({ status }: { status: UpdateStatus }): JSX.Element {
 		const timer = setInterval(() => setNow(Date.now()), UPDATE_TICK_MS);
 		return () => clearInterval(timer);
 	}, [ticking]);
+	const t = useT();
 	const detail = updateProgressDetail(status, now, true);
 	if (preparing) {
 		return (
-			<span className="status-item status-update" title="Getting the update ready so Restart is quick">
-				<Icon name="loading" className="codicon-modifier-spin" /> Preparing update…
+			<span className="status-item status-update" title={t('shell.statusBar.preparingTitle')}>
+				<Icon name="loading" className="codicon-modifier-spin" /> {t('shell.statusBar.preparing')}
 			</span>
 		);
 	}
 	return (
-		<span className="status-item status-update" title="Downloading update in the background">
-			<Icon name="cloud-download" /> Updating{percent !== undefined ? ` ${percent}%` : `${detail ? ` ${detail}` : ''}…`}
+		<span className="status-item status-update" title={t('shell.statusBar.updatingTitle')}>
+			<Icon name="cloud-download" /> {t('shell.statusBar.updating')}{percent !== undefined ? ` ${percent}%` : `${detail ? ` ${detail}` : ''}…`}
 		</span>
 	);
 }
@@ -100,6 +102,7 @@ export function formatMemory(bytes: number): string {
 /** VSCode-style bottom status strip: connection on the left; result/cursor/language/version
  *  on the right. Purely a status surface — the only interactive bit is the connection chip. */
 export function StatusBar(props: StatusBarProps): JSX.Element {
+	const t = useT();
 	const { connectionLabel, connected, prod, database, editor, result, running, concurrentRuns = 0, poolMax, memoryBytes, proItems, version, update, updateDismissed, agentActing, onClickConnection, onInstallUpdate } = props;
 	// The connection is saturated when as many queries are running as the pool allows: the next one
 	// on it will queue until a slot frees. Only meaningful once we know the pool size.
@@ -107,48 +110,48 @@ export function StatusBar(props: StatusBarProps): JSX.Element {
 	return (
 		<footer className="status-bar">
 			<div className="status-left">
-				<button className="status-item" type="button" onClick={onClickConnection} title="Connections">
+				<button className="status-item" type="button" onClick={onClickConnection} title={t('shell.dock.tool.connections')}>
 					<Icon name="circle-filled" className={`status-dot${connected ? ' on' : ''}${prod ? ' prod' : ''}`} />
-					<span>{connectionLabel ?? 'No connection'}</span>
-					{prod && <span className="status-prod">PROD</span>}
+					<span>{connectionLabel ?? t('shell.common.noConnection')}</span>
+					{prod && <span className="status-prod">{t('shell.statusBar.prod')}</span>}
 				</button>
 				{database && <span className="status-item status-muted">{database}</span>}
 				{(running || concurrentRuns > 0) && (
-					<span className="status-item" title={concurrentRuns > 1 ? `${concurrentRuns} queries running on this connection` : 'Query running'}>
-						<Icon name="sync" className="spin" /> {concurrentRuns > 1 ? `Running ${concurrentRuns}…` : 'Running…'}
+					<span className="status-item" title={concurrentRuns > 1 ? t('shell.statusBar.runningManyTitle', { count: concurrentRuns }) : t('shell.statusBar.runningTitle')}>
+						<Icon name="sync" className="spin" /> {concurrentRuns > 1 ? t('shell.statusBar.runningMany', { count: concurrentRuns }) : t('shell.statusBar.running')}
 					</span>
 				)}
 				{poolBusy && (
-					<span className="status-item status-busy" title={`All ${poolMax} pooled connections are busy. The next query on this connection will queue until one frees. Raise "Connection pool size" in the connection settings for more.`}>
-						<Icon name="warning" /> Connections busy
+					<span className="status-item status-busy" title={t('shell.statusBar.busyTitle', { count: poolMax })}>
+						<Icon name="warning" /> {t('shell.statusBar.busy')}
 					</span>
 				)}
 				{agentActing && (
-					<span className="status-item status-agent" title={`An agent is using the app: ${agentActing}`}>
-						<Icon name="sparkle" className="spin" /> Agent acting
+					<span className="status-item status-agent" title={t('shell.statusBar.agentActingTitle', { capability: agentActing })}>
+						<Icon name="sparkle" className="spin" /> {t('shell.statusBar.agentActing')}
 					</span>
 				)}
 				{update?.state === 'downloading' && <UpdatingStatus status={update} />}
 				{update?.state === 'downloaded' && updateDismissed && (
-					<button className="status-item status-update ready" type="button" onClick={onInstallUpdate} title="Restart to install the update">
-						<Icon name="arrow-circle-up" /> Restart to update
+					<button className="status-item status-update ready" type="button" onClick={onInstallUpdate} title={t('shell.statusBar.restartTitle')}>
+						<Icon name="arrow-circle-up" /> {t('shell.statusBar.restart')}
 					</button>
 				)}
 			</div>
 			<div className="status-right">
 				{result && (
-					<span className="status-item" title="Rows returned and elapsed time of the last query">
-						<Icon name="list-flat" /> {result.rows.toLocaleString()} {result.rows === 1 ? 'row' : 'rows'} · {result.ms} ms
+					<span className="status-item" title={t('shell.statusBar.resultTitle')}>
+						<Icon name="list-flat" /> {t('shell.statusBar.rows', { count: result.rows })} · {result.ms} ms
 					</span>
 				)}
 				{editor && (
-					<span className="status-item" title="Cursor position">
-						Ln {editor.line}, Col {editor.col}{editor.selected > 0 ? ` (${editor.selected.toLocaleString()} selected)` : ''}
+					<span className="status-item" title={t('shell.statusBar.cursorTitle')}>
+						{t('shell.statusBar.cursor', { line: String(editor.line), col: String(editor.col) })}{editor.selected > 0 ? ` ${t('shell.statusBar.selected', { count: editor.selected })}` : ''}
 					</span>
 				)}
 				{editor && <span className="status-item">SQL</span>}
 				{memoryBytes > 0 && (
-					<span className="status-item status-muted" title="Memory used by the app (all processes). A local model runs in its own process and is not counted here.">
+					<span className="status-item status-muted" title={t('shell.statusBar.memoryTitle')}>
 						<Icon name="pulse" /> {formatMemory(memoryBytes)}
 					</span>
 				)}

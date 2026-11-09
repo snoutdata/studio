@@ -1,0 +1,62 @@
+{
+	"aroundIn": "Around this event in",
+	"around": "Around this event",
+	"readingAround": "Reading the events around it…",
+	"noEarlier": "No earlier events in the day before",
+	"loadEarlier": "Load earlier",
+	"collapse": "Collapse",
+	"expand": "Expand",
+	"showLine": "Show the whole line",
+	"noLater": "No later events yet",
+	"loadLater": "Load later",
+	"chip": {
+		"stream": "stream",
+		"request": "request",
+		"loggedAt": "logged at",
+		"ingested": "ingested",
+		"event": "event"
+	},
+	"surroundingTitle": "Show the events logged just before and after this one, in the same stream",
+	"hideSurrounding": "Hide surrounding",
+	"surrounding": "Surrounding events",
+	"copyTitle": "Copy the message exactly as the service stored it",
+	"copied": "Copied",
+	"copy": "Copy",
+	"noMessage": "This event has no message.",
+	"script": {
+		"done": "Done: {ok} succeeded, {failed} failed of {total}",
+		"running": "Running {n} of {total}…",
+		"rows": {
+			"one": "{count} row",
+			"other": "{count} rows"
+		},
+		"seconds": "{value}s",
+		"skipped": "skipped"
+	},
+	"mcp": {
+		"agoSeconds": "{n}s ago",
+		"agoMinutes": "{n}m ago",
+		"agoHours": "{n}h ago",
+		"agoDays": "{n}d ago",
+		"refused": "refused",
+		"error": "error",
+		"rows": "{rows} rows",
+		"ms": "{ms} ms",
+		"clearTitle": "Clear the agent log?",
+		"clearBody": "Every query an agent ran over MCP will be removed from this log. This cannot be undone.",
+		"clearLog": "Clear log",
+		"header": "AGENT LOG",
+		"refresh": "Refresh",
+		"search": "Search the agent log",
+		"clear": "Clear",
+		"kindAll": "Everything",
+		"kindQuery": "Databases",
+		"kindApp": "The app",
+		"empty": "Nothing yet. Everything an external agent does through SnoutData Studio, queries and app actions alike, appears here.",
+		"noMatch": "No entries match the filter.",
+		"openTab": "Open in a new tab",
+		"changesTitle": "This call changed something",
+		"changes": "changes",
+		"deleteEntry": "Delete entry"
+	}
+}

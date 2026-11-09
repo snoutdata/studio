@@ -4,6 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { Icon } from './Icon';
+import { useI18n } from '../i18n';
 
 interface ConfirmCloseTabProps {
 	title: string;
@@ -14,20 +15,21 @@ interface ConfirmCloseTabProps {
 /** Themed "discard unsaved changes" prompt for closing a dirty editor tab — mirrors the
  *  quit dialog so we never fall back to the OS confirm box. */
 export function ConfirmCloseTab(props: ConfirmCloseTabProps): JSX.Element {
+	const { t, tr } = useI18n();
 	return (
 		<div className="modal-backdrop" onClick={props.onCancel}>
 			<div className="modal confirm" onClick={(e) => e.stopPropagation()}>
 				<h2 className="danger">
 					<Icon name="warning" />
-					Discard unsaved changes?
+					{t('shell.confirmClose.title')}
 				</h2>
 				<p className="confirm-detail">
-					<b>{props.title}</b> has unsaved edits. If you close it now, they will be lost.
+					{tr('shell.confirmClose.body', { name: props.title })}
 				</p>
 				<div className="modal-actions">
 					<span className="spacer" />
-					<button type="button" className="secondary" onClick={props.onCancel} autoFocus><Icon name="close" /> Cancel</button>
-					<button type="button" className="danger" onClick={props.onConfirm}><Icon name="discard" /> Discard</button>
+					<button type="button" className="secondary" onClick={props.onCancel} autoFocus><Icon name="close" /> {t('shell.common.cancel')}</button>
+					<button type="button" className="danger" onClick={props.onConfirm}><Icon name="discard" /> {t('shell.confirmClose.discard')}</button>
 				</div>
 			</div>
 		</div>

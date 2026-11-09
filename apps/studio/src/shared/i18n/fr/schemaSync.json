@@ -1,0 +1,106 @@
+{
+	"class": {
+		"add": "Ajouter",
+		"alter": "Modifier",
+		"drop": "Supprimer"
+	},
+	"confirm": {
+		"target": "la cible",
+		"title": {
+			"one": "Appliquer {count} instruction à {target} ?",
+			"other": "Appliquer {count} instructions à {target} ?"
+		},
+		"apply": "Appliquer",
+		"changes": "Ceci modifie",
+		"including": ", dont",
+		"destructive": {
+			"one": "{count} changement destructif",
+			"other": "{count} changements destructifs"
+		},
+		"canLose": "pouvant perdre des données",
+		"transactional": "Il s'exécute en une seule transaction (tout ou rien).",
+		"oneByOne": "Les instructions s'appliquent une par une ; un échec peut être corrigé et repris."
+	},
+	"title": "Synchronisation de schéma",
+	"pick": {
+		"heading": "Synchroniser un schéma de base de données",
+		"intro": "La **source** définit le schéma souhaité ; la **cible** est modifiée pour y correspondre. Les deux doivent être connectées et du même type de base.",
+		"needTwo": "Connectez au moins deux bases du même type pour synchroniser.",
+		"source": "Source (état souhaité)",
+		"selectConnection": "Sélectionner une connexion…",
+		"target": "Cible (sera modifiée)",
+		"readOnlyTarget": "(lecture seule, non modifiable)",
+		"comparing": "Comparaison…",
+		"compare": "Comparer les schémas"
+	},
+	"inSync": "Synchronisé",
+	"inSyncBody": "La cible correspond déjà à la source. Aucun changement nécessaire.",
+	"chooseOther": "Choisir d'autres bases",
+	"close": "Fermer",
+	"chip": {
+		"dropTitle": "Supprime les objets qui n'existent que sur la cible. Masquez-le pour une synchronisation additive, sans rien retirer.",
+		"toggle": {
+			"add": "Afficher ou masquer les ajouts",
+			"alter": "Afficher ou masquer les modifications",
+			"drop": "Afficher ou masquer les suppressions"
+		},
+		"noKeys": "Aucun changement de clé, d'index ou de clé étrangère dans ce diff.",
+		"keysTitle": "Les clés, index et clés étrangères peuvent échouer si la cible contient des lignes en double ou orphelines (un problème de données, pas de schéma). Masquez-les pour synchroniser le reste, puis ajoutez-les une fois les données propres.",
+		"keys": "Clés et index"
+	},
+	"selected": {
+		"one": "{count} sélectionné",
+		"other": "{count} sélectionnés"
+	},
+	"unselectAll": "Tout désélectionner",
+	"selectAll": "Tout sélectionner",
+	"filter": "Filtrer les changements…",
+	"clearFilter": "Effacer le filtre",
+	"applied": {
+		"one": "{count} instruction appliquée.",
+		"other": "{count} instructions appliquées."
+	},
+	"stillDiffer": {
+		"one": "{count} changement encore différent.",
+		"other": "{count} changements encore différents."
+	},
+	"additive": "Synchronisation additive : rien ne sera retiré de la cible.",
+	"noMatch": "Aucun changement ne correspond à \"{query}\".",
+	"cardTitle": "Cliquer pour inclure ou exclure, Maj-clic pour sélectionner une plage",
+	"canLoseData": "Peut perdre des données",
+	"migrationSql": "SQL de migration",
+	"statements": {
+		"one": "{count} instruction",
+		"other": "{count} instructions"
+	},
+	"copyScript": "Copier tout le script",
+	"back": "Retour",
+	"selectedOf": "{n} sur {total} sélectionnés",
+	"destructiveCount": {
+		"one": "{count} destructif",
+		"other": "{count} destructifs"
+	},
+	"applyProd": "Appliquer en PRODUCTION",
+	"applyBtn": "Appliquer",
+	"applying": "Application de la migration…",
+	"runningAgainst": "Exécution sur {name}.",
+	"statementFailed": "Instruction {n} sur {total} en échec",
+	"migrationStopped": "Migration arrêtée",
+	"rolledBack": "transaction annulée",
+	"correctedStatement": "Instruction corrigée",
+	"editRetry": "modifiez, puis Réessayer",
+	"sentTo": "Envoyé à {assistant}. Lisez sa correction dans le chat, collez l'instruction corrigée ci-dessus, puis Réessayer.",
+	"stoppedBody": "La migration s'est arrêtée avant qu'une instruction précise puisse être identifiée. Revenez aux changements, ou recalculez le diff par rapport à la base en direct.",
+	"askFix": "Demander à {assistant} de corriger",
+	"resyncTitle": "Réanalyser la cible et reconstruire le diff (après avoir corrigé la cause, par ex. supprimé des lignes en double).",
+	"resync": "Resynchroniser",
+	"backToChanges": "Retour aux changements",
+	"stop": "Arrêter",
+	"retry": "Réessayer",
+	"applied2": "Migration appliquée",
+	"appliedBody": {
+		"one": "{count} instruction appliquée à {target}. Les bases sont synchronisées.",
+		"other": "{count} instructions appliquées à {target}. Les bases sont synchronisées."
+	},
+	"done": "Terminé"
+}

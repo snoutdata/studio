@@ -24,6 +24,7 @@ import { bulkFormatsFor, dialectFor, keysetCursorFrom, keysetKeyFor, keysetOrder
 import type { QueryResult } from '../../../shared/query';
 import type { ColumnInfo, DatabaseSchema, TableInfo } from '../../../shared/schema';
 import { lockProdEditing, unlockProdEditing, useProdUnlocked } from '../prodUnlock';
+import { formatLocale, useT } from '../i18n';
 
 // A double-clicked table opens here: a "Data" browser (server-paged so a table with millions of
 // rows is never pulled into memory; fetches one page + 1 extra row to know if there's a next page,
@@ -47,12 +48,12 @@ const DEFAULT_PAGE_SIZE = 200;
 /** Compact, honestly-approximate row count for the paginator ("~4.2M rows"). */
 function formatApproxRows(n: number): string {
 	if (n >= 1_000_000) {
-		return `${(n / 1_000_000).toFixed(1)}M`;
+		return `${(n / 1_000_000).toLocaleString(formatLocale(), { minimumFractionDigits: 1, maximumFractionDigits: 1 })}M`;
 	}
 	if (n >= 10_000) {
 		return `${Math.round(n / 1_000)}k`;
 	}
-	return n.toLocaleString();
+	return n.toLocaleString(formatLocale());
 }
 
 interface TableViewProps {
@@ -100,6 +101,7 @@ function qualifiedName(table: TableInfo, driver: string): string {
 }
 
 export function TableView({ connectionId, driver, isProd, policy, readOnly, table, createInSchema, seedDraft, defaultTab, initialFilter, schema, resolveFkLabels = true, onNavigateFk, onRunDdl, onRunScript, onRunWrites, onRunMongoDdl, onPersisted, onDropped }: TableViewProps): JSX.Element {
+	const t = useT();
 	const [tab, setTab] = useState<InnerTab>(defaultTab ?? 'data');
 	// Honour later updates to `defaultTab` — when the user clicks the pulse icon for an
 	// already-open table the parent re-seeds it to `'telemetry'`; without this effect
@@ -217,7 +219,7 @@ export function TableView({ connectionId, driver, isProd, policy, readOnly, tabl
 		requestLabels: lookup.requestLabels,
 		requestPeek: lookup.requestPeek,
 		peekData: lookup.peekData,
-		onNavigate: (col, row) => { const t = lookup.navTarget(col, row); if (t) { onNavigateFk(t.table, t.filters); } },
+		onNavigate: (col, row) => { const target = lookup.navTarget(col, row); if (target) { onNavigateFk(target.table, target.filters); } },
 	} : undefined;
 
 	// Seed the filter when navigated to from an FK cell (by column name → index into the table),
@@ -425,8 +427,8 @@ export function TableView({ connectionId, driver, isProd, policy, readOnly, tabl
 			<div className="table-view">
 				<div className="tv-head">
 					<Icon name="add" className="tv-head-icon" />
-					<span className="tv-title">New table</span>
-					{createInSchema && <span className="muted">in {createInSchema}</span>}
+					<span className="tv-title">{t('tables.common.newTable')}</span>
+					{createInSchema && <span className="muted">{t('tables.view.inSchema', { schema: createInSchema })}</span>}
 				</div>
 				<TableProperties
 					connectionId={connectionId}
@@ -447,16 +449,16 @@ export function TableView({ connectionId, driver, isProd, policy, readOnly, tabl
 			<div className="tv-head">
 				<Icon name={table.kind === 'view' ? 'eye' : table.kind === 'collection' ? 'symbol-namespace' : table.kind === 'dictionary' ? 'book' : 'table'} className="tv-head-icon" />
 				<span className="tv-title">{table.schema ? `${table.schema}.${table.name}` : table.name}</span>
-				{table.kind === 'view' && <span className="muted">view</span>}
-				{table.kind === 'collection' && <span className="muted">collection</span>}
-				{table.kind === 'dictionary' && <span className="muted">dictionary</span>}
+				{table.kind === 'view' && <span className="muted">{t('tables.common.kindView')}</span>}
+				{table.kind === 'collection' && <span className="muted">{t('tables.common.kindCollection')}</span>}
+				{table.kind === 'dictionary' && <span className="muted">{t('tables.common.kindDictionary')}</span>}
 				{table.comment && <span className="tv-comment">{table.comment}</span>}
 			</div>
 			<div className="tabs tv-tabs">
-				<button type="button" className={`tab${tab === 'properties' ? ' active' : ''}`} onClick={() => setTab('properties')}>Properties</button>
-				<button type="button" className={`tab${tab === 'telemetry' ? ' active' : ''}`} onClick={() => setTab('telemetry')}>Telemetry</button>
-				{hasStorageTab && <button type="button" className={`tab${tab === 'storage' ? ' active' : ''}`} onClick={() => setTab('storage')}>Storage</button>}
-				<button type="button" className={`tab${tab === 'data' ? ' active' : ''}`} onClick={() => setTab('data')}>Data</button>
+				<button type="button" className={`tab${tab === 'properties' ? ' active' : ''}`} onClick={() => setTab('properties')}>{t('tables.view.properties')}</button>
+				<button type="button" className={`tab${tab === 'telemetry' ? ' active' : ''}`} onClick={() => setTab('telemetry')}>{t('tables.view.telemetry')}</button>
+				{hasStorageTab && <button type="button" className={`tab${tab === 'storage' ? ' active' : ''}`} onClick={() => setTab('storage')}>{t('tables.view.storage')}</button>}
+				<button type="button" className={`tab${tab === 'data' ? ' active' : ''}`} onClick={() => setTab('data')}>{t('tables.view.data')}</button>
 			</div>
 
 			{tab === 'properties' && (
@@ -501,8 +503,8 @@ export function TableView({ connectionId, driver, isProd, policy, readOnly, tabl
 					{prodSessionUnlocked && (
 						<div className="grid-edit-note muted small">
 							<Icon name="unlock" />
-							<span>Editing is allowed on this production connection until the app restarts. Saving still shows the statements first.</span>
-							<button type="button" className="link-btn" onClick={() => lockProdEditing(connectionId)}>Lock again</button>
+							<span>{t('tables.view.unlockedNote')}</span>
+							<button type="button" className="link-btn" onClick={() => lockProdEditing(connectionId)}>{t('tables.view.lockAgain')}</button>
 						</div>
 					)}
 					{editable ? (
@@ -524,7 +526,7 @@ export function TableView({ connectionId, driver, isProd, policy, readOnly, tabl
 							<div className="grid-edit-note muted small">
 								<Icon name="info" />
 								<span>{editRefusal(table, { readOnly, gridActionsAllowed: policy.allowsGridActions(true) })}</span>
-								{prodLocked && <button type="button" className="link-btn" onClick={() => unlockProdEditing(connectionId)}>Allow editing for this session</button>}
+								{prodLocked && <button type="button" className="link-btn" onClick={() => unlockProdEditing(connectionId)}>{t('tables.view.allowEditing')}</button>}
 							</div>
 						)
 					)}
@@ -534,7 +536,7 @@ export function TableView({ connectionId, driver, isProd, policy, readOnly, tabl
 						<div className="grid-load-bar">
 							<button type="button" className="grid-load-file" onClick={() => void chooseFileToLoad()}>
 								<Icon name="cloud-upload" />
-								Load a file
+								{t('tables.view.loadFile')}
 							</button>
 						</div>
 					)}
@@ -547,7 +549,7 @@ export function TableView({ connectionId, driver, isProd, policy, readOnly, tabl
 									<b>{fields[f.col]?.name ?? table.columns[f.col]?.name}</b> {f.value === null || f.value === undefined ? (f.op === '=' ? 'IS NULL' : 'IS NOT NULL') : `${f.op === '=' ? '=' : '≠'} ${String(f.value)}`}
 								</span>
 							))}
-							<button type="button" className="filter-clear" title="Clear filter" onClick={() => { setFilter([]); setPage(0); }}><Icon name="close" /></button>
+							<button type="button" className="filter-clear" title={t('results.filter.clear')} onClick={() => { setFilter([]); setPage(0); }}><Icon name="close" /></button>
 						</div>
 					)}
 					{editing.savePreview === null && editing.saveError && <div className="results-error">{editing.saveError}</div>}
@@ -580,6 +582,7 @@ export function TableView({ connectionId, driver, isProd, policy, readOnly, tabl
 									setBigEdit({ row: i, col, value: cellText(row[col]), columnName: fields[col]?.name ?? '' });
 								} : undefined}
 							defaultActionLabel={structurallyEditable ? (col) => defaultAction(columnByField?.[col])?.label ?? null : undefined}
+							defaultActionIsNull={structurallyEditable ? (col) => defaultAction(columnByField?.[col])?.value === NULL_VALUE : undefined}
 							onSetDefault={structurallyEditable ? (i, col) => {
 								const action = defaultAction(columnByField?.[col]);
 								if (!action) { return; }
@@ -608,19 +611,19 @@ export function TableView({ connectionId, driver, isProd, policy, readOnly, tabl
 							/>
 						)}
 					<div className="results-footer">
-						<span>{loading ? 'Loading…' : showing === 0 ? 'No rows' : `Rows ${(start + 1).toLocaleString()}–${(start + showing).toLocaleString()}`}</span>
-						<button type="button" className="page-btn" title="Refresh" disabled={dirty} onClick={() => setReloadSeq((s) => s + 1)}><Icon name="refresh" /></button>
+						<span>{loading ? t('editor.common.loading') : showing === 0 ? t('tables.view.noRows') : t('tables.view.rowsRange', { range: `${(start + 1).toLocaleString(formatLocale())}–${(start + showing).toLocaleString(formatLocale())}` })}</span>
+						<button type="button" className="page-btn" title={t('editor.common.refresh')} disabled={dirty} onClick={() => setReloadSeq((s) => s + 1)}><Icon name="refresh" /></button>
 						<span className="spacer" />
 						<div className="paginator">
-							<label className="page-size">Rows per page
+							<label className="page-size">{t('results.paging.perPage')}
 								<select value={pageSize} disabled={dirty} onChange={(e) => { setPageSize(Number(e.target.value)); setPage(0); }}>
 									{PAGE_SIZES.map((n) => <option key={n} value={n}>{n}</option>)}
 								</select>
 							</label>
-							<span className="page-range">Page {(page + 1).toLocaleString()}{approxTotalRows ? ` · ~${approxTotalRows} rows` : ''}</span>
-							<button type="button" className="page-btn first" title="First page" disabled={page === 0 || dirty} onClick={() => setPage(0)}><span className="pg-bar" /><Icon name="chevron-left" /></button>
-							<button type="button" className="page-btn" title="Previous page" disabled={page === 0 || dirty} onClick={() => setPage((p) => Math.max(0, p - 1))}><Icon name="chevron-left" /></button>
-							<button type="button" className="page-btn" title="Next page" disabled={!hasNext || dirty} onClick={() => setPage((p) => p + 1)}><Icon name="chevron-right" /></button>
+							<span className="page-range">{approxTotalRows ? t('tables.view.pageApprox', { page: page + 1, rows: approxTotalRows }) : t('tables.view.page', { page: page + 1 })}</span>
+							<button type="button" className="page-btn first" title={t('results.paging.first')} disabled={page === 0 || dirty} onClick={() => setPage(0)}><span className="pg-bar" /><Icon name="chevron-left" /></button>
+							<button type="button" className="page-btn" title={t('results.paging.previous')} disabled={page === 0 || dirty} onClick={() => setPage((p) => Math.max(0, p - 1))}><Icon name="chevron-left" /></button>
+							<button type="button" className="page-btn" title={t('results.paging.next')} disabled={!hasNext || dirty} onClick={() => setPage((p) => p + 1)}><Icon name="chevron-right" /></button>
 						</div>
 					</div>
 				</>

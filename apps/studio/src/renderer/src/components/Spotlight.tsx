@@ -6,6 +6,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Icon } from './Icon';
 import { LibyArt, type LibyMood } from '@snout/liby';
+import { useT } from '../i18n';
 
 export interface TourStep {
 	/** Matches a `data-tour="<anchor>"` element. Absent or not found ⇒ a centered card. */
@@ -50,7 +51,8 @@ const MARGIN = 10; // keep the card this far from the viewport edge
  * Skip. Anchors are resolved by `data-tour="…"` so steps stay decoupled from markup.
  * Reused for both the first-run tour and single-step feature announcements.
  */
-export function Spotlight({ steps, onFinish, finishLabel = "Done", badge, skipLabel = "Skip", onOpenLink }: SpotlightProps): JSX.Element {
+export function Spotlight({ steps, onFinish, finishLabel, badge, skipLabel, onOpenLink }: SpotlightProps): JSX.Element {
+	const t = useT();
 	const [index, setIndex] = useState(0);
 	const [rect, setRect] = useState<Rect | null>(null);
 	const [pos, setPos] = useState<{ top: number; left: number; place: string }>({ top: 0, left: 0, place: 'center' });
@@ -221,9 +223,9 @@ export function Spotlight({ steps, onFinish, finishLabel = "Done", badge, skipLa
 				<div className="tour-card-head">
 					<span className="tour-step-count">
 						{badge && <span className="tour-badge">{badge}</span>}
-						{steps.length > 1 ? `${index + 1} / ${steps.length}` : (badge ? '' : `${index + 1} of ${steps.length}`)}
+						{steps.length > 1 ? `${index + 1} / ${steps.length}` : (badge ? '' : t('shell.tour.stepOf', { current: index + 1, total: steps.length }))}
 					</span>
-					<button className="tour-skip" type="button" onClick={onFinish}>{skipLabel}</button>
+					<button className="tour-skip" type="button" onClick={onFinish}>{skipLabel ?? t('shell.tour.skip')}</button>
 				</div>
 				{step.art && <div className="tour-card-art">{step.art}</div>}
 				<h3 className="tour-card-title">{step.title}</h3>
@@ -241,13 +243,13 @@ export function Spotlight({ steps, onFinish, finishLabel = "Done", badge, skipLa
 					</div>
 					<div className="tour-card-actions">
 						{steps.length > 1 && (
-							<button className="tour-nav" type="button" onClick={back} disabled={index === 0} title="Previous">
+							<button className="tour-nav" type="button" onClick={back} disabled={index === 0} title={t('shell.tour.previous')}>
 								<Icon name="chevron-left" />
 							</button>
 						)}
 						{last
-							? <button className="tour-next" type="button" onClick={next}><Icon name="check" /> {finishLabel}</button>
-							: <button className="tour-nav" type="button" onClick={next} title="Next"><Icon name="chevron-right" /></button>}
+							? <button className="tour-next" type="button" onClick={next}><Icon name="check" /> {finishLabel ?? t('shell.tour.done')}</button>
+							: <button className="tour-nav" type="button" onClick={next} title={t('shell.common.next')}><Icon name="chevron-right" /></button>}
 					</div>
 				</div>
 			</div>

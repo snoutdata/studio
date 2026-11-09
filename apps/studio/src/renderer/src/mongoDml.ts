@@ -7,6 +7,7 @@ import type { ColumnInfo, TableInfo } from '../../shared/schema';
 import type { QueryField } from '../../shared/query';
 import { describeMongoWrite, type MongoWrite } from '../../shared/engine';
 import { isCellExpr, type CellValue, type RowInsert, type RowUpdate } from './dml';
+import { t } from '../../shared/i18n/core';
 
 // The document (MongoDB) counterpart to dml.ts. Where dml.ts turns the
 // editable grid's pending edits into SQL UPDATE/INSERT/DELETE strings, this turns the SAME edits
@@ -124,7 +125,7 @@ export interface DocumentFieldEdit {
 export function buildDocumentUpdate(input: { table: TableInfo; document: Record<string, unknown>; edits: DocumentFieldEdit[] }): { preview: string; write: MongoWrite } | { error: string } {
 	const { table, document, edits } = input;
 	if (!('_id' in document) || document._id === undefined || document._id === null) {
-		return { error: "This document has no _id, so nested field edits can't be saved. Use the pipeline editor instead." };
+		return { error: t('engineEditing.mongoNoId') };
 	}
 	const idColumn = table.columns.find((c) => c.name === '_id');
 	const set: Record<string, unknown> = {};
@@ -139,7 +140,7 @@ export function buildDocumentUpdate(input: { table: TableInfo; document: Record<
 		}
 	}
 	if (Object.keys(set).length === 0) {
-		return { error: 'No changes to save.' };
+		return { error: t('engineEditing.mongoNoChanges') };
 	}
 	const write: MongoWrite = { op: 'updateOne', collection: table.name, filter: { _id: idFilterValue(document._id, idColumn) }, update: { $set: set } };
 	return { preview: describeMongoWrite(write), write };
@@ -168,7 +169,7 @@ export function buildMongoWrites(input: MongoWriteInput): { preview: string; wri
 	const idIndex = fields.findIndex((f) => f.name === '_id');
 	const needsKey = input.updates.length > 0 || input.deletes.length > 0;
 	if (needsKey && idIndex < 0) {
-		return { error: "This result has no _id column, so edits and deletes can't be saved safely. Add documents only, or use the pipeline editor." };
+		return { error: t('engineEditing.mongoNoIdColumn') };
 	}
 	const columnFor = (index: number): ColumnInfo | undefined => table.columns.find((c) => c.name === fields[index]?.name);
 	const idColumn = table.columns.find((c) => c.name === '_id');

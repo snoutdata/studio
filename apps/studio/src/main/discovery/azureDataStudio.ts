@@ -3,6 +3,7 @@
  *  Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { t } from '../../shared/i18n/core';
 import type { ConnectionConfig } from '../../shared/connection';
 import type { ConnectionFormValues, ImportItemRef, ImportScanResult } from '../../shared/forms';
 import { asRecord, asString } from '../importCommon';
@@ -115,9 +116,9 @@ export function parseAzureDataStudioSettings(file: string, text: string): Found[
 				readOnly: false,
 			};
 			if (/integrated/i.test(auth)) {
-				notes.push("Uses Windows authentication; set a SQL login after import.");
+				notes.push(t('mainDiscovery.windowsAuth'));
 			} else if (/azure/i.test(auth)) {
-				notes.push("Uses Microsoft Entra sign-in; set a SQL login after import.");
+				notes.push(t('mainDiscovery.entraAuth'));
 			}
 		} else if (provider === 'PGSQL') {
 			values = {
@@ -137,13 +138,13 @@ export function parseAzureDataStudioSettings(file: string, text: string): Found[
 				sourceName: asString(options.connectionName) ?? "Azure Data Studio connection",
 				supported: false,
 				importsPassword: false,
-				note: `Unsupported provider (${provider || "unknown"}).`,
+				note: t('mainDiscovery.unsupportedProvider', { provider: provider || t('mainDiscovery.unknown') }),
 			};
 		}
 		const name = asString(options.connectionName) ?? (values.database ? `${values.host}/${values.database}` : values.host);
 		values.label = name || "Azure Data Studio connection";
 		if (notes.length === 0) {
-			notes.push(...credentialNotes(values, false, "Azure Data Studio keeps passwords in your credential store, so set it after import."));
+			notes.push(...credentialNotes(values, false, t('mainDiscovery.adsKeepsPasswords')));
 		}
 		return {
 			ref: { file, connId },

@@ -10,8 +10,22 @@
 // gets `packages/liby-stub` instead, built against the same types.
 
 import type { LibyEvent, LibyMood } from '@snout/liby';
+import { currentLocale, formatLocale, t, translateList } from '../../shared/i18n/core';
 import type { ErrorClass } from '../../shared/engine';
 import type { ChecklistTaskId } from './onboarding';
+
+// ---- Her words -------------------------------------------------------------------------------------
+
+/** How her text gets the app's language: handed to her through `studioHost`, so her package never
+ *  reaches for Studio's translations itself. */
+export interface LibyLanguage {
+	t(key: string, vars?: Record<string, string | number>): string;
+	list(key: string): string[];
+	/** The tag numbers are formatted with. */
+	formatLocale(): string;
+}
+
+export const LIBY_LANGUAGE: LibyLanguage = { t, list: (key) => translateList(currentLocale(), key), formatLocale };
 
 // ---- Her events -------------------------------------------------------------------------------------
 

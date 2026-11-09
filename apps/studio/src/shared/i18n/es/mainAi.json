@@ -1,0 +1,21 @@
+{
+	"noLocalModel": "Esta versión no incluye un modelo en este equipo, así que no puede explicar la revisión. Elige otra forma de revisar este repositorio en Configuración, Snoutbot.",
+	"signIn": "Inicia sesión para usar el asistente",
+	"offline": "Sin conexión: no se puede acceder al gateway {detail}",
+	"usageLimit": "Se alcanzó el límite de uso mensual",
+	"noApiKey": "Sin clave de API: añade tu clave de {label} abajo",
+	"modelReplied": "El modelo respondió: {reply}",
+	"connectedEmpty": "Conectado (respuesta vacía).",
+	"spendLimit": "{provider} informa de que tu cuenta alcanzó su límite de gasto. Sube el límite (o revisa la facturación) en {provider} y vuelve a intentarlo.",
+	"ollamaDown": "No se puede acceder a Ollama en {endpoint}. Inícialo (ejecuta \"ollama serve\"), comprueba que el modelo esté descargado y vuelve a intentarlo.",
+	"cloudRejected": "{provider} rechazó la solicitud. Comprueba la clave de API en Configuración → IA → Chat. ({message})",
+	"byokRejected": "{provider} rechazó tu clave de API. Compruébala en Configuración → IA. ({message})",
+	"addKey": "Añade tu clave de API de {provider} en Configuración → IA para usar este proveedor.",
+	"aiNotParsed": "La traducción con IA no se pudo interpretar como pipeline de MongoDB. Prueba a reformular o escribe un pipeline de agregación nativo.",
+	"aiNotObject": "La traducción con IA no era un objeto de pipeline de MongoDB. Prueba a reformular o escribe un pipeline de agregación nativo.",
+	"aiNoCollection": "No se pudo determinar qué colección consultar a partir de la traducción con IA. Escribe un pipeline de agregación nativo.",
+	"aiNoPipeline": "La traducción con IA no contenía un pipeline de agregación válido (un array de etapas). Escribe un pipeline de agregación nativo.",
+	"signInPeriod": "Inicia sesión para usar el asistente.",
+	"rulesOnly": "Este repositorio se revisa solo con las reglas. No se llama a ningún modelo.",
+	"noByok": "No hay ningún proveedor con clave propia configurado. Añade una clave en Configuración → IA."
+}

@@ -16,6 +16,7 @@ import {
 	type ExplainRead,
 	type ExplainVariant,
 } from '../../../shared/engine';
+import { formatLocale, useT, type Translate } from '../i18n';
 
 // The Explain panel. An engine that has more than one EXPLAIN declares them on its dialect
 // (`explainVariants`); this draws a picker over whatever it declared and reads each answer in the
@@ -52,32 +53,36 @@ type Answer =
 	| { state: 'estimate'; rows: ExplainEstimateRow[] }
 	| { state: 'text'; text: string; sql: boolean };
 
-const NUM = new Intl.NumberFormat();
+/** A count in the reader's own number format. */
+function num(n: number): string {
+	return n.toLocaleString(formatLocale());
+}
 
 /** `210 of 1,194 (18%)`. */
-function narrowed(initial: number, selected: number): string {
+function narrowed(t: Translate, initial: number, selected: number): string {
 	const pct = initial > 0 ? Math.round((selected / initial) * 100) : 100;
-	return `${NUM.format(selected)} of ${NUM.format(initial)} (${pct}%)`;
+	return t('results.explain.narrowed', { selected: num(selected), initial: num(initial), pct: String(pct) });
 }
 
 /** One sentence per table read: what the indexes left to read, or that they left everything. */
-function readSummary(read: ExplainRead): { text: string; skipped: boolean } {
+function readSummary(t: Translate, read: ExplainRead): { text: string; skipped: boolean } {
 	const granules = read.granules;
 	if (!granules) {
 		return { text: read.target, skipped: true };
 	}
 	const skipped = granules.selected < granules.initial;
-	const parts = read.parts ? `, ${narrowed(read.parts.initial, read.parts.selected)} parts` : '';
-	const what = read.fromProjection ? `Answered from projection ${read.target}` : `Reads ${read.target}`;
+	const parts = read.parts ? t('results.explain.partsTail', { parts: narrowed(t, read.parts.initial, read.parts.selected) }) : '';
+	const what = read.fromProjection ? t('results.explain.fromProjection', { target: read.target }) : t('results.explain.reads', { target: read.target });
 	return {
 		text: skipped
-			? `${what}: ${narrowed(granules.initial, granules.selected)} granules${parts}.`
-			: `${what}: all ${NUM.format(granules.initial)} granules, none skipped.`,
+			? t('results.explain.readPartial', { what, granules: narrowed(t, granules.initial, granules.selected), parts })
+			: t('results.explain.readFull', { what, count: num(granules.initial) }),
 		skipped,
 	};
 }
 
 export function ExplainPanel({ run, tableRows }: ExplainPanelProps): JSX.Element {
+	const t = useT();
 	const [variantId, setVariantId] = useState(run.variants[0]?.id ?? '');
 	const [answer, setAnswer] = useState<Answer>({ state: 'loading' });
 	const variant = run.variants.find((v) => v.id === variantId) ?? run.variants[0];
@@ -96,7 +101,7 @@ export function ExplainPanel({ run, tableRows }: ExplainPanelProps): JSX.Element
 		// Richest first: an EXPLAIN option a server version has not got is an error, not a word it
 		// ignores, so the attempts step down until one answers. The last one's message is the one
 		// worth showing, since it asked for the least.
-		let message = 'This server would not explain that statement.';
+		let message = t('results.explain.notExplained');
 		for (const sql of variant.statements(run.sql)) {
 			const res = await window.sqlApi.explain({ connectionId: run.connectionId, sql });
 			if (!res.ok) {
@@ -110,7 +115,7 @@ export function ExplainPanel({ run, tableRows }: ExplainPanelProps): JSX.Element
 					setAnswer({ state: 'plan', nodes });
 					return;
 				}
-				message = 'The server answered, but not with a plan this can read.';
+				message = t('results.explain.notAPlan');
 				continue;
 			}
 			if (variant.shape === 'estimate') {
@@ -143,7 +148,7 @@ export function ExplainPanel({ run, tableRows }: ExplainPanelProps): JSX.Element
 	return (
 		<div className="explain-panel">
 			<div className="explain-head">
-				<div className="explain-variants" role="tablist" aria-label="Explain">
+				<div className="explain-variants" role="tablist" aria-label={t('editor.run.explain')}>
 					{run.variants.map((v) => (
 						<button
 							key={v.id}
@@ -159,16 +164,16 @@ export function ExplainPanel({ run, tableRows }: ExplainPanelProps): JSX.Element
 					))}
 				</div>
 				<span className="spacer" />
-				<button type="button" className="explain-action" title="Copy this answer" onClick={copyAnswer}>
-					<Icon name="copy" /> Copy
+				<button type="button" className="explain-action" title={t('results.explain.copyTitle')} onClick={copyAnswer}>
+					<Icon name="copy" /> {t('results.explain.copy')}
 				</button>
-				<button type="button" className="explain-action" title="Explain again" onClick={() => void read()}>
-					<Icon name="refresh" /> Refresh
+				<button type="button" className="explain-action" title={t('results.explain.againTitle')} onClick={() => void read()}>
+					<Icon name="refresh" /> {t('editor.common.refresh')}
 				</button>
 			</div>
 			<div className="explain-hint muted">{variant?.hint}</div>
 			<div className="explain-body">
-				{answer.state === 'loading' && <div className="results-message">Explaining…</div>}
+				{answer.state === 'loading' && <div className="results-message">{t('results.explain.explaining')}</div>}
 				{answer.state === 'error' && <div className="results-error explain-error">{answer.message}</div>}
 				{answer.state === 'plan' && <PlanView nodes={answer.nodes} />}
 				{answer.state === 'estimate' && <EstimateView rows={answer.rows} tableRows={tableRows} />}
@@ -182,13 +187,14 @@ export function ExplainPanel({ run, tableRows }: ExplainPanelProps): JSX.Element
 
 /** The plan: what each table read costs, then the steps that produced it. */
 function PlanView({ nodes }: { nodes: ExplainNode[] }): JSX.Element {
+	const t = useT();
 	const reads = planReads(nodes);
 	return (
 		<>
 			{reads.length > 0 && (
 				<div className="explain-reads">
 					{reads.map((r, i) => {
-						const summary = readSummary(r);
+						const summary = readSummary(t, r);
 						return (
 							<div key={i} className={`explain-read${summary.skipped ? '' : ' explain-read-full'}`}>
 								<Icon name={summary.skipped ? 'filter' : 'warning'} />
@@ -206,6 +212,7 @@ function PlanView({ nodes }: { nodes: ExplainNode[] }): JSX.Element {
 }
 
 function PlanNode({ node }: { node: ExplainNode }): JSX.Element {
+	const t = useT();
 	return (
 		<li className="explain-node">
 			<div className="explain-node-head">
@@ -225,7 +232,7 @@ function PlanNode({ node }: { node: ExplainNode }): JSX.Element {
 			{node.read && node.read.indexes.length > 0 && (
 				<table className="explain-indexes">
 					<thead>
-						<tr><th>Index</th><th>Keys</th><th>Condition</th><th>Parts</th><th>Granules</th></tr>
+						<tr><th>{t('results.explain.index')}</th><th>{t('results.explain.keys')}</th><th>{t('results.explain.condition')}</th><th>{t('results.explain.parts')}</th><th>{t('results.explain.granules')}</th></tr>
 					</thead>
 					<tbody>
 						{node.read.indexes.map((index, i) => (
@@ -233,8 +240,8 @@ function PlanNode({ node }: { node: ExplainNode }): JSX.Element {
 								<td>{index.name ? `${index.type} ${index.name}` : index.type}</td>
 								<td>{index.keys?.join(', ') ?? index.description ?? ''}</td>
 								<td className="explain-condition" title={index.condition}>{index.condition ?? ''}</td>
-								<td className="explain-num">{index.parts ? narrowed(index.parts.initial, index.parts.selected) : ''}</td>
-								<td className="explain-num">{index.granules ? narrowed(index.granules.initial, index.granules.selected) : ''}</td>
+								<td className="explain-num">{index.parts ? narrowed(t, index.parts.initial, index.parts.selected) : ''}</td>
+								<td className="explain-num">{index.granules ? narrowed(t, index.granules.initial, index.granules.selected) : ''}</td>
 							</tr>
 						))}
 					</tbody>
@@ -251,8 +258,9 @@ function PlanNode({ node }: { node: ExplainNode }): JSX.Element {
 
 /** What running it would read, per table, against what the table holds. */
 function EstimateView({ rows, tableRows }: { rows: ExplainEstimateRow[]; tableRows?: (database: string, table: string) => number | undefined }): JSX.Element {
+	const t = useT();
 	if (rows.length === 0) {
-		return <div className="results-message">This statement reads no table, so there is nothing to estimate.</div>;
+		return <div className="results-message">{t('results.explain.noTable')}</div>;
 	}
 	const total = rows.reduce((sum, r) => sum + r.rows, 0);
 	return (
@@ -260,12 +268,12 @@ function EstimateView({ rows, tableRows }: { rows: ExplainEstimateRow[]; tableRo
 			<div className="explain-reads">
 				<div className="explain-read">
 					<Icon name="database" />
-					<span>Would read about {NUM.format(total)} rows from {rows.length === 1 ? '1 table' : `${rows.length} tables`}, before running it.</span>
+					<span>{t('results.explain.wouldRead', { rows: num(total), count: rows.length })}</span>
 				</div>
 			</div>
 			<table className="explain-estimate">
 				<thead>
-					<tr><th>Table</th><th className="explain-num">Parts</th><th className="explain-num">Rows</th><th className="explain-num">Of the table</th><th className="explain-num">Marks</th></tr>
+					<tr><th>{t('results.explain.table')}</th><th className="explain-num">{t('results.explain.parts')}</th><th className="explain-num">{t('results.explain.rows')}</th><th className="explain-num">{t('results.explain.ofTable')}</th><th className="explain-num">{t('results.explain.marks')}</th></tr>
 				</thead>
 				<tbody>
 					{rows.map((row, i) => {
@@ -275,10 +283,10 @@ function EstimateView({ rows, tableRows }: { rows: ExplainEstimateRow[]; tableRo
 						return (
 							<tr key={i}>
 								<td>{row.database ? `${row.database}.${row.table}` : row.table}</td>
-								<td className="explain-num">{NUM.format(row.parts)}</td>
-								<td className="explain-num">{NUM.format(row.rows)}</td>
-								<td className="explain-num" title={held ? `${NUM.format(held)} rows in the table` : 'The row count for this table is not loaded.'}>{share}</td>
-								<td className="explain-num">{NUM.format(row.marks)}</td>
+								<td className="explain-num">{num(row.parts)}</td>
+								<td className="explain-num">{num(row.rows)}</td>
+								<td className="explain-num" title={held ? t('results.explain.rowsInTable', { rows: num(held) }) : t('results.explain.rowCountUnknown')}>{share}</td>
+								<td className="explain-num">{num(row.marks)}</td>
 							</tr>
 						);
 					})}

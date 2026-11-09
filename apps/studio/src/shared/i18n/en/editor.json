@@ -1,0 +1,122 @@
+{
+	"ai": {
+		"completionOff": "AI completion is off. Enable it under Settings → AI.",
+		"noChange": "{assistant}: no change suggested.",
+		"noSuggestion": "{assistant}: no suggestion",
+		"thinking": "{assistant}: thinking…"
+	},
+	"aiEdit": {
+		"accept": "Accept",
+		"addToChat": "Add to Chat",
+		"applyHint": "⏎ apply · ⇧⏎ newline · Esc cancel",
+		"connectFirst": "Connect to a database to use Quick Edit.",
+		"editPlaceholder": "Edit selection: describe the change…",
+		"escDismiss": "Esc to dismiss",
+		"generateHint": "⏎ generate · ⇧⏎ newline · Esc cancel",
+		"generatePlaceholder": "Generate SQL: describe what you want…",
+		"modelTitle": "Model for this edit",
+		"processing": "Processing…",
+		"quickEdit": "Quick Edit",
+		"reject": "Reject",
+		"reviewHint": "⏎ accept · Esc reject"
+	},
+	"builder": {
+		"addStage": "Add stage",
+		"apply": "Apply to editor",
+		"deleteStage": "Delete this stage",
+		"disable": "Disable this stage (kept, excluded from the run)",
+		"empty": "No stages. Add one to start the pipeline.",
+		"enable": "Enable this stage",
+		"moveDown": "Move down",
+		"moveUp": "Move up",
+		"on": "on",
+		"operator": "Stage operator",
+		"runTo": "Run the pipeline up to and including this stage",
+		"title": "Pipeline stages"
+	},
+	"common": {
+		"cancel": "Cancel",
+		"close": "Close",
+		"collapse": "Collapse",
+		"delete": "Delete",
+		"loading": "Loading…",
+		"notConnected": "{label} (not connected)",
+		"refresh": "Refresh",
+		"revert": "Revert",
+		"run": "Run",
+		"save": "Save"
+	},
+	"conn": {
+		"choose": "Choose a connection",
+		"filter": "Filter connections",
+		"localProject": "SnoutData local project",
+		"new": "New Connection…",
+		"noMatch": "Nothing matches",
+		"noneYet": "No connections yet",
+		"readOnlyTitle": "Read-only connection. Writes and DDL are blocked."
+	},
+	"ctx": {
+		"explainSql": "Explain SQL",
+		"optimizeSql": "SQL Optimization",
+		"pipelineTranslation": "Get Pipeline Translation",
+		"textToSql": "Text to SQL"
+	},
+	"find": {
+		"collectionPlaceholder": "Collection…",
+		"collectionTitle": "Collection to query",
+		"fieldsPlaceholder": "Fields, e.g. name, email, -_id",
+		"fieldsTitle": "Projection: bare names include, a - prefix excludes (e.g. -password). Blank returns whole documents.",
+		"filterPlaceholder": "Filter, e.g. { \"status\": \"active\" }",
+		"filterTitle": "A Mongo query document (JSON). Blank matches every document.",
+		"find": "Find",
+		"limit": "Limit",
+		"limitInvalid": "Limit must be a non-negative number.",
+		"limitTitle": "Maximum documents to return",
+		"pickCollection": "Pick a collection to query.",
+		"runTitle": "Run this find (Enter)",
+		"sortPlaceholder": "Sort, e.g. createdAt:-1, name",
+		"sortTitle": "Sort keys: field or field:dir (1/asc or -1/desc)."
+	},
+	"history": {
+		"clear": "Clear history",
+		"clearBody": "Every recorded query in your history will be removed. This cannot be undone.",
+		"clearTitle": "Clear query history?",
+		"daysAgo": "{n}d ago",
+		"emptyRecent": "No history yet. The queries you run show up here.",
+		"emptySaved": "No saved queries. Save one from the editor and it is kept here.",
+		"error": "error",
+		"heading": "HISTORY",
+		"hoursAgo": "{n}h ago",
+		"minutesAgo": "{n}m ago",
+		"recent": "Recent",
+		"rowsMs": {
+			"one": "{count} rows · {ms} ms",
+			"other": "{count} rows · {ms} ms"
+		},
+		"saved": "Saved",
+		"secondsAgo": "{n}s ago"
+	},
+	"params": {
+		"detail": "ClickHouse binds these on the server with their types. Type the value itself, without quotes.",
+		"title": "Query parameters"
+	},
+	"pipeline": {
+		"collectionTitle": "Collection this pipeline runs against",
+		"explainTitle": "Explain this pipeline: show the query plan (which index it uses) without running it",
+		"findTitle": "Quick find: filter, project, sort without writing a pipeline",
+		"nativeTitle": "Write a native aggregation pipeline (JSON)",
+		"pipeline": "Pipeline",
+		"sqlTitle": "Write SQL (translated to an aggregation pipeline)",
+		"stages": "Stages",
+		"stagesTitle": "Edit the pipeline as visual stages (add, reorder, disable, preview each step)",
+		"surface": "MongoDB query surface"
+	},
+	"run": {
+		"explain": "Explain",
+		"explainTitle": "Show how the database would run this statement, without running it",
+		"more": "More run options",
+		"newTab": "Run in new tab",
+		"script": "Run script",
+		"scriptTitle": "Run every statement in the editor, one at a time"
+	}
+}

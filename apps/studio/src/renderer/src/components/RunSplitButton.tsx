@@ -5,6 +5,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { Icon } from './Icon';
+import { useT } from '../i18n';
 
 interface RunSplitButtonProps {
 	disabled: boolean;
@@ -20,6 +21,7 @@ interface RunSplitButtonProps {
  *  tab is reused otherwise), every statement in turn, or not at all (Explain, where the engine has
  *  one). The caret shares the Run button's enabled state. */
 export function RunSplitButton({ disabled, onRun, onRunNewTab, onRunScript, onExplain }: RunSplitButtonProps): JSX.Element {
+	const t = useT();
 	const [open, setOpen] = useState(false);
 	const ref = useRef<HTMLDivElement>(null);
 
@@ -39,12 +41,12 @@ export function RunSplitButton({ disabled, onRun, onRunNewTab, onRunScript, onEx
 	return (
 		<div className="run-split" ref={ref}>
 			<button className="run" type="button" onClick={onRun} disabled={disabled} data-tour="run-button">
-				<Icon name="play" /> Run
+				<Icon name="play" /> {t('editor.common.run')}
 			</button>
 			<button
 				className="run run-caret"
 				type="button"
-				title="More run options"
+				title={t('editor.run.more')}
 				disabled={disabled}
 				onClick={() => setOpen((o) => !o)}
 			>
@@ -53,14 +55,14 @@ export function RunSplitButton({ disabled, onRun, onRunNewTab, onRunScript, onEx
 			{open && (
 				<div className="run-dropdown">
 					<button type="button" className="run-item" onClick={() => { setOpen(false); onRunNewTab(); }}>
-						<Icon name="empty-window" /> Run in new tab
+						<Icon name="empty-window" /> {t('editor.run.newTab')}
 					</button>
-					<button type="button" className="run-item" onClick={() => { setOpen(false); onRunScript(); }} title="Run every statement in the editor, one at a time">
-						<Icon name="run-all" /> Run script
+					<button type="button" className="run-item" onClick={() => { setOpen(false); onRunScript(); }} title={t('editor.run.scriptTitle')}>
+						<Icon name="run-all" /> {t('editor.run.script')}
 					</button>
 					{onExplain && (
-						<button type="button" className="run-item" onClick={() => { setOpen(false); onExplain(); }} title="Show how the database would run this statement, without running it">
-							<Icon name="list-tree" /> Explain
+						<button type="button" className="run-item" onClick={() => { setOpen(false); onExplain(); }} title={t('editor.run.explainTitle')}>
+							<Icon name="list-tree" /> {t('editor.run.explain')}
 						</button>
 					)}
 				</div>

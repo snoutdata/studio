@@ -3,6 +3,8 @@
  *  Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { t } from './i18n/core';
+
 // Snout Containers, as a cloud project's tab sees them: the customer's own image, running for as
 // long as the project does, at `https://<ref>.api.snoutdata.com/containers/v1/<name>/`.
 //
@@ -99,7 +101,7 @@ export function containerNameProblem(name: string): string | null {
 	if (CONTAINER_NAME.test(name)) {
 		return null;
 	}
-	return `"${name}" is not a container name: lower-case letters, digits, hyphens and underscores, up to 32 characters, starting with a letter or a digit.`;
+	return t('engineShared.container.badName', { name });
 }
 
 /** A port typed into a form: undefined for empty (the default), NaN-free, or a sentence. */
@@ -110,7 +112,7 @@ export function parsePort(text: string): { port?: number; problem?: string } {
 	}
 	const port = Number(trimmed);
 	if (!Number.isInteger(port) || port < 1 || port > 65535) {
-		return { problem: `${trimmed} is not a port: 1 to 65535.` };
+		return { problem: t('engineShared.container.badPort', { port: trimmed }) };
 	}
 	return { port };
 }

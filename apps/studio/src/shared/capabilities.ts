@@ -4,6 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import type { ToolSpec } from './ai';
+import { t } from './i18n/core';
 
 /**
  * The capability bridge: a generic seam that lets any renderer-side module expose named
@@ -251,6 +252,16 @@ const CAPABILITY_TITLE_WORDS: Record<string, string> = {
 	url: 'URL',
 };
 
+/** The consent card's sentence, in the person's language: {@link CapabilitySpec.consentLabel} is its English. */
+export function capabilityConsent(spec: CapabilitySpec): string | undefined {
+	if (!spec.consentLabel) {
+		return undefined;
+	}
+	const key = `engineCapabilities.consent.${spec.name}`;
+	const translated = t(key);
+	return translated === key ? spec.consentLabel : translated;
+}
+
 /**
  * A human title for a capability, for any surface a PERSON reads (Settings' app-actions list,
  * the consent card, the agent timeline): `open_connection_form` becomes "Open connection form".
@@ -261,10 +272,16 @@ const CAPABILITY_TITLE_WORDS: Record<string, string> = {
  * CapabilitySpec.title} instead; that is the exception, not the pattern.
  */
 export function capabilityTitle(spec: CapabilitySpec | string): string {
+	const name = typeof spec === 'string' ? spec : spec.name;
+	// The catalog holds one per capability, named after it; a name it does not know stays derived.
+	const key = `engineCapabilities.title.${name}`;
+	const translated = t(key);
+	if (translated !== key) {
+		return translated;
+	}
 	if (typeof spec !== 'string' && spec.title) {
 		return spec.title;
 	}
-	const name = typeof spec === 'string' ? spec : spec.name;
 	const words = name.split('_').filter((word) => word.length > 0);
 	if (words.length === 0) {
 		return name;

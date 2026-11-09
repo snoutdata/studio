@@ -1,0 +1,15 @@
+{
+	"reserved": {
+		"copy": "Copy",
+		"paste": "Paste",
+		"cut": "Cut",
+		"selectAll": "Select All",
+		"undo": "Undo",
+		"redo": "Redo",
+		"find": "editor: Find",
+		"replace": "editor: Replace",
+		"goToLine": "editor: Go to Line",
+		"addNextMatch": "editor: Add Selection to Next Match",
+		"triggerSuggest": "editor: Trigger Suggest"
+	}
+}

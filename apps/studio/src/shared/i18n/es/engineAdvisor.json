@@ -1,0 +1,52 @@
+{
+	"sarg": {
+		"leadingWildcard": "`{operator} '%…'` sobre la columna indexada {column} no puede usar su índice.",
+		"leadingWildcardWhy": "Un `%` al inicio impide usar el índice b-tree de esta columna, así que la consulta recorre todas las filas. Prueba un índice de texto completo, un índice de trigramas (Postgres `pg_trgm`) o ancla el patrón (`prefix%`).",
+		"typeMismatch": "Comparar la columna de texto {column} con un literal numérico fuerza una conversión implícita.",
+		"typeMismatchWhy": "Cuando una columna de texto se compara con un número, el motor convierte el valor de cada fila para comparar, lo que anula el índice de esta columna (una trampa habitual de MySQL). Pon el literal entre comillas para que los tipos coincidan.",
+		"wrapFunction": "`{fn}({name})` no puede usar el índice de {column}: la función se ejecuta en cada fila.",
+		"wrapCast": "`CAST({name} …)` no puede usar el índice de {column}.",
+		"wrapArith": "Una operación sobre {column} (`{name} {op} …`) no puede usar su índice: pasa el cálculo al otro lado.",
+		"wrapWhy": "Envolver una columna indexada en una función o expresión impide usar el índice (que guarda el valor original), y la consulta recorre toda la tabla. Reescríbela para que la columna sola quede a un lado de la comparación, o añade un índice sobre la expresión."
+	},
+	"plan": {
+		"partitionScan": "Lee las {leaves} particiones de {table} (~{rows} filas): nada en la consulta permite a la base de datos saltarse alguna.",
+		"partitionSeriesWhy": "{table} es una tabla de serie particionada por {time}. Filtra por {time} con un rango que el planificador pueda comparar directamente ({time} >= now() - interval '1 day', o un rango literal), nunca con una función o un cast de {time}, para leer solo las particiones de ese rango.",
+		"partitionWhy": "{table} está particionada. Un filtro sobre su clave de partición, comparada directamente y no mediante una función o un cast, permite al planificador saltarse las particiones que quedan fuera.",
+		"sort": "El plan ordena filas que ningún índice ordena ya (un ordenamiento en memoria o en disco).",
+		"sortWhy": "Añade un índice cuyas primeras columnas coincidan con el ORDER BY: el motor leerá las filas en orden en lugar de ordenarlas.",
+		"filesort": "El plan usa un filesort (las filas no se leen en el orden necesario desde un índice).",
+		"filesortWhy": "Añade un índice compuesto que cubra las columnas de igualdad del WHERE y luego la del ORDER BY: un solo índice sirve para ambos.",
+		"tempTable": "El plan materializa una tabla temporal interna.",
+		"tempTableWhy": "Un GROUP BY, DISTINCT o UNION que no puede usar un índice crea una tabla temporal; un índice sobre las columnas de agrupación suele eliminarla.",
+		"filesortTable": "El plan usa un filesort en esta tabla (las filas no se leen en orden desde un índice).",
+		"filesortTableWhy": "Añade un índice compuesto que cubra las columnas de igualdad del WHERE y luego la del ORDER BY.",
+		"tempTableStep": "El plan materializa una tabla temporal interna para este paso.",
+		"tempTableStepWhy": "Un índice sobre las columnas de agrupación o de join suele eliminar la tabla temporal.",
+		"final": "FINAL sobre {table} ({rows} filas) fusiona sus parts mientras la consulta las lee.",
+		"finalWhy": "FINAL une las filas duplicadas al leer, y en una tabla grande eso cuesta mucho más que la propia consulta. Filtra primero para fusionar menos, o elimina duplicados en la consulta (argMax(value, version) ... GROUP BY key); do_not_merge_across_partitions_select_final = 1 ayuda cuando la clave nunca cruza particiones.",
+		"projection": "Respondida desde la proyección {name}: {last} de {first} gránulos leídos.",
+		"projectionWhy": "Una proyección es una copia de la tabla en otro orden o preagregada, y ClickHouse la usó porque lee menos que la tabla. No hay nada que hacer: la palanca está funcionando.",
+		"granulesTable": "Lectura completa de {table}: se leyeron los {first} gránulos ({approx}{rows} filas), ninguno se saltó.",
+		"granules": "Lectura completa: se leyeron los {first} gránulos ({approx}{rows} filas), ninguno se saltó.",
+		"granulesWhy": "ClickHouse se salta datos según la clave ORDER BY de la tabla y su clave de partición, no según un índice sobre una columna. Este filtro no redujo ninguna de las dos, así que se leyó cada gránulo. Filtra por una columna inicial de la clave ORDER BY (la primera antes) o por la clave de partición; para una columna fuera de la clave, la palanca es un índice de salto (bloom_filter, set, minmax) o una proyección ordenada por ella.",
+		"fullScan": "Lectura completa de la tabla: ningún índice reduce las filas.",
+		"fullScanRows": "Lectura completa de la tabla (~{rows} filas): ningún índice reduce las filas.",
+		"fullScanTable": "Lectura completa de {table}: ningún índice reduce las filas.",
+		"fullScanTableRows": "Lectura completa de {table} (~{rows} filas): ningún índice reduce las filas.",
+		"fullScanWhy": "El motor lee cada fila porque ningún índice coincide con el filtro o el join. Añade un índice sobre las columnas del WHERE o del JOIN, o haz el predicado sargable (mira las indicaciones en el editor), para tocar solo las filas necesarias."
+	},
+	"hazards": {
+		"setIgnored": "Solo se asigna \"{column}\". {ignored} NO se actualizará.",
+		"setBoolean": "Solo se asigna \"{column}\", y su valor es una expresión booleana, no el valor que parece.",
+		"setWhy": "{operator} no separa asignaciones en una cláusula SET, lo hace la coma. Esto se interpreta como la única asignación \"{column} = ({value})\": todo el lado derecho se reduce a un solo valor true/false/NULL, y las demás columnas nombradas solo se comparan, no se cambian.",
+		"nullNotEqual": "\"<> NULL\" no coincide con ninguna fila, ni siquiera con las que no son NULL.",
+		"nullEqual": "\"= NULL\" no coincide con ninguna fila, ni siquiera con las que son NULL.",
+		"nullWhy": "Comparar cualquier cosa con NULL da NULL (desconocido), nunca verdadero, así que el predicado lo descarta todo. Usa {fix} en su lugar.",
+		"theTable": "la tabla",
+		"chDelete": "ALTER TABLE ... DELETE reescribe en segundo plano cada part de {table} que tenga una fila afectada, y no se puede revertir.",
+		"chDeleteWhy": "Esto es una mutación, no un borrado de filas. Un DELETE FROM {table} WHERE ... ligero (ClickHouse 23.3 o posterior) marca las filas como borradas al instante y las quita en las fusiones normales, lo que cuesta mucho menos; ALTER TABLE ... DELETE es para cuando hay que recuperar el espacio en disco ya. Síguela en Operations > Storage > Mutations.",
+		"chUpdate": "ALTER TABLE ... UPDATE reescribe en segundo plano cada columna que cambia en cada part que tenga una fila afectada, y no se puede revertir.",
+		"chUpdateWhy": "Esto es una mutación, no una actualización de filas: en una tabla grande es una reescritura larga, y si falla bloquea las mutaciones siguientes de la misma tabla. Acota el WHERE todo lo posible y síguela en Operations > Storage > Mutations."
+	}
+}

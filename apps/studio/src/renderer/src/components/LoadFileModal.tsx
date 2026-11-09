@@ -5,6 +5,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { Icon } from './Icon';
+import { formatLocale, useT } from '../i18n';
 import { SqlCode } from './SqlCode';
 import { formatBytes } from '../formatBytes';
 import { errorMessage } from '../errors';
@@ -34,7 +35,8 @@ interface LoadFileModalProps {
 }
 
 export function LoadFileModal({ connectionId, driver, schema, table, choice, onClose, onLoaded }: LoadFileModalProps): JSX.Element {
-	const formats = useMemo(() => bulkFormatsFor(driver), [driver]);
+	const t = useT();
+const formats = useMemo(() => bulkFormatsFor(driver), [driver]);
 	const [formatId, setFormatId] = useState(choice.formatId ?? formats[0]?.id ?? '');
 	const [busy, setBusy] = useState(false);
 	const [error, setError] = useState<string | null>(null);
@@ -106,7 +108,7 @@ export function LoadFileModal({ connectionId, driver, schema, table, choice, onC
 			<div className="modal load-file" onClick={(e) => e.stopPropagation()}>
 				<h2>
 					<Icon name="cloud-upload" />
-					Load a file into {name}
+					{t('connections.loadFile.title', { name })}
 				</h2>
 
 				<div className="load-file-source">
@@ -119,7 +121,7 @@ export function LoadFileModal({ connectionId, driver, schema, table, choice, onC
 				{done
 					? (
 						<p className="confirm-detail">
-							{done.rows.toLocaleString()} {done.rows === 1 ? 'row' : 'rows'} written in {(done.ms / 1000).toFixed(1)}s.
+							{t('connections.loadFile.written', { count: done.rows, seconds: (done.ms / 1000).toLocaleString(formatLocale(), { minimumFractionDigits: 1, maximumFractionDigits: 1 }) })}
 						</p>
 					)
 					: (
@@ -127,8 +129,8 @@ export function LoadFileModal({ connectionId, driver, schema, table, choice, onC
 							{/* A plain labelled field, like the connection form's: a box around one control
 							    reads as a group that has lost its other members. */}
 							<label>
-								Read it as
-								<select aria-label="Read it as" value={formatId} disabled={busy} onChange={(e) => setFormatId(e.target.value)}>
+								{t('connections.loadFile.readAs')}
+								<select aria-label={t('connections.loadFile.readAs')} value={formatId} disabled={busy} onChange={(e) => setFormatId(e.target.value)}>
 									{formats.map((f) => <option key={f.id} value={f.id}>{f.label}</option>)}
 								</select>
 							</label>
@@ -150,7 +152,7 @@ export function LoadFileModal({ connectionId, driver, schema, table, choice, onC
 				{busy && (
 					<p className="muted small load-file-progress">
 						<Icon name="loading" className="spin" />
-						{rowsRead === null ? 'Sending the file…' : `${rowsRead.toLocaleString()} rows read so far…`}
+						{rowsRead === null ? t('connections.loadFile.sending') : t('connections.loadFile.rowsRead', { rows: rowsRead })}
 					</p>
 				)}
 				{error && <div className="results-error">{error}</div>}
@@ -158,11 +160,11 @@ export function LoadFileModal({ connectionId, driver, schema, table, choice, onC
 				<div className="modal-actions">
 					<span className="spacer" />
 					{done
-						? <button type="button" onClick={onClose} autoFocus><Icon name="check" /> Done</button>
+						? <button type="button" onClick={onClose} autoFocus><Icon name="check" /> {t('connections.loadFile.done')}</button>
 						: (
 							<>
-								<button type="button" className="secondary" disabled={busy} onClick={onClose}><Icon name="close" /> Cancel</button>
-								<button type="button" disabled={busy || !format} onClick={() => void load()}><Icon name="cloud-upload" /> {busy ? 'Loading…' : 'Load'}</button>
+								<button type="button" className="secondary" disabled={busy} onClick={onClose}><Icon name="close" /> {t('connections.common.cancel')}</button>
+								<button type="button" disabled={busy || !format} onClick={() => void load()}><Icon name="cloud-upload" /> {busy ? t('connections.loadFile.loading') : t('connections.loadFile.load')}</button>
 							</>
 						)}
 				</div>

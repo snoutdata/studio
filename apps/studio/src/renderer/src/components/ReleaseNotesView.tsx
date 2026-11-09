@@ -7,6 +7,7 @@ import { useMemo, useRef } from 'react';
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
 import { releaseNotes } from '../releaseNotes';
+import { useT } from '../i18n';
 import logoMark from '../assets/logo-mark.png';
 
 interface ReleaseNotesViewProps {
@@ -65,6 +66,7 @@ function render(body: string): { html: string; toc: TocEntry[] } {
  *  UPDATE" table of contents on the left, the rendered per-version markdown on the right, and the
  *  "Show release notes after an update" toggle up top. */
 export function ReleaseNotesView({ version, showAfterUpdate, onToggleShowAfterUpdate, onOpenLink }: ReleaseNotesViewProps): JSX.Element {
+	const t = useT();
 	const note = releaseNotes();
 	const bodyRef = useRef<HTMLDivElement>(null);
 	const { html, toc } = useMemo(() => render(note.body), [note.body]);
@@ -72,7 +74,7 @@ export function ReleaseNotesView({ version, showAfterUpdate, onToggleShowAfterUp
 	if (!note.body) {
 		return (
 			<div className="release-notes">
-				<div className="release-notes-empty">No release notes are available for this version.</div>
+				<div className="release-notes-empty">{t('chat.releaseNotes.empty')}</div>
 			</div>
 		);
 	}
@@ -106,22 +108,22 @@ export function ReleaseNotesView({ version, showAfterUpdate, onToggleShowAfterUp
 							checked={showAfterUpdate}
 							onChange={(e) => onToggleShowAfterUpdate(e.target.checked)}
 						/>
-						Show release notes after an update
+						{t('chat.releaseNotes.showAfterUpdate')}
 					</label>
-					{note.date && <div className="release-notes-date">Release date: {note.date}</div>}
+					{note.date && <div className="release-notes-date">{t('chat.releaseNotes.date', { date: note.date })}</div>}
 				</div>
 				<div className="release-notes-cols">
 					{toc.length > 0 && (
-						<nav className="release-notes-toc" aria-label="What's new">
-							<div className="release-notes-toc-head">WHAT'S NEW</div>
-							{toc.map((t) => (
+						<nav className="release-notes-toc" aria-label={t('chat.releaseNotes.whatsNew')}>
+							<div className="release-notes-toc-head">{t('chat.releaseNotes.whatsNewHead')}</div>
+							{toc.map((entry) => (
 								<button
-									key={t.slug}
+									key={entry.slug}
 									type="button"
-									className={`release-notes-toc-link depth-${t.depth}`}
-									onClick={() => scrollTo(t.slug)}
+									className={`release-notes-toc-link depth-${entry.depth}`}
+									onClick={() => scrollTo(entry.slug)}
 								>
-									{t.text}
+									{entry.text}
 								</button>
 							))}
 						</nav>

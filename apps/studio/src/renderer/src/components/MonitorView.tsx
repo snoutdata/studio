@@ -5,6 +5,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { Icon } from './Icon';
+import { useT } from '../i18n';
 import { MonitorArt, WidgetSlotArt } from '../art/Illustrations';
 import { WidgetTile } from './WidgetTile';
 import { WidgetEditor } from './WidgetEditor';
@@ -40,7 +41,8 @@ function freshWidget(connectionId: string): MonitorWidget {
 }
 
 export function MonitorView({ connections, active, focus, onClose }: MonitorViewProps): JSX.Element {
-	const [monitors, setMonitors] = useState<Monitor[]>([]);
+	const t = useT();
+const [monitors, setMonitors] = useState<Monitor[]>([]);
 	const [selectedId, setSelectedId] = useState<string | null>(null);
 	const [editing, setEditing] = useState<MonitorWidget | null>(null);
 	const [renaming, setRenaming] = useState<string | null>(null);
@@ -105,7 +107,7 @@ export function MonitorView({ connections, active, focus, onClose }: MonitorView
 
 	async function createMonitor(): Promise<void> {
 		const now = Date.now();
-		const dash: Monitor = { id: uid(), name: "New monitor", widgets: [], createdAt: now, updatedAt: now };
+		const dash: Monitor = { id: uid(), name: t('monitors.newMonitor'), widgets: [], createdAt: now, updatedAt: now };
 		setMonitors((prev) => [...prev, dash]);
 		setSelectedId(dash.id);
 		await window.sqlApi.monitors.save(dash);
@@ -177,45 +179,45 @@ export function MonitorView({ connections, active, focus, onClose }: MonitorView
 								className={`monitor-tab${d.id === selectedId ? ' active' : ''}`}
 								onClick={() => setSelectedId(d.id)}
 								onDoubleClick={() => { setRenaming(d.id); setRenameText(d.name); }}
-								title="Double-click to rename"
+								title={t('monitors.renameHint')}
 							>
 								{d.name}
 							</button>
 						)
 					))}
-					<button className="monitor-tab add" onClick={() => void createMonitor()} title="New monitor"><Icon name="add" /></button>
+					<button className="monitor-tab add" onClick={() => void createMonitor()} title={t('monitors.newMonitor')}><Icon name="add" /></button>
 				</span>
 				<span className="spacer" />
 				{selected && (
 					<>
-						<button className="secondary" onClick={() => setEditing(freshWidget(connections[0]?.id ?? ''))}><Icon name="add" /> Add widget</button>
+						<button className="secondary" onClick={() => setEditing(freshWidget(connections[0]?.id ?? ''))}><Icon name="add" /> {t('monitors.addWidget')}</button>
 						{confirmDelete ? (
 							<span className="monitor-confirm">
-								Delete "{selected.name}"?
-								<button className="danger" onClick={() => void deleteSelected()}><Icon name="trash" /> Delete</button>
-								<button className="secondary" onClick={() => setConfirmDelete(false)}><Icon name="close" /> Cancel</button>
+								{t('monitors.deleteConfirm', { name: selected.name })}
+								<button className="danger" onClick={() => void deleteSelected()}><Icon name="trash" /> {t('monitors.delete')}</button>
+								<button className="secondary" onClick={() => setConfirmDelete(false)}><Icon name="close" /> {t('monitors.cancel')}</button>
 							</span>
 						) : (
-							<button className="icon-button" title="Delete monitor" onClick={() => setConfirmDelete(true)}><Icon name="trash" /></button>
+							<button className="icon-button" title={t('monitors.deleteMonitor')} onClick={() => setConfirmDelete(true)}><Icon name="trash" /></button>
 						)}
 					</>
 				)}
-				<button className="icon-button" title="Close" onClick={onClose}><Icon name="close" /></button>
+				<button className="icon-button" title={t('monitors.close')} onClick={onClose}><Icon name="close" /></button>
 			</div>
 
 			{!loaded ? null : monitors.length === 0 ? (
 				<div className="monitor-empty">
 					<MonitorArt className="monitor-empty-art" />
-					<h3>No monitors yet</h3>
-					<p>A monitor is a set of live SQL widgets, polled on an interval and plotted over time.</p>
-					<button onClick={() => void createMonitor()}><Icon name="add" /> New monitor</button>
+					<h3>{t('monitors.emptyTitle')}</h3>
+					<p>{t('monitors.emptyBody')}</p>
+					<button onClick={() => void createMonitor()}><Icon name="add" /> {t('monitors.newMonitor')}</button>
 				</div>
 			) : !selected ? null : selected.widgets.length === 0 ? (
 				<div className="monitor-empty">
 					<WidgetSlotArt className="monitor-empty-art" />
-					<h3>{selected.name} is empty</h3>
-					<p>Add a widget: a SQL query polled every few seconds and plotted. A trend samples a number over time; a snapshot re-runs a query and replaces the chart.</p>
-					<button onClick={() => setEditing(freshWidget(connections[0]?.id ?? ''))}><Icon name="add" /> Add widget</button>
+					<h3>{t('monitors.monitorEmpty', { name: selected.name })}</h3>
+					<p>{t('monitors.monitorEmptyBody')}</p>
+					<button onClick={() => setEditing(freshWidget(connections[0]?.id ?? ''))}><Icon name="add" /> {t('monitors.addWidget')}</button>
 				</div>
 			) : (
 				<div className="monitor-grid">

@@ -30,6 +30,7 @@ import type { SecurityEmitter } from '../emitter';
 import { assertSafeExpression, assertSafeName, assertSafePassword, assertSafeSettingName, privilegeList, quoteBackslashLiteral, settingValue } from '../emitter';
 import type { GrantScope, GrantTarget, PolicyDraft, PolicyRef, PolicySetting, PrincipalRef, SecurityChange } from '../types';
 import { quoteClickHouseIdent } from '../../dialect/index';
+import { t } from '../../../i18n/core';
 
 /** A backtick-quoted identifier, through the one ClickHouse quoter: a name ending in a backslash
  *  must not escape its own closing quote. */
@@ -241,23 +242,23 @@ LEFT JOIN (
 ORDER BY s.name`;
 
 const POLICY_QUERIES: CatalogQuery[] = [
-	{ label: 'row policies', candidates: [ROW_POLICIES] },
+	{ get label() { return t('engineSecurity.catalog.rowPolicies'); }, candidates: [ROW_POLICIES] },
 	// The usage join needs `system.quotas_usage`, which an account without SHOW QUOTAS cannot
 	// read. The limits alone are still worth having, so the second candidate drops the join
 	// rather than the whole list.
-	{ label: 'quotas', candidates: [quotas(true), quotas(false)] },
-	{ label: 'settings profiles', candidates: [SETTINGS_PROFILES] },
+	{ get label() { return t('engineSecurity.catalog.quotas'); }, candidates: [quotas(true), quotas(false)] },
+	{ get label() { return t('engineSecurity.catalog.settingsProfiles'); }, candidates: [SETTINGS_PROFILES] },
 ];
 
 const GRANT_QUERIES: CatalogQuery[] = [
-	{ label: 'privileges', candidates: [GRANTS] },
+	{ get label() { return t('engineSecurity.catalog.privileges'); }, candidates: [GRANTS] },
 ];
 
 export const clickhouseCatalog: SecurityCatalog = {
 	driverId: 'clickhouse',
 	principals: [
-		{ label: 'users', candidates: [USERS] },
-		{ label: 'roles', candidates: [ROLES] },
+		{ get label() { return t('engineSecurity.catalog.users'); }, candidates: [USERS] },
+		{ get label() { return t('engineSecurity.catalog.roles'); }, candidates: [ROLES] },
 	],
 	grants: GRANT_QUERIES,
 	policies: POLICY_QUERIES,
@@ -275,7 +276,7 @@ function onClause(target: GrantTarget): string {
 		case 'global':
 			return '*.*';
 		case 'schema':
-			throw new Error('ClickHouse has no schemas. Grant on a database or on a table instead.');
+			throw new Error(t('engineSecurity.vendors.chNoSchema'));
 		case 'database':
 			return `${quoteIdent(assertSafeName(database, 'database name'))}.*`;
 		default: {
@@ -348,7 +349,7 @@ function toClause(appliesTo: readonly string[], appliesToAll: boolean): string {
 /** `name = value, name = value`, for a settings profile. */
 function settingsClause(settings: readonly PolicySetting[]): string {
 	if (settings.length === 0) {
-		throw new Error('A settings profile needs at least one setting.');
+		throw new Error(t('engineSecurity.vendors.chProfileEmpty'));
 	}
 	return settings.map((setting) => `${assertSafeSettingName(setting.name)} = ${settingValue(setting.value)}`).join(', ');
 }
@@ -356,11 +357,11 @@ function settingsClause(settings: readonly PolicySetting[]): string {
 /** `FOR INTERVAL 1 hour MAX queries = 100, errors = 10`. */
 function intervalClause(interval: NonNullable<PolicyDraft['interval']>): string {
 	if (!Number.isInteger(interval.duration) || interval.duration <= 0) {
-		throw new Error('A quota window has to be a whole number of units.');
+		throw new Error(t('engineSecurity.vendors.chQuotaWhole'));
 	}
 	const unit = interval.unit.trim().toLowerCase();
 	if (!(QUOTA_UNITS as readonly string[]).includes(unit)) {
-		throw new Error(`"${interval.unit}" is not a window a ClickHouse quota can be measured over.`);
+		throw new Error(t('engineSecurity.vendors.chQuotaUnit', { unit: interval.unit }));
 	}
 	if (interval.limits.length === 0) {
 		return `FOR INTERVAL ${interval.duration} ${unit} TRACKING ONLY`;
@@ -368,11 +369,11 @@ function intervalClause(interval: NonNullable<PolicyDraft['interval']>): string 
 	const limits = interval.limits.map((limit) => {
 		const metric = limit.name.trim().toLowerCase();
 		if (!(QUOTA_METRICS as readonly string[]).includes(metric)) {
-			throw new Error(`"${limit.name}" is not something a ClickHouse quota can limit.`);
+			throw new Error(t('engineSecurity.vendors.chQuotaMetric', { name: limit.name }));
 		}
 		const value = limit.value.trim();
 		if (!/^\d+(\.\d+)?$/.test(value)) {
-			throw new Error(`The limit for ${metric} has to be a number.`);
+			throw new Error(t('engineSecurity.vendors.chQuotaNumber', { metric }));
 		}
 		return `${metric} = ${value}`;
 	});
@@ -397,7 +398,7 @@ function createPolicy(draft: PolicyDraft): string[] {
 		}
 		case 'quota': {
 			if (!draft.interval) {
-				throw new Error('A quota needs a window to measure over.');
+				throw new Error(t('engineSecurity.vendors.chQuotaWindow'));
 			}
 			// KEYED BY user_name: a quota with no key is one bucket for the whole server, which is
 			// almost never what someone setting a per-account limit means.
@@ -444,7 +445,7 @@ export const clickhouseEmitter: SecurityEmitter = {
 				const statements: string[] = [];
 				if (change.draft.kind === 'role') {
 					if (change.draft.password) {
-						throw new Error('A ClickHouse role has no password. Create a user instead, or leave the password blank.');
+						throw new Error(t('engineSecurity.vendors.chRolePassword'));
 					}
 					statements.push(`CREATE ROLE ${name}`);
 				} else if (change.draft.password) {

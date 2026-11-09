@@ -25,6 +25,7 @@
  */
 
 import type { AmbientContext } from '../../ai';
+import { t } from '../../i18n/core';
 import { valueFreeError } from '../memory/errorClass';
 
 export type DataAccessLevel = 'schema' | 'screen' | 'queries';
@@ -49,6 +50,19 @@ export const DATA_ACCESS_INFO: Record<DataAccessLevel, { label: string; detail: 
 		detail: 'Also lets the AI run read-only queries and read their rows, with your approval for each one. The most accurate answers.',
 	},
 };
+
+/** What a person reads for each level, in their language. DATA_ACCESS_INFO stays English: it also
+ *  goes into a message to the model. */
+export function dataAccessText(level: DataAccessLevel): { label: string; detail: string } {
+	switch (level) {
+		case 'schema':
+			return { label: t('engineDataAccess.schema.label'), detail: t('engineDataAccess.schema.detail') };
+		case 'screen':
+			return { label: t('engineDataAccess.screen.label'), detail: t('engineDataAccess.screen.detail') };
+		case 'queries':
+			return { label: t('engineDataAccess.queries.label'), detail: t('engineDataAccess.queries.detail') };
+	}
+}
 
 const RANK: Record<DataAccessLevel, number> = { schema: 0, screen: 1, queries: 2 };
 

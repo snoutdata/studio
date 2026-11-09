@@ -1,0 +1,127 @@
+{
+	"platformReason": "Faz parte da plataforma do projeto. Usuários e arquivos são copiados como partes próprias.",
+	"noLongerListed": "O SnoutData Cloud não lista mais esse projeto.",
+	"betweenOnly": "Uma cópia é feita entre este computador e o SnoutData Cloud.",
+	"nameNew": "Dê um nome ao novo projeto.",
+	"notReadable": "Sem leitura",
+	"sourceNoConn": "\"{sourceLabel}\" não tem conexão salva para o banco de dados. Abra a seção Banco de dados para adicionar uma.",
+	"notWritable": "Sem gravação",
+	"targetNoConn": "\"{targetLabel}\" não tem conexão salva para o banco de dados. Abra a seção Banco de dados para adicionar uma.",
+	"notChecked": "Não foi possível verificar",
+	"yourData": "Seus schemas, tabelas e dados",
+	"toDecideBelow": {
+		"one": "{count} a decidir abaixo",
+		"other": "{count} a decidir abaixo"
+	},
+	"findingsToDecide": "O banco de dados tem pontos a decidir abaixo.",
+	"noSignIn": "Nenhum: o login está desativado na origem",
+	"usersUnreadable": "Não foi possível ler os usuários: {error}",
+	"userExists": "Um usuário cujo e-mail já está no destino fica como está.",
+	"usersNoEmail": {
+		"one": "{count} usuário sem e-mail (anônimo, telefone ou excluído) fica para trás.",
+		"other": "{count} usuários sem e-mail (anônimos, telefone ou excluídos) ficam para trás."
+	},
+	"passwordsAcross": "As senhas são copiadas como estão armazenadas, então cada pessoa entra com a sua.",
+	"signInOn": "O login é ativado para \"{targetLabel}\".",
+	"noUsers": "Nenhum usuário para copiar",
+	"noStorage": "Nenhum: o armazenamento está desativado na origem",
+	"filesNotListed": "Não foi possível listar os arquivos: {error}",
+	"noAnswer": "sem resposta",
+	"bucketExists": "Um bucket ou arquivo que já está no destino fica como está.",
+	"storageOn": "O armazenamento é ativado para \"{targetLabel}\".",
+	"noRoom": "Os arquivos têm {size} e \"{targetLabel}\" tem espaço para {room} no plano.",
+	"noBuckets": "Nenhum bucket",
+	"replaces": "Substitui {list} no destino pela versão deste computador.",
+	"notSent": "{name} não é enviado: {problem}",
+	"noFunctions": "Nenhuma função",
+	"secretReplaced": "Um secret com o mesmo nome no destino é substituído. Os valores vão deste computador para o SnoutData Cloud e nunca são exibidos.",
+	"noSecrets": "Nenhum secret",
+	"alreadyRunning": "Esta cópia já está em andamento.",
+	"chooseOnePart": "Escolha pelo menos uma parte para copiar.",
+	"toolsMissing": "As ferramentas Postgres usadas na cópia do banco de dados ainda não estão instaladas.",
+	"typeToConfirm": "O destino é um projeto de produção. Digite \"{confirmName}\" para iniciar a cópia.",
+	"waiting": "Aguardando",
+	"stopped": "Parado",
+	"notReached": "Não alcançado",
+	"creatingProject": "Criando o projeto do SnoutData Cloud \"{name}\"",
+	"switchingSignIn": "Ativando o login para \"{targetLabel}\"",
+	"switchingStorage": "Ativando o armazenamento para \"{targetLabel}\"",
+	"starting": "Iniciando",
+	"stoppedKept": "Parado. O que já foi copiado fica no destino.",
+	"serviceSilent": "O serviço de {what} do destino não respondeu: {detail}",
+	"statusN": "status {status}",
+	"waitingFor": "Aguardando o serviço de {what} do destino iniciar",
+	"whatSignIn": "login",
+	"whatStorage": "armazenamento",
+	"copyingUsers": {
+		"one": "Copiando usuários: {count} criado",
+		"other": "Copiando usuários: {count} criados"
+	},
+	"usersCopied": {
+		"one": "{count} usuário copiado",
+		"other": "{count} usuários copiados"
+	},
+	"alreadyThere": {
+		"one": "{count} já estava lá",
+		"other": "{count} já estavam lá"
+	},
+	"leftBehind": {
+		"one": "{count} sem e-mail ficou para trás",
+		"other": "{count} sem e-mail ficaram para trás"
+	},
+	"refused": {
+		"one": "{count} recusado",
+		"other": "{count} recusados"
+	},
+	"notChecked2": "O banco de dados não foi verificado.",
+	"needsDecision": "precisa de uma decisão",
+	"madeNeedsLook": "O novo projeto foi criado, mas o banco de dados precisa de uma revisão antes de copiar qualquer coisa: {first} Abra a cópia de novo para decidir.",
+	"startingCopy": "Iniciando a cópia",
+	"rowsMismatch": "{schema}.{table}: {here} linhas aqui, {there} lá",
+	"none": "nenhuma",
+	"tablesCopied": {
+		"one": "{count} tabela copiada, a contagem de linhas confere.",
+		"other": "{count} tabelas copiadas, as contagens de linhas conferem."
+	},
+	"copiedBut": {
+		"one": "Copiado, mas {count} item não chegou igual. Os detalhes estão abaixo.",
+		"other": "Copiado, mas {count} itens não chegaram iguais. Os detalhes estão abaixo."
+	},
+	"dbCopyFailed": "A cópia do banco de dados falhou.",
+	"noBucketsToCopy": "Nenhum bucket para copiar.",
+	"filesCopied": "Copiados: {buckets}, {files}{size}",
+	"notCopied": "Não copiado.",
+	"fnsDeployed": {
+		"one": "{count} função com deploy{rest}.",
+		"other": "{count} funções com deploy{rest}."
+	},
+	"fnsNotDeployed": ", {count} não",
+	"secretsSet": {
+		"one": "{count} secret definido{rest}.",
+		"other": "{count} secrets definidos{rest}."
+	},
+	"noun_finding": {
+		"one": "{count} ponto",
+		"other": "{count} pontos"
+	},
+	"noun_user": {
+		"one": "{count} usuário",
+		"other": "{count} usuários"
+	},
+	"noun_bucket": {
+		"one": "{count} bucket",
+		"other": "{count} buckets"
+	},
+	"noun_file": {
+		"one": "{count} arquivo",
+		"other": "{count} arquivos"
+	},
+	"noun_function": {
+		"one": "{count} função",
+		"other": "{count} funções"
+	},
+	"noun_secret": {
+		"one": "{count} secret",
+		"other": "{count} secrets"
+	}
+}

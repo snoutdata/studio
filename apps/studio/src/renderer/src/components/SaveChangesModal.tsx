@@ -5,6 +5,7 @@
 
 import { useEffect, useState } from 'react';
 import { Icon } from './Icon';
+import { useI18n } from '../i18n';
 
 // Confirmation dialog for saving inline data edits: shows the generated DML (with a prod
 // warning), and lets the user copy it or run it. Shared by the table-browser and the
@@ -22,6 +23,7 @@ interface SaveChangesModalProps {
 }
 
 export function SaveChangesModal({ sql, isProd, saving, error, note, onCancel, onRun }: SaveChangesModalProps): JSX.Element {
+	const { t, tr } = useI18n();
 	const [copied, setCopied] = useState(false);
 
 	// Enter runs the save (matching the prod-confirm dialog), Escape cancels — both inert while
@@ -52,19 +54,19 @@ export function SaveChangesModal({ sql, isProd, saving, error, note, onCancel, o
 	return (
 		<div className="modal-backdrop" onClick={() => !saving && onCancel()}>
 			<div className="modal designer-preview" onClick={(e) => e.stopPropagation()}>
-				<h3>Save data changes</h3>
-				{isProd && <div className="prod-warning"><Icon name="warning" /> This is a <b>production</b> connection. Review carefully.</div>}
+				<h3>{t('shell.saveChanges.title')}</h3>
+				{isProd && <div className="prod-warning"><Icon name="warning" /> {tr('shell.saveChanges.prodWarning')}</div>}
 				{note && <div className="prod-warning"><Icon name="info" /> {note}</div>}
 				<pre className="ddl-preview">{sql}</pre>
 				{error && <div className="results-error">{error}</div>}
 				<div className="modal-actions">
-					<button type="button" className="copy" onClick={onCancel} disabled={saving}><Icon name="close" /> Cancel</button>
+					<button type="button" className="copy" onClick={onCancel} disabled={saving}><Icon name="close" /> {t('shell.common.cancel')}</button>
 					<span className="spacer" />
 					<button type="button" className="copy" onClick={() => void copy()} disabled={saving}>
-						<Icon name={copied ? 'check' : 'copy'} /> {copied ? 'Copied' : 'Copy'}
+						<Icon name={copied ? 'check' : 'copy'} /> {t(copied ? 'shell.common.copied' : 'shell.common.copy')}
 					</button>
 					<button type="button" onClick={onRun} disabled={saving}>
-						<Icon name={saving ? 'loading' : 'play'} className={saving ? 'codicon-modifier-spin' : undefined} /> {saving ? 'Applying…' : 'Run'}
+						<Icon name={saving ? 'loading' : 'play'} className={saving ? 'codicon-modifier-spin' : undefined} /> {t(saving ? 'shell.saveChanges.applying' : 'shell.common.run')}
 					</button>
 				</div>
 			</div>

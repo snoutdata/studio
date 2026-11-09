@@ -3,6 +3,8 @@
  *  Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { t } from '../shared/i18n/core';
+
 // Who a Windows update must be signed by. Pure, so it is tested without Electron.
 //
 // electron-builder writes the same list into the packaged app-update.yml (the publish block's
@@ -21,5 +23,5 @@ export const WINDOWS_PUBLISHER_NAMES: readonly string[] = ['CN=SNOUTDATA, O=SNOU
  */
 export function signatureRefusal(version: string, verifierAnswer: string): string {
 	const detail = verifierAnswer.length > 300 ? `${verifierAnswer.slice(0, 300)}...` : verifierAnswer;
-	return `The downloaded update to v${version} is not signed by SnoutData, so it was not installed. ${detail}`;
+	return t('mainErrors.notSigned', { version, detail });
 }

@@ -1,0 +1,10 @@
+{
+	"boundary": {
+		"rulesOnly": "Aucune explication n'est rédigée et aucun modèle n'est appelé. Les constats sont les mots mêmes des règles.",
+		"local": "Le modèle tourne sur cet ordinateur : rien de la revue n'est envoyé nulle part. Cela coûte du temps et de la puissance sur cette machine.",
+		"snoutAi": "Le SQL modifié et les constats tirés de votre base de données sont envoyés à nos serveurs pour être rédigés, et cela est décompté de votre quota IA.",
+		"ollamaLocal": "Le modèle tourne sur cet ordinateur, sur votre Ollama. Rien de la revue n'est envoyé nulle part.",
+		"ollamaRemote": "Le SQL modifié et les constats tirés de votre base de données sont envoyés au serveur Ollama indiqué ({host}). Ils ne nous parviennent pas.",
+		"byok": "Le SQL modifié et les constats tirés de votre base de données sont envoyés à {vendor} avec votre propre clé. Ils ne nous parviennent pas."
+	}
+}

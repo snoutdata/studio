@@ -6,6 +6,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Icon } from './Icon';
+import { useT, type Translate } from '../i18n';
 import { isByokProvider } from '../../../shared/ai';
 import type { AiModelInfo } from '../../../shared/ai';
 import { groupPickerModels, modelKey, modelSourceLine } from '../../../shared/aiSources';
@@ -41,32 +42,32 @@ function nameOf(m: AiModelInfo): string {
 }
 
 /** "32768" → "32K context"; null when no window is known. */
-function contextLabel(tokens: number | undefined): string | null {
+function contextLabel(tokens: number | undefined, t: Translate): string | null {
 	if (!tokens || tokens <= 0) {
 		return null;
 	}
 	// Million-token windows read as "1000K" on the K scale, so switch units at 1M.
 	if (tokens >= 1_000_000) {
 		const millions = tokens / 1_000_000;
-		return `${Number.isInteger(millions) ? millions : millions.toFixed(1)}M context`;
+		return t('chat.model.contextM', { n: String(Number.isInteger(millions) ? millions : millions.toFixed(1)) });
 	}
-	return `${Math.round(tokens / 1000)}K context`;
+	return t('chat.model.contextK', { n: String(Math.round(tokens / 1000)) });
 }
 
 /** A short hint about how fast the model spends the paid wallet. Derived from the gateway price
  *  (bucketed into a usage weight server-side), so it stays correct as models change. */
-function costHint(m: AiModelInfo): string {
+function costHint(m: AiModelInfo, t: Translate): string {
 	// BYOK runs on the user's own key, billed by their provider, not our wallet — so the
 	// wallet buckets don't apply.
 	if (isByokProvider(m.provider)) {
-		return 'Your key';
+		return t('chat.model.yourKey');
 	}
 	switch (m.usageWeight) {
-		case 'heavy': return 'Uses more of your balance';
-		case 'normal': return 'Uses your balance';
+		case 'heavy': return t('chat.model.usesMore');
+		case 'normal': return t('chat.model.uses');
 		// Priced at $0 by the gateway, so it does not draw down the balance. Not "unlimited":
 		// every tier is metered by a dollar wallet.
-		default: return 'Included';
+		default: return t('chat.model.included');
 	}
 }
 
@@ -78,6 +79,7 @@ function costHint(m: AiModelInfo): string {
  *  and context window. The menu is rendered in a portal so it escapes the composer's
  *  `overflow: hidden` clip. Metadata comes from the control plane via aiProviderStatus. */
 export function ModelPicker({ models, current, onChange, onOpen, disabled }: ModelPickerProps): JSX.Element {
+	const t = useT();
 	const [open, setOpen] = useState(false);
 	const [hovered, setHovered] = useState<string | null>(null);
 	const [anchor, setAnchor] = useState<MenuAnchor | null>(null);
@@ -101,8 +103,8 @@ export function ModelPicker({ models, current, onChange, onOpen, disabled }: Mod
 			return;
 		}
 		function onDown(e: MouseEvent): void {
-			const t = e.target as Node;
-			if (!btnRef.current?.contains(t) && !menuRef.current?.contains(t)) {
+			const hit = e.target as Node;
+			if (!btnRef.current?.contains(hit) && !menuRef.current?.contains(hit)) {
 				setOpen(false);
 			}
 		}
@@ -150,12 +152,12 @@ export function ModelPicker({ models, current, onChange, onOpen, disabled }: Mod
 				ref={btnRef}
 				className="model-picker-btn"
 				disabled={disabled}
-				title="Choose the chat model"
+				title={t('chat.model.choose')}
 				onClick={toggle}
 			>
-				<span className="model-picker-name">{active ? nameOf(active) : 'no models'}</span>
+				<span className="model-picker-name">{active ? nameOf(active) : t('chat.model.none')}</span>
 				{active?.label && <span className="model-picker-label">{active.label}</span>}
-				{active?.reasoning && <span className="model-picker-reason" title="Reasoning (thinking) model">✦</span>}
+				{active?.reasoning && <span className="model-picker-reason" title={t('chat.model.reasoningTitle')}>✦</span>}
 				<Icon name="chevron-down" />
 			</button>
 			{open && anchor && createPortal(
@@ -165,7 +167,7 @@ export function ModelPicker({ models, current, onChange, onOpen, disabled }: Mod
 					ref={menuRef}
 					style={{ right: anchor.right, bottom: anchor.bottom }}
 				>
-					{models.length === 0 && <div className="model-picker-empty muted small">No models. Set one in AI settings.</div>}
+					{models.length === 0 && <div className="model-picker-empty muted small">{t('chat.model.empty')}</div>}
 					<div className="model-picker-list">
 						{groups.map((g) => (
 							<div className="model-picker-group" role="group" aria-label={g.title} key={g.id}>
@@ -188,7 +190,7 @@ export function ModelPicker({ models, current, onChange, onOpen, disabled }: Mod
 										>
 											<span className="model-picker-row-name">{nameOf(m)}</span>
 											{m.label && <span className="model-picker-row-label">{m.label}</span>}
-											{m.recommended && <span className="model-picker-tag">Recommended</span>}
+											{m.recommended && <span className="model-picker-tag">{t('chat.model.recommended')}</span>}
 											<span className="spacer" />
 											{v === current && <Icon name="check" />}
 										</button>
@@ -202,9 +204,9 @@ export function ModelPicker({ models, current, onChange, onOpen, disabled }: Mod
 							<div className="model-picker-flyout-name">{nameOf(detail)}</div>
 							{detail.description && <div className="model-picker-flyout-desc">{detail.description}</div>}
 							<div className="model-picker-flyout-meta">
-								{contextLabel(detail.contextWindow) && <span>{contextLabel(detail.contextWindow)}</span>}
-								<span className={detail.metered ? 'metered' : 'free'}>{costHint(detail)}</span>
-								{detail.reasoning && <span>Reasoning model</span>}
+								{contextLabel(detail.contextWindow, t) && <span>{contextLabel(detail.contextWindow, t)}</span>}
+								<span className={detail.metered ? 'metered' : 'free'}>{costHint(detail, t)}</span>
+								{detail.reasoning && <span>{t('chat.model.reasoning')}</span>}
 							</div>
 						</div>
 					)}
@@ -214,7 +216,7 @@ export function ModelPicker({ models, current, onChange, onOpen, disabled }: Mod
 							<div className="model-picker-flyout-meta">
 								<span>{modelSourceLine(detail)}</span>
 								<span className="model-picker-flyout-id">{detail.model}</span>
-								{detail.reasoning && <span>Reasoning model</span>}
+								{detail.reasoning && <span>{t('chat.model.reasoning')}</span>}
 							</div>
 						</div>
 					)}

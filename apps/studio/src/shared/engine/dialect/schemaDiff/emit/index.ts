@@ -18,6 +18,7 @@ import { OracleEmitter } from './oracle';
 import { PostgresEmitter } from './postgres';
 import { SqliteEmitter } from './sqlite';
 import { SqlServerEmitter } from './sqlserver';
+import { t } from '../../../../i18n/core';
 
 export interface DdlEmitter {
 	readonly driverId: string;
@@ -41,6 +42,6 @@ export function emitterFor(driverId: string, sourceSchemas: readonly string[] = 
 		case 'sqlite': return new SqliteEmitter(sourceSchemas);
 		case 'hana': return new HanaEmitter(sourceSchemas);
 		case 'clickhouse': return new ClickHouseEmitter(sourceSchemas);
-		default: throw new Error(`Schema sync is not supported for driver "${driverId}".`);
+		default: throw new Error(t('engineSchemaDiff.emit.unsupportedDriver', { driver: driverId }));
 	}
 }

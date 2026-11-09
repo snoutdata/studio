@@ -1,0 +1,125 @@
+{
+	"unsupported": {
+		"sqlite": "O SQLite não tem usuários nem privilégios. Acessar o banco é acessar o arquivo.",
+		"duckdb": "O DuckDB não tem usuários nem privilégios. Acessar o banco é acessar o arquivo.",
+		"pinecone": "O Pinecone não tem usuários de banco. O acesso é controlado pela chave de API da conexão.",
+		"mongodb": "O MongoDB gerencia usuários com comandos próprios em vez de SQL. Ainda não tem suporte.",
+		"snowflake": "Usuários e roles do Snowflake ainda não têm suporte.",
+		"redshift": "Usuários e grupos do Redshift ainda não têm suporte.",
+		"db2": "Autoridades e privilégios do Db2 ainda não têm suporte.",
+		"hana": "Usuários e roles do SAP HANA ainda não têm suporte.",
+		"logs": "Um serviço de logs não tem usuários de banco. Quem pode ler estes logs é definido pela conta de nuvem que esta conexão usa, no seu provedor de nuvem.",
+		"generic": "Usuários e privilégios ainda não têm suporte nesta conexão."
+	},
+	"target": {
+		"global": "o servidor inteiro",
+		"database": "o banco {path}",
+		"schema": "o schema {path}"
+	},
+	"policyOn": " em {path}",
+	"kind": {
+		"rowPolicy": "política de linhas",
+		"quota": "cota",
+		"settingsProfile": "perfil de configurações"
+	},
+	"everyoneExcept": "todos, exceto {names}",
+	"everyone": "todos",
+	"nobody": "ninguém",
+	"createPolicy": {
+		"rowPolicy": "Criar a {label}, aplicada a {who}.",
+		"quota": "Criar a {label}, aplicada a {who}.",
+		"settingsProfile": "Criar o {label}, aplicado a {who}."
+	},
+	"dropPolicy": {
+		"rowPolicy": "Excluir a {label}.",
+		"quota": "Excluir a {label}.",
+		"settingsProfile": "Excluir o {label}."
+	},
+	"setPolicy": {
+		"rowPolicy": "Fazer a {label} se aplicar a {who}.",
+		"quota": "Fazer a {label} se aplicar a {who}.",
+		"settingsProfile": "Fazer o {label} se aplicar a {who}."
+	},
+	"createPrincipal": {
+		"user": "Criar o usuário {who}.",
+		"role": "Criar a role {who}.",
+		"login": "Criar o login {who}.",
+		"group": "Criar o grupo {who}."
+	},
+	"dropPrincipal": {
+		"user": "Excluir o usuário {who} e tudo o que foi concedido a ele.",
+		"role": "Excluir a role {who} e tudo o que foi concedido a ela.",
+		"login": "Excluir o login {who} e tudo o que foi concedido a ele.",
+		"group": "Excluir o grupo {who} e tudo o que foi concedido a ele."
+	},
+	"setPassword": "Definir uma nova senha para {who}.",
+	"enable": "Permitir que {who} entre de novo.",
+	"disable": "Impedir que {who} entre.",
+	"grant": "Conceder {privileges} em {target} a {who}.",
+	"revoke": "Retirar {privileges} em {target} de {who}.",
+	"grantRole": "Adicionar {who} à role {role}.",
+	"revokeRole": "Remover {who} da role {role}.",
+	"emitter": {
+		"empty": "O campo \"{what}\" não pode ficar vazio.",
+		"badName": "O campo \"{what}\" (\"{name}\") contém um caractere não permitido em um nome.",
+		"passwordEmpty": "A senha não pode ficar vazia.",
+		"passwordBad": "A senha contém um caractere não permitido.",
+		"badPrivilege": "\"{privilege}\" não é um nome de privilégio válido.",
+		"noPrivilege": "Selecione pelo menos um privilégio.",
+		"kindRowPolicy": "política de linhas",
+		"kindQuota": "cota",
+		"kindSettingsProfile": "perfil de configurações",
+		"policyUnsupported": "O SnoutData ainda não aceita este objeto do {engine}: {kind}.",
+		"badExpression": "O campo \"{what}\" não pode conter ponto e vírgula nem comentário.",
+		"badSetting": "\"{name}\" não é um nome de configuração válido.",
+		"settingNoValue": "Uma configuração precisa de um valor."
+	},
+	"what": {
+		"columnName": "nome da coluna",
+		"databaseName": "nome do banco de dados",
+		"host": "host",
+		"objectName": "nome do objeto",
+		"principalName": "nome da conta",
+		"roleName": "nome da role",
+		"rowPolicyFilter": "filtro da política de linhas",
+		"schemaName": "nome do schema",
+		"tableName": "nome da tabela",
+		"userName": "nome de usuário",
+		"userOrRoleName": "nome de usuário ou role"
+	},
+	"catalog": {
+		"accountsAndRoles": "contas e roles",
+		"accounts": "contas",
+		"columnPrivileges": "privilégios de coluna",
+		"databasePermissions": "permissões do banco de dados",
+		"databasePrivileges": "privilégios do banco de dados",
+		"databaseUsersAndRoles": "usuários e roles do banco de dados",
+		"objectPrivileges": "privilégios de objeto",
+		"privileges": "privilégios",
+		"quotas": "cotas",
+		"rolesAndUsers": "roles e usuários",
+		"roles": "roles",
+		"rowPolicies": "políticas de linhas",
+		"schemaPrivileges": "privilégios de schema",
+		"serverLogins": "logins do servidor",
+		"settingsProfiles": "perfis de configurações",
+		"systemPrivileges": "privilégios de sistema",
+		"tableAndViewPrivileges": "privilégios de tabela e view",
+		"tablePrivileges": "privilégios de tabela",
+		"users": "usuários"
+	},
+	"vendors": {
+		"pgNoGlobal": "O PostgreSQL não tem GRANT no nível do servidor. Conceda em um banco de dados, schema ou tabela.",
+		"oracleNoSchema": "O Oracle não tem GRANT no nível de schema ou de banco. Conceda o privilégio de sistema ou conceda na tabela.",
+		"oraclePassword": "Um usuário Oracle precisa de uma senha.",
+		"sqlserverPassword": "Um login do SQL Server precisa de uma senha.",
+		"chNoSchema": "O ClickHouse não tem schemas. Conceda em um banco de dados ou em uma tabela.",
+		"chProfileEmpty": "Um perfil de configurações precisa de pelo menos uma configuração.",
+		"chQuotaWhole": "Uma janela de cota deve ser um número inteiro de unidades.",
+		"chQuotaUnit": "\"{unit}\" não é uma janela em que uma cota do ClickHouse possa ser medida.",
+		"chQuotaMetric": "\"{name}\" não é algo que uma cota do ClickHouse possa limitar.",
+		"chQuotaNumber": "O limite de {metric} deve ser um número.",
+		"chQuotaWindow": "Uma cota precisa de uma janela de medição.",
+		"chRolePassword": "Uma role do ClickHouse não tem senha. Crie um usuário ou deixe a senha em branco."
+	}
+}

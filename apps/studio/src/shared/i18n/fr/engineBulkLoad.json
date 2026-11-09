@@ -1,0 +1,23 @@
+{
+	"labels": {
+		"csvNames": "CSV avec ligne d'en-tête",
+		"csv": "CSV, sans ligne d'en-tête",
+		"tsvNames": "Séparé par tabulations, avec ligne d'en-tête",
+		"tsv": "Séparé par tabulations, sans ligne d'en-tête",
+		"json": "JSON, un objet par ligne"
+	},
+	"notes": {
+		"parquet": "En colonnes, typé, et le plus rapide à charger.",
+		"native": "Ce que le serveur écrit lui-même. Aucune conversion de part et d'autre."
+	},
+	"warnings": {
+		"unnamed": "{format} ne contient pas de noms de colonnes : les valeurs arrivent selon l'ORDRE des colonnes de la table. Un fichier dont les colonnes sont dans un autre ordre remplit les mauvaises, sans aucune erreur.",
+		"guessed": "Le format a été déduit du nom du fichier, pas de son contenu. S'il est faux, le chargement échoue, en général dès la première ligne.",
+		"compressed": "Le fichier est envoyé compressé et le serveur le décompresse à l'arrivée : rien n'est écrit sur cet ordinateur.",
+		"noTransaction": "Un INSERT n'est pas dans une transaction. Un chargement qui échoue en cours de route laisse les lignes déjà écrites, et le relancer les ajoute une seconde fois."
+	},
+	"describe": {
+		"byName": "Lu comme {format} et associé à {name} par nom de colonne.",
+		"byPosition": "Lu comme {format} et associé à {name} par position de colonne."
+	}
+}

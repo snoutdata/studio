@@ -1,0 +1,62 @@
+{
+	"aroundIn": "Em torno deste evento em",
+	"around": "Em torno deste evento",
+	"readingAround": "Lendo os eventos em torno…",
+	"noEarlier": "Sem eventos anteriores no dia anterior",
+	"loadEarlier": "Carregar anteriores",
+	"collapse": "Recolher",
+	"expand": "Expandir",
+	"showLine": "Mostrar a linha inteira",
+	"noLater": "Ainda não há eventos posteriores",
+	"loadLater": "Carregar posteriores",
+	"chip": {
+		"stream": "stream",
+		"request": "requisição",
+		"loggedAt": "registrado às",
+		"ingested": "ingerido",
+		"event": "evento"
+	},
+	"surroundingTitle": "Mostrar os eventos registrados logo antes e depois deste, no mesmo stream",
+	"hideSurrounding": "Ocultar contexto",
+	"surrounding": "Eventos em torno",
+	"copyTitle": "Copiar a mensagem exatamente como o serviço a guardou",
+	"copied": "Copiado",
+	"copy": "Copiar",
+	"noMessage": "Este evento não tem mensagem.",
+	"script": {
+		"done": "Concluído: {ok} com sucesso, {failed} com falha de {total}",
+		"running": "Executando {n} de {total}…",
+		"rows": {
+			"one": "{count} linha",
+			"other": "{count} linhas"
+		},
+		"seconds": "{value} s",
+		"skipped": "ignorada"
+	},
+	"mcp": {
+		"agoSeconds": "há {n} s",
+		"agoMinutes": "há {n} min",
+		"agoHours": "há {n} h",
+		"agoDays": "há {n} d",
+		"refused": "recusado",
+		"error": "erro",
+		"rows": "{rows} linhas",
+		"ms": "{ms} ms",
+		"clearTitle": "Limpar o log do agente?",
+		"clearBody": "Todas as consultas que um agente executou via MCP serão removidas deste log. Não é possível desfazer.",
+		"clearLog": "Limpar log",
+		"header": "LOG DO AGENTE",
+		"refresh": "Atualizar",
+		"search": "Pesquisar no log do agente",
+		"clear": "Limpar",
+		"kindAll": "Tudo",
+		"kindQuery": "Bancos de dados",
+		"kindApp": "O aplicativo",
+		"empty": "Nada ainda. Tudo o que um agente externo faz pelo SnoutData Studio, consultas e ações no aplicativo, aparece aqui.",
+		"noMatch": "Nenhuma entrada corresponde ao filtro.",
+		"openTab": "Abrir em uma nova aba",
+		"changesTitle": "Esta chamada alterou algo",
+		"changes": "altera",
+		"deleteEntry": "Excluir entrada"
+	}
+}

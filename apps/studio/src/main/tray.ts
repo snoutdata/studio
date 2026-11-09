@@ -3,6 +3,7 @@
  *  Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { t } from '../shared/i18n/core';
 import { Menu, Tray, nativeImage, nativeTheme, type MenuItemConstructorOptions, type NativeImage } from 'electron';
 
 import {
@@ -188,13 +189,13 @@ export class AppTray {
 				}]
 				: []),
 			{ type: 'separator' },
-			{ label: "Open SnoutData Studio", click: () => this.host.show() },
+			{ label: t('mainTray.open'), click: () => this.host.show() },
 			{ label: model.account.label, click: () => this.host.open('account') },
 			{ type: 'separator' },
 			// A build without Data Flows (the open tree) has no flows to list or make.
 			...(model.flowsAvailable ? [{ label: "Data Flows", submenu: this.flowsMenu(model) }] : []),
-			{ label: "Connections", submenu: this.connectionsMenu(model) },
-			{ label: "Dashboard", submenu: this.projectsMenu(model) },
+			{ label: t('mainMenu.connections'), submenu: this.connectionsMenu(model) },
+			{ label: t('mainMenu.dashboard'), submenu: this.projectsMenu(model) },
 			// The reviewer joins its neighbours only once it exists: `model.review` is null until
 			// the user has watched a repository, so nobody meets Snoutbot for the first time in a
 			// context menu (trayMenu.ts, `reviewLine`).
@@ -204,10 +205,10 @@ export class AppTray {
 			{ type: 'separator' },
 			// No accelerator hints here: Settings and About have no shortcut in this app, and a menu
 			// that showed one would be inventing it.
-			{ label: "Settings…", click: () => this.host.open('settings') },
-			{ label: "Documentation", click: () => this.host.openLink('docs') },
-			{ label: "Website", click: () => this.host.openLink('site') },
-			{ label: "About SnoutData Studio", click: () => this.host.open('about') },
+			{ label: t('mainMenu.settings'), click: () => this.host.open('settings') },
+			{ label: t('mainMenu.documentation'), click: () => this.host.openLink('docs') },
+			{ label: t('mainTray.website'), click: () => this.host.openLink('site') },
+			{ label: t('mainMenu.about'), click: () => this.host.open('about') },
 			{ type: 'separator' },
 			{
 				label: model.update.label,
@@ -219,7 +220,7 @@ export class AppTray {
 					}
 				},
 			},
-			{ label: "Quit SnoutData Studio", click: () => this.host.quit() },
+			{ label: t('mainTray.quit'), click: () => this.host.quit() },
 		];
 	}
 
@@ -228,20 +229,20 @@ export class AppTray {
 			label: flow.detail ? `${flow.name} (${flow.detail})` : flow.name,
 			icon: dot(flow.dot),
 			submenu: [
-				{ label: "Run Now", enabled: !flow.running, click: () => this.host.runFlow(flow.id) },
-				{ label: "Show in App", click: () => this.host.open('flowsPanel') },
+				{ label: t('mainTray.runNow'), enabled: !flow.running, click: () => this.host.runFlow(flow.id) },
+				{ label: t('mainTray.showInApp'), click: () => this.host.open('flowsPanel') },
 			],
 		}));
 		if (model.flowsEmpty) {
 			items.push({ label: model.flowsEmpty, enabled: false });
 		}
 		if (model.flowsOverflow > 0) {
-			items.push({ label: `and ${model.flowsOverflow} more`, enabled: false });
+			items.push({ label: t('mainTray.andMore', { count: model.flowsOverflow }), enabled: false });
 		}
 		items.push(
 			{ type: 'separator' },
-			{ label: "New Data Flow…", click: () => this.host.open('newFlow') },
-			{ label: "Open Data Flows", click: () => this.host.open('flowsPanel') },
+			{ label: t('mainMenu.newDataFlow'), click: () => this.host.open('newFlow') },
+			{ label: t('mainTray.openFlows'), click: () => this.host.open('flowsPanel') },
 		);
 		return items;
 	}
@@ -250,9 +251,9 @@ export class AppTray {
 	 *  is markdown, and markdown belongs in the app, not in a context menu the OS draws. */
 	private reviewMenu(): MenuItemConstructorOptions[] {
 		return [
-			{ label: "Open Reviews", click: () => this.host.open('reviews') },
-			{ label: "Check Now", click: () => this.host.checkReviews() },
-			{ label: "Snoutbot Settings…", click: () => this.host.open('snoutbotSettings') },
+			{ label: t('mainTray.openReviews'), click: () => this.host.open('reviews') },
+			{ label: t('mainTray.checkNow'), click: () => this.host.checkReviews() },
+			{ label: t('mainMenu.snoutbotSettings'), click: () => this.host.open('snoutbotSettings') },
 		];
 	}
 
@@ -261,7 +262,7 @@ export class AppTray {
 	 *  carry the same name. */
 	private projectsMenu(model: TrayModel): MenuItemConstructorOptions[] {
 		const items: MenuItemConstructorOptions[] = [];
-		for (const [label, group] of [["Local", model.localProjects], ["Cloud", model.cloudProjects]] as const) {
+		for (const [label, group] of [[t('mainTray.local'), model.localProjects], [t('mainTray.cloud'), model.cloudProjects]] as const) {
 			if (group.length > 0) {
 				items.push({ label, enabled: false }, ...group.map((project) => this.projectItem(project)));
 			}
@@ -270,12 +271,12 @@ export class AppTray {
 			items.push({ label: model.projectsEmpty, enabled: false });
 		}
 		if (model.projectsOverflow > 0) {
-			items.push({ label: `and ${model.projectsOverflow} more`, enabled: false });
+			items.push({ label: t('mainTray.andMore', { count: model.projectsOverflow }), enabled: false });
 		}
 		items.push(
 			{ type: 'separator' },
-			{ label: "Set Up a Local Project…", click: () => this.host.open('localSetup') },
-			{ label: "Open Dashboard", click: () => this.host.open('dashboardView') },
+			{ label: t('mainMenu.setUpLocal'), click: () => this.host.open('localSetup') },
+			{ label: t('mainTray.openDashboard'), click: () => this.host.open('dashboardView') },
 		);
 		return items;
 	}
@@ -291,7 +292,7 @@ export class AppTray {
 					enabled: action.enabled,
 					click: () => this.host.projectAction(target, action.verb),
 				})),
-				{ label: "Show in App", click: () => this.host.openProject(target, project.name) },
+				{ label: t('mainTray.showInApp'), click: () => this.host.openProject(target, project.name) },
 			],
 		};
 	}
@@ -302,22 +303,22 @@ export class AppTray {
 			icon: dot(connection.dot),
 			submenu: [
 				{
-					label: connection.connected ? "Disconnect" : "Connect",
+					label: connection.connected ? t('mainTray.disconnect') : t('mainTray.connect'),
 					click: () => this.host.setConnected(connection.id, !connection.connected),
 				},
-				{ label: "Show in App", click: () => this.host.open('connectionsView') },
+				{ label: t('mainTray.showInApp'), click: () => this.host.open('connectionsView') },
 			],
 		}));
 		if (model.connectionsEmpty) {
 			items.push({ label: model.connectionsEmpty, enabled: false });
 		}
 		if (model.connectionsOverflow > 0) {
-			items.push({ label: `and ${model.connectionsOverflow} more`, enabled: false });
+			items.push({ label: t('mainTray.andMore', { count: model.connectionsOverflow }), enabled: false });
 		}
 		items.push(
 			{ type: 'separator' },
-			{ label: "New Connection…", click: () => this.host.open('addConn') },
-			{ label: "Open Connections", click: () => this.host.open('connectionsView') },
+			{ label: t('mainMenu.newConnection'), click: () => this.host.open('addConn') },
+			{ label: t('mainTray.openConnections'), click: () => this.host.open('connectionsView') },
 		);
 		return items;
 	}

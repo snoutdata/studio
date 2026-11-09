@@ -1,0 +1,254 @@
+{
+	"cell": {
+		"copyPath": "Copier le chemin qui lit cette valeur",
+		"editValue": "Modifier la valeur : {column}",
+		"expand": "Développer",
+		"formatJson": "Formater le JSON",
+		"items": {
+			"one": "{count} élément",
+			"other": "{count} éléments"
+		},
+		"keys": {
+			"one": "{count} clé",
+			"other": "{count} clés"
+		},
+		"prettyJson": "Essayer de mettre en forme la valeur en JSON",
+		"reformat": "Reformater la valeur",
+		"text": "Texte",
+		"tree": "Arbre",
+		"viewValue": "Voir la valeur : {column}"
+	},
+	"doc": {
+		"clickToEdit": "Cliquer pour modifier",
+		"emptyArray": "tableau vide",
+		"emptyObject": "objet vide",
+		"fieldsEdited": {
+			"one": "{count} champ modifié",
+			"other": "{count} champs modifiés"
+		},
+		"noFields": "Ce document n'a aucun champ.",
+		"saveEllipsis": "Enregistrer…"
+	},
+	"edit": {
+		"addNewRow": "Ajouter une nouvelle ligne",
+		"addRow": "Ajouter une ligne",
+		"hint": "Double-cliquez sur une cellule pour la modifier · cliquez sur le # pour marquer une ligne à supprimer",
+		"logEvents": "Les événements de log ne sont pas modifiables : un service de logs cloud est en lecture seule.",
+		"mongoNote": "Ces modifications sont appliquées une par une, pas en une seule transaction. Si l'une échoue, les précédentes seront déjà enregistrées.",
+		"nothingToSave": "Rien à enregistrer. Remplissez d'abord une nouvelle ligne ou modifiez une cellule.",
+		"saveFailed": "Échec de l'enregistrement des modifications.",
+		"unsaved": "Modifications non enregistrées"
+	},
+	"explain": {
+		"againTitle": "Expliquer à nouveau",
+		"condition": "Condition",
+		"copy": "Copier",
+		"copyTitle": "Copier cette réponse",
+		"explaining": "Explication…",
+		"fromProjection": "Répondu depuis la projection {target}",
+		"granules": "Granules",
+		"index": "Index",
+		"keys": "Clés",
+		"marks": "Marks",
+		"narrowed": "{selected} sur {initial} ({pct} %)",
+		"noTable": "Cette instruction ne lit aucune table : il n'y a rien à estimer.",
+		"notAPlan": "Le serveur a répondu, mais pas avec un plan lisible ici.",
+		"notExplained": "Ce serveur a refusé d'expliquer cette instruction.",
+		"ofTable": "De la table",
+		"parts": "Parts",
+		"partsTail": ", {parts} parts",
+		"readFull": "{what} : les {count} granules, aucun ignoré.",
+		"readPartial": "{what} : {granules} granules{parts}.",
+		"reads": "Lit {target}",
+		"rowCountUnknown": "Le nombre de lignes de cette table n'est pas chargé.",
+		"rows": "Lignes",
+		"rowsInTable": "{rows} lignes dans la table",
+		"table": "Table",
+		"wouldRead": {
+			"one": "Lirait environ {rows} lignes de 1 table, avant exécution.",
+			"other": "Lirait environ {rows} lignes de {count} tables, avant exécution."
+		}
+	},
+	"export": {
+		"anySize": "- toute taille",
+		"clipboard": "Copier dans le presse-papiers",
+		"export": "Exporter",
+		"fromServer": "Directement depuis le serveur",
+		"fullData": "Données complètes",
+		"gridData": "Données de la grille",
+		"noLimit": "- sans limite",
+		"title": "Exporter les résultats"
+	},
+	"filter": {
+		"clear": "Effacer le filtre",
+		"contains": "contient {value}"
+	},
+	"fk": {
+		"notFound": "Aucune ligne référencée trouvée.",
+		"open": "Ouvrir dans un nouvel onglet"
+	},
+	"footer": {
+		"bytesRead": "{bytes} lus",
+		"bytesTitle": "Octets lus par la base pour répondre. Sur un moteur en colonnes, c'est le vrai coût d'une requête, quel que soit le nombre de lignes renvoyées.",
+		"counting": "Comptage…",
+		"countTotal": "Compter le total",
+		"cutShort": "tronqué",
+		"cutShortTitle": "Un plafond a arrêté la lecture avant la fin de la plage : ceci n'est que le début de la réponse. Réduisez la plage ou ajoutez un filtre.",
+		"editingProd": "Édition en prod",
+		"editingProdTitle": "L'édition est autorisée sur cette connexion de production jusqu'au redémarrage de l'application. Cliquez pour la verrouiller à nouveau.",
+		"eventsRead": "{scanned} événements ont été lus pour répondre.",
+		"eventsReadMatched": "{scanned} événements ont été lus pour répondre, dont {matched} correspondaient.",
+		"limitMore": "Auto-LIMIT {limit} a été ajouté. Suivant après la dernière ligne en récupère {limit} de plus. Modifiez la taille dans Paramètres → Éditeur et requêtes.",
+		"limitNote": "Auto-LIMIT {limit} a été ajouté. Modifiez-le dans Paramètres → Éditeur et requêtes.",
+		"ofTotal": "sur {count} au total",
+		"readOnly": "Lecture seule",
+		"rows": {
+			"one": "{count} ligne",
+			"other": "{count} lignes"
+		},
+		"rowsRead": "{scanned} lignes ont été lues pour répondre.",
+		"rowsReadMatched": "{scanned} lignes ont été lues pour répondre, dont {matched} correspondaient.",
+		"scanned": "{scanned} parcourues",
+		"trueTotalTitle": "Total réel, sans la limite de récupération"
+	},
+	"grid": {
+		"columnDefault": "Valeur par défaut de la colonne : laissez vide pour utiliser « {value} »",
+		"deleteHint": "Cliquez pour marquer cette ligne à supprimer",
+		"inside": "{count} à l'intérieur",
+		"lockedTitle": "C'est une connexion de production : l'édition est verrouillée. Choisissez « Autoriser l'édition » pour la déverrouiller pendant cette session.",
+		"openAsTree": "Ouvrir cette valeur en arbre",
+		"peek": "Aperçu de la ligne référencée",
+		"resize": "Glisser pour redimensionner la colonne",
+		"sort": "Cliquer pour trier",
+		"viewDocument": "Voir le document"
+	},
+	"lines": {
+		"closeAll": "Toutes les lignes sont ouvertes. Cliquez pour les fermer.",
+		"openAll": "Ouvrir toutes les lignes (payloads mis en forme)"
+	},
+	"log": {
+		"changeReruns": "Modifier ceci réexécute l'instruction.",
+		"changeWrites": "Modifier ceci écrit la plage dans l'instruction et l'exécute.",
+		"days": "{n} j",
+		"fromSql": "depuis le SQL",
+		"fromSqlTitle": "Cette plage vient de l'instruction : le contrôle ci-dessus ne s'y applique pas. Retirez la borne de temps du WHERE pour l'utiliser.",
+		"last15m": "15 dernières minutes",
+		"last1h": "Dernière heure",
+		"last24h": "24 dernières heures",
+		"last30d": "30 derniers jours",
+		"last6h": "6 dernières heures",
+		"last7d": "7 derniers jours",
+		"noEvents": "Aucun événement : {window}.",
+		"noRangeAdd": "L'instruction ne donnait aucune plage de temps : voilà ce qui a été exécuté. Remontez plus loin, ou ajoutez votre propre limite avec `WHERE ts >= ago('24h')`.",
+		"noRangeEdits": "L'instruction ne donnait aucune plage de temps : voilà ce qui a été exécuté. Remonter plus loin écrit la plage dans votre SQL, sous la forme `WHERE ts >= ago('24h')`.",
+		"searched": "Recherche de {start} à {end}.",
+		"windowRange": "{start} à {end}",
+		"windowSpan": "{span} jusqu'à {end}"
+	},
+	"menu": {
+		"allowEditing": "Autoriser l'édition (cette session)",
+		"copy": "Copier",
+		"copyAbove": "Copier depuis la ligne du dessus",
+		"copyBelow": "Copier depuis la ligne du dessous",
+		"copyRow": "Copier la ligne",
+		"deleteRow": "Supprimer la ligne",
+		"duplicateRow": "Dupliquer la ligne",
+		"editCell": "Modifier la cellule",
+		"editValue": "Modifier la valeur…",
+		"exclude": "Exclure cette valeur",
+		"filterSort": "Filtrer et trier",
+		"filterTo": "Filtrer sur cette valeur",
+		"foreignKey": "Clé étrangère",
+		"generateSql": "Générer du SQL",
+		"openReferenced": "Ouvrir la ligne référencée",
+		"orderAsc": "Tri croissant",
+		"orderDesc": "Tri décroissant",
+		"paste": "Coller",
+		"removeRow": "Retirer la ligne",
+		"setNull": "Mettre à NULL",
+		"undoDelete": "Annuler la suppression",
+		"viewValue": "Voir la valeur…"
+	},
+	"mode": {
+		"grid": "Vue en grille",
+		"json": "Vue JSON (ligne active)",
+		"log": "Lecteur de logs (une ligne par événement, dépliable)",
+		"record": "Vue enregistrement (une ligne à la fois)",
+		"tree": "Arbre du document (ligne active, dépliable)"
+	},
+	"paging": {
+		"all": "Toutes",
+		"fetchMore": "Récupérer plus de lignes",
+		"fetchNext": "Récupérer les {count} lignes suivantes",
+		"first": "Première page",
+		"lastLoaded": "Dernière page chargée",
+		"next": "Page suivante",
+		"perPage": "Par page",
+		"previous": "Page précédente",
+		"range": "{range} sur {total}"
+	},
+	"record": {
+		"next": "Enregistrement suivant",
+		"position": "ligne {row} sur {total}",
+		"previous": "Enregistrement précédent"
+	},
+	"search": {
+		"clear": "Effacer la recherche",
+		"columnsLabel": "Rechercher dans toutes les colonnes",
+		"columnsTitle": "Rechercher dans toutes les colonnes des lignes chargées dans la grille",
+		"linesLabel": "Rechercher dans les lignes chargées",
+		"linesTitle": "Recherche dans les lignes chargées du lecteur. Trouve n'importe où dans un événement, y compris dans un payload replié.",
+		"placeholder": "Rechercher"
+	},
+	"surface": {
+		"blocked": "Bloqué, rien n'a été exécuté.",
+		"cancelled": "Annulé, rien n'a été exécuté.",
+		"copy": "Copier",
+		"describe": "Décrire",
+		"failed": "La requête a échoué.",
+		"insert": "Insérer dans l'éditeur",
+		"insertNew": "Insérer dans un nouvel éditeur",
+		"insertPipeline": "Insérer dans l'onglet pipeline",
+		"listTables": "Lister les tables",
+		"pipelineOf": "Pipeline de {connection}",
+		"ranChanged": {
+			"one": "Exécuté. {count} ligne modifiée.",
+			"other": "Exécuté. {count} lignes modifiées."
+		},
+		"ranChangedMs": {
+			"one": "Exécuté. {count} ligne modifiée en {ms} ms.",
+			"other": "Exécuté. {count} lignes modifiées en {ms} ms."
+		},
+		"ranReturned": {
+			"one": "Exécuté. {count} ligne renvoyée.",
+			"other": "Exécuté. {count} lignes renvoyées."
+		},
+		"ranReturnedMs": {
+			"one": "Exécuté. {count} ligne renvoyée en {ms} ms.",
+			"other": "Exécuté. {count} lignes renvoyées en {ms} ms."
+		},
+		"running": "Exécution…",
+		"runQuery": "Exécuter la requête",
+		"searchColumns": "Chercher des colonnes"
+	},
+	"view": {
+		"connecting": "Connexion à la base de données…",
+		"noWritePath": "Ce backend n'a pas de chemin d'écriture : un événement de log ingéré ne peut pas être modifié.",
+		"prodLocked": "C'est une connexion de production : l'édition est verrouillée. Cliquez pour l'autoriser pendant cette session.",
+		"reconnect": "Reconnecter et réessayer",
+		"rowsAffected": {
+			"one": "{count} ligne affectée",
+			"other": "{count} lignes affectées"
+		},
+		"runKeys": "exécute l'instruction sous le curseur, ou la sélection.",
+		"runPrompt": "Exécutez une requête pour voir ses résultats ici.",
+		"writeFailed": "L'écriture a échoué."
+	},
+	"wrap": {
+		"full": "Lignes agrandies à leur valeur entière. Cliquez pour une seule ligne.",
+		"lines": "Renvoi sur {lines} lignes. Cliquez pour agrandir chaque ligne à sa valeur entière.",
+		"off": "Renvoyer le texte long sur {lines} lignes (cliquez à nouveau pour agrandir chaque ligne)",
+		"tooMany": "Trop de lignes sur cette page pour toutes les agrandir : elles restent sur {lines} lignes. Cliquez pour une seule ligne."
+	},
+	"zeroOfZero": "0 sur 0"
+}

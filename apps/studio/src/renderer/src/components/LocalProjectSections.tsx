@@ -8,9 +8,10 @@ import { Icon } from './Icon';
 import { useConfirm } from './ConfirmDialog';
 import { localStateLabel } from '../localProjects';
 import { prefix, wirePath, type Vocabulary } from '../../../shared/ownLayout';
-import { Log, Status, useLoad, useProgressLines, type Said } from './projectUi';
+import { Log, Status, useLoad, useProgressLines, type Said, mono } from './projectUi';
 import { PostgresStatements } from './ProjectSections';
 import { bytes, platformQuery, query, when } from '../projectSql';
+import { formatLocale, t, useT } from '../i18n';
 import type {
 	LocalActivity, LocalConnectionFacts, LocalCopyTarget, LocalExport, LocalFunctionRow, LocalMailKind, LocalMailTemplate, LocalProjectRow,
 	LocalSettings, LocalSettingsChange,
@@ -32,6 +33,7 @@ interface SectionProps {
 
 /** The Overview of a local project: state, the numbers, the services, the keys, and what just happened. */
 export function LocalOverview(props: { row: LocalProjectRow; onChanged(): Promise<void>; workOnIt: JSX.Element }): JSX.Element {
+	const t = useT();
 	const { row } = props;
 	return (
 		<>
@@ -39,13 +41,13 @@ export function LocalOverview(props: { row: LocalProjectRow; onChanged(): Promis
 			{row.state === 'running' && <AtAGlance row={row} />}
 			{row.services.length > 0 && (
 				<fieldset>
-					<legend>Services</legend>
+					<legend>{t('localProjects.overview.services')}</legend>
 					<div className="local-services">
 						{row.services.map((s) => (
-							<div key={s.name} className="local-service static" title={s.oneShot ? "Runs once when the project starts" : undefined}>
+							<div key={s.name} className="local-service static" title={s.oneShot ? t('localProjects.overview.runsOnce') : undefined}>
 								<span className={`cloud-dot ${serviceTone(s)}`} aria-hidden="true" />
 								<span className="mono">{s.name}</span>
-								<span className="muted small">{s.oneShot ? (s.exitCode === 0 ? "done" : s.state) : s.health || s.state}</span>
+								<span className="muted small">{s.oneShot ? (s.exitCode === 0 ? t('localProjects.overview.done') : s.state) : s.health || s.state}</span>
 							</div>
 						))}
 					</div>
@@ -60,6 +62,7 @@ export function LocalOverview(props: { row: LocalProjectRow; onChanged(): Promis
 
 /** State with Start and Stop: on Overview, and again under Settings where the cloud keeps "Running". */
 function LocalRunning(props: { row: LocalProjectRow; onChanged(): Promise<void> }): JSX.Element {
+	const t = useT();
 	const { row } = props;
 	const [said, setSaid] = useState<Said>(null);
 	const [busy, setBusy] = useState(false);
@@ -69,9 +72,9 @@ function LocalRunning(props: { row: LocalProjectRow; onChanged(): Promise<void> 
 	async function act(action: 'start' | 'stop'): Promise<void> {
 		if (action === 'stop' && row.production) {
 			const ok = await confirm({
-				title: "Stop a production project?",
-				body: "It is marked production. Everything connected to it loses it until it is started again.",
-				confirmLabel: "Stop it",
+				title: t('localProjects.prod.stopTitle'),
+				body: t('localProjects.prod.stopBody'),
+				confirmLabel: t('localProjects.prod.stopIt'),
 				danger: true,
 			});
 			if (!ok) {
@@ -94,22 +97,22 @@ function LocalRunning(props: { row: LocalProjectRow; onChanged(): Promise<void> 
 
 	return (
 		<fieldset>
-			<legend>Status</legend>
+			<legend>{t('projects.common.status')}</legend>
 			<div className="cloud-facts">
-				<span className="muted">State</span><span>{busy ? "working" : localStateLabel(row.state)}{row.production ? ", production" : ''}</span>
-				<span className="muted">Services</span><span>{total > 0 ? `${up} of ${total} running` : "not created yet"}</span>
+				<span className="muted">{t('localProjects.running.state')}</span><span>{busy ? t('localProjects.running.working') : localStateLabel(row.state)}{row.production ? t('localProjects.running.prodSuffix') : ''}</span>
+				<span className="muted">{t('localProjects.overview.services')}</span><span>{total > 0 ? t('localProjects.running.servicesUp', { up, total }) : t('localProjects.running.notCreated')}</span>
 				<span className="muted">API</span><span className="mono">{row.apiUrl}</span>
-				<span className="muted">Database</span><span className="mono">127.0.0.1:{row.dbPort}</span>
-				<span className="muted">Folder</span><span className="mono">{row.folder}</span>
-				<span className="muted">Created</span><span>{new Date(row.createdAt).toLocaleString()}</span>
+				<span className="muted">{t('localProjects.common.database')}</span><span className="mono">127.0.0.1:{row.dbPort}</span>
+				<span className="muted">{t('localProjects.common.folder')}</span><span className="mono">{row.folder}</span>
+				<span className="muted">{t('projects.common.created')}</span><span>{new Date(row.createdAt).toLocaleString(formatLocale())}</span>
 			</div>
-			{row.state === 'missing' && <p className="form-status warn">The folder is gone. Restore it (with its .env) to run this project again, or remove it from the list.</p>}
-			{row.state === 'unknown' && <p className="field-hint">Docker is not running, so the state cannot be read. Start Docker, then Start.</p>}
+			{row.state === 'missing' && <p className="form-status warn">{t('localProjects.running.folderGone')}</p>}
+			{row.state === 'unknown' && <p className="field-hint">{t('localProjects.running.dockerDown')}</p>}
 			<div className="cloud-actions">
-				<button type="button" disabled={busy || row.state === 'running' || row.state === 'missing'} onClick={() => void act('start')}><Icon name="play" /> Start</button>
-				<button type="button" disabled={busy || row.state === 'stopped' || row.state === 'missing' || row.state === 'unknown'} onClick={() => void act('stop')}><Icon name="debug-stop" /> Stop</button>
+				<button type="button" disabled={busy || row.state === 'running' || row.state === 'missing'} onClick={() => void act('start')}><Icon name="play" /> {t('localProjects.common.start')}</button>
+				<button type="button" disabled={busy || row.state === 'stopped' || row.state === 'missing' || row.state === 'unknown'} onClick={() => void act('stop')}><Icon name="debug-stop" /> {t('localProjects.common.stop')}</button>
 				<span className="spacer" />
-				<button type="button" className="secondary" disabled={row.state === 'missing'} onClick={() => void window.sqlApi.local.openFolder(row.id)}><Icon name="folder-opened" /> Open folder</button>
+				<button type="button" className="secondary" disabled={row.state === 'missing'} onClick={() => void window.sqlApi.local.openFolder(row.id)}><Icon name="folder-opened" /> {t('localProjects.running.openFolder')}</button>
 			</div>
 			<Status said={said} />
 			<Log lines={progress.lines} />
@@ -128,6 +131,7 @@ interface Glance {
 
 /** Overview's four numbers, read from the project's own database as the owner. */
 function AtAGlance({ row }: SectionProps): JSX.Element | null {
+	const t = useT();
 	const target = { kind: 'local' as const, id: row.id };
 	const glance = useLoad(async () => {
 		const [base] = await query<Omit<Glance, 'files' | 'fileBytes'>>(target, `select pg_database_size(current_database())::text as "dbBytes",
@@ -146,16 +150,17 @@ function AtAGlance({ row }: SectionProps): JSX.Element | null {
 	const g = glance.data;
 	return (
 		<div className="local-stats">
-			<div className="local-stat"><span className="muted small">Size</span><strong>{bytes(g.dbBytes)}</strong><span className="muted small">the database</span></div>
-			<div className="local-stat"><span className="muted small">Connections</span><strong>{g.connections}</strong><span className="muted small">open now</span></div>
-			<div className="local-stat"><span className="muted small">Files</span><strong>{g.files === null ? "--" : g.files}</strong><span className="muted small">{g.fileBytes === null ? "storage is not set up" : `${bytes(g.fileBytes)} in storage`}</span></div>
-			<div className="local-stat"><span className="muted small">Up since</span><strong>{new Date(g.startedAt).toLocaleDateString()}</strong><span className="muted small">{new Date(g.startedAt).toLocaleTimeString()}</span></div>
+			<div className="local-stat"><span className="muted small">{t('projects.common.size')}</span><strong>{bytes(g.dbBytes)}</strong><span className="muted small">{t('localProjects.glance.theDatabase')}</span></div>
+			<div className="local-stat"><span className="muted small">{t('localProjects.glance.connections')}</span><strong>{g.connections}</strong><span className="muted small">{t('localProjects.glance.openNow')}</span></div>
+			<div className="local-stat"><span className="muted small">{t('localProjects.common.files')}</span><strong>{g.files === null ? "--" : g.files}</strong><span className="muted small">{g.fileBytes === null ? t('localProjects.glance.storageNotSet') : t('localProjects.glance.inStorage', { size: bytes(g.fileBytes) })}</span></div>
+			<div className="local-stat"><span className="muted small">{t('localProjects.glance.upSince')}</span><strong>{new Date(g.startedAt).toLocaleDateString(formatLocale())}</strong><span className="muted small">{new Date(g.startedAt).toLocaleTimeString(formatLocale())}</span></div>
 		</div>
 	);
 }
 
 /** The address and the two keys, where the cloud dashboard keeps them: on the project's Overview, with Rotate. */
 function ApiAndKeys({ row }: SectionProps): JSX.Element {
+	const t = useT();
 	const projectId = row.id;
 	const [facts, setFacts] = useState<LocalConnectionFacts | null>(null);
 	const [said, setSaid] = useState<Said>(null);
@@ -173,9 +178,9 @@ function ApiAndKeys({ row }: SectionProps): JSX.Element {
 
 	async function rotate(): Promise<void> {
 		const ok = await confirm({
-			title: "Rotate the API keys?",
-			body: "Both keys are replaced and the services restart with them. Every key already pasted into an app or a secret stops working, and signed-in users sign in again.",
-			confirmLabel: "Rotate keys",
+			title: t('localProjects.keys.rotateTitle'),
+			body: t('localProjects.keys.rotateBody'),
+			confirmLabel: t('projects.common.rotateKeys'),
 			danger: true,
 		});
 		if (!ok) {
@@ -196,14 +201,14 @@ function ApiAndKeys({ row }: SectionProps): JSX.Element {
 	}
 	return (
 		<fieldset>
-			<legend>API and keys</legend>
+			<legend>{t('localProjects.keys.title')}</legend>
 			<div className="cloud-facts">
 				<span className="muted">URL</span>
-				<span className="cloud-actions"><span className="mono">{facts.apiUrl}</span><span className="spacer" /><button type="button" className="secondary small" onClick={() => void copy('apiUrl')}><Icon name="copy" /> Copy</button></span>
-				<span className="muted">App key</span>
-				<span className="cloud-actions"><span>Ships in your application. It reaches what your row-level security grants.</span><span className="spacer" /><button type="button" className="secondary small" onClick={() => void copy('appKey')}><Icon name="copy" /> Copy</button></span>
-				<span className="muted">Server key</span>
-				<span className="cloud-actions"><span>Bypasses row-level security. Keep it on your servers.</span><span className="spacer" /><button type="button" className="secondary small" onClick={() => void copy('serverKey')}><Icon name="copy" /> Copy</button></span>
+				<span className="cloud-actions"><span className="mono">{facts.apiUrl}</span><span className="spacer" /><button type="button" className="secondary small" onClick={() => void copy('apiUrl')}><Icon name="copy" /> {t('projects.common.copy')}</button></span>
+				<span className="muted">{t('projects.common.appKey')}</span>
+				<span className="cloud-actions"><span>{t('localProjects.keys.appHint')}</span><span className="spacer" /><button type="button" className="secondary small" onClick={() => void copy('appKey')}><Icon name="copy" /> {t('projects.common.copy')}</button></span>
+				<span className="muted">{t('projects.common.serverKey')}</span>
+				<span className="cloud-actions"><span>{t('localProjects.keys.serverHint')}</span><span className="spacer" /><button type="button" className="secondary small" onClick={() => void copy('serverKey')}><Icon name="copy" /> {t('projects.common.copy')}</button></span>
 			</div>
 			<table className="cloud-table">
 				<tbody>
@@ -214,8 +219,8 @@ function ApiAndKeys({ row }: SectionProps): JSX.Element {
 			</table>
 			<div className="cloud-actions">
 				<span className="spacer" />
-				<button type="button" className="danger" disabled={busy || row.state !== 'running'} title={row.state !== 'running' ? "Start the project first" : undefined} onClick={() => void rotate()}>
-					<Icon name="key" /> {busy ? "Rotating…" : "Rotate keys"}
+				<button type="button" className="danger" disabled={busy || row.state !== 'running'} title={row.state !== 'running' ? t('localProjects.common.startFirst') : undefined} onClick={() => void rotate()}>
+					<Icon name="key" /> {busy ? t('localProjects.keys.rotating') : t('projects.common.rotateKeys')}
 				</button>
 			</div>
 			<Status said={said} />
@@ -227,6 +232,7 @@ function ApiAndKeys({ row }: SectionProps): JSX.Element {
 
 /** What the app did to the project, newest first: the local stand-in for the cloud's activity log. */
 function ActivityList({ projectId, limit, heading }: { projectId: string; limit?: number; heading: string }): JSX.Element {
+	const t = useT();
 	const activity = useLoad<LocalActivity[]>(() => window.sqlApi.local.activity(projectId), [projectId]);
 	const rows = (activity.data ?? []).slice(0, limit ?? 200);
 	// What is done on the same screen (a key copied, a restart) lands here without a click: the log
@@ -244,7 +250,7 @@ function ActivityList({ projectId, limit, heading }: { projectId: string; limit?
 		<fieldset>
 			<legend>{heading}</legend>
 			{activity.error && <div className="form-status error">{activity.error}</div>}
-			{activity.data && rows.length === 0 && <p className="field-hint">Nothing yet. Starting, stopping, settings, keys, exports and deploys are recorded here.</p>}
+			{activity.data && rows.length === 0 && <p className="field-hint">{t('localProjects.activity.none')}</p>}
 			{rows.length > 0 && (
 				<table className="cloud-table">
 					<tbody>
@@ -252,16 +258,16 @@ function ActivityList({ projectId, limit, heading }: { projectId: string; limit?
 							<tr key={`${a.at}-${i}`}>
 								<td className="local-nowrap muted">{when(a.at)}</td>
 								<td>{a.what}</td>
-								<td className="cloud-table-action">{!a.ok && <span className="cloud-dot error" title="It did not finish" />}</td>
+								<td className="cloud-table-action">{!a.ok && <span className="cloud-dot error" title={t('localProjects.activity.failed')} />}</td>
 							</tr>
 						))}
 					</tbody>
 				</table>
 			)}
 			<div className="cloud-actions">
-				<span className="field-hint">What this app did to the project, on this computer.</span>
+				<span className="field-hint">{t('localProjects.activity.hint')}</span>
 				<span className="spacer" />
-				<button type="button" className="secondary small" disabled={activity.loading} onClick={() => void activity.reload()}><Icon name="refresh" /> Refresh</button>
+				<button type="button" className="secondary small" disabled={activity.loading} onClick={() => void activity.reload()}><Icon name="refresh" /> {t('projects.common.refresh')}</button>
 			</div>
 		</fieldset>
 	);
@@ -269,6 +275,7 @@ function ActivityList({ projectId, limit, heading }: { projectId: string; limit?
 
 /** The project's Postgres: how to reach it, and the connection it already is in this app. */
 export function LocalDatabase({ row, onOpenDatabase }: { row: LocalProjectRow; onOpenDatabase(): void }): JSX.Element {
+	const t = useT();
 	const [facts, setFacts] = useState<LocalConnectionFacts | null>(null);
 	const [said, setSaid] = useState<Said>(null);
 
@@ -283,25 +290,25 @@ export function LocalDatabase({ row, onOpenDatabase }: { row: LocalProjectRow; o
 	return (
 		<>
 			<fieldset>
-				<legend>Tables and SQL</legend>
-				<p className="field-hint">The database is a connection in your Connections list, marked with the SnoutData butterfly: browse its tables there and open a SQL editor on it.</p>
+				<legend>{t('localProjects.db.title')}</legend>
+				<p className="field-hint">{t('localProjects.db.intro')}</p>
 				<div className="cloud-actions">
-					<button type="button" onClick={onOpenDatabase}><Icon name="plug" /> Open in Connections</button>
+					<button type="button" onClick={onOpenDatabase}><Icon name="plug" /> {t('projects.common.openInConnections')}</button>
 				</div>
 			</fieldset>
 			{facts && (
 				<fieldset>
-					<legend>Connect from anywhere else</legend>
+					<legend>{t('localProjects.db.connectElsewhere')}</legend>
 					<div className="cloud-facts">
-						<span className="muted">Host</span><span className="mono">{facts.host}</span>
-						<span className="muted">Port</span><span className="mono">{facts.port}</span>
-						<span className="muted">Database</span><span className="mono">{facts.database}</span>
-						<span className="muted">User</span><span className="mono">{facts.user}</span>
+						<span className="muted">{t('localProjects.db.host')}</span><span className="mono">{facts.host}</span>
+						<span className="muted">{t('projects.common.port')}</span><span className="mono">{facts.port}</span>
+						<span className="muted">{t('localProjects.common.database')}</span><span className="mono">{facts.database}</span>
+						<span className="muted">{t('projects.common.user')}</span><span className="mono">{facts.user}</span>
 					</div>
-					<p className="field-hint">This computer only. The owner can do everything in its database, including creating the extensions the image offers, and is not a superuser. A new password is under Settings.</p>
+					<p className="field-hint">{t('localProjects.db.thisComputer')}</p>
 					<div className="cloud-actions">
-						<button type="button" className="secondary" onClick={() => void copy('dbPassword')}><Icon name="copy" /> Copy password</button>
-						<button type="button" className="secondary" onClick={() => void copy('dbUrl')}><Icon name="copy" /> Copy connection string</button>
+						<button type="button" className="secondary" onClick={() => void copy('dbPassword')}><Icon name="copy" /> {t('localProjects.db.copyPassword')}</button>
+						<button type="button" className="secondary" onClick={() => void copy('dbUrl')}><Icon name="copy" /> {t('localProjects.db.copyString')}</button>
 					</div>
 				</fieldset>
 			)}
@@ -336,6 +343,7 @@ function same(a: unknown, b: unknown): boolean {
  * Saving writes only what changed and `up` recreates only the services it touched.
  */
 function LocalSettingsForm({ projectId, vocabulary, parts, onChanged, note }: { projectId: string; vocabulary: Vocabulary; parts: SettingsPart[]; onChanged?(): Promise<void>; note?: string }): JSX.Element {
+	const t = useT();
 	const [loaded, setLoaded] = useState<LocalSettings | null>(null);
 	const [draft, setDraft] = useState<LocalSettings | null>(null);
 	const [secrets, setSecrets] = useState(SECRET_FIELDS);
@@ -413,44 +421,44 @@ function LocalSettingsForm({ projectId, vocabulary, parts, onChanged, note }: { 
 		<>
 			{parts.includes('network') && (
 				<fieldset>
-					<legend>Network</legend>
+					<legend>{t('localProjects.setup.network')}</legend>
 					<div className="local-port-grid">
 						<label>
-							API port
+							{t('localProjects.setup.apiPort')}
 							<input type="number" value={draft.apiPort} onChange={(e) => set({ apiPort: Number(e.target.value) })} />
 						</label>
 						<label>
-							Database port
+							{t('localProjects.setup.dbPort')}
 							<input type="number" value={draft.dbPort} onChange={(e) => set({ dbPort: Number(e.target.value) })} />
 						</label>
 					</div>
 					<label className="check">
-						<input type="checkbox" checked={draft.exposeApi} onChange={(e) => set({ exposeApi: e.target.checked })} /> Reachable from other devices on my network
+						<input type="checkbox" checked={draft.exposeApi} onChange={(e) => set({ exposeApi: e.target.checked })} /> {t('localProjects.setup.lanAccess')}
 					</label>
-					<p className="field-hint">Changing the API port changes the URL your app must use; the keys stay the same.</p>
+					<p className="field-hint">{t('localProjects.settings.portHint')}</p>
 				</fieldset>
 			)}
 			{parts.includes('providers') && (
 				<fieldset>
-					<legend>Sign in with</legend>
-					<p className="field-hint">Your own OAuth client from each provider. Register this callback with it, exactly: <span className="mono">{callback}</span></p>
+					<legend>{t('localProjects.settings.signIn')}</legend>
+					<p className="field-hint">{mono(t('localProjects.settings.oauthIntro', { callback }))}</p>
 					<label className="check">
 						<input type="checkbox" checked={draft.googleEnabled} onChange={(e) => set({ googleEnabled: e.target.checked })} /> Google
 					</label>
 					{draft.googleEnabled && (
 						<>
 							<ol className="field-hint local-steps">
-								<li>In Google Cloud console, APIs and Services, Credentials: create an OAuth client ID of type Web application.</li>
-								<li>Add the callback above to its authorised redirect URIs.</li>
-								<li>Paste its client ID and secret here, and save.</li>
+								<li>{t('localProjects.settings.google1')}</li>
+								<li>{t('localProjects.settings.google2')}</li>
+								<li>{t('localProjects.settings.google3')}</li>
 							</ol>
 							<label>
-								Client ID
+								{t('localProjects.settings.clientId')}
 								<input value={draft.googleClientId} onChange={(e) => set({ googleClientId: e.target.value })} placeholder="1234567890-abc.apps.googleusercontent.com" />
 							</label>
 							<label>
-								Client secret
-								{secretField('googleSecret', "Stored when set. Type to set or replace it.")}
+								{t('localProjects.settings.clientSecret')}
+								{secretField('googleSecret', t('localProjects.settings.storedHint'))}
 							</label>
 						</>
 					)}
@@ -459,14 +467,14 @@ function LocalSettingsForm({ projectId, vocabulary, parts, onChanged, note }: { 
 					</label>
 					{draft.githubEnabled && (
 						<>
-							<p className="field-hint">In GitHub, Settings, Developer settings, OAuth Apps: a new app with the callback above as its authorization callback URL.</p>
+							<p className="field-hint">{t('localProjects.settings.github')}</p>
 							<label>
-								Client ID
+								{t('localProjects.settings.clientId')}
 								<input value={draft.githubClientId} onChange={(e) => set({ githubClientId: e.target.value })} />
 							</label>
 							<label>
-								Client secret
-								{secretField('githubSecret', "Stored when set. Type to set or replace it.")}
+								{t('localProjects.settings.clientSecret')}
+								{secretField('githubSecret', t('localProjects.settings.storedHint'))}
 							</label>
 						</>
 					)}
@@ -474,95 +482,94 @@ function LocalSettingsForm({ projectId, vocabulary, parts, onChanged, note }: { 
 			)}
 			{parts.includes('redirects') && (
 				<fieldset>
-					<legend>Redirect addresses</legend>
+					<legend>{t('localProjects.settings.redirects')}</legend>
 					<label>
-						Site URL
+						{t('localProjects.setup.siteUrl')}
 						<input value={draft.siteUrl} onChange={(e) => set({ siteUrl: e.target.value })} placeholder="http://localhost:3000" />
 					</label>
-					<p className="field-hint">Where users land after signing in, confirming their email or resetting a password, when no other address is asked for.</p>
+					<p className="field-hint">{t('localProjects.settings.siteHint')}</p>
 					<label>
-						Additional redirect addresses
+						{t('localProjects.settings.additional')}
 						<textarea rows={4} value={draft.redirectUrls.join('\n')} onChange={(e) => set({ redirectUrls: e.target.value.split('\n') })} placeholder={'http://localhost:5173\nhttps://staging.example.com'} spellCheck={false} />
 					</label>
-					<p className="field-hint">One per line. Only these, and the site URL, are allowed as a sign-in's destination.</p>
+					<p className="field-hint">{t('localProjects.settings.onePerLine')}</p>
 				</fieldset>
 			)}
 			{parts.includes('signups') && (
 				<fieldset>
-					<legend>Sign-ups</legend>
+					<legend>{t('localProjects.setup.signups')}</legend>
 					<label className="check">
-						<input type="checkbox" checked={draft.autoconfirm} onChange={(e) => set({ autoconfirm: e.target.checked })} /> Confirm new users without an email
+						<input type="checkbox" checked={draft.autoconfirm} onChange={(e) => set({ autoconfirm: e.target.checked })} /> {t('localProjects.setup.autoconfirm')}
 					</label>
 					<label className="check">
-						<input type="checkbox" checked={draft.disableSignup} onChange={(e) => set({ disableSignup: e.target.checked })} /> Refuse new sign-ups
+						<input type="checkbox" checked={draft.disableSignup} onChange={(e) => set({ disableSignup: e.target.checked })} /> {t('localProjects.setup.disableSignup')}
 					</label>
 				</fieldset>
 			)}
 			{parts.includes('mail') && (
 				<fieldset>
-					<legend>Mail server</legend>
-					<p className="field-hint">The server auth sends its emails through. A hosted project has one already; a local one uses yours.</p>
+					<legend>{t('localProjects.settings.mail')}</legend>
+					<p className="field-hint">{t('localProjects.settings.mailHint')}</p>
 					<div className="local-port-grid">
 						<label>
-							Server
+							{t('localProjects.common.server')}
 							<input value={draft.smtpHost} onChange={(e) => set({ smtpHost: e.target.value })} placeholder="smtp.example.com" />
 						</label>
 						<label>
-							Port
+							{t('projects.common.port')}
 							<input type="number" value={draft.smtpPort} onChange={(e) => set({ smtpPort: Number(e.target.value) })} />
 						</label>
 					</div>
 					<label>
-						User
+						{t('projects.common.user')}
 						<input value={draft.smtpUser} onChange={(e) => set({ smtpUser: e.target.value })} autoComplete="off" />
 					</label>
 					<label>
-						Password
-						{secretField('smtpPass', loaded.smtpPassSet ? "Set. Type to replace it." : '')}
+						{t('projects.common.password')}
+						{secretField('smtpPass', loaded.smtpPassSet ? t('localProjects.settings.setReplace') : '')}
 					</label>
 					<label>
-						Send from
+						{t('localProjects.setup.sendFrom')}
 						<input value={draft.smtpAdminEmail} onChange={(e) => set({ smtpAdminEmail: e.target.value })} />
 					</label>
 					<label>
-						Sender name
+						{t('localProjects.setup.senderName')}
 						<input value={draft.smtpSenderName} onChange={(e) => set({ smtpSenderName: e.target.value })} />
 					</label>
 				</fieldset>
 			)}
 			{parts.includes('storage') && (
 				<fieldset>
-					<legend>Storage</legend>
+					<legend>{t('localProjects.settings.storage')}</legend>
 					<label>
-						Largest upload, in MB
+						{t('localProjects.settings.maxUpload')}
 						<input type="number" min={1} value={draft.fileSizeLimitMb} onChange={(e) => set({ fileSizeLimitMb: Number(e.target.value) })} />
 					</label>
 				</fieldset>
 			)}
 			{parts.includes('functions') && (
 				<fieldset>
-					<legend>Memory and time</legend>
+					<legend>{t('localProjects.settings.memoryTime')}</legend>
 					<div className="local-port-grid">
 						<label>
-							Memory per function, MB
+							{t('localProjects.settings.memPerFn')}
 							<input type="number" min={64} max={4096} value={draft.functionsMemoryMb} onChange={(e) => set({ functionsMemoryMb: Number(e.target.value) })} />
 						</label>
 						<label>
-							Shared by all of them, MB
+							{t('localProjects.settings.sharedMb')}
 							<input type="number" min={256} value={draft.functionsContainerMb} onChange={(e) => set({ functionsContainerMb: Number(e.target.value) })} />
 						</label>
 						<label>
-							Longest call, seconds
+							{t('localProjects.settings.longestCall')}
 							<input type="number" min={1} max={3600} value={Math.round(draft.functionsWallMs / 1000)} onChange={(e) => set({ functionsWallMs: Number(e.target.value) * 1000 })} />
 						</label>
 						<label>
-							CPU time per call, ms
+							{t('localProjects.settings.cpu')}
 							<input type="number" min={100} max={600000} value={draft.functionsCpuMs} onChange={(e) => set({ functionsCpuMs: Number(e.target.value) })} />
 						</label>
 					</div>
 					<p className="field-hint">
-						Each request runs in its own isolate with the memory above. They share the functions container's memory, so about{' '}
-						{Math.max(1, Math.floor(draft.functionsContainerMb / Math.max(1, draft.functionsMemoryMb)))} run at full size at once; past 85% of it the runtime stops idle ones first.
+						{t('localProjects.settings.isolates', { count: Math.max(1, Math.floor(draft.functionsContainerMb / Math.max(1, draft.functionsMemoryMb))) })}
 					</p>
 				</fieldset>
 			)}
@@ -570,9 +577,9 @@ function LocalSettingsForm({ projectId, vocabulary, parts, onChanged, note }: { 
 			<Status said={said} />
 			<Log lines={progress.lines} />
 			<div className="modal-actions">
-				<button type="button" className="secondary" disabled={busy || !pending} onClick={() => { setDraft(loaded); setSecrets(SECRET_FIELDS); }}><Icon name="discard" /> Discard</button>
+				<button type="button" className="secondary" disabled={busy || !pending} onClick={() => { setDraft(loaded); setSecrets(SECRET_FIELDS); }}><Icon name="discard" /> {t('localProjects.settings.discard')}</button>
 				<span className="spacer" />
-				<button type="button" disabled={busy || !pending} onClick={() => void save()}><Icon name="save" /> {busy ? "Applying…" : "Save and restart"}</button>
+				<button type="button" disabled={busy || !pending} onClick={() => void save()}><Icon name="save" /> {busy ? t('projects.common.applying') : t('projects.common.saveRestart')}</button>
 			</div>
 		</>
 	);
@@ -595,15 +602,16 @@ export function LocalSettingsSection({ row, onChanged, onRemoved }: { row: Local
 }
 
 function LocalPassword({ row }: SectionProps): JSX.Element {
+	const t = useT();
 	const [said, setSaid] = useState<Said>(null);
 	const [busy, setBusy] = useState(false);
 	const [confirm, confirmDialog] = useConfirm();
 
 	async function reset(): Promise<void> {
 		const ok = await confirm({
-			title: "Reset the password?",
-			body: "A new password is set for the database's owner and written into .env. Your connections in this app are updated; anything else that connects needs the new one.",
-			confirmLabel: "Reset password",
+			title: t('localProjects.password.title'),
+			body: t('localProjects.password.body'),
+			confirmLabel: t('projects.common.resetPassword'),
 			danger: true,
 		});
 		if (!ok) {
@@ -619,13 +627,13 @@ function LocalPassword({ row }: SectionProps): JSX.Element {
 
 	return (
 		<fieldset>
-			<legend>Password</legend>
-			<p className="field-hint">A reset draws a new password for <span className="mono">{row.ref}_owner</span> and stores it in the project's .env, its only copy. Sessions already open keep going.</p>
+			<legend>{t('projects.common.password')}</legend>
+			<p className="field-hint">{mono(t('localProjects.password.intro', { ref: row.ref }))}</p>
 			<div className="cloud-actions">
-				<button type="button" disabled={busy || row.state !== 'running'} title={row.state !== 'running' ? "Start the project first" : undefined} onClick={() => void reset()}>
-					<Icon name="key" /> {busy ? "Resetting…" : "Reset the password"}
+				<button type="button" disabled={busy || row.state !== 'running'} title={row.state !== 'running' ? t('localProjects.common.startFirst') : undefined} onClick={() => void reset()}>
+					<Icon name="key" /> {busy ? t('localProjects.password.resetting') : t('localProjects.password.reset')}
 				</button>
-				<button type="button" className="secondary" onClick={() => void window.sqlApi.local.copy(row.id, 'dbPassword').then(setSaid)}><Icon name="copy" /> Copy password</button>
+				<button type="button" className="secondary" onClick={() => void window.sqlApi.local.copy(row.id, 'dbPassword').then(setSaid)}><Icon name="copy" /> {t('localProjects.db.copyPassword')}</button>
 			</div>
 			<Status said={said} />
 			{confirmDialog}
@@ -634,15 +642,16 @@ function LocalPassword({ row }: SectionProps): JSX.Element {
 }
 
 function LocalProduction({ row, onChanged }: { row: LocalProjectRow; onChanged(): Promise<void> }): JSX.Element {
+	const t = useT();
 	const [said, setSaid] = useState<Said>(null);
 	const [confirm, confirmDialog] = useConfirm();
 
 	async function change(on: boolean): Promise<void> {
 		if (!on) {
 			const ok = await confirm({
-				title: "Stop treating this as production?",
-				body: "Statements that change its data run without asking first, and Stop no longer asks.",
-				confirmLabel: "Not production",
+				title: t('localProjects.prod.offTitle'),
+				body: t('localProjects.prod.offBody'),
+				confirmLabel: t('localProjects.prod.notProd'),
 			});
 			if (!ok) {
 				return;
@@ -654,10 +663,10 @@ function LocalProduction({ row, onChanged }: { row: LocalProjectRow; onChanged()
 
 	return (
 		<fieldset>
-			<legend>Production</legend>
-			<p className="field-hint">A production project's connection carries the production guard, so anything run on it that changes it asks you to confirm first, and stopping it asks too.</p>
+			<legend>{t('localProjects.prod.title')}</legend>
+			<p className="field-hint">{t('localProjects.prod.intro')}</p>
 			<label className="check">
-				<input type="checkbox" checked={row.production} onChange={(e) => void change(e.target.checked)} /> Treat this as production
+				<input type="checkbox" checked={row.production} onChange={(e) => void change(e.target.checked)} /> {t('projects.common.treatProd')}
 			</label>
 			<Status said={said} />
 			{confirmDialog}
@@ -667,6 +676,7 @@ function LocalProduction({ row, onChanged }: { row: LocalProjectRow; onChanged()
 
 /** Export, and Put it back: the cloud's backups, as files in the project's own backups folder. */
 function LocalBackups({ row }: SectionProps): JSX.Element {
+	const t = useT();
 	const list = useLoad<LocalExport[]>(() => window.sqlApi.local.exports(row.id), [row.id]);
 	const [said, setSaid] = useState<Said>(null);
 	const [busy, setBusy] = useState<'export' | 'restore' | null>(null);
@@ -690,9 +700,9 @@ function LocalBackups({ row }: SectionProps): JSX.Element {
 
 	async function restore(): Promise<void> {
 		const ok = await confirm({
-			title: "Put the database back?",
-			body: `The database is replaced by ${pick}: everything written since it was taken is gone. The services stop while it runs. Files in storage are not touched.`,
-			confirmLabel: "Put it back",
+			title: t('localProjects.backups.restoreTitle'),
+			body: t('localProjects.backups.restoreBody', { pick }),
+			confirmLabel: t('localProjects.backups.putBack'),
 			danger: true,
 		});
 		if (!ok) {
@@ -711,8 +721,8 @@ function LocalBackups({ row }: SectionProps): JSX.Element {
 	return (
 		<>
 			<fieldset>
-				<legend>Export</legend>
-				<p className="field-hint">A <span className="mono">pg_dump</span> of the whole database in the custom format, which <span className="mono">pg_restore</span> reads, kept in the project's backups folder. It is taken from the running database, so nothing stops while it runs.</p>
+				<legend>{t('localProjects.backups.export')}</legend>
+				<p className="field-hint">{mono(t('localProjects.backups.intro'))}</p>
 				{list.error && <div className="form-status error">{list.error}</div>}
 				{exports.length > 0 && (
 					<table className="cloud-table">
@@ -728,27 +738,27 @@ function LocalBackups({ row }: SectionProps): JSX.Element {
 					</table>
 				)}
 				<div className="cloud-actions">
-					<button type="button" disabled={busy !== null || !running} title={running ? undefined : "Start the project first"} onClick={() => void exportNow()}>
-						<Icon name="export" /> {busy === 'export' ? "Exporting…" : exports.length > 0 ? "Export again" : "Export"}
+					<button type="button" disabled={busy !== null || !running} title={running ? undefined : t('localProjects.common.startFirst')} onClick={() => void exportNow()}>
+						<Icon name="export" /> {busy === 'export' ? t('localProjects.backups.exporting') : exports.length > 0 ? t('localProjects.backups.exportAgain') : t('localProjects.backups.export')}
 					</button>
-					<button type="button" className="secondary" onClick={() => void window.sqlApi.local.openExports(row.id)}><Icon name="folder-opened" /> Show in folder</button>
+					<button type="button" className="secondary" onClick={() => void window.sqlApi.local.openExports(row.id)}><Icon name="folder-opened" /> {t('localProjects.backups.showInFolder')}</button>
 				</div>
 			</fieldset>
 			<fieldset>
-				<legend>Put it back</legend>
-				{exports.length === 0 && <p className="field-hint">Nothing to put back to yet. Take an export first; each one is a moment this project can return to.</p>}
+				<legend>{t('localProjects.backups.putBack')}</legend>
+				{exports.length === 0 && <p className="field-hint">{t('localProjects.backups.nothing')}</p>}
 				{exports.length > 0 && (
 					<>
-						<p className="field-hint">Replaces this project's database with an export. A local project has no room beside it, so unlike a hosted restore this goes over the original: take an export first if you may want today back.</p>
+						<p className="field-hint">{t('localProjects.backups.warn')}</p>
 						<label>
-							Export
+							{t('localProjects.backups.export')}
 							<select value={pick} onChange={(e) => setChosen(e.target.value)}>
 								{exports.map((e) => <option key={e.name} value={e.name}>{e.name} ({when(e.at)})</option>)}
 							</select>
 						</label>
 						<div className="cloud-actions">
-							<button type="button" className="danger" disabled={busy !== null || !running || !pick} title={running ? undefined : "Start the project first"} onClick={() => void restore()}>
-								<Icon name="history" /> {busy === 'restore' ? "Putting it back…" : "Put it back"}
+							<button type="button" className="danger" disabled={busy !== null || !running || !pick} title={running ? undefined : t('localProjects.common.startFirst')} onClick={() => void restore()}>
+								<Icon name="history" /> {busy === 'restore' ? t('localProjects.backups.putting') : t('localProjects.backups.putBack')}
 							</button>
 						</div>
 					</>
@@ -763,6 +773,7 @@ function LocalBackups({ row }: SectionProps): JSX.Element {
 
 /** Take a local project off the list, and its data and folder only when asked for. Settings, like the dashboard's Delete. */
 function LocalRemove(props: { row: LocalProjectRow; onRemoved(): void }): JSX.Element {
+	const t = useT();
 	const { row } = props;
 	const [said, setSaid] = useState<Said>(null);
 	const [busy, setBusy] = useState(false);
@@ -786,30 +797,30 @@ function LocalRemove(props: { row: LocalProjectRow; onRemoved(): void }): JSX.El
 	return (
 		<>
 			<fieldset>
-				<legend>Remove</legend>
+				<legend>{t('projects.common.remove')}</legend>
 				{!removing && (
 					<>
-						<p className="field-hint">Stops the project and takes it off the list. Its data and folder are kept unless you say otherwise.</p>
+						<p className="field-hint">{t('localProjects.remove.intro')}</p>
 						<div className="cloud-actions">
-							<button type="button" className="danger" disabled={busy} onClick={() => setRemoving(true)}><Icon name="trash" /> Remove project…</button>
+							<button type="button" className="danger" disabled={busy} onClick={() => setRemoving(true)}><Icon name="trash" /> {t('localProjects.remove.button')}</button>
 						</div>
 					</>
 				)}
 				{removing && (
 					<>
 						<label className="check">
-							<input type="checkbox" checked={deleteData} onChange={(e) => setDeleteData(e.target.checked)} /> Also delete its data (the database and the files)
+							<input type="checkbox" checked={deleteData} onChange={(e) => setDeleteData(e.target.checked)} /> {t('localProjects.remove.alsoData')}
 						</label>
-						<p className="field-hint">This cannot be undone. Without it, the Docker volumes stay, and setting the folder up again brings the data back.</p>
+						<p className="field-hint">{t('localProjects.remove.alsoDataHint')}</p>
 						{deleteData && (
 							<label className="check">
-								<input type="checkbox" checked={deleteFolder} onChange={(e) => setDeleteFolder(e.target.checked)} /> And delete the folder, .env, exports and functions included
+								<input type="checkbox" checked={deleteFolder} onChange={(e) => setDeleteFolder(e.target.checked)} /> {t('localProjects.remove.alsoFolder')}
 							</label>
 						)}
 						<div className="cloud-actions">
-							<button type="button" className="secondary" disabled={busy} onClick={() => setRemoving(false)}><Icon name="close" /> Cancel</button>
+							<button type="button" className="secondary" disabled={busy} onClick={() => setRemoving(false)}><Icon name="close" /> {t('projects.common.cancel')}</button>
 							<span className="spacer" />
-							<button type="button" className="danger" disabled={busy} onClick={() => void remove()}><Icon name="trash" /> {deleteData ? "Remove and delete data" : "Remove from the list"}</button>
+							<button type="button" className="danger" disabled={busy} onClick={() => void remove()}><Icon name="trash" /> {deleteData ? t('localProjects.remove.removeDelete') : t('localProjects.remove.fromList')}</button>
 						</div>
 					</>
 				)}
@@ -832,11 +843,11 @@ export function LocalAuthSettings({ row }: SectionProps): JSX.Element {
 }
 
 const MAIL_NAMES: Record<LocalMailKind, string> = {
-	confirmation: "Email confirmation",
-	invite: "Invitation",
-	magic_link: "Magic link",
-	email_change: "Email change",
-	recovery: "Password reset",
+	get confirmation() { return t('localProjects.mail.confirmation'); },
+	get invite() { return t('localProjects.mail.invite'); },
+	get magic_link() { return t('localProjects.mail.magicLink'); },
+	get email_change() { return t('localProjects.mail.emailChange'); },
+	get recovery() { return t('localProjects.mail.recovery'); },
 };
 
 const MAIL_SAMPLES: Record<string, string> = {
@@ -856,6 +867,7 @@ function previewDoc(body: string): string {
 }
 
 function LocalMailTemplates({ row }: SectionProps): JSX.Element {
+	const t = useT();
 	const list = useLoad<LocalMailTemplate[]>(() => window.sqlApi.local.mailTemplates(row.id), [row.id]);
 	const [editing, setEditing] = useState<LocalMailTemplate | null>(null);
 	const [subject, setSubject] = useState('');
@@ -863,12 +875,12 @@ function LocalMailTemplates({ row }: SectionProps): JSX.Element {
 	const [said, setSaid] = useState<Said>(null);
 	const [busy, setBusy] = useState(false);
 	const progress = useProgressLines(row.id);
-	const own = (list.data ?? []).filter((t) => t.custom).length;
+	const own = (list.data ?? []).filter((tpl) => tpl.custom).length;
 
-	function open(t: LocalMailTemplate): void {
-		setEditing(t);
-		setSubject(t.subject);
-		setBody(t.body);
+	function open(tpl: LocalMailTemplate): void {
+		setEditing(tpl);
+		setSubject(tpl.subject);
+		setBody(tpl.body);
 		setSaid(null);
 	}
 
@@ -893,18 +905,18 @@ function LocalMailTemplates({ row }: SectionProps): JSX.Element {
 
 	return (
 		<fieldset>
-			<legend>Email templates</legend>
-			<p className="field-hint">The account emails auth sends. {own === 0 ? "All five are auth's own." : `${own} of 5 are your own.`} They go out through the mail server above.</p>
+			<legend>{t('localProjects.mail.title')}</legend>
+			<p className="field-hint">{t('localProjects.mail.lead')} {own === 0 ? t('localProjects.mail.allAuth') : t('localProjects.mail.ownCount', { own })} {t('localProjects.mail.tail')}</p>
 			{list.error && <div className="form-status error">{list.error}</div>}
 			{!editing && list.data && (
 				<table className="cloud-table">
 					<tbody>
-						{list.data.map((t) => (
-							<tr key={t.kind}>
-								<td>{MAIL_NAMES[t.kind]}</td>
-								<td className="muted">{t.subject}</td>
-								<td className="muted">{t.custom ? "Yours" : ''}</td>
-								<td className="cloud-table-action"><button type="button" className="table-action" onClick={() => open(t)}><Icon name="edit" /> Edit</button></td>
+						{list.data.map((tpl) => (
+							<tr key={tpl.kind}>
+								<td>{MAIL_NAMES[tpl.kind]}</td>
+								<td className="muted">{tpl.subject}</td>
+								<td className="muted">{tpl.custom ? t('localProjects.mail.yours') : ''}</td>
+								<td className="cloud-table-action"><button type="button" className="table-action" onClick={() => open(tpl)}><Icon name="edit" /> {t('projects.common.edit')}</button></td>
 							</tr>
 						))}
 					</tbody>
@@ -914,7 +926,7 @@ function LocalMailTemplates({ row }: SectionProps): JSX.Element {
 				<>
 					<h4 className="local-subhead">{MAIL_NAMES[editing.kind]}</h4>
 					<label>
-						Subject
+						{t('localProjects.mail.subject')}
 						<input value={subject} onChange={(e) => setSubject(e.target.value)} maxLength={200} />
 					</label>
 					<div className="local-mail-panes">
@@ -923,19 +935,19 @@ function LocalMailTemplates({ row }: SectionProps): JSX.Element {
 							<textarea className="mono local-mail-body" value={body} onChange={(e) => setBody(e.target.value)} spellCheck={false} />
 						</label>
 						<label>
-							Preview
-							<iframe className="local-mail-preview" title="Preview" sandbox="" srcDoc={previewDoc(body)} />
+							{t('localProjects.mail.preview')}
+							<iframe className="local-mail-preview" title={t('localProjects.mail.preview')} sandbox="" srcDoc={previewDoc(body)} />
 						</label>
 					</div>
 					<p className="field-hint">
-						Variables: <span className="mono">{'{{ .ConfirmationURL }}'}</span> (required: the link your user clicks), <span className="mono">{'{{ .Token }}'}</span>, <span className="mono">{'{{ .SiteURL }}'}</span>, <span className="mono">{'{{ .Email }}'}</span>
-						{editing.kind === 'email_change' && <>, <span className="mono">{'{{ .NewEmail }}'}</span></>}. Saving restarts auth.
+						{t('localProjects.mail.varsLead')} <span className="mono">{'{{ .ConfirmationURL }}'}</span> {t('localProjects.mail.varsRequired')} <span className="mono">{'{{ .Token }}'}</span>, <span className="mono">{'{{ .SiteURL }}'}</span>, <span className="mono">{'{{ .Email }}'}</span>
+						{editing.kind === 'email_change' && <>, <span className="mono">{'{{ .NewEmail }}'}</span></>}. {t('localProjects.mail.varsTail')}
 					</p>
 					<div className="cloud-actions">
-						{editing.custom && <button type="button" className="secondary" disabled={busy} onClick={() => void save(null)}><Icon name="discard" /> Go back to auth's own</button>}
+						{editing.custom && <button type="button" className="secondary" disabled={busy} onClick={() => void save(null)}><Icon name="discard" /> {t('localProjects.mail.reset')}</button>}
 						<span className="spacer" />
-						<button type="button" className="secondary" disabled={busy} onClick={() => setEditing(null)}><Icon name="close" /> Cancel</button>
-						<button type="button" disabled={busy || !subject.trim() || !body.trim()} onClick={() => void save({ subject, body })}><Icon name="save" /> {busy ? "Saving…" : "Save"}</button>
+						<button type="button" className="secondary" disabled={busy} onClick={() => setEditing(null)}><Icon name="close" /> {t('projects.common.cancel')}</button>
+						<button type="button" disabled={busy || !subject.trim() || !body.trim()} onClick={() => void save({ subject, body })}><Icon name="save" /> {busy ? t('projects.common.saving') : t('projects.common.save')}</button>
 					</div>
 				</>
 			)}
@@ -948,6 +960,7 @@ function LocalMailTemplates({ row }: SectionProps): JSX.Element {
 // --- Functions -----------------------------------------------------------------------------------
 
 export function LocalFunctions({ row }: SectionProps): JSX.Element {
+	const t = useT();
 	const [list, setList] = useState<LocalFunctionRow[] | null>(null);
 	const settings = useLoad<LocalSettings>(() => window.sqlApi.local.settings(row.id), [row.id]);
 	const [name, setName] = useState('');
@@ -1001,9 +1014,9 @@ export function LocalFunctions({ row }: SectionProps): JSX.Element {
 	return (
 		<>
 			<fieldset>
-				<legend>Your functions</legend>
-				<p className="field-hint">A function is a folder: functions/&lt;name&gt;/index.ts in the project's folder, served at {prefix('fn', row.vocabulary)}/&lt;name&gt;. Edit them in your own editor, then deploy.</p>
-				{list && list.length === 0 && <p className="field-hint">None yet.</p>}
+				<legend>{t('localProjects.fn.title')}</legend>
+				<p className="field-hint">{t('localProjects.fn.intro', { prefix: prefix('fn', row.vocabulary) })}</p>
+				{list && list.length === 0 && <p className="field-hint">{t('localProjects.fn.none')}</p>}
 				{list && list.length > 0 && (
 					<table className="cloud-table">
 						<tbody>
@@ -1012,12 +1025,12 @@ export function LocalFunctions({ row }: SectionProps): JSX.Element {
 									<td className="mono">{f.name}</td>
 									<td className="mono muted">{f.url}</td>
 									<td>
-										<label className="check local-inline-check" title="Callable with no API key, for a webhook's receiver. The function checks its caller itself.">
-											<input type="checkbox" checked={keyless.has(f.name)} disabled={busy || !settings.data} onChange={(e) => void setKeyless(f.name, e.target.checked)} /> No key needed
+										<label className="check local-inline-check" title={t('localProjects.fn.noKeyHint')}>
+											<input type="checkbox" checked={keyless.has(f.name)} disabled={busy || !settings.data} onChange={(e) => void setKeyless(f.name, e.target.checked)} /> {t('localProjects.fn.noKey')}
 										</label>
 									</td>
 									<td className="cloud-table-action">
-										<button type="button" className="table-action" onClick={() => void window.sqlApi.local.openFolder(row.id, f.name)}><Icon name="folder-opened" /> Open</button>
+										<button type="button" className="table-action" onClick={() => void window.sqlApi.local.openFolder(row.id, f.name)}><Icon name="folder-opened" /> {t('localProjects.fn.open')}</button>
 									</td>
 								</tr>
 							))}
@@ -1025,23 +1038,23 @@ export function LocalFunctions({ row }: SectionProps): JSX.Element {
 					</table>
 				)}
 				<div className="cloud-actions">
-					<button type="button" disabled={busy || row.state !== 'running'} title={row.state !== 'running' ? "Start the project first" : undefined} onClick={() => void deploy()}>
-						<Icon name="cloud-upload" /> {busy ? "Working…" : "Deploy functions"}
+					<button type="button" disabled={busy || row.state !== 'running'} title={row.state !== 'running' ? t('localProjects.common.startFirst') : undefined} onClick={() => void deploy()}>
+						<Icon name="cloud-upload" /> {busy ? t('localProjects.fn.working') : t('localProjects.fn.deploy')}
 					</button>
-					<button type="button" className="secondary" onClick={() => void window.sqlApi.local.openFolder(row.id)}><Icon name="folder-opened" /> Open folder</button>
+					<button type="button" className="secondary" onClick={() => void window.sqlApi.local.openFolder(row.id)}><Icon name="folder-opened" /> {t('localProjects.running.openFolder')}</button>
 				</div>
 				<Status said={said} />
 				<Log lines={progress.lines} />
 			</fieldset>
 			<fieldset>
-				<legend>New function</legend>
+				<legend>{t('localProjects.fn.new')}</legend>
 				<label>
-					Name
+					{t('projects.common.name')}
 					<input value={name} onChange={(e) => setName(e.target.value)} placeholder="send-welcome" maxLength={63} />
 				</label>
-				<p className="field-hint">Creates functions/{name.trim() || "<name>"}/index.ts from a template.</p>
+				<p className="field-hint">{t('localProjects.fn.creates', { name: name.trim() || "<name>" })}</p>
 				<div className="cloud-actions">
-					<button type="button" disabled={!name.trim()} onClick={() => void create()}><Icon name="add" /> Create</button>
+					<button type="button" disabled={!name.trim()} onClick={() => void create()}><Icon name="add" /> {t('projects.common.create')}</button>
 				</div>
 			</fieldset>
 			<FunctionSecrets row={row} />
@@ -1052,6 +1065,7 @@ export function LocalFunctions({ row }: SectionProps): JSX.Element {
 
 /** Secrets for functions: functions/.env, names listed, values never read back. */
 function FunctionSecrets({ row }: SectionProps): JSX.Element {
+	const t = useT();
 	const names = useLoad<string[]>(() => window.sqlApi.local.functionSecrets(row.id), [row.id]);
 	const [name, setName] = useState('');
 	const [value, setValue] = useState('');
@@ -1079,15 +1093,15 @@ function FunctionSecrets({ row }: SectionProps): JSX.Element {
 
 	return (
 		<fieldset>
-			<legend>Secrets</legend>
-			<p className="field-hint">Environment variables for every function, kept in functions/.env (not in git). Values are never shown again; setting one deploys the functions with it.</p>
+			<legend>{t('projects.common.secrets')}</legend>
+			<p className="field-hint">{t('localProjects.fn.secretsIntro')}</p>
 			{names.data && names.data.length > 0 && (
 				<table className="cloud-table">
 					<tbody>
 						{names.data.map((n) => (
 							<tr key={n}>
 								<td className="mono">{n}</td>
-								<td className="cloud-table-action"><button type="button" className="table-action is-danger" disabled={busy || !running} onClick={() => void set(n, null)}><Icon name="trash" /> Remove</button></td>
+								<td className="cloud-table-action"><button type="button" className="table-action is-danger" disabled={busy || !running} onClick={() => void set(n, null)}><Icon name="trash" /> {t('projects.common.remove')}</button></td>
 							</tr>
 						))}
 					</tbody>
@@ -1095,16 +1109,16 @@ function FunctionSecrets({ row }: SectionProps): JSX.Element {
 			)}
 			<div className="local-port-grid">
 				<label>
-					Name
+					{t('projects.common.name')}
 					<input value={name} onChange={(e) => setName(e.target.value)} placeholder="STRIPE_KEY" spellCheck={false} />
 				</label>
 				<label>
-					Value
+					{t('localProjects.fn.value')}
 					<input type="password" value={value} onChange={(e) => setValue(e.target.value)} autoComplete="new-password" />
 				</label>
 			</div>
 			<div className="cloud-actions">
-				<button type="button" disabled={busy || !running || !name.trim() || !value} title={running ? undefined : "Start the project first"} onClick={() => void set(name.trim(), value)}><Icon name="lock" /> {busy ? "Saving…" : "Set secret"}</button>
+				<button type="button" disabled={busy || !running || !name.trim() || !value} title={running ? undefined : t('localProjects.common.startFirst')} onClick={() => void set(name.trim(), value)}><Icon name="lock" /> {busy ? t('projects.common.saving') : t('cloudProjects.fn.setSecret')}</button>
 			</div>
 			<Status said={said} />
 			<Log lines={progress.lines} />
@@ -1114,13 +1128,13 @@ function FunctionSecrets({ row }: SectionProps): JSX.Element {
 
 /** Push is a SnoutData Cloud service the self-hosted stack does not run, and the section says so plainly. */
 export function LocalPush(): JSX.Element {
+	const t = useT();
 	return (
 		<fieldset>
-			<legend>Push notifications</legend>
-			<p>Snout Push sends notifications to iPhone, Android and the web from one API, with the device registry and delivery log in your own database.</p>
+			<legend>{t('localProjects.push.title')}</legend>
+			<p>{t('localProjects.push.intro')}</p>
 			<p className="field-hint">
-				It is not part of the self-hosted stack yet: the local gateway has no /push/v1 and no sender runs beside it. Push runs on
-				SnoutData Cloud projects today.
+				{t('localProjects.push.notYet')}
 			</p>
 		</fieldset>
 	);
@@ -1130,6 +1144,7 @@ export function LocalPush(): JSX.Element {
 
 /** Logs, locally: every service's own Docker log, Postgres's statements like a cloud project's, and the activity log. */
 export function LocalLogs({ row }: SectionProps): JSX.Element {
+	const t = useT();
 	const services = row.services.map((s) => s.name);
 	const [source, setSource] = useState<string>('all');
 	const [text, setText] = useState('');
@@ -1171,9 +1186,9 @@ export function LocalLogs({ row }: SectionProps): JSX.Element {
 	return (
 		<>
 			<fieldset>
-				<legend>Source</legend>
+				<legend>{t('localProjects.logs.source')}</legend>
 				<div className="local-chips">
-					{[['activity', "Activity"], ['all', "Every service"], ...services.map((s) => [s, s]), ['postgres', "Postgres statements"]].map(([id, label]) => (
+					{[['activity', t('localProjects.logs.activity')], ['all', t('localProjects.logs.every')], ...services.map((s) => [s, s]), ['postgres', t('projects.statements.title')]].map(([id, label]) => (
 						<button key={id} type="button" className={`local-chip${source === id ? ' selected' : ''}`} onClick={() => setSource(id)}>{label}</button>
 					))}
 				</div>
@@ -1182,18 +1197,18 @@ export function LocalLogs({ row }: SectionProps): JSX.Element {
 			{source === 'postgres' && <PostgresStatements target={{ kind: 'local', id: row.id }} />}
 			{!special && (
 				<fieldset>
-					<legend>{source === 'all' ? "Every service" : source}</legend>
+					<legend>{source === 'all' ? t('localProjects.logs.every') : source}</legend>
 					<div className="cloud-actions">
-						<span className="field-hint">The last 300 lines, straight from Docker.</span>
+						<span className="field-hint">{t('localProjects.logs.last300')}</span>
 						<span className="spacer" />
 						<label className="check local-inline-check">
-							<input type="checkbox" checked={follow} onChange={(e) => setFollow(e.target.checked)} /> Follow
+							<input type="checkbox" checked={follow} onChange={(e) => setFollow(e.target.checked)} /> {t('localProjects.logs.follow')}
 						</label>
 						<button type="button" className="secondary" disabled={loading} onClick={() => void load()}>
-							<Icon name={loading ? 'loading' : 'refresh'} className={loading ? 'codicon-modifier-spin' : ''} /> Refresh
+							<Icon name={loading ? 'loading' : 'refresh'} className={loading ? 'codicon-modifier-spin' : ''} /> {t('projects.common.refresh')}
 						</button>
 					</div>
-					<pre className="local-log tall" ref={ref}>{text || (loading ? "Reading…" : "Nothing logged.")}</pre>
+					<pre className="local-log tall" ref={ref}>{text || (loading ? t('localProjects.logs.reading') : t('localProjects.logs.nothing'))}</pre>
 				</fieldset>
 			)}
 		</>
@@ -1202,6 +1217,7 @@ export function LocalLogs({ row }: SectionProps): JSX.Element {
 
 /** The data API switch, locally: the `rest` container's compose profile (main/localStack/plan.ts). */
 export function LocalDataApiSwitch({ row }: SectionProps): JSX.Element {
+	const t = useT();
 	const state = useLoad(() => window.sqlApi.local.dataApi(row.id), [row.id]);
 	const [said, setSaid] = useState<Said>(null);
 	const [busy, setBusy] = useState(false);
@@ -1223,21 +1239,21 @@ export function LocalDataApiSwitch({ row }: SectionProps): JSX.Element {
 		return <div className="form-status error">{state.error}</div>;
 	}
 	if (!state.data) {
-		return <div className="field-hint">Loading…</div>;
+		return <div className="field-hint">{t('projects.common.loading')}</div>;
 	}
 	const restUp = row.services.some((s) => s.name === 'rest' && s.state === 'running');
 	return (
 		<fieldset>
-			<legend>Data API</legend>
+			<legend>{t('projects.common.dataApi')}</legend>
 			<label className="check">
-				<input type="checkbox" checked={state.data.on} disabled={busy || !state.data.switchable} onChange={(e) => void change(e.target.checked)} /> {state.data.on ? "On" : "Off"}
+				<input type="checkbox" checked={state.data.on} disabled={busy || !state.data.switchable} onChange={(e) => void change(e.target.checked)} /> {state.data.on ? t('projects.common.on') : t('projects.common.off')}
 			</label>
 			<p className="field-hint">
 				{state.data.on
-					? `Your tables are served over HTTP${row.state === 'running' && !restUp ? " once the project is started" : ''}, with row-level security deciding what each key and user can reach. Off, ${prefix('data', row.vocabulary)} and ${prefix('graph', row.vocabulary)} refuse, and the database, auth, storage and the rest keep running.`
-					: `Off: ${prefix('data', row.vocabulary)} and ${prefix('graph', row.vocabulary)} refuse. Switch it on to call your tables over HTTP from an app.`}
+					? t(row.state === 'running' && !restUp ? 'localProjects.dataApi.onHintPending' : 'localProjects.dataApi.onHint', { data: prefix('data', row.vocabulary), graph: prefix('graph', row.vocabulary) })
+					: t('localProjects.dataApi.offHint', { data: prefix('data', row.vocabulary), graph: prefix('graph', row.vocabulary) })}
 			</p>
-			{!state.data.switchable && <p className="form-status warn">This project has a compose.override.yaml of your own, so the app leaves the data API to it.</p>}
+			{!state.data.switchable && <p className="form-status warn">{t('localProjects.dataApi.override')}</p>}
 			<Status said={said} />
 			<Log lines={progress.lines} />
 		</fieldset>
@@ -1245,13 +1261,14 @@ export function LocalDataApiSwitch({ row }: SectionProps): JSX.Element {
 }
 
 const ADDRESS_HEADERS: ReadonlyArray<{ value: string; label: string }> = [
-	{ value: '', label: "None (the gateway is reached directly)" },
+	{ value: '', get label() { return t('localProjects.domains.none'); } },
 	{ value: 'x-real-ip', label: "x-real-ip (nginx, Caddy)" },
 	{ value: 'x-forwarded-for', label: "x-forwarded-for" },
 	{ value: 'cf-connecting-ip', label: "cf-connecting-ip (Cloudflare)" },
 ];
 
 export function LocalDomains({ row }: SectionProps): JSX.Element {
+	const t = useT();
 	const settings = useLoad(() => window.sqlApi.local.settings(row.id), [row.id]);
 	const [url, setUrl] = useState<string | null>(null);
 	const [header, setHeader] = useState<string | null>(null);
@@ -1263,7 +1280,7 @@ export function LocalDomains({ row }: SectionProps): JSX.Element {
 		return <div className="form-status error">{settings.error}</div>;
 	}
 	if (!settings.data) {
-		return <div className="field-hint">Loading…</div>;
+		return <div className="field-hint">{t('projects.common.loading')}</div>;
 	}
 	const s = settings.data;
 	const address = url ?? s.publicUrl;
@@ -1290,36 +1307,36 @@ export function LocalDomains({ row }: SectionProps): JSX.Element {
 	return (
 		<>
 			<fieldset>
-				<legend>Public address</legend>
-				<p className="field-hint">Where clients reach this project. Auth puts it in every sign-in, confirmation and OAuth link, so it must be the address your users' browsers can open.</p>
+				<legend>{t('localProjects.domains.title')}</legend>
+				<p className="field-hint">{t('localProjects.domains.intro')}</p>
 				<label>
-					Address
+					{t('projects.common.address')}
 					<input value={address} onChange={(e) => setUrl(e.target.value)} placeholder="https://api.example.com" />
 				</label>
-				<p className="field-hint">http://localhost:{s.apiPort} on this computer, http://&lt;this computer's IP&gt;:{s.apiPort} for a phone on your network (switch on "Reachable from other devices" in Settings), or an https:// domain with a TLS proxy in front.</p>
+				<p className="field-hint">{t('localProjects.domains.examples', { port: s.apiPort })}</p>
 				<label>
-					The proxy writes the caller's address into
+					{t('localProjects.domains.proxyWrites')}
 					<select value={proxyHeader} onChange={(e) => setHeader(e.target.value)}>
 						{ADDRESS_HEADERS.map((h) => <option key={h.value} value={h.value}>{h.label}</option>)}
 					</select>
 				</label>
-				<p className="field-hint">Behind a proxy, auth's per-caller limits must see callers and not the proxy.</p>
+				<p className="field-hint">{t('localProjects.domains.proxyHint')}</p>
 				<Status said={said} />
 				<Log lines={progress.lines} />
 				<div className="cloud-actions">
 					<span className="spacer" />
-					<button type="button" disabled={busy || !changed} onClick={() => void save()}><Icon name="save" /> {busy ? "Applying…" : "Save and restart"}</button>
+					<button type="button" disabled={busy || !changed} onClick={() => void save()}><Icon name="save" /> {busy ? t('projects.common.applying') : t('projects.common.saveRestart')}</button>
 				</div>
 			</fieldset>
 			<fieldset>
-				<legend>Serving it from your own domain</legend>
-				<p className="field-hint">Point the domain's DNS at this machine, run a TLS proxy on 443 in front of the gateway, and set the address above. With Caddy, which fetches the certificate itself, the whole configuration is:</p>
+				<legend>{t('localProjects.domains.ownDomain')}</legend>
+				<p className="field-hint">{t('localProjects.domains.ownDomainIntro')}</p>
 				<pre className="local-snippet">{`${host} {
 	reverse_proxy 127.0.0.1:${s.apiPort} {
 		header_up X-Real-IP {remote_host}
 	}
 }`}</pre>
-				<p className="field-hint">Then choose x-real-ip above, and keep "Reachable from other devices" off in Settings so only the proxy reaches the gateway. Realtime needs the proxy to pass WebSocket upgrades, which Caddy does by default.</p>
+				<p className="field-hint">{t('localProjects.domains.thenChoose')}</p>
 			</fieldset>
 		</>
 	);

@@ -20,6 +20,7 @@ import { dialectFor } from '../../index';
 import type { ColumnInfo, IndexInfo, TableInfo } from '../../../../schema';
 import type { DdlEmitter } from './index';
 import type { SchemaChange } from '../types';
+import { t } from '../../../../i18n/core';
 
 const q = dialectFor('clickhouse').quoteIdent;
 
@@ -122,7 +123,7 @@ export class ClickHouseEmitter implements DdlEmitter {
 			case 'dropColumn':
 				return [`ALTER TABLE ${q(change.table)} DROP COLUMN ${q(change.column.name)}`];
 			case 'setPrimaryKey':
-				throw new Error(`ClickHouse cannot change the primary key of "${change.table}": it is the order the data is stored in. Create a new table with the new ORDER BY and copy the rows into it.`);
+				throw new Error(t('engineSchemaDiff.emit.clickhousePrimaryKey', { table: change.table }));
 			case 'addIndex':
 				return [`ALTER TABLE ${q(change.table)} ADD ${indexDef(change.index)}`];
 			case 'dropIndex':

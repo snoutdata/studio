@@ -1,0 +1,82 @@
+{
+	"check": {
+		"checked": {
+			"one": "{count} table checked",
+			"other": "{count} tables checked"
+		},
+		"clean": "{checked}: every key, foreign key and index is where the cluster needs it.",
+		"toFix": "{n} to fix",
+		"toLookAt": "{n} to look at",
+		"suggestions": {
+			"one": "{count} suggestion",
+			"other": "{count} suggestions"
+		},
+		"summary": "{checked}: {parts}."
+	},
+	"severity": {
+		"fix": "Fix",
+		"worthAlook": "Look at",
+		"suggestion": "Suggestion"
+	},
+	"slots": "{used} of {max} project slots used on the {tier} plan",
+	"tierCurrent": "current",
+	"plan": {
+		"none": "none",
+		"noMove": {
+			"one": "{count} step ({kinds}); nothing moves and writes do not pause.",
+			"other": "{count} steps ({kinds}); nothing moves and writes do not pause."
+		},
+		"moves": {
+			"one": "{count} cutover, about {rows} rows, about {seconds}s to copy, writes pause for about {ms} ms.",
+			"other": "{count} cutovers, about {rows} rows, about {seconds}s to copy, writes pause for about {ms} ms."
+		}
+	},
+	"join": {
+		"joining": "joining the cluster",
+		"spreading": "taking its share of the data",
+		"stopped": "stopped",
+		"starting": "starting as a copy of the home node"
+	},
+	"ran": {
+		"notCluster": "This project is not a cluster.",
+		"notClusterAnyMore": "This project is not a cluster any more. The database restarts once while its services move back into its pod.",
+		"rejoining": "{node} is joining the cluster again.",
+		"leftAsIs": "{node} is left as it is.",
+		"retrying": "The cluster is trying that step again.",
+		"dropped": "The rest of that request was dropped. Nothing else changed.",
+		"jobStarted": "Job {job} started. Its progress is under Jobs.",
+		"createdJoining": {
+			"one": "A cluster node is on the way. It starts as a copy of the home node, then joins the cluster and takes its share of the data on its own.",
+			"other": "{count} cluster nodes are on the way. Each starts as a copy of the home node, then joins the cluster and takes its share of the data on its own."
+		},
+		"createdStarting": {
+			"one": "A cluster node is starting as a copy of the home node. Attach it once it is ready.",
+			"other": "{count} cluster nodes are starting as a copy of the home node. Attach each once it is ready."
+		},
+		"podDeleted": "The pod of {pod} is being deleted.",
+		"alreadyNodes": "The project already has {nodes} cluster nodes.",
+		"alreadyCluster": "This project is already a cluster.",
+		"nowCluster": "This project is a cluster now. The router and the services start in pods of their own, and the database keeps running.",
+		"replicaMaking": "A replica of cluster node {node} is being made from its backup. It protects the node once it is following it.",
+		"replicaRemoving": "The replica of cluster node {node} is being removed, and its project slot freed.",
+		"noReplica": "Cluster node {node} has no replica. Nothing changed.",
+		"marked": "Marked as seen. The alert stays open until what it is about is over.",
+		"done": "Done."
+	},
+	"replica": {
+		"protected": "Protected by a replica",
+		"making": "A replica is being made",
+		"none": "No replica",
+		"failingOver": "Its replica is taking its place",
+		"failoverFailed": "Its replica could not take its place"
+	},
+	"failover": {
+		"stopped": "The node is stopped",
+		"replicaTakes": "Its replica takes its place",
+		"newReplica": "A new replica is made"
+	},
+	"blocked": {
+		"firstBackup": "Its first backup is not finished yet, and a replica is made from it.",
+		"noSlot": "A replica takes one project slot, and all of your plan's are in use."
+	}
+}

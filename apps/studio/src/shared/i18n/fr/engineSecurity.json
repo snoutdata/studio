@@ -1,0 +1,125 @@
+{
+	"unsupported": {
+		"sqlite": "SQLite n'a ni utilisateurs ni privilèges. Accéder à la base, c'est accéder au fichier.",
+		"duckdb": "DuckDB n'a ni utilisateurs ni privilèges. Accéder à la base, c'est accéder au fichier.",
+		"pinecone": "Pinecone n'a pas d'utilisateurs de base de données. L'accès est contrôlé par la clé API de la connexion.",
+		"mongodb": "MongoDB gère les utilisateurs avec ses propres commandes plutôt qu'en SQL. Pas encore pris en charge.",
+		"snowflake": "Les utilisateurs et rôles Snowflake ne sont pas encore pris en charge.",
+		"redshift": "Les utilisateurs et groupes Redshift ne sont pas encore pris en charge.",
+		"db2": "Les autorités et privilèges Db2 ne sont pas encore pris en charge.",
+		"hana": "Les utilisateurs et rôles SAP HANA ne sont pas encore pris en charge.",
+		"logs": "Un service de journaux n'a pas d'utilisateurs de base de données. Qui peut lire ces journaux est défini par le compte cloud de cette connexion, chez votre fournisseur cloud.",
+		"generic": "Les utilisateurs et privilèges ne sont pas encore pris en charge pour cette connexion."
+	},
+	"target": {
+		"global": "tout le serveur",
+		"database": "la base {path}",
+		"schema": "le schéma {path}"
+	},
+	"policyOn": " sur {path}",
+	"kind": {
+		"rowPolicy": "politique de lignes",
+		"quota": "quota",
+		"settingsProfile": "profil de paramètres"
+	},
+	"everyoneExcept": "tous sauf {names}",
+	"everyone": "tous",
+	"nobody": "personne",
+	"createPolicy": {
+		"rowPolicy": "Créer la {label}, appliquée à {who}.",
+		"quota": "Créer le {label}, appliqué à {who}.",
+		"settingsProfile": "Créer le {label}, appliqué à {who}."
+	},
+	"dropPolicy": {
+		"rowPolicy": "Supprimer la {label}.",
+		"quota": "Supprimer le {label}.",
+		"settingsProfile": "Supprimer le {label}."
+	},
+	"setPolicy": {
+		"rowPolicy": "Appliquer la {label} à {who}.",
+		"quota": "Appliquer le {label} à {who}.",
+		"settingsProfile": "Appliquer le {label} à {who}."
+	},
+	"createPrincipal": {
+		"user": "Créer l'utilisateur {who}.",
+		"role": "Créer le rôle {who}.",
+		"login": "Créer le login {who}.",
+		"group": "Créer le groupe {who}."
+	},
+	"dropPrincipal": {
+		"user": "Supprimer l'utilisateur {who} et tout ce qui lui a été accordé.",
+		"role": "Supprimer le rôle {who} et tout ce qui lui a été accordé.",
+		"login": "Supprimer le login {who} et tout ce qui lui a été accordé.",
+		"group": "Supprimer le groupe {who} et tout ce qui lui a été accordé."
+	},
+	"setPassword": "Définir un nouveau mot de passe pour {who}.",
+	"enable": "Permettre à {who} de se connecter à nouveau.",
+	"disable": "Empêcher {who} de se connecter.",
+	"grant": "Accorder {privileges} sur {target} à {who}.",
+	"revoke": "Retirer {privileges} sur {target} à {who}.",
+	"grantRole": "Ajouter {who} au rôle {role}.",
+	"revokeRole": "Retirer {who} du rôle {role}.",
+	"emitter": {
+		"empty": "Le champ \"{what}\" ne peut pas être vide.",
+		"badName": "Le champ \"{what}\" (\"{name}\") contient un caractère interdit dans un nom.",
+		"passwordEmpty": "Le mot de passe ne peut pas être vide.",
+		"passwordBad": "Le mot de passe contient un caractère interdit.",
+		"badPrivilege": "\"{privilege}\" n'est pas un nom de privilège valide.",
+		"noPrivilege": "Sélectionnez au moins un privilège.",
+		"kindRowPolicy": "politique de lignes",
+		"kindQuota": "quota",
+		"kindSettingsProfile": "profil de paramètres",
+		"policyUnsupported": "SnoutData ne prend pas encore en charge cet objet {engine} : {kind}.",
+		"badExpression": "Le champ \"{what}\" ne peut pas contenir de point-virgule ni de commentaire.",
+		"badSetting": "\"{name}\" n'est pas un nom de paramètre valide.",
+		"settingNoValue": "Un paramètre doit avoir une valeur."
+	},
+	"what": {
+		"columnName": "nom de colonne",
+		"databaseName": "nom de base de données",
+		"host": "hôte",
+		"objectName": "nom d'objet",
+		"principalName": "nom du compte",
+		"roleName": "nom de rôle",
+		"rowPolicyFilter": "filtre de politique de lignes",
+		"schemaName": "nom de schéma",
+		"tableName": "nom de table",
+		"userName": "nom d'utilisateur",
+		"userOrRoleName": "nom d'utilisateur ou de rôle"
+	},
+	"catalog": {
+		"accountsAndRoles": "comptes et rôles",
+		"accounts": "comptes",
+		"columnPrivileges": "privilèges de colonne",
+		"databasePermissions": "autorisations de base de données",
+		"databasePrivileges": "privilèges de base de données",
+		"databaseUsersAndRoles": "utilisateurs et rôles de la base de données",
+		"objectPrivileges": "privilèges d'objet",
+		"privileges": "privilèges",
+		"quotas": "quotas",
+		"rolesAndUsers": "rôles et utilisateurs",
+		"roles": "rôles",
+		"rowPolicies": "politiques de lignes",
+		"schemaPrivileges": "privilèges de schéma",
+		"serverLogins": "connexions au serveur",
+		"settingsProfiles": "profils de paramètres",
+		"systemPrivileges": "privilèges système",
+		"tableAndViewPrivileges": "privilèges de table et de vue",
+		"tablePrivileges": "privilèges de table",
+		"users": "utilisateurs"
+	},
+	"vendors": {
+		"pgNoGlobal": "PostgreSQL n'a pas de GRANT à l'échelle du serveur. Accordez plutôt sur une base de données, un schéma ou une table.",
+		"oracleNoSchema": "Oracle n'a pas de GRANT à l'échelle d'un schéma ou d'une base. Accordez le privilège système, ou accordez sur la table.",
+		"oraclePassword": "Un utilisateur Oracle doit avoir un mot de passe.",
+		"sqlserverPassword": "Une connexion SQL Server doit avoir un mot de passe.",
+		"chNoSchema": "ClickHouse n'a pas de schémas. Accordez plutôt sur une base de données ou une table.",
+		"chProfileEmpty": "Un profil de paramètres doit contenir au moins un paramètre.",
+		"chQuotaWhole": "Une fenêtre de quota doit être un nombre entier d'unités.",
+		"chQuotaUnit": "\"{unit}\" n'est pas une fenêtre sur laquelle mesurer un quota ClickHouse.",
+		"chQuotaMetric": "\"{name}\" n'est pas une chose qu'un quota ClickHouse peut limiter.",
+		"chQuotaNumber": "La limite de {metric} doit être un nombre.",
+		"chQuotaWindow": "Un quota doit avoir une fenêtre de mesure.",
+		"chRolePassword": "Un rôle ClickHouse n'a pas de mot de passe. Créez plutôt un utilisateur, ou laissez le mot de passe vide."
+	}
+}

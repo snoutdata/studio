@@ -3,6 +3,7 @@
  *  Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { t } from '../shared/i18n/core';
 import { app } from 'electron';
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { homedir } from 'node:os';
@@ -130,12 +131,12 @@ function buildParsed(el: { attrs: Record<string, string>; inner: string }, usern
 
 	const notes: string[] = [];
 	if (!driver) {
-		notes.push(`Unsupported driver (${driverRef || jdbcDriver || "unknown"}).`);
+		notes.push(t('mainDiscovery.unsupportedDriver', { driver: driverRef || jdbcDriver || t('mainDiscovery.unknown') }));
 	} else {
 		if (!username) {
-			notes.push("Username not found; set it after import.");
+			notes.push(t('mainDiscovery.noUsername'));
 		}
-		notes.push("Passwords aren't imported from DataGrip; set it after import.");
+		notes.push(t('mainDiscovery.datagripNoPw'));
 	}
 
 	return {

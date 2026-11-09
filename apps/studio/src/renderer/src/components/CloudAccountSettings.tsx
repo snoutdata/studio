@@ -9,6 +9,7 @@ import { Icon } from './Icon';
 import { CloudKeyArt } from '../art/Illustrations';
 import { SettingsIntro } from './SettingsIntro';
 import { errorMessage } from '../errors';
+import { useT, type Translate } from '../i18n';
 import type {
 	CloudAccount,
 	CloudAccountView,
@@ -54,23 +55,25 @@ function blankAccount(vendor: CloudVendor): CloudAccount {
 }
 
 /** What an account can be pointed at, in one phrase, for the list and the picker. */
-function serviceWords(info: CloudVendorInfo | undefined): string {
+function serviceWords(info: CloudVendorInfo | undefined, t: Translate): string {
 	if (!info || info.services.length === 0) {
-		return 'nothing built yet';
+		return t('cloudAccounts.services.none');
 	}
-	const words = info.services.map((service) => (service === 'objectStore' ? 'files' : 'log events'));
-	return words.join(' and ');
+	const files = info.services.includes('objectStore');
+	const logs = info.services.some((service) => service !== 'objectStore');
+	return t(files && logs ? 'cloudAccounts.services.both' : files ? 'cloudAccounts.services.files' : 'cloudAccounts.services.logs');
 }
 
 /** How to sign in, in the order most people already have one. */
 const AUTH_LABELS: Record<CloudAuth['mode'], string> = {
-	named: 'A credential already on this computer',
-	key: 'A key I will paste',
-	document: 'A key file I will paste (Google service account)',
-	chain: 'However this computer already signs in',
+	named: 'cloudAccounts.auth.named',
+	key: 'cloudAccounts.auth.key',
+	document: 'cloudAccounts.auth.document',
+	chain: 'cloudAccounts.auth.chain',
 };
 
 export function CloudAccountsSection(): JSX.Element {
+	const t = useT();
 	const [vendors, setVendors] = useState<CloudVendorInfo[]>([]);
 	const [accounts, setAccounts] = useState<CloudAccountView[]>([]);
 	const [editing, setEditing] = useState<CloudAccount | null>(null);
@@ -174,21 +177,14 @@ export function CloudAccountsSection(): JSX.Element {
 	return (
 		<>
 			<SettingsIntro art={CloudKeyArt}>
-				<p>
-					The clouds a data flow can read. Set an account up here once, and any flow can point it at that cloud's
-					files or its log events.
-				</p>
-				<p className="muted">
-					This page holds the credential and nothing else: which service a flow uses, and which bucket or log group,
-					are chosen while you build it, from the lists the account can see. Requests go to your cloud from this
-					computer, and a key you paste is kept in this computer's keychain rather than in the file beside it.
-				</p>
+				<p>{t('cloudAccounts.intro1')}</p>
+				<p className="muted">{t('cloudAccounts.intro2')}</p>
 			</SettingsIntro>
 
 			<fieldset className="cloud-card">
-				<legend>Your accounts</legend>
+				<legend>{t('cloudAccounts.yourAccounts')}</legend>
 				{accounts.length === 0 ? (
-					<div className="muted">Nothing set up yet.</div>
+					<div className="muted">{t('cloudAccounts.nothing')}</div>
 				) : (
 					<ul className="cloud-profiles">
 						{accounts.map((account) => (
@@ -198,27 +194,27 @@ export function CloudAccountsSection(): JSX.Element {
 								</button>
 								<span className="muted">
 									{vendors.find((entry) => entry.vendor === account.vendor)?.label ?? account.vendor}
-									{` · ${serviceWords(vendors.find((entry) => entry.vendor === account.vendor))}`}
+									{` · ${serviceWords(vendors.find((entry) => entry.vendor === account.vendor), t)}`}
 									{account.auth.mode === 'named' ? ` · ${account.auth.name}` : ''}
 									{account.region ? ` · ${account.region}` : ''}
 								</span>
-								<button type="button" className="link-btn" data-test="cloud-remove" onClick={() => void remove(account.id)}>Remove</button>
+								<button type="button" className="link-btn" data-test="cloud-remove" onClick={() => void remove(account.id)}>{t('cloudAccounts.remove')}</button>
 							</li>
 						))}
 					</ul>
 				)}
-				<button type="button" data-test="cloud-add" onClick={() => edit(null)} disabled={busy}><Icon name="add" /> Add an account</button>
+				<button type="button" data-test="cloud-add" onClick={() => edit(null)} disabled={busy}><Icon name="add" /> {t('cloudAccounts.addAccount')}</button>
 			</fieldset>
 
 			{editing && (
 				<fieldset className="cloud-card" data-test="cloud-editor">
-					<legend>{accounts.some((a) => a.id === editing.id) ? 'Edit this account' : 'A new account'}</legend>
+					<legend>{accounts.some((a) => a.id === editing.id) ? t('cloudAccounts.editAccount') : t('cloudAccounts.newAccount')}</legend>
 
-					<label>Cloud
+					<label>{t('cloudAccounts.cloud')}
 						<select data-test="cloud-vendor" value={editing.vendor} onChange={(e) => set({ vendor: e.target.value as CloudVendor })}>
 							{vendors.map((entry) => (
 								<option key={entry.vendor} value={entry.vendor} disabled={entry.services.length === 0}>
-									{entry.label}{entry.services.length === 0 ? ' (not built yet)' : ''}
+									{entry.label}{entry.services.length === 0 ? ` ${t('cloudAccounts.notBuilt')}` : ''}
 								</option>
 							))}
 						</select>
@@ -228,11 +224,11 @@ export function CloudAccountsSection(): JSX.Element {
 					    line that stops this page ever needing a service picker again. */}
 					<span className="muted" data-test="cloud-vendor-what">{info?.what}</span>
 
-					<label>Name
+					<label>{t('cloudAccounts.name')}
 						<input value={editing.name} onChange={(e) => set({ name: e.target.value })} placeholder="acme production" />
 					</label>
 
-					<label>How to sign in
+					<label>{t('cloudAccounts.howToSignIn')}
 						<select
 							value={editing.auth.mode}
 							onChange={(e) => {
@@ -242,7 +238,7 @@ export function CloudAccountsSection(): JSX.Element {
 							}}
 						>
 							{(Object.keys(AUTH_LABELS) as CloudAuth['mode'][]).map((mode) => (
-								<option key={mode} value={mode}>{AUTH_LABELS[mode]}</option>
+								<option key={mode} value={mode}>{t(AUTH_LABELS[mode])}</option>
 							))}
 						</select>
 					</label>
@@ -252,9 +248,7 @@ export function CloudAccountsSection(): JSX.Element {
 							{importable.length > 0 ? (
 								<>
 									<span className="muted">
-										Found on this computer{info?.importsFrom ? `, from ${info.importsFrom}` : ''}. Nothing is copied:
-										picking one stores its NAME, and the credential is read when a flow runs, so it stays where you
-										manage it and keeps working when you rotate it.
+										{info?.importsFrom ? t('cloudAccounts.foundFrom', { source: info.importsFrom }) : t('cloudAccounts.found')}
 									</span>
 									<ul className="cloud-importable" data-test="cloud-importable">
 										{importable.map((credential) => (
@@ -270,11 +264,10 @@ export function CloudAccountsSection(): JSX.Element {
 								</>
 							) : (
 								<span className="muted">
-									Nothing found on this computer{info?.importsFrom ? ` from ${info.importsFrom}` : ''}. Type a name if you
-									have one, or paste a key instead.
+									{info?.importsFrom ? t('cloudAccounts.nothingFoundFrom', { source: info.importsFrom }) : t('cloudAccounts.nothingFound')}
 								</span>
 							)}
-							<label>Profile name
+							<label>{t('cloudAccounts.profileName')}
 								<input
 									value={editing.auth.name}
 									onChange={(e) => set({ auth: { mode: 'named', name: e.target.value } })}
@@ -286,28 +279,26 @@ export function CloudAccountsSection(): JSX.Element {
 
 					{editing.auth.mode === 'key' && (
 						<>
-							<label>Key ID
+							<label>{t('cloudAccounts.keyId')}
 								<input
 									value={editing.auth.keyId}
 									onChange={(e) => set({ auth: { mode: 'key', keyId: e.target.value } })}
 									placeholder="AKIA…"
 								/>
 							</label>
-							<label>Secret key
+							<label>{t('cloudAccounts.secretKey')}
 								<input
 									type="password"
 									value={secret ?? ''}
 									onChange={(e) => setSecret(e.target.value)}
-									placeholder={hasStoredSecret ? 'Stored. Type to replace it.' : ''}
+									placeholder={hasStoredSecret ? t('cloudAccounts.storedType') : ''}
 								/>
 							</label>
 							{hasStoredSecret && (
 								<div className="flow-wizard-row">
-									<span className="muted">
-										The stored key is not shown, here or anywhere: nothing in the app can read it back out.
-									</span>
+									<span className="muted">{t('cloudAccounts.storedNotShown')}</span>
 									<button type="button" className="link-btn" data-test="cloud-forget" onClick={() => { setSecret(null as unknown as string); setHasStoredSecret(false); }}>
-										Forget it
+										{t('cloudAccounts.forgetIt')}
 									</button>
 								</div>
 							)}
@@ -322,14 +313,14 @@ export function CloudAccountsSection(): JSX.Element {
 					  */}
 					{editing.auth.mode === 'document' && (
 						<>
-							<label>What to call it
+							<label>{t('cloudAccounts.whatToCall')}
 								<input
 									value={editing.auth.label}
 									onChange={(e) => set({ auth: { mode: 'document', label: e.target.value } })}
 									placeholder="flows@my-project.iam.gserviceaccount.com"
 								/>
 							</label>
-							<label>The key file
+							<label>{t('cloudAccounts.keyFile')}
 								<textarea
 									rows={5}
 									value={secret ?? ''}
@@ -338,19 +329,16 @@ export function CloudAccountsSection(): JSX.Element {
 									// JSON can see they are in the right field. It is the shape of the thing, not
 									// one of them. The suppression has to sit on the line ABOVE the match.
 									// nosemgrep: generic.secrets.security.detected-google-gcm-service-account.detected-google-gcm-service-account
-									placeholder={hasStoredSecret ? 'Stored. Paste again to replace it.' : '{ "type": "service_account", … }'}
+									placeholder={hasStoredSecret ? t('cloudAccounts.storedPaste') : '{ "type": "service_account", … }'}
 									spellCheck={false}
 								/>
 							</label>
-							<span className="muted">
-								Paste the whole file. It goes straight to this computer's keychain, is never written beside the
-								account, and nothing in the app can read it back out.
-							</span>
+							<span className="muted">{t('cloudAccounts.pasteWholeFile')}</span>
 							{hasStoredSecret && (
 								<div className="flow-wizard-row">
-									<span className="muted">A key file is stored.</span>
+									<span className="muted">{t('cloudAccounts.keyFileStored')}</span>
 									<button type="button" className="link-btn" onClick={() => { setSecret(null as unknown as string); setHasStoredSecret(false); }}>
-										Forget it
+										{t('cloudAccounts.forgetIt')}
 									</button>
 								</div>
 							)}
@@ -358,44 +346,33 @@ export function CloudAccountsSection(): JSX.Element {
 					)}
 
 					{editing.auth.mode === 'chain' && (
-						<span className="muted">
-							Uses whatever this computer already has: environment variables, a signed-in session, or the role a
-							machine is running as. Nothing is stored by the app.
-						</span>
+						<span className="muted">{t('cloudAccounts.chainNote')}</span>
 					)}
 
-					<label>Region
+					<label>{t('cloudAccounts.region')}
 						<input value={editing.region ?? ''} onChange={(e) => set({ region: e.target.value })} placeholder="eu-west-1" />
 					</label>
 					<span className="muted">
-						{storage
-							? 'A starting point, not a constraint: listing your buckets does not depend on it, each one carries its own region, and a log group asks for one on the flow.'
-							: 'A starting point, not a constraint: a flow chooses the region it reads.'}
+						{storage ? t('cloudAccounts.regionStorage') : t('cloudAccounts.regionOther')}
 					</span>
 
 					{/* Only where it means something. The endpoint is what tells one S3-compatible service
 					    from another, and on a vendor's own cloud it is a field that can only be wrong. */}
 					{editing.vendor === 's3compat' && (
 						<>
-							<label>Endpoint
+							<label>{t('cloudAccounts.endpoint')}
 								<input value={editing.endpoint ?? ''} onChange={(e) => set({ endpoint: e.target.value })} placeholder="https://…" />
 							</label>
-							<span className="muted">
-								The address of your storage: Cloudflare R2, MinIO, Backblaze B2, Wasabi, Ceph, or anything else
-								that speaks the S3 API.
-							</span>
+							<span className="muted">{t('cloudAccounts.endpointHelp')}</span>
 							<label className="check">
 								<input
 									type="checkbox"
 									checked={Boolean(editing.forcePathStyle)}
 									onChange={(e) => set({ forcePathStyle: e.target.checked })}
 								/>
-								Address buckets by path
+								{t('cloudAccounts.addressByPath')}
 							</label>
-							<span className="muted">
-								What most self-hosted storage needs. Without it the name goes in the host name, and a server that
-								does not do that fails as a name-not-found, which reads as a broken network.
-							</span>
+							<span className="muted">{t('cloudAccounts.addressByPathHelp')}</span>
 						</>
 					)}
 
@@ -410,10 +387,10 @@ export function CloudAccountsSection(): JSX.Element {
 
 					<div className="flow-wizard-row">
 						<button type="button" data-test="cloud-test" onClick={() => void run('test')} disabled={busy || !complete}>
-							<Icon name="beaker" /> {busy ? 'Checking…' : 'Test it'}
+							<Icon name="beaker" /> {busy ? t('cloudAccounts.checking') : t('cloudAccounts.testIt')}
 						</button>
-						<button type="button" data-test="cloud-save" onClick={() => void run('save')} disabled={busy || !complete}><Icon name="save" /> Save</button>
-						<button type="button" className="link-btn" onClick={() => setEditing(null)} disabled={busy}>Cancel</button>
+						<button type="button" data-test="cloud-save" onClick={() => void run('save')} disabled={busy || !complete}><Icon name="save" /> {t('settings.common.save')}</button>
+						<button type="button" className="link-btn" onClick={() => setEditing(null)} disabled={busy}>{t('settings.common.cancel')}</button>
 					</div>
 				</fieldset>
 			)}

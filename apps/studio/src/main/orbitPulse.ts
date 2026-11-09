@@ -3,6 +3,7 @@
  *  Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { t } from '../shared/i18n/core';
 import type { ExecuteQueryResult } from '../shared/protocol';
 import {
 	clampPulseInterval,
@@ -244,7 +245,7 @@ export class OrbitPulseSampler {
 			ready = true;
 		}
 		if (!ready && this.targets.get(target.connectionId) === target) {
-			this.switchToFallback(target, reason ?? `${target.source} is not reporting on this server.`);
+			this.switchToFallback(target, reason ?? t('mainErrors.notReporting', { source: target.source }));
 		}
 	}
 
@@ -256,7 +257,7 @@ export class OrbitPulseSampler {
 	 */
 	private failed(target: PulseTarget, error: string): void {
 		if (target.fallbackSql) {
-			this.switchToFallback(target, `Could not read ${target.source}, falling back to ${target.fallbackSource ?? 'a simpler activity view'}. (${error})`);
+			this.switchToFallback(target, t('mainErrors.orbitFallback', { source: target.source, fallback: target.fallbackSource ?? t('mainErrors.simplerView'), error }));
 			return;
 		}
 		this.setStatus(target.connectionId, error);

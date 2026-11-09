@@ -1,0 +1,29 @@
+{
+	"gettingStarted": "Primeiros passos",
+	"minimize": "Minimizar",
+	"dontShowAgain": "Não mostrar novamente",
+	"allSet": "Tudo pronto. Boas consultas!",
+	"takeTour": "Fazer um tour rápido",
+	"checklist": {
+		"addConnection": {
+			"label": "Adicionar uma conexão de banco de dados",
+			"hint": "Conecte um banco de dados MySQL, Postgres ou SQL Server."
+		},
+		"run": {
+			"label": "Executar uma consulta",
+			"hint": "Digite SQL no editor e pressione Executar (ou Ctrl/Cmd+Enter)."
+		},
+		"explore": {
+			"label": "Explorar uma tabela",
+			"hint": "Clique duas vezes em uma tabela na barra lateral para navegar pelos dados."
+		},
+		"ai": {
+			"label": "Perguntar a {assistant}",
+			"hint": "Insira no editor o SQL que {assistant} propõe."
+		},
+		"save": {
+			"label": "Salvar uma consulta",
+			"hint": "Guarde uma consulta para usar de novo depois."
+		}
+	}
+}

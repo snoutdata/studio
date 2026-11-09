@@ -5,6 +5,14 @@
 
 import { Suspense, lazy, type ComponentProps, type ComponentType, type ReactElement } from 'react';
 
+import { useT } from './i18n';
+
+/** The fallback, a component of its own so that it reads the language by the hook. */
+function Loading(): ReactElement {
+	const t = useT();
+	return <div className="muted pad small">{t('shell.common.loading')}</div>;
+}
+
 /**
  * Code-splits a feature view out of the launch chunk.
  *
@@ -33,7 +41,7 @@ export function lazyView<T extends ComponentType<any>>(load: () => Promise<{ def
 	const Loaded = lazy(load) as ComponentType<ComponentProps<T>>;
 	function LazyView(props: ComponentProps<T>): ReactElement {
 		return (
-			<Suspense fallback={<div className="muted pad small">Loading…</div>}>
+			<Suspense fallback={<Loading />}>
 				<Loaded {...props} />
 			</Suspense>
 		);

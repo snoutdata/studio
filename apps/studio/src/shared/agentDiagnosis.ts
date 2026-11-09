@@ -4,6 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { agentDescriptor, type AgentKind } from './agentConsole';
+import { t } from './i18n/core';
 
 /*
  * An agent refused to start.
@@ -65,14 +66,14 @@ export function diagnoseStartupFailure(kind: AgentKind, transcript: string): Age
 	const text = stripAnsi(transcript);
 	const descriptor = agentDescriptor(kind);
 	const label = descriptor.label;
-	const docs: AgentFixAction = { kind: 'openUrl', label: `${label} documentation`, url: descriptor.installUrl };
-	const settings: AgentFixAction = { kind: 'openConfig', label: `Open ${label}'s settings folder` };
+	const docs: AgentFixAction = { kind: 'openUrl', label: t('engineShared.agent.docs', { agent: label }), url: descriptor.installUrl };
+	const settings: AgentFixAction = { kind: 'openConfig', label: t('engineShared.agent.openSettings', { agent: label }) };
 
 	// Its own configuration stopped it.
 	if (/error loading configuration|unknown variant|failed to parse config|invalid config|config(?:uration)? error/i.test(text)) {
 		return {
-			title: `${label} would not start because of its own settings.`,
-			detail: `Its message is above. Those settings live outside SnoutData Studio, so they are yours and ${label}'s to sort out.`,
+			title: t('engineShared.agent.configTitle', { agent: label }),
+			detail: t('engineShared.agent.configDetail', { agent: label }),
 			actions: [settings, docs],
 		};
 	}
@@ -80,16 +81,16 @@ export function diagnoseStartupFailure(kind: AgentKind, transcript: string): Age
 	// Its launcher is broken: nothing to do with configuration, and equally not ours.
 	if (/is not recognized as an internal or external command|cannot find module|MODULE_NOT_FOUND|no such file or directory/i.test(text)) {
 		return {
-			title: `${label} is on this computer but could not run.`,
-			detail: `Its message is above. How ${label} is installed and updated is outside SnoutData Studio.`,
+			title: t('engineShared.agent.launcherTitle', { agent: label }),
+			detail: t('engineShared.agent.launcherDetail', { agent: label }),
 			actions: [docs],
 		};
 	}
 
 	if (/permission denied|EACCES|EPERM/i.test(text)) {
 		return {
-			title: `${label} was not allowed to start.`,
-			detail: `Its message is above. The system refused it something it needed.`,
+			title: t('engineShared.agent.deniedTitle', { agent: label }),
+			detail: t('engineShared.agent.deniedDetail'),
 			actions: [docs],
 		};
 	}

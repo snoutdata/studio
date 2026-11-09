@@ -1,0 +1,23 @@
+{
+	"labels": {
+		"csvNames": "CSV with a header row",
+		"csv": "CSV, no header row",
+		"tsvNames": "Tab separated with a header row",
+		"tsv": "Tab separated, no header row",
+		"json": "JSON, one object per line"
+	},
+	"notes": {
+		"parquet": "Columnar, typed, and the fastest of these to load.",
+		"native": "What the server itself writes. No conversion at either end."
+	},
+	"warnings": {
+		"unnamed": "{format} carries no column names, so the values land in the table's column ORDER. A file whose columns are in another order fills the wrong ones, and nothing about that is an error.",
+		"guessed": "The format was read off the file's name, not its contents. If it is wrong the load refuses, usually on the first row.",
+		"compressed": "The file is sent compressed and the server expands it as it arrives, so nothing is written to this computer.",
+		"noTransaction": "An INSERT is not inside a transaction. A load that fails part way through leaves the rows it had already written, and running it again adds them a second time."
+	},
+	"describe": {
+		"byName": "Read as {format} and matched to {name} by column name.",
+		"byPosition": "Read as {format} and matched to {name} by column position."
+	}
+}

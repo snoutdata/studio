@@ -1,0 +1,14 @@
+{
+	"portInUse": {
+		"title": "Agent access is off: port {port} is in use",
+		"detail": "Something else on this computer is listening on 127.0.0.1:{port}, the port your agents are configured to reach, so the app did not start its agent server there and did not move to another port by itself. If you did not start that program, do not let an agent send it your token. In Settings, Agent access, you can move to port {suggested}: that also replaces the token, and the coding agents this app starts get the new address. A config you pasted elsewhere needs the new one.",
+		"detailNoSuggestion": "Something else on this computer is listening on 127.0.0.1:{port}, the port your agents are configured to reach, so the app did not start its agent server there and did not move to another port by itself. If you did not start that program, do not let an agent send it your token. In Settings, Agent access, you can move to another port: that also replaces the token, and the coding agents this app starts get the new address. A config you pasted elsewhere needs the new one."
+	},
+	"lockout": {
+		"title": "Agent access refused a program that kept sending a wrong token",
+		"detail": {
+			"one": "{attempts} requests with a wrong token arrived from {remote}, so the agent server refuses any further wrong token from that address for about {count} minute. Your own agents and anything else holding the right token still get in. The token was not changed. If you think it has leaked, replace it in Settings, Agent access.",
+			"other": "{attempts} requests with a wrong token arrived from {remote}, so the agent server refuses any further wrong token from that address for about {count} minutes. Your own agents and anything else holding the right token still get in. The token was not changed. If you think it has leaked, replace it in Settings, Agent access."
+		}
+	}
+}

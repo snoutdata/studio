@@ -4,6 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { ASSISTANT_NAME } from '../../../shared/assistant';
+import { t, useT, type Translate } from '../i18n';
 import { useEffect, useRef, useState } from 'react';
 import { Icon } from './Icon';
 import { ConnectionPicker } from './ConnectionPicker';
@@ -24,7 +25,7 @@ import { KnowledgePopover } from './KnowledgePopover';
 import type { Tier } from '../../../shared/auth';
 import type { ConnectionConfig } from '../../../shared/connection';
 import { buildFixPrompt, buildExplainQueryPrompt, buildOptimizeQueryPrompt, buildOptimizeFollowUp } from '../aiFix';
-import { backendKindForDriver, dialectFor, DATA_ACCESS_INFO, DATA_ACCESS_LEVELS, type DataAccessLevel } from '../../../shared/engine';
+import { backendKindForDriver, dataAccessText, dialectFor, DATA_ACCESS_LEVELS, type DataAccessLevel } from '../../../shared/engine';
 import { errorMessage } from '../errors';
 import { libyHeard } from '@snout/liby';
 import { libyFeel } from '@snout/liby/studio';
@@ -67,13 +68,13 @@ function sumUsage(a: TokenUsage, b: TokenUsage): TokenUsage {
 function titleOf(turns: ChatTurn[]): string {
 	const first = turns.find((m) => m.role === 'user');
 	if (!first) {
-		return "New chat";
+		return t('chat.panel.newChat');
 	}
 	const text = first.content.replace(/\s+/g, ' ').trim();
 	if (text) {
 		return text.slice(0, 60);
 	}
-	return first.attachments?.[0]?.name ?? "New chat";
+	return first.attachments?.[0]?.name ?? t('chat.panel.newChat');
 }
 
 /** What actually happened to a SQL block the user ran from the chat, reported back by App once the
@@ -189,25 +190,26 @@ function isBudgetError(message: string): boolean {
 /** A live status line for the in-flight assistant turn, shown the whole time the stop button
  *  is enabled so the user always knows the agent is still working and at what. Derived from the
  *  current tool step (if any) and whether we're blocked on the user's approval. */
-function busyStatus(steps: AiToolEvent[] | undefined, waitingApproval: boolean): string {
+function busyStatus(steps: AiToolEvent[] | undefined, waitingApproval: boolean, t: Translate): string {
 	if (waitingApproval) {
-		return "Waiting for your approval…";
+		return t('chat.busy.approval');
 	}
 	// The last step still in its 'start' phase is the one currently executing.
 	const running = steps?.slice().reverse().find((s) => s.phase === 'start');
 	if (running) {
 		switch (running.tool) {
-			case 'run_query': return "Running query…";
-			case 'list_tables': return "Listing tables…";
-			case 'describe_table': return running.summary ? `Reading ${running.summary}…` : "Reading table…";
-			case 'search_columns': return "Searching columns…";
-			default: return "Working…";
+			case 'run_query': return t('chat.busy.query');
+			case 'list_tables': return t('chat.busy.tables');
+			case 'describe_table': return running.summary ? t('chat.busy.reading', { name: running.summary }) : t('chat.busy.readingTable');
+			case 'search_columns': return t('chat.busy.columns');
+			default: return t('chat.busy.working');
 		}
 	}
-	return "Planning next moves…";
+	return t('chat.busy.planning');
 }
 
 export function ChatPanel({ variant = 'docked', contextLabel, composerHeight, connections, connectedIds, activeConnectionId, getAmbient, settingsRev, knowledgeRev, fixRequest, addToChatRequest, askRequest, perfActionRequest, signedIn, authRestoring, tier, onConnect, onInsertSql, onInsertSqlNewTab, onInsertPipeline, onRunSql, runOutcome, onResizeComposer, onSelectConnection, onToggleFull, onOpenSettings, onOpenAccount, onClose }: ChatPanelProps): JSX.Element {
+	const t = useT();
 	const isFull = variant === 'full';
 	const [messages, setMessages] = useState<PanelMessage[]>([]);
 	const [input, setInput] = useState('');
@@ -500,29 +502,29 @@ export function ChatPanel({ variant = 'docked', contextLabel, composerHeight, co
 		? [currentModel, ...enabledModels]
 		: enabledModels;
 	const selectedStatus: AiProviderStatus | undefined = provider === 'snout-project'
-		? (projectSel ? { provider, configured: true, reachable: true, detail: `${projectSel.name ?? projectSel.ref}: the project's own AI`, models: [], completionModels: [] } : undefined)
+		? (projectSel ? { provider, configured: true, reachable: true, detail: t('chat.panel.projectAi', { name: projectSel.name ?? projectSel.ref }), models: [], completionModels: [] } : undefined)
 		: statuses.find((s) => s.provider === provider);
 
 	function placeholder(): string {
 		if (activeConn && activeConnected) {
-			return `Ask ${ASSISTANT_NAME} about ${activeConn.label}…`;
+			return t('chat.panel.askAbout', { assistant: ASSISTANT_NAME, name: activeConn.label });
 		}
-		return `Ask ${ASSISTANT_NAME} anything…  (⏎ send · ⇧⏎ newline)`;
+		return t('chat.panel.askAnything', { assistant: ASSISTANT_NAME });
 	}
 
 	function emptyHint(): string {
 		if (activeConn && activeConnected) {
-			return `Ask for SQL grounded in “${activeConn.label}”'s schema.`;
+			return t('chat.panel.hintConnected', { name: activeConn.label });
 		}
 		if (activeConn && !activeConnected) {
-			return `“${activeConn.label}” isn't connected. Connect it for schema-aware answers, or ask a general SQL question.`;
+			return t('chat.panel.hintNotConnected', { name: activeConn.label });
 		}
 		if (connections.length === 0) {
-			return "No connections yet. Add one in the Connections panel to get schema-aware answers. You can still ask general SQL questions.";
+			return t('chat.panel.hintNoConnections');
 		}
 		return onSelectConnection
-			? "Choose a connection below to ground answers in its schema, or ask a general SQL question."
-			: "Select a connection above the editor to ground answers in its schema, or ask a general SQL question.";
+			? t('chat.panel.hintChooseBelow')
+			: t('chat.panel.hintChooseAbove');
 	}
 
 	/** Upsert a conversation into history. Called after each completed reply so the session is
@@ -714,7 +716,7 @@ export function ChatPanel({ variant = 'docked', contextLabel, composerHeight, co
 	/** The label of the connection a pending query runs against, for the "Always" button. */
 	function approvalConnLabel(): string {
 		const id = pendingApproval?.connectionId;
-		return connections.find((c) => c.id === id)?.label ?? 'this connection';
+		return connections.find((c) => c.id === id)?.label ?? t('chat.panel.thisConnection');
 	}
 
 	/** The label shown in a proposed-SQL block's header — the connection the chat is grounded in. */
@@ -920,7 +922,7 @@ export function ChatPanel({ variant = 'docked', contextLabel, composerHeight, co
 		if (!ok) {
 			// Connect failed: drop the empty assistant placeholder and tell the user. No tokens spent.
 			setMessages((prev) => (prev[prev.length - 1]?.role === 'assistant' && !prev[prev.length - 1].content ? prev.slice(0, -1) : prev));
-			setError(`Couldn't connect to "${activeConn?.label ?? 'the database'}". Check the connection settings and try again, or continue without a connection.`);
+			setError(t('chat.panel.connectFailed', { name: activeConn?.label ?? t('chat.panel.theDatabase') }));
 			return;
 		}
 		await runTurn(p.text, p.priorTurns, activeConnectionId, tokens, sessionId, false, p.attachments ?? []);
@@ -1082,7 +1084,7 @@ export function ChatPanel({ variant = 'docked', contextLabel, composerHeight, co
 		return {
 			id: String(i),
 			variant: message.role,
-			label: assistant ? ASSISTANT_NAME : "You",
+			label: assistant ? ASSISTANT_NAME : t('chat.panel.you'),
 			steps: assistant ? message.steps : undefined,
 			attachments: assistant ? undefined : message.attachments,
 			// A user turn is shown verbatim: what they typed is not a proposal to act on, so it never
@@ -1095,8 +1097,8 @@ export function ChatPanel({ variant = 'docked', contextLabel, composerHeight, co
 					<button
 						type="button"
 						className="icon-btn chat-copy"
-						title={copiedIndex === i ? "Copied" : "Copy this reply"}
-						aria-label="Copy this reply"
+						title={copiedIndex === i ? t('chat.panel.copied') : t('chat.panel.copyReply')}
+						aria-label={t('chat.panel.copyReply')}
 						onClick={() => copyReply(i, message.content)}
 					>
 						<Icon name={copiedIndex === i ? 'check' : 'copy'} />
@@ -1110,7 +1112,7 @@ export function ChatPanel({ variant = 'docked', contextLabel, composerHeight, co
 							name={pendingApproval ? 'clock' : 'loading'}
 							className={pendingApproval ? '' : 'codicon-modifier-spin'}
 						/>
-						{' '}{busyStatus(message.steps, Boolean(pendingApproval))}
+						{' '}{busyStatus(message.steps, Boolean(pendingApproval), t)}
 					</div>
 				)
 				: undefined,
@@ -1120,20 +1122,20 @@ export function ChatPanel({ variant = 'docked', contextLabel, composerHeight, co
 	return (
 		<div className={`chat-panel${isFull ? ' chat-full' : ''}`} data-tour="ai-assistant">
 			<div className="chat-header" data-liby="chat-header">
-				{!isFull && <button className="icon-btn" aria-label="Collapse" onClick={onClose}><Icon name="chevron-right" /></button>}
+				{!isFull && <button className="icon-btn" aria-label={t('chat.panel.collapse')} onClick={onClose}><Icon name="chevron-right" /></button>}
 				<span className="chat-title">{ASSISTANT_NAME}</span>
-				{contextLabel && <span className="chat-context-chip" title={`${ASSISTANT_NAME} sees the ${contextLabel} you have open.`}><Icon name="eye" /> {contextLabel}</span>}
+				{contextLabel && <span className="chat-context-chip" title={t('chat.panel.sees', { assistant: ASSISTANT_NAME, context: contextLabel })}><Icon name="eye" /> {contextLabel}</span>}
 				<span className="spacer" />
 				{signedIn && activeConnectionId && (
-					<button className={`icon-btn chat-knows${knowledgeOpen ? ' active' : ''}`} aria-label="What I know about this database" onClick={() => setKnowledgeOpen((o) => !o)}>
+					<button className={`icon-btn chat-knows${knowledgeOpen ? ' active' : ''}`} aria-label={t('chat.panel.knows')} onClick={() => setKnowledgeOpen((o) => !o)}>
 						<Icon name="lightbulb" />{knownCount > 0 && <span className="chat-knows-count">{knownCount}</span>}
 					</button>
 				)}
-				<button className="icon-btn" aria-label="New chat" onClick={newChat}><Icon name="add" /></button>
-				<button className="icon-btn" aria-label="Chat history" onClick={() => setHistoryOpen(true)}><Icon name="history" /></button>
-				<button className="icon-btn" aria-label="AI settings" onClick={onOpenSettings}><Icon name="gear" /></button>
+				<button className="icon-btn" aria-label={t('chat.panel.newChat')} onClick={newChat}><Icon name="add" /></button>
+				<button className="icon-btn" aria-label={t('chat.panel.chatHistory')} onClick={() => setHistoryOpen(true)}><Icon name="history" /></button>
+				<button className="icon-btn" aria-label={t('chat.panel.aiSettings')} onClick={onOpenSettings}><Icon name="gear" /></button>
 				{onToggleFull && (
-					<button className="icon-btn chat-full-toggle" aria-label={isFull ? "Exit full screen" : "Full screen"} aria-pressed={isFull} onClick={onToggleFull}>
+					<button className="icon-btn chat-full-toggle" aria-label={isFull ? t('chat.panel.exitFull') : t('chat.panel.full')} aria-pressed={isFull} onClick={onToggleFull}>
 						<Icon name={isFull ? 'screen-normal' : 'screen-full'} />
 					</button>
 				)}
@@ -1147,7 +1149,7 @@ export function ChatPanel({ variant = 'docked', contextLabel, composerHeight, co
 				/>
 			)}
 			{!signedIn && authRestoring ? (
-				<div className="chat-signin-skeleton" aria-busy="true" aria-label="Restoring your account">
+				<div className="chat-signin-skeleton" aria-busy="true" aria-label={t('chat.panel.restoring')}>
 					<div className="chat-skeleton-line chat-skeleton-art" />
 					<div className="chat-skeleton-line chat-skeleton-title" />
 					<div className="chat-skeleton-line chat-skeleton-body" />
@@ -1160,31 +1162,31 @@ export function ChatPanel({ variant = 'docked', contextLabel, composerHeight, co
 					<AssistantArt className="chat-signin-art" />
 					{held ? (
 						<>
-							<div className="chat-signin-title">Sign in and {ASSISTANT_NAME} will take it from here</div>
-							<div className="muted small">It is ready to look at this for you. Sign in and it starts right away.</div>
+							<div className="chat-signin-title">{t('chat.signin.heldTitle', { assistant: ASSISTANT_NAME })}</div>
+							<div className="muted small">{t('chat.signin.heldBody')}</div>
 							{held.about && <div className="chat-signin-held" data-test="chat-signin-held"><Icon name="error" /> <span>{held.about}</span></div>}
 						</>
 					) : (
 						<>
-							<div className="chat-signin-title">{ASSISTANT_NAME}, one assistant for your data and the Studio</div>
-							<div className="muted small">Sign in to have it write SQL, find answers in your databases, and set up connections, monitors, data flows and settings for you.</div>
+							<div className="chat-signin-title">{t('chat.signin.title', { assistant: ASSISTANT_NAME })}</div>
+							<div className="muted small">{t('chat.signin.body')}</div>
 						</>
 					)}
 					<div className="chat-signin-actions">
-						<button type="button" onClick={onOpenAccount}><Icon name="account" /> Sign in</button>
-						{held && <button type="button" className="secondary" onClick={() => setHeld(null)}><Icon name="close" /> Not now</button>}
+						<button type="button" onClick={onOpenAccount}><Icon name="account" /> {t('chat.signin.signIn')}</button>
+						{held && <button type="button" className="secondary" onClick={() => setHeld(null)}><Icon name="close" /> {t('chat.signin.notNow')}</button>}
 					</div>
 				</div>
 			) : (
 			<>
 			{perfSession && (
-				<div className="chat-mode-banner" title="This chat is dedicated to optimizing one statement. Start a new chat for anything else.">
+				<div className="chat-mode-banner" title={t('chat.perf.title')}>
 					<Icon name="dashboard" className="chat-mode-icon" />
 					<div className="chat-mode-text">
-						<div className="chat-mode-title">Query optimization</div>
-						<div className="muted small">Tuned for this one statement. Start a new chat for other questions.</div>
+						<div className="chat-mode-title">{t('chat.perf.heading')}</div>
+						<div className="muted small">{t('chat.perf.body')}</div>
 					</div>
-					<button type="button" className="chat-mode-new" title="New chat" onClick={newChat}><Icon name="add" /> New chat</button>
+					<button type="button" className="chat-mode-new" title={t('chat.panel.newChat')} onClick={newChat}><Icon name="add" /> {t('chat.panel.newChat')}</button>
 				</div>
 			)}
 			{dataAccess === null && (
@@ -1192,14 +1194,14 @@ export function ChatPanel({ variant = 'docked', contextLabel, composerHeight, co
 					<div className="chat-data-access-head">
 						<Icon name="shield" className="chat-plan-hint-icon" />
 						<div className="chat-plan-hint-text">
-							<div id="chat-data-access-title" className="chat-data-access-title">What may the AI see of your data?</div>
-							<div className="muted">The less it sees, the more generic its answers about your data.</div>
+							<div id="chat-data-access-title" className="chat-data-access-title">{t('chat.dataAccess.title')}</div>
+							<div className="muted">{t('chat.dataAccess.body')}</div>
 						</div>
 					</div>
 					<div className="chat-data-access-options">
 						{DATA_ACCESS_LEVELS.map((level) => (
 							<button key={level} type="button" className="chat-data-access-option" onClick={() => void chooseDataAccess(level)}>
-								<span className="chat-data-access-label">{DATA_ACCESS_INFO[level].label}</span>
+								<span className="chat-data-access-label">{dataAccessText(level).label}</span>
 							</button>
 						))}
 					</div>
@@ -1209,20 +1211,20 @@ export function ChatPanel({ variant = 'docked', contextLabel, composerHeight, co
 				<div className="chat-plan-hint" role="status">
 					<Icon name="check" className="chat-plan-hint-icon" />
 					<div className="chat-plan-hint-text">
-						Saved. You can change it anytime in AI settings.
+						{t('chat.dataAccess.saved')}
 					</div>
-					<button type="button" className="chat-plan-hint-cta" onClick={onOpenSettings}><Icon name="settings-gear" /> Open settings</button>
-					<button type="button" className="icon-btn" aria-label="Dismiss" onClick={() => setDataAccessChosen(null)}><Icon name="close" /></button>
+					<button type="button" className="chat-plan-hint-cta" onClick={onOpenSettings}><Icon name="settings-gear" /> {t('chat.dataAccess.openSettings')}</button>
+					<button type="button" className="icon-btn" aria-label={t('chat.panel.dismiss')} onClick={() => setDataAccessChosen(null)}><Icon name="close" /></button>
 				</div>
 			)}
 			{tier === 'free' && !planHintDismissed && !isFull && dataAccess !== null && !dataAccessChosen && (
 				<div className="chat-plan-hint">
 					<Icon name="sparkle" className="chat-plan-hint-icon" />
 					<div className="chat-plan-hint-text">
-						You're on the free plan, which has a monthly AI allowance. Paid plans have more, across every model.
+						{t('chat.planHint.body')}
 					</div>
-					<button type="button" className="chat-plan-hint-cta" onClick={onOpenAccount}><Icon name="credit-card" /> View plans</button>
-					<button type="button" className="icon-btn" aria-label="Dismiss" onClick={() => setPlanHintDismissed(true)}><Icon name="close" /></button>
+					<button type="button" className="chat-plan-hint-cta" onClick={onOpenAccount}><Icon name="credit-card" /> {t('chat.planHint.view')}</button>
+					<button type="button" className="icon-btn" aria-label={t('chat.panel.dismiss')} onClick={() => setPlanHintDismissed(true)}><Icon name="close" /></button>
 				</div>
 			)}
 			<RenderSurface
@@ -1254,42 +1256,42 @@ export function ChatPanel({ variant = 'docked', contextLabel, composerHeight, co
 				footer={<>
 				{suggestion && (
 					<div className="chat-approval knowledge-learned">
-						<div className="chat-approval-head"><Icon name="lightbulb" /> Want me to remember this?</div>
+						<div className="chat-approval-head"><Icon name="lightbulb" /> {t('chat.remember.title')}</div>
 						<div className="knowledge-learned-text">{suggestion.text}</div>
-						<div className="muted small">I'll keep this in mind for “{activeConnLabel()}” so I get it right next time.</div>
+						<div className="muted small">{t('chat.remember.body', { name: activeConnLabel() })}</div>
 						<div className="chat-approval-actions">
-							<button type="button" onClick={() => void rememberSuggestion()}><Icon name="check" /> Remember</button>
-							<button type="button" className="secondary" onClick={dismissSuggestion}>Not now</button>
+							<button type="button" onClick={() => void rememberSuggestion()}><Icon name="check" /> {t('chat.remember.remember')}</button>
+							<button type="button" className="secondary" onClick={dismissSuggestion}>{t('chat.signin.notNow')}</button>
 						</div>
 					</div>
 				)}
 				{pendingConnect && (
 					<div className="chat-approval">
-						<div className="chat-approval-head"><Icon name="plug" /> Connect to “{activeConn?.label ?? 'the database'}”?</div>
-						<div className="muted small">It isn't connected. Connect so the assistant can read its schema and run read-only queries for an accurate, data-backed answer, or continue without a connection (general answers only, no live data).</div>
+						<div className="chat-approval-head"><Icon name="plug" /> {t('chat.connect.title', { name: activeConn?.label ?? t('chat.panel.theDatabase') })}</div>
+						<div className="muted small">{t('chat.connect.body')}</div>
 						<div className="chat-approval-actions">
-							<button type="button" onClick={() => void connectThenSend()}><Icon name="plug" /> Connect</button>
-							<button type="button" className="secondary" onClick={() => void sendRestricted()}>Continue without</button>
+							<button type="button" onClick={() => void connectThenSend()}><Icon name="plug" /> {t('chat.connect.connect')}</button>
+							<button type="button" className="secondary" onClick={() => void sendRestricted()}>{t('chat.connect.continueWithout')}</button>
 						</div>
 					</div>
 				)}
 				{pendingApproval && pendingApproval.sql !== undefined && (
 					<div className="chat-approval">
-						<div className="chat-approval-head"><Icon name="play" /> The assistant wants to run a query</div>
+						<div className="chat-approval-head"><Icon name="play" /> {t('chat.approval.runQuery')}</div>
 						<pre>{pendingApproval.sql}</pre>
 						<div className="chat-approval-actions">
-							<button type="button" onClick={() => respondApproval(true)}><Icon name="play" /> Run</button>
-							<button type="button" className="secondary chat-approval-always" onClick={() => respondApproval(true, true)} title={`Stop asking before running read-only queries on ${approvalConnLabel()}`}><Icon name="check-all" /> Always allow {approvalConnLabel()}</button>
-							<button type="button" className="secondary" onClick={() => respondApproval(false)}><Icon name="debug-step-over" /> Skip</button>
+							<button type="button" onClick={() => respondApproval(true)}><Icon name="play" /> {t('chat.approval.run')}</button>
+							<button type="button" className="secondary chat-approval-always" onClick={() => respondApproval(true, true)} title={t('chat.approval.alwaysTitle', { name: approvalConnLabel() })}><Icon name="check-all" /> {t('chat.approval.always', { name: approvalConnLabel() })}</button>
+							<button type="button" className="secondary" onClick={() => respondApproval(false)}><Icon name="debug-step-over" /> {t('chat.approval.skip')}</button>
 						</div>
 					</div>
 				)}
 				{pendingApproval && pendingApproval.sql === undefined && (
 					<div className="chat-approval">
-						<div className="chat-approval-head"><Icon name="play" /> The assistant wants to {pendingApproval.summary ?? "perform an action"}</div>
+						<div className="chat-approval-head"><Icon name="play" /> {t('chat.approval.wantsTo', { action: pendingApproval.summary ?? t('chat.approval.performAction') })}</div>
 						<div className="chat-approval-actions">
-							<button type="button" onClick={() => respondApproval(true)}><Icon name="check" /> Allow</button>
-							<button type="button" className="secondary" onClick={() => respondApproval(false)}><Icon name="debug-step-over" /> Skip</button>
+							<button type="button" onClick={() => respondApproval(true)}><Icon name="check" /> {t('chat.approval.allow')}</button>
+							<button type="button" className="secondary" onClick={() => respondApproval(false)}><Icon name="debug-step-over" /> {t('chat.approval.skip')}</button>
 						</div>
 					</div>
 				)}
@@ -1297,20 +1299,20 @@ export function ChatPanel({ variant = 'docked', contextLabel, composerHeight, co
 					<div className="chat-error">
 						<div>{error}</div>
 						{byokRetry && statuses.some((s) => s.provider === 'positron-cloud' && s.models.length > 0) && (
-							<button type="button" onClick={() => void retryOnManaged()}><Icon name="refresh" /> Retry on managed credits</button>
+							<button type="button" onClick={() => void retryOnManaged()}><Icon name="refresh" /> {t('chat.error.retryManaged')}</button>
 						)}
 						{isBudgetError(error)
-							? <button type="button" className="secondary" onClick={onOpenAccount}><Icon name="credit-card" /> Manage plan</button>
-							: <button type="button" className="secondary" onClick={onOpenSettings}><Icon name="settings-gear" /> Open AI settings</button>}
+							? <button type="button" className="secondary" onClick={onOpenAccount}><Icon name="credit-card" /> {t('chat.error.managePlan')}</button>
+							: <button type="button" className="secondary" onClick={onOpenSettings}><Icon name="settings-gear" /> {t('chat.error.openAiSettings')}</button>}
 					</div>
 				)}
 				</>}
 			/>
 			{tokens.totalTokens > 0 && (
-				<div className="chat-tokens" title="Tokens used in this chat (prompt + completion)">
+				<div className="chat-tokens" title={t('chat.tokens.title')}>
 					<Icon name="symbol-numeric" />
-					<span>{tokens.totalTokens.toLocaleString()} tokens</span>
-					<span className="muted">{tokens.promptTokens.toLocaleString()} in · {tokens.completionTokens.toLocaleString()} out</span>
+					<span>{t('chat.tokens.total', { tokens: tokens.totalTokens })}</span>
+					<span className="muted">{t('chat.tokens.inOut', { input: tokens.promptTokens, output: tokens.completionTokens })}</span>
 				</div>
 			)}
 			<Splitter orientation="horizontal" onDrag={(_dx, dy) => onResizeComposer?.(dy)} />
@@ -1338,8 +1340,8 @@ export function ChatPanel({ variant = 'docked', contextLabel, composerHeight, co
 							isConnected={(id) => connectedIds.includes(id)}
 							value={activeConnectionId}
 							onChange={(id) => { if (id) { onSelectConnection?.(id); } }}
-							placeholder={connections.length === 0 ? "No connections" : "Choose a connection"}
-							title={`Connection ${ASSISTANT_NAME} grounds on`}
+							placeholder={connections.length === 0 ? t('chat.composer.noConnections') : t('chat.composer.chooseConnection')}
+							title={t('chat.composer.groundsOn', { assistant: ASSISTANT_NAME })}
 						/>
 					)}
 					<span
@@ -1358,7 +1360,7 @@ export function ChatPanel({ variant = 'docked', contextLabel, composerHeight, co
 					<button
 						type="button"
 						className="icon-btn composer-attach"
-						aria-label={perfSession ? "Attachments are off in a query optimization chat. Start a new chat to attach a document." : "Attach a document (txt, md, csv, json; PDF and Word on Windows and macOS) as context"}
+						aria-label={perfSession ? t('chat.composer.attachOffPerf') : t('chat.composer.attach')}
 						onClick={() => void attachDocument()}
 						disabled={attaching || busy || !renderConfig.allowAttach}
 					>
@@ -1367,7 +1369,7 @@ export function ChatPanel({ variant = 'docked', contextLabel, composerHeight, co
 					<button
 						type="button"
 						className={busy ? 'composer-send stop' : 'composer-send'}
-						title={busy ? "Stop" : "Send (Enter)"}
+						title={busy ? t('chat.composer.stop') : t('chat.composer.send')}
 						onClick={() => { if (busy) { stop(); } else { void send(); } }}
 						disabled={busy ? false : (!input.trim() && attachments.length === 0)}
 					>
