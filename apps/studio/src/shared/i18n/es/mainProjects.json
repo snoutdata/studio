@@ -39,5 +39,13 @@
 	"overQuota": "superó su cuota de almacenamiento, así que rechaza escrituras",
 	"pausedWakes": "en pausa, así que la primera conexión lo despierta y tarda unos segundos",
 	"signInToImport": "Inicia sesión en SnoutData para importar tus bases de datos alojadas.",
-	"noHostedCreate": "Esta cuenta aún no tiene bases de datos alojadas. Crea una desde el panel Cloud."
+	"noHostedCreate": "Esta cuenta aún no tiene bases de datos alojadas. Crea una desde el panel Cloud.",
+	"aiOn": "Pasarela de IA activada. Tarda alrededor de un minuto en responder.",
+	"aiOff": "Pasarela de IA desactivada. Se conservan sus modelos, claves y presupuestos.",
+	"agentRelayFailed": "No se pudo contactar con la pasarela de IA del proyecto.",
+	"agentRelayToken": "Esta dirección solo responde al agente que inició SnoutData Studio.",
+	"agentRelayNoCall": "Esta dirección solo reenvía llamadas a modelos.",
+	"agentRelayNoProject": "Este agente no apunta a ningún proyecto.",
+	"agentRelayTooLarge": "Esa solicitud es demasiado grande.",
+	"noKeysToMove": "No hay claves con modelos para mover."
 }

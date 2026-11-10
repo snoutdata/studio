@@ -11,14 +11,13 @@
 import type { QueryField } from './query';
 import type { DataAccessLevel } from './engine';
 
-/** `snout-project` is a SnoutData Cloud project's own AI gateway (its owner's provider keys),
- *  reached through the control plane's `cloud-project-ai` relay; which project is
- *  {@link AiSettings.project}. See `shared/aiSources.ts`. */
+/** `snout-project` is a SnoutData project's own AI gateway (its owner's provider keys), Cloud or
+ *  Local; which project is {@link AiSettings.project}. See `shared/aiSources.ts`. */
 export type AiProviderId = 'ollama' | 'positron-cloud' | 'snout-project' | ByokProviderId;
 
-/** The chat model chosen from a SnoutData Cloud project's own AI gateway. */
+/** The chat model chosen from a SnoutData project's own AI gateway. */
 export interface ProjectAiSelection {
-	/** The project's ref (no colon). */
+	/** The project's ref (no colon); a Local project's is `localAiRef(id)`. */
 	ref: string;
 	model: string;
 	/** The project's name when it was chosen, so the picker can show it before the list loads. */

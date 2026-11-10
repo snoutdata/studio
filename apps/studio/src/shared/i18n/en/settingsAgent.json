@@ -87,5 +87,12 @@
 	"courtesyHelp": "Switch this off and the request is refused outright. Worth knowing either way: asking is a courtesy, not a lock. Any program running as you on this computer can already read what SnoutData Studio keeps here, the same as it can read anything else of yours.",
 	"anotherPort": "Another port",
 	"moveReplace": "Move to this port and replace the token",
-	"replaceToken": "Replace the token"
+	"replaceToken": "Replace the token",
+	"aiRoute": {
+		"legend": "Where each agent's model calls go",
+		"hint": "Point an agent at a project's AI gateway to budget and log its spend with the project's. The agent is never given the project's key.",
+		"ownAccount": "Its own account",
+		"opencodeHint": "Add this to opencode's own config once. The console sets the two variables it reads.",
+		"restart": "Restart {agent}"
+	}
 }

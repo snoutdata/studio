@@ -91,5 +91,22 @@
 	"completionModel": "Modèle de complétion",
 	"completionHelp": "La complétion utilise son propre modèle dédié (distinct de la liste de chat). Elle demande de la vitesse et du fill-in-the-middle SQL, pas de l'intelligence brute : un petit modèle de code FIM vaut mieux ici qu'un gros modèle de chat.",
 	"completionOff": "Désactivé. L'éditeur garde sa complétion de schéma locale et déterministe ({shortcut}). Activez ceci pour ajouter du texte fantôme généré par un modèle.",
-	"test": "Tester"
+	"test": "Tester",
+	"moveKeys": {
+		"legend": "Déplacer mes clés vers un projet",
+		"intro": "Envoie ces clés, une seule fois, à la passerelle IA d'un projet et fait passer {assistant} sur les modèles de ce projet.",
+		"keyLine": "{provider} : {models}",
+		"noTargets": "Aucune passerelle IA de projet ne répond pour l'instant. Activez l'IA dans un projet, puis revenez ici.",
+		"project": "Projet",
+		"localProject": "{name} (sur cet ordinateur)",
+		"cloudProject": "{name} (dans le Cloud)",
+		"whereCloud": "Vos clés se trouveront alors dans {project} : dans le Cloud, sur nos serveurs, dans le pod de votre projet.",
+		"whereLocal": "Vos clés se trouveront alors dans {project} : sur cette machine, dans la base de données du projet.",
+		"copyStays": "Studio garde sa propre copie : vous pouvez toujours utiliser vos clés directement depuis ici.",
+		"moved": "{provider} : {models} ajoutés au projet.",
+		"nothing": "Ces modèles sont déjà dans ce projet : rien n'a été envoyé.",
+		"switched": "{assistant} utilise maintenant {model} de ce projet.",
+		"moving": "Déplacement…",
+		"move": "Déplacer mes clés"
+	}
 }

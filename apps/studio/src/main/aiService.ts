@@ -11,7 +11,8 @@ import { OFFICIAL_BUILD } from '../shared/officialBuild';
 import { BYOK_ANTHROPIC_MODELS, BYOK_PROVIDER_DEFAULTS, isByokProvider, isCompletionOnlyModel, isReasoningModel, supportsPromptCaching, usageWeightForCost, type AiAuditKind, type AiBudgetStatus, type AiCompletionOutcomeParams, type AiCompletionRecord, type AiEditParams, type AiModelInfo, type AiProviderId, type AiProviderStatus, type AiSettings, type AiToolEvent, type AmbientContext, type ByokProviderId, type ChatMessage, type CloudProviderId, type TokenUsage } from '../shared/ai';
 import { getModelCatalog, isCompletionModel, isEmbeddingModel, preferredCompletionModel, type ModelMeta } from './modelCatalog';
 import { ACCOUNTS_FUNCTIONS_URL, ACCOUNTS_URL, accountsAppKeyHeader, getCloudClient } from './cloudClient';
-import { projectModelInfos, projectRefusal, projectRelayBase } from '../shared/aiSources';
+import { localAiRef, localIdOfAiRef, projectModelInfos, projectRefusal, projectRelayBase, type ProjectAiSource } from '../shared/aiSources';
+import { keyHeader, type Vocabulary } from '../shared/ownLayout';
 import { createProjectAiSources } from './projectAiSources';
 import { readCreditBalance } from './creditBalance';
 import { currentLocale, type Locale, t } from '../shared/i18n/core';
@@ -34,7 +35,7 @@ import { OpenAiProvider } from './ai/openaiProvider';
 import { ScriptedProvider, type ScriptedReply } from './ai/scriptedProvider';
 import { LoggingProvider } from './ai/loggingProvider';
 import { setAiDebugEnabled } from './ai/debugLog';
-import { isNetworkError, networkBlockedMessage, networkErrorDetail } from './netFetch';
+import { isNetworkError, netFetch, networkBlockedMessage, networkErrorDetail } from './netFetch';
 import { benchmarkModels } from './ai/benchmarkModels';
 import { runAgentLoop } from './ai/agent';
 import type { CapabilityInvocation, CapabilityResult, CapabilitySpec } from '../shared/capabilities';
@@ -74,6 +75,12 @@ const LIBY_MAX_MESSAGES = 6;
  *  embedding models. Conservative: anything not matching a known non-chat marker is kept. */
 function isLikelyChatModel(model: string): boolean {
 	return !/embedding|whisper|tts|audio|dall-?e|image|moderation|rerank|babbage|davinci|realtime|transcribe/i.test(model);
+}
+
+/** The Local projects as the assistant reaches them. Wired from main's local stack. */
+export interface LocalProjectAi {
+	running(): Promise<{ id: string; name: string }[]>;
+	target(id: string): { apiPort: number; serverKey: string; vocabulary: Vocabulary };
 }
 
 /** What the chat needs from the renderer beyond plain text: tool-step notifications and a
@@ -308,7 +315,9 @@ export class AiService {
 	private completionAbort: AbortController | null = null;
 	/** The projects whose own AI gateway this user may use, read through the `cloud-project-ai`
 	 *  relay when the picker opens (never on boot) and cached for a minute. */
-	private readonly projectSources = createProjectAiSources(() => askRelayForSources());
+	private readonly projectSources = createProjectAiSources(() => askRelayForSources(), Date.now, () => this.askLocalForSources());
+	/** The Local projects, wired once the local stack exists (none in a test). */
+	private localProjects: LocalProjectAi | null = null;
 
 	constructor(
 		private readonly settings: AiSettingsStore,
@@ -342,6 +351,21 @@ export class AiService {
 	 *  provider can't be used to serve a model even if it's selected (rawProvider enforces it). */
 	setByokAllowed(allowed: boolean): void {
 		this.byokAllowed = allowed;
+	}
+
+	/** Where the Local projects' gateways are. Their keys stay in main. */
+	setLocalProjects(local: LocalProjectAi): void {
+		this.localProjects = local;
+	}
+
+	/** Whether the BYOK entitlement is on, for what moves those keys elsewhere. */
+	isByokAllowed(): boolean {
+		return this.byokAllowed;
+	}
+
+	/** Forget the project list, after something changed what a project serves. */
+	forgetProjectSources(): void {
+		this.projectSources.clear();
 	}
 
 	/** Record whether a user is signed in; gates every model call (the assistant is
@@ -1767,6 +1791,37 @@ export class AiService {
 		return projectModelInfos(await this.projectSources.list(force), disabled);
 	}
 
+	/** The projects themselves, for what is done to one (the move of the user's keys). */
+	async projectAiSources(force = false): Promise<ProjectAiSource[]> {
+		return !this.signedIn || this.scriptedAccount ? [] : this.projectSources.list(force);
+	}
+
+	/** Each running Local project whose gateway answers, with its models. One failing costs only itself. */
+	private async askLocalForSources(): Promise<ProjectAiSource[]> {
+		const local = this.localProjects;
+		if (!local) {
+			return [];
+		}
+		const projects = await local.running();
+		const answers = await Promise.all(projects.map(async (project): Promise<ProjectAiSource | null> => {
+			try {
+				const { apiPort, serverKey, vocabulary } = local.target(project.id);
+				const res = await netFetch(`http://127.0.0.1:${apiPort}/ai/v1/models`, {
+					headers: { [keyHeader(vocabulary)]: serverKey, Authorization: `Bearer ${serverKey}` },
+					signal: AbortSignal.timeout(4000),
+				});
+				if (!res.ok) {
+					return null;
+				}
+				const body = await res.json() as { data?: { id: string; owned_by?: string }[] };
+				return { ref: localAiRef(project.id), name: project.name, state: 'running', models: body.data ?? [] };
+			} catch {
+				return null;
+			}
+		}));
+		return answers.filter((a): a is ProjectAiSource => a !== null);
+	}
+
 	/** Status for one BYOK provider. Surfaces ONLY the models the user curated (`byok[p].models`),
 	 *  not the provider's full catalogue, which can be dozens of models and would flood the picker.
 	 *  The full list for the Settings combo is fetched separately ({@link byokModelList}). No network
@@ -1904,7 +1959,7 @@ export class AiService {
 		// project's, never SnoutData AI's balance.
 		if (providerId === 'snout-project' && !networkErr) {
 			const project = settings.project;
-			const sentence = projectRefusal(message, project?.name || project?.ref || 'this project');
+			const sentence = projectRefusal(message, project?.name || project?.ref || 'this project', project ? localIdOfAiRef(project.ref) !== null : false);
 			if (sentence) {
 				return new Error(sentence);
 			}
@@ -1981,6 +2036,15 @@ export class AiService {
 			const project = settings.project;
 			if (!project) {
 				throw new Error('Pick a model in the assistant\'s model picker.');
+			}
+			// A Local project is this machine's own: straight to its gateway with its server key.
+			const localId = localIdOfAiRef(project.ref);
+			if (localId) {
+				if (!this.localProjects) {
+					throw new Error(t('mainAi.noLocalProject'));
+				}
+				const { apiPort, serverKey, vocabulary } = this.localProjects.target(localId);
+				return new OpenAiProvider({ baseUrl: `http://127.0.0.1:${apiPort}/ai/v1`, apiKey: serverKey, model, headers: { [keyHeader(vocabulary)]: serverKey } });
 			}
 			return new OpenAiProvider({ baseUrl: projectRelayBase(ACCOUNTS_FUNCTIONS_URL, project.ref), apiKey: () => this.cloudToken(), model, headers: accountsAppKeyHeader() });
 		}

@@ -17,5 +17,6 @@
 	"aiNoPipeline": "La traduction IA ne contient pas de pipeline d'agrégation valide (un tableau d'étapes). Écrivez plutôt un pipeline d'agrégation natif.",
 	"signInPeriod": "Connectez-vous pour utiliser l'assistant.",
 	"rulesOnly": "Ce dépôt est revu uniquement par les règles. Aucun modèle n'est appelé.",
-	"noByok": "Aucun fournisseur avec votre propre clé n'est configuré. Ajoutez une clé dans Paramètres → IA."
+	"noByok": "Aucun fournisseur avec votre propre clé n'est configuré. Ajoutez une clé dans Paramètres → IA.",
+	"noLocalProject": "Ce projet Local n'est pas disponible ici. Choisissez un autre modèle."
 }

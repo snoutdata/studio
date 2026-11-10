@@ -17,5 +17,6 @@
 	"aiNoPipeline": "La traducción con IA no contenía un pipeline de agregación válido (un array de etapas). Escribe un pipeline de agregación nativo.",
 	"signInPeriod": "Inicia sesión para usar el asistente.",
 	"rulesOnly": "Este repositorio se revisa solo con las reglas. No se llama a ningún modelo.",
-	"noByok": "No hay ningún proveedor con clave propia configurado. Añade una clave en Configuración → IA."
+	"noByok": "No hay ningún proveedor con clave propia configurado. Añade una clave en Configuración → IA.",
+	"noLocalProject": "Ese proyecto Local no está disponible aquí. Elige otro modelo."
 }

@@ -108,6 +108,7 @@ export type CloudProjectFunction =
 	| 'cloud-project-secrets'
 	| 'cloud-project-domain'
 	| 'cloud-project-sql'
+	| 'cloud-project-ai'
 	| 'cloud-project-shards'
 	| 'cloud-project-containers'
 	| 'cloud-project-maintenance-window';
@@ -127,6 +128,7 @@ const WAITS: Readonly<Partial<Record<CloudProjectFunction, number>>> = {
 	'cloud-project-secrets': 45_000, // the same wait
 	'cloud-project-rotate-jwt': 50_000, // REFRESH_WAIT_MS 30 s + DOOR_GRACE_MS 1.5 s
 	'cloud-project-sql': 58_000, // the function's own 55 s budget, a cold connect included
+	'cloud-project-ai': 50_000, // the relay's 45 s to the project's gateway
 	'cloud-project-shards': 58_000, // ROUTER_MS 45 s
 };
 
@@ -201,7 +203,7 @@ export interface CloudApi {
  * by the time they reach a screen.
  */
 export class CloudRequestError extends Error {
-	constructor(message: string, readonly status: number) {
+	constructor(message: string, readonly status: number, readonly code?: string) {
 		super(message);
 		this.name = 'CloudRequestError';
 	}

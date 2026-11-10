@@ -16,6 +16,7 @@ import { proDefines, proMainAliases, proPaths, proRendererAliases } from './scri
 // See electron.vite.config.ts: the reviewer's rule set is aliased to its built output rather
 // than installed, so the test bundles resolve it the same way the app does.
 const REVIEW_CORE = resolve(process.cwd(), '../../packages/review-core/dist/index.js');
+const PSYCHE_ADMIN = resolve(process.cwd(), '../../packages/psyche-admin/src/index.ts');
 const MOVE = resolve(process.cwd(), '../../packages/move/dist/index.js');
 const MOVE_RUNNER = resolve(process.cwd(), '../../packages/move/dist/runner/index.js');
 // `@snoutdata/client`, built from packages/client the same way (`npm run client:build`).
@@ -64,7 +65,7 @@ const common = {
 	// connection never loads a byte of them.
 	external: ['mysql2', 'pg', 'ssh2', 'mssql', 'oracledb', 'ibm_db', 'mongodb', 'snowflake-sdk', '@duckdb/node-api', '@sap/hana-client', 'electron',
 		'@aws-sdk/client-cloudwatch-logs', '@aws-sdk/credential-providers', '@azure/identity', 'google-auth-library'],
-	alias: { '@snoutdata/client': CLIENT, '@snout/review-core': REVIEW_CORE, '@snout/move': MOVE, '@snout/move-runner': MOVE_RUNNER, ...libyNameAlias(LIBY_PATHS), ...proMainAliases(PRO_PATHS) },
+	alias: { '@snoutdata/client': CLIENT, '@snout/psyche-admin': PSYCHE_ADMIN, '@snout/review-core': REVIEW_CORE, '@snout/move': MOVE, '@snout/move-runner': MOVE_RUNNER, ...libyNameAlias(LIBY_PATHS), ...proMainAliases(PRO_PATHS) },
 	define: proDefines(PRO_PATHS, process.cwd()),
 };
 

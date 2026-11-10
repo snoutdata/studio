@@ -91,5 +91,22 @@
 	"completionModel": "Completion model",
 	"completionHelp": "Completion uses its own dedicated model (these are separate from the chat list). It wants speed + SQL fill-in-the-middle, not raw intelligence, so a small FIM code model beats a big chat model here.",
 	"completionOff": "Off. The editor still has deterministic, local schema completion ({shortcut}). Turn this on to add model-generated ghost text.",
-	"test": "Test"
+	"test": "Test",
+	"moveKeys": {
+		"legend": "Move my keys to a project",
+		"intro": "Sends these keys to a project's AI gateway, once, and switches {assistant} to that project's models.",
+		"keyLine": "{provider}: {models}",
+		"noTargets": "No project's AI gateway is answering right now. Switch AI on in a project, then come back.",
+		"project": "Project",
+		"localProject": "{name} (on this computer)",
+		"cloudProject": "{name} (in the Cloud)",
+		"whereCloud": "Your keys will then live in {project}: in the Cloud, on our servers, inside your project's pod.",
+		"whereLocal": "Your keys will then live in {project}: on this machine, in the project's database.",
+		"copyStays": "Studio keeps its own copy, so you can still use your keys directly from here.",
+		"moved": "{provider}: {models} added to the project.",
+		"nothing": "Those models are already in this project, so nothing was sent.",
+		"switched": "{assistant} now uses {model} from this project.",
+		"moving": "Moving…",
+		"move": "Move my keys"
+	}
 }

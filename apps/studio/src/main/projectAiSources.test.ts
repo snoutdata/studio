@@ -54,3 +54,13 @@ test('the list is cached for a minute, a failure is not cached, and clear() forg
 	await Promise.all([sources.list(), sources.list()]);
 	assert.equal(calls, 6);
 });
+
+test('Local projects are listed after the Cloud ones, and still when the relay fails', async () => {
+	const local = [{ ref: 'local-1', name: 'Here', state: 'running', models: [{ id: 'm' }] }];
+	const both = createProjectAiSources(async () => ({ projects: [{ ref: 'a1', name: 'A', state: 'ready', models: [] }] }), () => 0, async () => local);
+	assert.deepEqual((await both.list()).map((s) => s.ref), ['a1', 'local-1']);
+	const offline = createProjectAiSources(async () => {
+		throw new Error('offline');
+	}, () => 0, async () => local);
+	assert.deepEqual((await offline.list()).map((s) => s.ref), ['local-1']);
+});

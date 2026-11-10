@@ -3,6 +3,7 @@
  *  Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import type { ProjectAiSelection } from './ai';
 import { t } from './i18n/core';
 
 // The Agent Console contract: the user's own coding agent (Claude Code today, Codex later) run
@@ -339,6 +340,11 @@ export interface AgentConsoleConfig {
 	 * shape already exists for the assistant's own queries (`tools.autoApproveConnections`).
 	 */
 	autoApproveCapabilities: string[];
+	/**
+	 * The agents pointed at a project's AI gateway, by the user's choice: which project and model.
+	 * Absent ⇒ the agent uses its own account, as it comes. Nothing here is a credential.
+	 */
+	aiRoutes: Partial<Record<AgentKind, ProjectAiSelection>>;
 }
 
 export interface AgentPreference {

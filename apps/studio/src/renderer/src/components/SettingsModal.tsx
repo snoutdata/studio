@@ -36,6 +36,11 @@ import type { ProEnginePage } from '../proSeam';
 import { useSecretsWeak } from '../secretsPlace';
 import { formatLocale, LOCALES, rich, useI18n, useT, type LanguagePreference, type Translate } from '../i18n';
 import { translate } from '../../../shared/i18n/core';
+import { lazyView } from '../lazyView';
+
+// Both fetched the first time their page opens.
+const MoveKeysPanel = lazyView(() => import('./MoveKeysPanel').then((mod) => ({ default: mod.MoveKeysPanel })));
+const AgentAiRouteSettings = lazyView(() => import('./AgentAiRouteSettings').then((mod) => ({ default: mod.AgentAiRouteSettings })));
 
 export type SettingsTab = 'account' | 'appearance' | 'editor' | 'ai' | 'datagen' | 'extractmodel' | 'audit' | 'agent' | 'knowledge' | 'snoutbot' | 'connections' | 'cloud' | 'network' | 'privacy' | 'shortcuts' | 'reset';
 
@@ -1112,6 +1117,14 @@ function AiSection({ onAiSaved, byokAllowed }: { onAiSaved?: () => void; byokAll
 						{provider === 'positron-cloud' && cloudFields('positron-cloud', gatewayModel, setGatewayModel)}
 						{byokAllowed && BYOK_IDS.includes(provider as ByokProviderId) && byokFields(provider as ByokProviderId)}
 					</fieldset>
+					{byokAllowed && <MoveKeysPanel onMoved={() => {
+						void window.sqlApi.aiSettings().then((s) => {
+							setLoaded(s);
+							setProvider(s.provider);
+						});
+						void loadStatuses();
+						onAiSaved?.();
+					}} />}
 					{/* Discovery for Free users: BYOK exists but is a paid feature; show it disabled. */}
 					{!byokAllowed && (
 						<fieldset className="byok-plan-hint" disabled>
@@ -1807,6 +1820,8 @@ function AgentAccessSection({ reveal }: { reveal?: { label: string; labelKey?: s
 							<Icon name="search" /> {probing ? t('settingsAgent.looking') : t('settingsAgent.lookAgain')}
 						</button>
 					</fieldset>
+
+					<AgentAiRouteSettings agents={agents} />
 
 					<fieldset>
 						<legend>{t('settingsAgent.insideLegend')}</legend>

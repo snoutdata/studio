@@ -6,7 +6,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { DEFAULT_AI_SETTINGS, type AiModelInfo } from './ai';
-import { billedBy, chatSelection, groupPickerModels, modelKey, normalizeProjectSelection, parseModelKey, projectModelInfos, projectRefusal, projectRelayBase, resolveStoredProvider, type ProjectAiSource } from './aiSources';
+import { billedBy, chatSelection, groupPickerModels, localAiRef, localIdOfAiRef, modelKey, normalizeProjectSelection, parseModelKey, projectModelInfos, projectRefusal, projectRelayBase, resolveStoredProvider, targetOfAiRef, type ProjectAiSource } from './aiSources';
 
 const SOURCES: ProjectAiSource[] = [
 	{ ref: 'x8catwwkz44dn', name: 'Shop', state: 'running', models: [{ id: 'gpt-6-astra', owned_by: 'openai', vendor: 'OpenAI' }, { id: 'claude-x', owned_by: 'anthropic' }] },
@@ -85,4 +85,18 @@ test('the relay base and its refusals', () => {
 	assert.match(projectRefusal('OpenAI 403: {"error":{"message":"no"}}', 'Shop') ?? '', /may not use the AI of Shop/);
 	assert.equal(projectRefusal('OpenAI 429: {"error":{"message":"budget spent","code":"budget_exceeded"}}', 'Shop'), "Shop's AI gateway refused the request: budget spent");
 	assert.equal(projectRefusal('fetch failed', 'Shop'), null);
+});
+
+test('a Local project\'s ref stays one picker value and names the Local project', () => {
+	const ref = localAiRef('6f1c-22');
+	assert.equal(localIdOfAiRef(ref), '6f1c-22');
+	assert.equal(localIdOfAiRef('abcdefghijklm'), null);
+	assert.deepEqual(targetOfAiRef(ref), { kind: 'local', id: '6f1c-22' });
+	assert.deepEqual(targetOfAiRef('abcdefghijklm'), { kind: 'cloud', ref: 'abcdefghijklm' });
+	assert.deepEqual(parseModelKey(modelKey({ provider: 'snout-project', model: 'qwen:7b', projectRef: ref })), { provider: 'snout-project', model: 'qwen:7b', projectRef: ref });
+});
+
+test('a Local project\'s refused key is not called a sign-in', () => {
+	assert.match(projectRefusal('OpenAI 401: {}', 'Here') ?? '', /sign-in/);
+	assert.doesNotMatch(projectRefusal('OpenAI 401: {}', 'Here', true) ?? '', /sign-in/);
 });

@@ -5,10 +5,11 @@
 
 import type { ProjectAiSource } from '../shared/aiSources';
 
-// The SnoutData Cloud projects whose own AI gateway the signed-in user may use, from the control
-// plane's `cloud-project-ai` relay (`{action: "ai-sources"}`). Read lazily, when the model picker
-// opens, never on the boot path, and cached for a minute like the model catalog. A failure is an
-// empty list: a project's models are an addition to the picker, never a reason it fails.
+// The SnoutData projects whose own AI gateway the signed-in user may use: the Cloud ones from the
+// control plane's `cloud-project-ai` relay (`{action: "ai-sources"}`), the Local ones asked on this
+// machine. Read lazily, when the model picker opens, never on the boot path, and cached for a minute
+// like the model catalog. A failure is an empty list: a project's models are an addition to the
+// picker, never a reason it fails.
 
 const CACHE_TTL_MS = 60_000;
 
@@ -38,8 +39,9 @@ export interface ProjectAiSources {
 	clear(): void;
 }
 
-/** `fetchSources` asks the relay; `now` is a seam for the test. Concurrent asks share one call. */
-export function createProjectAiSources(fetchSources: () => Promise<unknown>, now: () => number = Date.now): ProjectAiSources {
+/** `fetchSources` asks the relay, `fetchLocal` the Local projects (each answers for itself and it
+ *  never throws); `now` is a seam for the test. Concurrent asks share one call. */
+export function createProjectAiSources(fetchSources: () => Promise<unknown>, now: () => number = Date.now, fetchLocal: () => Promise<ProjectAiSource[]> = async () => []): ProjectAiSources {
 	let cache: { at: number; sources: ProjectAiSource[] } | null = null;
 	let inFlight: Promise<ProjectAiSource[]> | null = null;
 	let generation = 0;
@@ -55,12 +57,14 @@ export function createProjectAiSources(fetchSources: () => Promise<unknown>, now
 			inFlight = (async () => {
 				let sources: ProjectAiSource[] = [];
 				let ok = false;
+				const local = parseAiSources({ projects: await fetchLocal().catch(() => []) });
 				try {
 					sources = parseAiSources(await fetchSources());
 					ok = true;
 				} catch {
-					// Offline, signed out or the relay refused: no project models this time.
+					// Offline, signed out or the relay refused: no Cloud project models this time.
 				}
+				sources = [...sources, ...local];
 				// A failure is not cached, so the next open asks again; a clear() while asking wins.
 				if (ok && asked === generation) {
 					cache = { at: now(), sources };

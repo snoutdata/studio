@@ -141,5 +141,7 @@
 	"swapFailed": "La base de données restaurée n'a pas pu être mise en place : {detail}",
 	"putBackCron": "Restauré à {name}, mais ses tâches Cron n'ont pas pu être restaurées : {detail}",
 	"sayStartAgain": "Redémarrage des services",
-	"restoredNotUp": "Restauré, mais la stack n'a pas redémarré : {detail}"
+	"restoredNotUp": "Restauré, mais la stack n'a pas redémarré : {detail}",
+	"aiOn": "Passerelle IA activée.",
+	"aiOff": "Passerelle IA désactivée. Ses modèles, clés et budgets sont conservés."
 }

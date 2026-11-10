@@ -66,7 +66,7 @@ export function parseOpenProjectCommand(id: string): { target: ProjectTarget; na
  */
 export type ProjectSection =
 	| 'overview' | 'database' | 'extensions' | 'cron' | 'timeSeries' | 'shards'
-	| 'auth' | 'storage' | 'dataApi' | 'functions' | 'containers' | 'realtime' | 'push'
+	| 'auth' | 'storage' | 'dataApi' | 'functions' | 'containers' | 'realtime' | 'push' | 'ai'
 	| 'logs' | 'domains' | 'settings';
 
 /** Inside Postgres; separate servers beside it, each with its own switch; the project as a whole. */
@@ -96,6 +96,7 @@ export const PROJECT_SECTIONS: ReadonlyArray<{
 	{ id: 'containers', get label() { return t('engineShared.project.containers'); }, icon: 'package', group: 'services' },
 	{ id: 'realtime', get label() { return t('engineShared.project.realtime'); }, icon: 'pulse', group: 'services' },
 	{ id: 'push', get label() { return t('engineShared.project.push'); }, icon: 'bell', group: 'services' },
+	{ id: 'ai', get label() { return t('engineShared.project.ai'); }, icon: 'sparkle', group: 'services' },
 	{ id: 'logs', get label() { return t('engineShared.project.logs'); }, icon: 'history', group: 'manage' },
 	{ id: 'domains', get label() { return t('engineShared.project.domains'); }, icon: 'globe', group: 'manage' },
 	{ id: 'settings', get label() { return t('engineShared.project.settings'); }, icon: 'settings-gear', group: 'manage' },
@@ -139,6 +140,17 @@ export interface ProjectApiResponse {
 	body: unknown;
 	/** The service's own sentence when it refused. */
 	error?: string;
+	/** The AI gateway's error code, when it gave one. */
+	code?: string;
+}
+
+/** A project's AI gateway, as its section's switch shows it. */
+export interface ProjectAiState {
+	/** False for a Local project whose stack has no gateway. */
+	offered: boolean;
+	enabled: boolean;
+	/** Where a program calls it. */
+	endpoint: string;
 }
 
 export interface ProjectActionOutcome {

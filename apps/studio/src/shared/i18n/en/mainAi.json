@@ -17,5 +17,6 @@
 	"aiNoPipeline": "The AI translation did not contain a valid aggregation pipeline (an array of stages). Author a native aggregation pipeline instead.",
 	"signInPeriod": "Sign in to use the assistant.",
 	"rulesOnly": "This repository is reviewed by the rules alone. No model is called.",
-	"noByok": "No bring-your-own-key provider is set up. Add a key under Settings → AI."
+	"noByok": "No bring-your-own-key provider is set up. Add a key under Settings → AI.",
+	"noLocalProject": "That Local project is not available here. Pick another model."
 }

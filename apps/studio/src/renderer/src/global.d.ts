@@ -11,7 +11,7 @@ import type { CloudAccountForm, CloudAccountView, CloudContainerList, CloudTestR
 import type { ConnectionFormValues, ConnectionsState, DiscoveryOptions, DiscoveryProgress, ImportItemRef, ImportScanResult, ImportSourceId, TunnelProfileFormValues, TunnelProfilesState } from '../../shared/forms';
 import type { CloudActionOutcome, CloudCreateForm, CloudCreateOutcome, CloudProjectOp, CloudProjectOps, CloudProjectOutcome, CloudProjectsView } from '../../shared/cloudProjects';
 import type { CloudContainers, ContainerBuildForm, ContainerBuildProgress } from '../../shared/cloudContainers';
-import type { ProjectActionOutcome, ProjectApiRequest, ProjectApiResponse, ProjectSqlResult, ProjectTarget } from '../../shared/projects';
+import type { ProjectActionOutcome, ProjectAiState, ProjectApiRequest, ProjectApiResponse, ProjectSqlResult, ProjectTarget } from '../../shared/projects';
 import type { LocalActionOutcome, LocalActivity, LocalConnectionFacts, LocalCopyTarget, LocalExport, LocalFunctionRow, LocalInstallOutcome, LocalMailKind, LocalMailTemplate, LocalProgress, LocalProjectsView, LocalRequirements, LocalSettings, LocalSettingsChange, LocalSetupForm } from '../../shared/localStack';
 import type { AiApprovalRequest, AiAuditEntry, AiAuditKind, AiBudgetStatus, AiChatResult, AiCompletionOutcomeParams, AiCompletionParams, AiCompletionResult, AiEditParams, AiEditResult, AiModelInfo, AiProviderId, AiProviderStatus, AiSettings, AiSettingsFormValues, AiToolEvent, AmbientContext, ByokProviderId, ChatMessage, ExtractDocumentResult, LibyChatRequest } from '../../shared/ai';
 import type { AiCapabilityRequest, CapabilityResult, CapabilitySpec } from '../../shared/capabilities';
@@ -29,6 +29,9 @@ import type { DbeaverScriptScan, WorkspaceFile, WorkspaceSearchHit } from '../..
 import type { UpdateStatus } from '../../shared/update';
 import type { CliSignInAnswer, CliSignInRequest, McpLogEntry, McpStatus } from '../../shared/mcp';
 import type { ReviewAppCheck, ReviewForge, ReviewForgeAuth, ReviewMethod, ReviewPollResult, ReviewRepoList, ReviewRun, ReviewStarted, ReviewStatus, ReviewTokenCheck } from '../../shared/review';
+import type { MoveKeyPreview, MoveKeysResult, MoveKeysTarget } from '../../shared/moveKeys';
+import type { PsycheMethod } from '../../shared/psycheAdmin';
+import type { ProjectAiSelection } from '../../shared/ai';
 import type { AgentActionRequest, AgentApproval, AgentConsoleAttach, AgentConsoleChunk, AgentConsoleConfig, AgentConsoleExit, AgentConsoleSize, AgentConsoleStatus, AgentImagePaste, AgentKind } from '../../shared/agentConsole';
 import type { ProxyFormValues, ProxyStatus, ProxyTestResult } from '../../shared/proxy';
 import type { ResolvedKeybinding } from '../../shared/keybindings';
@@ -90,6 +93,9 @@ export interface SqlApi {
 	project: {
 		sql(target: ProjectTarget, sql: string): Promise<ProjectSqlResult>;
 		api(target: ProjectTarget, request: ProjectApiRequest): Promise<ProjectApiResponse>;
+		ai(target: ProjectTarget, method: PsycheMethod, path: string, body?: unknown): Promise<ProjectApiResponse>;
+		aiState(target: ProjectTarget): Promise<ProjectAiState>;
+		setAi(target: ProjectTarget, on: boolean): Promise<ProjectActionOutcome>;
 		upload(target: ProjectTarget, bucket: string, prefix: string, upsert: boolean): Promise<ProjectActionOutcome | null>;
 		uploadDropped(target: ProjectTarget, bucket: string, prefix: string, upsert: boolean, files: File[]): Promise<ProjectActionOutcome | null>;
 		download(target: ProjectTarget, bucket: string, path: string): Promise<ProjectActionOutcome | null>;
@@ -311,6 +317,9 @@ export interface SqlApi {
 	aiProviderStatus(): Promise<AiProviderStatus[]>;
 	/** Chat models of the SnoutData Cloud projects whose AI this user may use (cached a minute). */
 	aiProjectModels(force?: boolean): Promise<AiModelInfo[]>;
+	aiMovePreview(): Promise<MoveKeyPreview[]>;
+	aiMoveTargets(): Promise<MoveKeysTarget[]>;
+	aiMoveKeys(ref: string, name: string): Promise<MoveKeysResult>;
 	aiBudgetStatus(): Promise<AiBudgetStatus | null>;
 	aiCreditsEnabled(): Promise<boolean>;
 	aiSetCreditsEnabled(enabled: boolean): Promise<void>;
@@ -428,6 +437,7 @@ export interface SqlApi {
 		pasteImage(kind: AgentKind): Promise<AgentImagePaste>;
 		resize(kind: AgentKind, size: AgentConsoleSize): void;
 		config(): Promise<AgentConsoleConfig>;
+		setAiRoute(kind: AgentKind, route: ProjectAiSelection | null): Promise<AgentConsoleConfig>;
 		openConfigFolder(kind: AgentKind): Promise<boolean>;
 		setAllowMutating(allowed: boolean): Promise<AgentConsoleConfig>;
 		/** The house-rules switch (our tools only, DB clients denied, results drawn in the app).

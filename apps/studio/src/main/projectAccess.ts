@@ -7,7 +7,8 @@ import { t } from '../shared/i18n/core';
 import { readFileSync, writeFileSync } from 'node:fs';
 import { basename, extname } from 'node:path';
 
-import { projectKey, type ProjectActionOutcome, type ProjectApiRequest, type ProjectApiResponse, type ProjectSqlResult, type ProjectTarget } from '../shared/projects';
+import { projectKey, type ProjectActionOutcome, type ProjectAiState, type ProjectApiRequest, type ProjectApiResponse, type ProjectSqlResult, type ProjectTarget } from '../shared/projects';
+import { isPsycheMethod, psycheAdminPathAllowed, type PsycheMethod } from '../shared/psycheAdmin';
 import { CloudRequestError, detailFrom, type CloudApi } from './cloudApi';
 import { apiErrorMessage, apiPathAllowed } from './localStack/plan';
 import { CLOUD_VOCABULARY, DB_LAYOUT_SQL, keyHeader, platformSql, wirePath, type Vocabulary } from '../shared/ownLayout';
@@ -194,6 +195,70 @@ export class ProjectAccess {
 		const res = await this.send(target, request.method, request.path, json ? JSON.stringify(request.body) : undefined, json ? { 'Content-Type': 'application/json' } : {});
 		const body = parse(res.text) ?? (res.text || null);
 		return res.ok ? { ok: true, status: res.status, body } : { ok: false, status: res.status, body, error: apiErrorMessage(body, res.text, res.status) };
+	}
+
+	/**
+	 * One call to the project's AI gateway's admin API (`/ai/v1/<path>`): through the control plane
+	 * for a Cloud project, which decides who may, and straight to the local stack with its server
+	 * key for a Local one.
+	 */
+	async psyche(target: ProjectTarget, method: PsycheMethod, path: string, body?: unknown): Promise<ProjectApiResponse> {
+		if (!isPsycheMethod(method) || !psycheAdminPathAllowed(path)) {
+			return { ok: false, status: 0, body: null, error: t('mainProjects.noCall', { path: String(path) }) };
+		}
+		if (target.kind === 'cloud') {
+			try {
+				const answer = await this.deps.cloud.request<unknown>('cloud-project-ai', { ref: target.ref, admin: { method, path, ...(body === undefined ? {} : { body }) } });
+				return { ok: true, status: 200, body: answer };
+			} catch (err) {
+				return { ok: false, status: err instanceof CloudRequestError ? err.status : 0, body: null, error: detailFrom(err), code: err instanceof CloudRequestError ? err.code : undefined };
+			}
+		}
+		let local: LocalTarget;
+		try {
+			local = this.deps.local(target.id);
+		} catch (err) {
+			return { ok: false, status: 0, body: null, error: detailFrom(err) };
+		}
+		const base = `http://127.0.0.1:${local.apiPort}`;
+		let res: Response;
+		try {
+			res = await this.deps.fetch(`${base}/ai/v1/${path}`, {
+				method,
+				headers: {
+					[keyHeader(local.vocabulary)]: local.serverKey,
+					Authorization: `Bearer ${local.serverKey}`,
+					...(body === undefined ? {} : { 'Content-Type': 'application/json' }),
+				},
+				body: body === undefined ? undefined : JSON.stringify(body),
+				signal: AbortSignal.timeout(60000),
+			});
+		} catch (err) {
+			return { ok: false, status: 0, body: null, error: t('mainProjects.gatewaySilent', { where: t('mainProjects.gatewayLocal', { base }), error: err instanceof Error ? err.message : String(err) }) };
+		}
+		const text = await res.text();
+		const parsed = parse(text);
+		if (res.ok) {
+			return { ok: true, status: res.status, body: parsed };
+		}
+		const code = (parsed as { error?: { code?: unknown } } | null)?.error?.code;
+		return { ok: false, status: res.status, body: parsed, error: apiErrorMessage(parsed, text, res.status), code: typeof code === 'string' ? code : undefined };
+	}
+
+	/** A Cloud project's gateway: its switch and its address. A Local one is `LocalStackService.ai`. */
+	async cloudAiState(ref: string): Promise<ProjectAiState> {
+		const answer = await this.deps.cloud.request<{ ai?: { enabled?: boolean; endpoint?: string } }>('cloud-project-ai', { ref });
+		return { offered: true, enabled: answer.ai?.enabled === true, endpoint: answer.ai?.endpoint ?? `${cloudApiBase(ref)}/ai/v1` };
+	}
+
+	/** Switch a Cloud project's gateway. Switching it on restarts the database once. */
+	async setCloudAi(ref: string, enable: boolean): Promise<ProjectActionOutcome> {
+		try {
+			await this.deps.cloud.request<unknown>('cloud-project-ai', { ref, enable });
+			return { ok: true, message: enable ? t('mainProjects.aiOn') : t('mainProjects.aiOff') };
+		} catch (err) {
+			return { ok: false, message: detailFrom(err) };
+		}
 	}
 
 	/** Files from this computer into a space, each under `prefix`. An existing name is refused unless `upsert`. */

@@ -91,5 +91,22 @@
 	"completionModel": "Modelo de completado",
 	"completionHelp": "El completado usa su propio modelo dedicado (separado de la lista de chat). Necesita velocidad y fill-in-the-middle de SQL, no inteligencia bruta, así que aquí un modelo pequeño de código FIM supera a uno grande de chat.",
 	"completionOff": "Desactivado. El editor mantiene el completado de esquema local y determinista ({shortcut}). Actívalo para añadir texto fantasma generado por un modelo.",
-	"test": "Probar"
+	"test": "Probar",
+	"moveKeys": {
+		"legend": "Mover mis claves a un proyecto",
+		"intro": "Envía estas claves, una sola vez, a la pasarela de IA de un proyecto y cambia {assistant} a los modelos de ese proyecto.",
+		"keyLine": "{provider}: {models}",
+		"noTargets": "Ahora mismo no responde ninguna pasarela de IA de proyecto. Activa la IA en un proyecto y vuelve aquí.",
+		"project": "Proyecto",
+		"localProject": "{name} (en este equipo)",
+		"cloudProject": "{name} (en la nube)",
+		"whereCloud": "Tus claves estarán entonces en {project}: en la nube, en nuestros servidores, dentro del pod de tu proyecto.",
+		"whereLocal": "Tus claves estarán entonces en {project}: en esta máquina, en la base de datos del proyecto.",
+		"copyStays": "Studio conserva su propia copia, así que aún puedes usar tus claves directamente desde aquí.",
+		"moved": "{provider}: {models} añadidos al proyecto.",
+		"nothing": "Esos modelos ya están en este proyecto, así que no se envió nada.",
+		"switched": "{assistant} usa ahora {model} de este proyecto.",
+		"moving": "Moviendo…",
+		"move": "Mover mis claves"
+	}
 }

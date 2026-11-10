@@ -3,6 +3,7 @@
  *  Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import type { AgentAiLaunch } from '../shared/agentAiRoute';
 import { t } from '../shared/i18n/core';
 import { execFile } from 'node:child_process';
 import { existsSync } from 'node:fs';
@@ -135,6 +136,9 @@ export const MCP_ENV_TOKEN = 'SNOUTDATA_MCP_TOKEN';
 export interface ConsoleEnvOptions {
 	platform: NodeJS.Platform;
 	mcp: { url: string; token: string } | null;
+	/** A project's AI gateway, when the user pointed this agent at one: the relay's address and its
+	 *  local token (shared/agentAiRoute.ts), never a project's key. */
+	ai?: Record<string, string>;
 }
 
 /**
@@ -157,6 +161,7 @@ export function consoleEnvironment(parent: NodeJS.ProcessEnv, options: ConsoleEn
 		env[MCP_ENV_URL] = options.mcp.url;
 		env[MCP_ENV_TOKEN] = options.mcp.token;
 	}
+	Object.assign(env, options.ai);
 	return env;
 }
 
@@ -321,6 +326,8 @@ export interface AgentConsoleDeps {
 	mcp(): { url: string; token: string } | null;
 	/** Per-kind launch arguments beyond the descriptor's (the handoff flags). */
 	extraArgs?(kind: AgentKind, descriptor: AgentDescriptor): string[];
+	/** Where this agent's model calls go, when the user pointed it at a project. Absent or null ⇒ its own account. */
+	aiLaunch?(kind: AgentKind): Promise<AgentAiLaunch | null>;
 	/** Overridable for tests. */
 	pty?: PtyFactory;
 	env?: NodeJS.ProcessEnv;
@@ -559,7 +566,8 @@ export class AgentConsole {
 		if (!install.installed || !install.path) {
 			return this.status(kind);
 		}
-		const args = [...descriptor.launchArgs, ...(this.deps.extraArgs?.(kind, descriptor) ?? [])];
+		const ai = (await this.deps.aiLaunch?.(kind)) ?? null;
+		const args = [...descriptor.launchArgs, ...(this.deps.extraArgs?.(kind, descriptor) ?? []), ...(ai?.args ?? [])];
 		const plan = planSpawn(install.path, args, this.platform, this.env.ComSpec);
 		if (!plan) {
 			return this.status(kind);
@@ -567,7 +575,7 @@ export class AgentConsole {
 		const factory = this.deps.pty ?? nodePtyFactory;
 		const pty = factory(plan, {
 			cwd: this.deps.cwd(),
-			env: consoleEnvironment(this.env, { platform: this.platform, mcp: this.deps.mcp() }),
+			env: consoleEnvironment(this.env, { platform: this.platform, mcp: this.deps.mcp(), ai: ai?.env }),
 			cols: size.cols,
 			rows: size.rows,
 		});

@@ -87,5 +87,12 @@
 	"courtesyHelp": "Désactivez ceci et la demande est refusée d'office. Bon à savoir dans tous les cas : demander est une courtoisie, pas un verrou. Tout programme exécuté sous votre compte sur cet ordinateur peut déjà lire ce que SnoutData Studio conserve ici, comme n'importe quoi d'autre vous appartenant.",
 	"anotherPort": "Autre port",
 	"moveReplace": "Passer sur ce port et remplacer le jeton",
-	"replaceToken": "Remplacer le jeton"
+	"replaceToken": "Remplacer le jeton",
+	"aiRoute": {
+		"legend": "Où vont les appels de modèles de chaque agent",
+		"hint": "Dirigez un agent vers la passerelle IA d'un projet pour budgéter et journaliser ses dépenses avec celles du projet. L'agent ne reçoit jamais la clé du projet.",
+		"ownAccount": "Son propre compte",
+		"opencodeHint": "Ajoutez ceci une fois à la configuration d'opencode. La console définit les deux variables qu'elle lit.",
+		"restart": "Redémarrer {agent}"
+	}
 }

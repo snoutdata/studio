@@ -14,10 +14,13 @@ import type { CloudAccountForm, CloudAccountView, CloudContainerList, CloudTestR
 import type { ConnectionFormValues, ConnectionsState, DiscoveryOptions, DiscoveryProgress, ImportItemRef, ImportScanResult, ImportSourceId, TunnelProfileFormValues, TunnelProfilesState } from '../shared/forms';
 import type { CloudActionOutcome, CloudCreateForm, CloudCreateOutcome, CloudProjectOp, CloudProjectOps, CloudProjectOutcome, CloudProjectsView } from '../shared/cloudProjects';
 import type { CloudContainers, ContainerBuildForm, ContainerBuildProgress } from '../shared/cloudContainers';
-import type { ProjectActionOutcome, ProjectApiRequest, ProjectApiResponse, ProjectSqlResult, ProjectTarget } from '../shared/projects';
+import type { ProjectActionOutcome, ProjectAiState, ProjectApiRequest, ProjectApiResponse, ProjectSqlResult, ProjectTarget } from '../shared/projects';
 import type { LocalActionOutcome, LocalActivity, LocalConnectionFacts, LocalCopyTarget, LocalExport, LocalFunctionRow, LocalInstallOutcome, LocalMailKind, LocalMailTemplate, LocalProgress, LocalProjectsView, LocalRequirements, LocalSettings, LocalSettingsChange, LocalSetupForm } from '../shared/localStack';
 import type { AiApprovalRequest, AiAuditEntry, AiAuditKind, AiBudgetStatus, AiChatResult, AiCompletionOutcomeParams, AiCompletionParams, AiCompletionResult, AiEditParams, AiEditResult, AiModelInfo, AiProviderId, AiProviderStatus, AiSettings, AiSettingsFormValues, AiToolEvent, AmbientContext, ByokProviderId, ChatMessage, ExtractDocumentResult, LibyChatRequest } from '../shared/ai';
 import type { AiCapabilityRequest, CapabilityResult, CapabilitySpec } from '../shared/capabilities';
+import type { MoveKeyPreview, MoveKeysResult, MoveKeysTarget } from '../shared/moveKeys';
+import type { PsycheMethod } from '../shared/psycheAdmin';
+import type { ProjectAiSelection } from '../shared/ai';
 import type { AgentActionRequest, AgentApproval, AgentConsoleAttach, AgentConsoleChunk, AgentConsoleConfig, AgentConsoleExit, AgentConsoleSize, AgentConsoleStatus, AgentImagePaste, AgentKind } from '../shared/agentConsole';
 import type { AuthProviderId, AuthState } from '../shared/auth';
 import type { QueryHistoryEntry, SavedQuery } from '../shared/queries';
@@ -126,6 +129,9 @@ const sqlApi = {
 	project: {
 		sql: (target: ProjectTarget, sql: string): Promise<ProjectSqlResult> => ipcRenderer.invoke('project:sql', target, sql),
 		api: (target: ProjectTarget, request: ProjectApiRequest): Promise<ProjectApiResponse> => ipcRenderer.invoke('project:api', target, request),
+		ai: (target: ProjectTarget, method: PsycheMethod, path: string, body?: unknown): Promise<ProjectApiResponse> => ipcRenderer.invoke('project:ai', target, method, path, body),
+		aiState: (target: ProjectTarget): Promise<ProjectAiState> => ipcRenderer.invoke('project:aiState', target),
+		setAi: (target: ProjectTarget, on: boolean): Promise<ProjectActionOutcome> => ipcRenderer.invoke('project:setAi', target, on),
 		upload: (target: ProjectTarget, bucket: string, prefix: string, upsert: boolean): Promise<ProjectActionOutcome | null> => ipcRenderer.invoke('project:upload', target, bucket, prefix, upsert),
 		/** Upload files dropped from the OS. Only their paths cross, and only real files have one. */
 		uploadDropped: (target: ProjectTarget, bucket: string, prefix: string, upsert: boolean, files: File[]): Promise<ProjectActionOutcome | null> =>
@@ -491,6 +497,9 @@ const sqlApi = {
 	aiTest: (): Promise<{ ok: boolean; message: string }> => ipcRenderer.invoke('ai:test'),
 	aiProviderStatus: (): Promise<AiProviderStatus[]> => ipcRenderer.invoke('ai:providerStatus'),
 	aiProjectModels: (force?: boolean): Promise<AiModelInfo[]> => ipcRenderer.invoke('ai:projectModels', force === true),
+	aiMovePreview: (): Promise<MoveKeyPreview[]> => ipcRenderer.invoke('ai:movePreview'),
+	aiMoveTargets: (): Promise<MoveKeysTarget[]> => ipcRenderer.invoke('ai:moveTargets'),
+	aiMoveKeys: (ref: string, name: string): Promise<MoveKeysResult> => ipcRenderer.invoke('ai:moveKeys', ref, name),
 	/** The signed-in user's live gateway plan usage (spend vs. budget); null when signed out
 	 *  or the gateway is unreachable. */
 	aiBudgetStatus: (): Promise<AiBudgetStatus | null> => ipcRenderer.invoke('ai:budgetStatus'),
@@ -724,6 +733,7 @@ const sqlApi = {
 		/** Allow (or refuse) agent capabilities that CHANGE the app. Off by default. */
 		setAllowMutating: (allowed: boolean): Promise<AgentConsoleConfig> => ipcRenderer.invoke('agentConsole:setAllowMutating', allowed),
 		setRouteDatabase: (route: boolean): Promise<AgentConsoleConfig> => ipcRenderer.invoke('agentConsole:setRouteDatabase', route),
+		setAiRoute: (kind: AgentKind, route: ProjectAiSelection | null): Promise<AgentConsoleConfig> => ipcRenderer.invoke('agentConsole:setAiRoute', kind, route),
 		/** An agent wants to take an action that CHANGES the app; the user answers. */
 		onApprovalRequest: (handler: (request: AgentActionRequest) => void): (() => void) => {
 			const listener = (_event: IpcRendererEvent, request: AgentActionRequest): void => handler(request);

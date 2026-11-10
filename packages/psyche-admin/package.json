@@ -1,0 +1,12 @@
+{
+	"name": "@snout/psyche-admin",
+	"private": true,
+	"version": "0.0.0",
+	"license": "Apache-2.0",
+	"type": "module",
+	"description": "A typed client for a Psyche's admin API, shared by the admin console, the dashboard, Studio and the CLI.",
+	"main": "src/index.ts",
+	"scripts": {
+		"test": "node --experimental-strip-types --test src/*.test.ts"
+	}
+}

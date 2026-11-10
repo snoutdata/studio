@@ -141,5 +141,7 @@
 	"swapFailed": "The restored database could not be swapped in: {detail}",
 	"putBackCron": "Put back to {name}, but its Cron jobs could not be restored: {detail}",
 	"sayStartAgain": "Starting the services again",
-	"restoredNotUp": "Restored, but the stack did not come back up: {detail}"
+	"restoredNotUp": "Restored, but the stack did not come back up: {detail}",
+	"aiOn": "AI gateway switched on.",
+	"aiOff": "AI gateway switched off. Its models, keys and budgets are kept."
 }

@@ -14,6 +14,7 @@ import {
 	apiKey, exportName, restoreScript, restoreSwapSql, isExportName, mailEnv, mailTemplateProblem, memoryMb, overrideStale, ownerPasswordSql,
 	downloadStack, STACK_COMMIT, STACK_FILES, STACK_SOURCE, stackFileProblem,
 	keyRoles, rotatedKeys, scramVerifier, secretNameProblem, secretNames, secretValueProblem, settingsProblem, withSecret,
+	aiOffered, aiOn,
 } from './plan';
 
 // Local projects: what the wizard writes into .env, what the requirements say, and what
@@ -481,3 +482,13 @@ test("auth's emails: the override hands auth the MAIL_* values, and a template m
 	assert.ok(mailTemplateProblem('two\nlines', '{{ .Token }}'));
 	assert.equal(mailTemplateProblem('Hi', '<a href="{{ .ConfirmationURL }}">x</a>'), null);
 });
+
+test('the AI gateway is offered only by a stack that has it, and its switch is the profile', () => {
+	const env = (text: string): Map<string, string> => parseEnv(text);
+	assert.equal(aiOffered('image: snout-stack:0.1.11', env('PSYCHE_DB_PASSWORD=x\n')), false);
+	assert.equal(aiOffered('image: ghcr.io/snoutdata/snout-psyche:0.1.0', env('')), false);
+	assert.equal(aiOffered('image: ghcr.io/snoutdata/snout-psyche:0.1.0', env('PSYCHE_DB_PASSWORD=x\n')), true);
+	assert.equal(aiOn(env('COMPOSE_PROFILES=objects,images,ai\n')), true);
+	assert.equal(aiOn(env('COMPOSE_PROFILES=objects,images\n')), false);
+});
+

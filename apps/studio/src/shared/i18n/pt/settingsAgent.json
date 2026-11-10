@@ -87,5 +87,12 @@
 	"courtesyHelp": "Desative isto e o pedido é recusado de vez. Vale saber de qualquer forma: perguntar é uma cortesia, não uma tranca. Qualquer programa rodando como você neste computador já pode ler o que o SnoutData Studio guarda aqui, assim como pode ler qualquer outra coisa sua.",
 	"anotherPort": "Outra porta",
 	"moveReplace": "Mudar para esta porta e substituir o token",
-	"replaceToken": "Substituir o token"
+	"replaceToken": "Substituir o token",
+	"aiRoute": {
+		"legend": "Para onde vão as chamadas de modelos de cada agente",
+		"hint": "Aponte um agente para o gateway de IA de um projeto para orçar e registrar o gasto dele junto com o do projeto. O agente nunca recebe a chave do projeto.",
+		"ownAccount": "A própria conta",
+		"opencodeHint": "Adicione isto uma vez à configuração do opencode. O console define as duas variáveis que ela lê.",
+		"restart": "Reiniciar {agent}"
+	}
 }

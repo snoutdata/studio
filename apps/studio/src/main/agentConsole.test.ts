@@ -90,6 +90,13 @@ function harness(overrides: { mcp?: { url: string; token: string } | null; env?:
 }
 
 describe('consoleEnvironment', () => {
+	test('a route to a project adds only what it was given', () => {
+		const env = consoleEnvironment({ ANTHROPIC_API_KEY: 'mine' }, { platform: 'linux', mcp: null, ai: { ANTHROPIC_BASE_URL: 'http://127.0.0.1:1/agent/claude', ANTHROPIC_AUTH_TOKEN: 'local' } });
+		assert.equal(env.ANTHROPIC_BASE_URL, 'http://127.0.0.1:1/agent/claude');
+		assert.equal(env.ANTHROPIC_AUTH_TOKEN, 'local');
+		assert.equal(env.ANTHROPIC_API_KEY, undefined);
+	});
+
 	test('passes an allow-list and drops everything secret-shaped', () => {
 		const env = consoleEnvironment(
 			{

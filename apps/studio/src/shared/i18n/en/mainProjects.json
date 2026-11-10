@@ -39,5 +39,13 @@
 	"overQuota": "over its storage quota, so it is refusing writes",
 	"pausedWakes": "paused, so the first connection wakes it and takes a few seconds",
 	"signInToImport": "Sign in to SnoutData to import your hosted databases.",
-	"noHostedCreate": "This account has no hosted databases yet. Create one from the Cloud panel."
+	"noHostedCreate": "This account has no hosted databases yet. Create one from the Cloud panel.",
+	"aiOn": "AI gateway switched on. It takes about a minute to answer.",
+	"aiOff": "AI gateway switched off. Its models, keys and budgets are kept.",
+	"agentRelayFailed": "The project's AI gateway could not be reached.",
+	"agentRelayToken": "This address only answers the agent SnoutData Studio started.",
+	"agentRelayNoCall": "This address only forwards model calls.",
+	"agentRelayNoProject": "This agent is not pointed at a project.",
+	"agentRelayTooLarge": "That request is too large.",
+	"noKeysToMove": "There are no keys with models to move."
 }

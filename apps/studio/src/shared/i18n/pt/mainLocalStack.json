@@ -141,5 +141,7 @@
 	"swapFailed": "Não foi possível trocar pelo banco de dados restaurado: {detail}",
 	"putBackCron": "Restaurado para {name}, mas os jobs do Cron não puderam ser restaurados: {detail}",
 	"sayStartAgain": "Reiniciando os serviços",
-	"restoredNotUp": "Restaurado, mas a stack não voltou: {detail}"
+	"restoredNotUp": "Restaurado, mas a stack não voltou: {detail}",
+	"aiOn": "Gateway de IA ativado.",
+	"aiOff": "Gateway de IA desativado. Seus modelos, chaves e orçamentos são mantidos."
 }

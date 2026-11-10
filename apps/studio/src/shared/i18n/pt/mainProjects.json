@@ -39,5 +39,13 @@
 	"overQuota": "acima da cota de armazenamento, então está recusando gravações",
 	"pausedWakes": "pausado, então a primeira conexão o desperta e leva alguns segundos",
 	"signInToImport": "Entre no SnoutData para importar seus bancos de dados hospedados.",
-	"noHostedCreate": "Esta conta ainda não tem bancos de dados hospedados. Crie um no painel Cloud."
+	"noHostedCreate": "Esta conta ainda não tem bancos de dados hospedados. Crie um no painel Cloud.",
+	"aiOn": "Gateway de IA ativado. Ele leva cerca de um minuto para responder.",
+	"aiOff": "Gateway de IA desativado. Seus modelos, chaves e orçamentos são mantidos.",
+	"agentRelayFailed": "Não foi possível acessar o gateway de IA do projeto.",
+	"agentRelayToken": "Este endereço só responde ao agente iniciado pelo SnoutData Studio.",
+	"agentRelayNoCall": "Este endereço só encaminha chamadas de modelos.",
+	"agentRelayNoProject": "Este agente não está apontado para um projeto.",
+	"agentRelayTooLarge": "Essa solicitação é grande demais.",
+	"noKeysToMove": "Não há chaves com modelos para mover."
 }

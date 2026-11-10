@@ -25,7 +25,8 @@
 		"gatewayForbidden": "You may not use the AI of {project}. Pick another model, or ask the project's owner for access.",
 		"gatewaySignIn": "SnoutData Cloud did not accept your sign-in for {project}. Sign in again, then try once more.",
 		"gatewayRefused": "{project}'s AI gateway refused the request: {detail}",
-		"gatewayRefusedStatus": "{project}'s AI gateway refused the request: status {status}"
+		"gatewayRefusedStatus": "{project}'s AI gateway refused the request: status {status}",
+		"gatewayKeyLocal": "{project}'s AI gateway did not accept this project's server key. Check that the project is running and try again."
 	},
 	"cell": {
 		"items": {
@@ -170,7 +171,8 @@
 		"push": "Push",
 		"logs": "Logs",
 		"domains": "Domains",
-		"settings": "Settings"
+		"settings": "Settings",
+		"ai": "AI"
 	},
 	"projectGroup": {
 		"database": "Database",

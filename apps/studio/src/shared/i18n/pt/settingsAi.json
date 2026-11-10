@@ -91,5 +91,22 @@
 	"completionModel": "Modelo de autocompletar",
 	"completionHelp": "O autocompletar usa um modelo próprio e dedicado (separado da lista de chat). Ele precisa de velocidade e fill-in-the-middle de SQL, não de inteligência bruta, então aqui um modelo pequeno de código FIM ganha de um modelo grande de chat.",
 	"completionOff": "Desativado. O editor continua com o autocompletar de schema local e determinístico ({shortcut}). Ative para adicionar texto fantasma gerado por um modelo.",
-	"test": "Testar"
+	"test": "Testar",
+	"moveKeys": {
+		"legend": "Mover minhas chaves para um projeto",
+		"intro": "Envia estas chaves, uma única vez, ao gateway de IA de um projeto e muda {assistant} para os modelos desse projeto.",
+		"keyLine": "{provider}: {models}",
+		"noTargets": "Nenhum gateway de IA de projeto está respondendo agora. Ative a IA em um projeto e volte aqui.",
+		"project": "Projeto",
+		"localProject": "{name} (neste computador)",
+		"cloudProject": "{name} (na nuvem)",
+		"whereCloud": "Suas chaves ficarão então em {project}: na nuvem, em nossos servidores, dentro do pod do seu projeto.",
+		"whereLocal": "Suas chaves ficarão então em {project}: nesta máquina, no banco de dados do projeto.",
+		"copyStays": "O Studio mantém sua própria cópia, então você ainda pode usar suas chaves diretamente daqui.",
+		"moved": "{provider}: {models} adicionados ao projeto.",
+		"nothing": "Esses modelos já estão neste projeto, então nada foi enviado.",
+		"switched": "{assistant} agora usa {model} deste projeto.",
+		"moving": "Movendo…",
+		"move": "Mover minhas chaves"
+	}
 }

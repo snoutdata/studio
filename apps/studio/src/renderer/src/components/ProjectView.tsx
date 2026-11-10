@@ -54,6 +54,8 @@ type Row = { kind: 'local'; row: LocalProjectRow } | { kind: 'cloud'; row: Cloud
 const ShardsSection = lazyView(() => import('./ShardsSection').then((m) => ({ default: m.ShardsSection })));
 // Snout Containers: its own chunk too, fetched the first time the section is opened.
 const ContainersSection = lazyView(() => import('./ContainersSection').then((m) => ({ default: m.ContainersSection })));
+// The AI gateway's screens: their own chunk too.
+const ProjectAiSection = lazyView(() => import('./ProjectAiSection').then((m) => ({ default: m.ProjectAiSection })));
 
 /** Sections that read the database or the gateway, so they wait until the project can answer. */
 const NEEDS_RUNNING: ReadonlySet<ProjectSection> = new Set(['extensions', 'cron', 'timeSeries', 'realtime']);
@@ -244,6 +246,8 @@ function Section(props: SectionProps): JSX.Element | null {
 			return <RealtimeSection project={project} />;
 		case 'push':
 			return local ? <LocalPush /> : <CloudService projectRef={cloud!.ref} service="push" />;
+		case 'ai':
+			return whenRunning(<ProjectAiSection target={project.target} />);
 		case 'logs':
 			return local
 				? <LocalLogs row={local} />

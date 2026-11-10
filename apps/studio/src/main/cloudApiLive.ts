@@ -51,12 +51,18 @@ async function invoke<T>(name: string, body: Record<string, unknown> = {}, metho
 		// part and the STATUS is what says whether we were refused or something broke.
 		const context = (error as { context?: Response }).context;
 		const status = context?.status ?? 0;
-		const detail = context
-			? await context.clone().json().then((body) => (body as { error?: string })?.error).catch(() => undefined)
+		// A function's refusal is `{error: "..."}`; a project's AI gateway relayed is `{error: {message, code}}`.
+		const said = context
+			? await context.clone().json().then((body) => (body as { error?: string | { message?: string; code?: string } })?.error).catch(() => undefined)
 			: undefined;
-		throw new CloudRequestError(detail ?? detailFrom(error), status);
+		const detail = typeof said === 'string' ? said : said?.message;
+		throw new CloudRequestError(detail ?? detailFrom(error), status, typeof said === 'object' ? said?.code : undefined);
 	}
 	const payload = data as (T & { error?: string }) | null;
+	// A relayed admin call may answer nothing at all (a delete's 204).
+	if (!payload && name === 'cloud-project-ai') {
+		return null as T;
+	}
 	if (!payload || payload.error) {
 		throw new Error(payload?.error ?? t('mainErrors.cloudNothing'));
 	}
@@ -85,9 +91,13 @@ function e2eCloudApi(base: string): CloudApi {
 			headers: { 'Content-Type': 'application/json' },
 			body: JSON.stringify(body),
 		});
-		const payload = (await response.json()) as T & { error?: string };
+		if (response.status === 204) {
+			return null as T;
+		}
+		const payload = (await response.json()) as T & { error?: string | { message?: string; code?: string } };
 		if (!response.ok || payload.error) {
-			throw new CloudRequestError(payload.error ?? `${path} failed (${response.status})`, response.status);
+			const said = payload.error;
+			throw new CloudRequestError((typeof said === 'string' ? said : said?.message) ?? `${path} failed (${response.status})`, response.status, typeof said === 'object' ? said?.code : undefined);
 		}
 		return payload;
 	}

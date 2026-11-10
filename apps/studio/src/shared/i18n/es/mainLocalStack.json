@@ -141,5 +141,7 @@
 	"swapFailed": "No se pudo sustituir por la base de datos restaurada: {detail}",
 	"putBackCron": "Restaurado a {name}, pero no se pudieron restaurar sus trabajos de Cron: {detail}",
 	"sayStartAgain": "Reiniciando los servicios",
-	"restoredNotUp": "Restaurado, pero la stack no volvió a levantarse: {detail}"
+	"restoredNotUp": "Restaurado, pero la stack no volvió a levantarse: {detail}",
+	"aiOn": "Pasarela de IA activada.",
+	"aiOff": "Pasarela de IA desactivada. Se conservan sus modelos, claves y presupuestos."
 }

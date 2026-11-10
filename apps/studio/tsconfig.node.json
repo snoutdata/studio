@@ -10,8 +10,10 @@
 		"esModuleInterop": true,
 		"skipLibCheck": true,
 		"noEmit": true,
+		"allowImportingTsExtensions": true,
 		"paths": {
 			"@snout/review-core": ["../../packages/review-core/dist/index.d.ts"],
+			"@snout/psyche-admin": ["../../packages/psyche-admin/src/index.ts"],
 			"@snout/move": ["../../packages/move/dist/index.d.ts"],
 			"@snout/liby/name": ["../../packages/liby-stub/studio/name.ts"],
 			"@snout/studio-pro/main": ["../../packages/studio-pro-stub/main.ts"],
@@ -21,6 +23,8 @@
 		}
 	},
 	"include": [
+		"../../packages/psyche-admin/src/index.ts",
+		"../../packages/psyche-admin/src/guides.ts",
 		"scripts/**/*.ts",
 		"src/main/**/*.ts",
 		"src/preload/**/*.ts",

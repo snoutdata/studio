@@ -25,7 +25,8 @@
 		"gatewayForbidden": "No puedes usar la IA de {project}. Elige otro modelo o pide acceso al propietario del proyecto.",
 		"gatewaySignIn": "SnoutData Cloud no aceptó tu inicio de sesión en {project}. Vuelve a iniciar sesión e inténtalo de nuevo.",
 		"gatewayRefused": "La puerta de enlace de IA de {project} rechazó la solicitud: {detail}",
-		"gatewayRefusedStatus": "La puerta de enlace de IA de {project} rechazó la solicitud: estado {status}"
+		"gatewayRefusedStatus": "La puerta de enlace de IA de {project} rechazó la solicitud: estado {status}",
+		"gatewayKeyLocal": "La pasarela de IA de {project} no aceptó la clave de servidor de este proyecto. Comprueba que el proyecto esté en marcha e inténtalo de nuevo."
 	},
 	"cell": {
 		"items": {
@@ -170,7 +171,8 @@
 		"push": "Push",
 		"logs": "Logs",
 		"domains": "Dominios",
-		"settings": "Configuración"
+		"settings": "Configuración",
+		"ai": "IA"
 	},
 	"projectGroup": {
 		"database": "Base de datos",

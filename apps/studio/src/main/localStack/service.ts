@@ -20,6 +20,7 @@ import type {
 import { resolveOnPath } from '../agentConsole';
 import { createPrivateFile, ensurePrivateDir, PRIVATE_MODE, tightenPrivateFiles } from '../privateFile';
 import type { LocalTarget } from '../projectAccess';
+import type { ProjectAiState } from '../../shared/projects';
 import {
 	APP_OVERRIDE, DATA_API_PROFILE, OVERRIDE_MARK, dataApiOn, withProfile, publicUrlProblem, applyEnv, composeProject, dbUrl, envFor, envForSettings, evaluateRequirements, formProblem, functionTemplate,
 	composeVocabulary, envKey, isFunctionName, isRef, parseDockerPs, parseEnv, projectState, settingsFromEnv, slugify, stackImageFrom,
@@ -27,6 +28,7 @@ import {
 	MAIL_DEFAULTS, MAIL_DIR, MAIL_KINDS_ORDER, isMailKind, mailEnv, mailTemplateProblem, mailTemplateUrl, overrideStale, settingsProblem,
 	secretNameProblem, secretNames, secretValueProblem, withSecret,
 	EXPORT_DIR, RESTORE_FILE, restoreAfterSwapScript, restoreCleanupScript, restoreScript, restoreSwapSql, exportName, isExportName, ownerPasswordSql, randomSecret, rotatedKeys, scramVerifier,
+	AI_PROFILE, aiOffered, aiOn,
 } from './plan';
 
 // The running half of local projects: finds Docker, sets a
@@ -938,6 +940,38 @@ export class LocalStackService {
 			return on
 				? { ok: true, message: t('mainLocalStack.dataApiOn', { rest: prefix('data', this.vocabulary(project)), graphql: prefix('graph', this.vocabulary(project)) }) }
 				: { ok: true, message: t('mainLocalStack.dataApiOff') };
+		});
+	}
+
+	/** The project's AI gateway: whether its stack has one, its switch, and its address. */
+	ai(id: string): ProjectAiState {
+		const project = this.find(id);
+		const env = this.readEnv(project);
+		const compose = join(project.folder, 'compose.yaml');
+		return {
+			offered: existsSync(compose) && aiOffered(readFileSync(compose, 'utf8'), env),
+			enabled: aiOn(env),
+			endpoint: `http://127.0.0.1:${project.apiPort}/ai/v1`,
+		};
+	}
+
+	/** Switch the AI gateway on or off: the profile in .env, then `up` (on) or the container removed (off). */
+	setAi(id: string, on: boolean, progress: (p: LocalProgress) => void): Promise<LocalActionOutcome> {
+		return this.exclusive(id, async () => {
+			const project = this.find(id);
+			const env = this.readEnv(project);
+			const envPath = join(project.folder, '.env');
+			const profiles = withProfile(env.get('COMPOSE_PROFILES') ?? 'objects,images', AI_PROFILE, on);
+			writeFileSync(envPath, applyEnv(readFileSync(envPath, 'utf8'), { COMPOSE_PROFILES: profiles }), { mode: 0o600 });
+			const line = (l: string): void => progress({ installId: id, step: 'start', message: '', line: l });
+			const res = on
+				? await this.compose(project, ['up', '-d', '--wait', '--wait-timeout', '600'], { onLine: line, timeoutMs: 15 * 60 * 1000 })
+				: await this.compose(project, ['rm', '--stop', '--force', 'ai'], { onLine: line, timeoutMs: 5 * 60 * 1000 });
+			this.note(id, on ? "AI gateway switched on" : "AI gateway switched off", res.code === 0);
+			if (res.code !== 0) {
+				return { ok: false, message: t('mainLocalStack.switchNotApplied', { detail: tailOf(res.stderr) }) };
+			}
+			return { ok: true, message: on ? t('mainLocalStack.aiOn') : t('mainLocalStack.aiOff') };
 		});
 	}
 

@@ -21,6 +21,20 @@ function withStore(fn: (store: AgentConsoleStore, dir: string) => void): void {
 }
 
 describe('AgentConsoleStore', () => {
+	test('an agent uses its own account until pointed at a project, and a broken route is none', () => {
+		withStore((store, dir) => {
+			assert.equal(store.aiRoute('claude'), undefined);
+			store.setAiRoute('claude', { ref: 'abcdefghijklm', model: 'm', name: 'Shop' });
+			assert.deepEqual(new AgentConsoleStore(dir).aiRoute('claude'), { ref: 'abcdefghijklm', model: 'm', name: 'Shop', ownedBy: undefined, vendor: undefined });
+			store.setAiRoute('claude', undefined);
+			assert.equal(new AgentConsoleStore(dir).aiRoute('claude'), undefined);
+			writeFileSync(join(dir, 'agents.json'), JSON.stringify({ aiRoutes: { claude: { ref: 'abc' }, codex: 'nonsense' } }));
+			const reread = new AgentConsoleStore(dir);
+			assert.equal(reread.aiRoute('claude'), undefined);
+			assert.equal(reread.aiRoute('codex'), undefined);
+		});
+	});
+
 	test('defaults to Claude Code with the mutating path closed', () => {
 		withStore((store) => {
 			assert.equal(store.lastKind(), 'claude');

@@ -6,14 +6,16 @@
 // Where a chat model comes from, and how the picker groups them.
 // Three sources, each billed differently, which is the distinction the picker has to make plain:
 //   - SnoutData AI (`positron-cloud`): our gateway, the user's SnoutData balance.
-//   - A SnoutData Cloud project's own AI gateway (`snout-project` + the project's ref): the
-//     project's own provider keys, billed by that provider. Reached through the control plane's
-//     `cloud-project-ai` relay with the user's own sign-in.
+//   - A SnoutData project's own AI gateway (`snout-project` + the project's ref): the project's own
+//     provider keys, billed by that provider. A Cloud project is reached through the control plane's
+//     `cloud-project-ai` relay with the user's own sign-in, a Local one straight on this machine with
+//     its server key, which stays in main.
 //   - The user's own keys kept in Studio (BYOK, and the hidden local Ollama).
 // Pure on purpose: the renderer and main both use it, and it is unit-tested without Electron.
 
 import { BYOK_PROVIDER_DEFAULTS, isByokProvider, isReasoningModel, type AiModelInfo, type AiProviderId, type AiSettings, type ProjectAiSelection } from './ai';
 import { t } from './i18n/core';
+import type { ProjectTarget } from './projects';
 
 /** One project the relay lists (`POST cloud-project-ai {action: "ai-sources"}`). `models` is null
  *  when the project is paused or its gateway did not answer: it is shown as nothing, never woken. */
@@ -24,6 +26,25 @@ export interface ProjectAiSource {
 	/** `vendor` is the relay's display name for who bills the model ("OpenAI", "AWS Bedrock", or
 	 *  the provider's host); `owned_by` is Psyche's own field. */
 	models: { id: string; owned_by?: string; vendor?: string }[] | null;
+}
+
+const LOCAL_AI_REF = 'local-';
+
+/** A Local project's `ref` in a picker value or a selection. A Cloud ref holds no `-`, and a Local
+ *  project's id holds no `:`, so the two never collide and `modelKey` keeps its shape. */
+export function localAiRef(id: string): string {
+	return `${LOCAL_AI_REF}${id}`;
+}
+
+/** The Local project's id in a ref, or null for a Cloud project's. */
+export function localIdOfAiRef(ref: string): string | null {
+	return ref.startsWith(LOCAL_AI_REF) && ref.length > LOCAL_AI_REF.length ? ref.slice(LOCAL_AI_REF.length) : null;
+}
+
+/** The project a ref names. */
+export function targetOfAiRef(ref: string): ProjectTarget {
+	const id = localIdOfAiRef(ref);
+	return id ? { kind: 'local', id } : { kind: 'cloud', ref };
 }
 
 /** The relay's base for one project, OpenAI-compatible: `{functions}/cloud-project-ai/{ref}/v1`. */
@@ -244,7 +265,7 @@ export function groupPickerModels(models: AiModelInfo[]): PickerGroup[] {
  * whose AI was switched off, 403 a project this user may not use. Anything else is the
  * project's own gateway speaking (its budgets, its provider), named as the project's.
  */
-export function projectRefusal(message: string, projectName: string): string | null {
+export function projectRefusal(message: string, projectName: string, local = false): string | null {
 	const match = /^OpenAI (\d{3}): ([\s\S]*)$/.exec(message.trim());
 	if (!match) {
 		return null;
@@ -272,7 +293,7 @@ export function projectRefusal(message: string, projectName: string): string | n
 		return t('engineShared.ai.gatewayForbidden', { project: projectName });
 	}
 	if (status === 401) {
-		return t('engineShared.ai.gatewaySignIn', { project: projectName });
+		return local ? t('engineShared.ai.gatewayKeyLocal', { project: projectName }) : t('engineShared.ai.gatewaySignIn', { project: projectName });
 	}
 	return detail
 		? t('engineShared.ai.gatewayRefused', { project: projectName, detail })

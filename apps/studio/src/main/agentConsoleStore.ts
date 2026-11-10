@@ -8,6 +8,8 @@ import { dirname, join } from 'node:path';
 
 import { AGENT_KINDS, isAgentKind, type AgentConsoleConfig, type AgentKind, type AgentPreference } from '../shared/agentConsole';
 import { alwaysAsksByName } from '../shared/capabilities';
+import type { ProjectAiSelection } from '../shared/ai';
+import { normalizeProjectSelection } from '../shared/aiSources';
 
 // Non-secret settings for the agent console → userData/agents.json.
 // Nothing here is a credential: the MCP bearer token stays in mcp.json where it already lives, and
@@ -17,7 +19,7 @@ import { alwaysAsksByName } from '../shared/capabilities';
 // pattern).
 
 function defaults(): AgentConsoleConfig {
-	return { lastKind: 'claude', allowMutatingCapabilities: false, routeDatabaseThroughApp: true, paths: {}, agents: {}, autoApproveCapabilities: [] };
+	return { lastKind: 'claude', allowMutatingCapabilities: false, routeDatabaseThroughApp: true, paths: {}, agents: {}, autoApproveCapabilities: [], aiRoutes: {} };
 }
 
 export class AgentConsoleStore {
@@ -70,6 +72,15 @@ export class AgentConsoleStore {
 						}
 					}
 				}
+				if (raw.aiRoutes && typeof raw.aiRoutes === 'object') {
+					for (const kind of AGENT_KINDS) {
+						// Anything that does not name a project and a model leaves the agent as it comes.
+						const route = normalizeProjectSelection((raw.aiRoutes as Record<string, unknown>)[kind]);
+						if (route) {
+							config.aiRoutes[kind] = route;
+						}
+					}
+				}
 				if (raw.paths && typeof raw.paths === 'object') {
 					for (const kind of AGENT_KINDS) {
 						const value = (raw.paths as Record<string, unknown>)[kind];
@@ -95,7 +106,7 @@ export class AgentConsoleStore {
 
 	config(): AgentConsoleConfig {
 		const config = this.read();
-		return { ...config, paths: { ...config.paths }, agents: { ...config.agents }, autoApproveCapabilities: [...config.autoApproveCapabilities] };
+		return { ...config, paths: { ...config.paths }, agents: { ...config.agents }, autoApproveCapabilities: [...config.autoApproveCapabilities], aiRoutes: { ...config.aiRoutes } };
 	}
 
 	/** What the user has said about this agent (an empty object ⇒ they have not said anything). */
@@ -220,6 +231,23 @@ export class AgentConsoleStore {
 		if (config.autoApproveCapabilities.length > 0) {
 			this.write({ ...config, autoApproveCapabilities: [] });
 		}
+	}
+
+	/** The project this agent's model calls go to, or undefined for its own account. */
+	aiRoute(kind: AgentKind): ProjectAiSelection | undefined {
+		return this.read().aiRoutes[kind];
+	}
+
+	setAiRoute(kind: AgentKind, route: ProjectAiSelection | undefined): void {
+		const config = this.read();
+		const aiRoutes = { ...config.aiRoutes };
+		const checked = normalizeProjectSelection(route);
+		if (checked) {
+			aiRoutes[kind] = checked;
+		} else {
+			delete aiRoutes[kind];
+		}
+		this.write({ ...config, aiRoutes });
 	}
 
 	pinnedPath(kind: AgentKind): string | undefined {

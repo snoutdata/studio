@@ -118,7 +118,13 @@ import { readTunnels } from './tunnelStore';
 import { agentActionDetail, agentCallGate, type AgentActionDetail } from './agentActionDetail';
 import { gateMonitorCall } from './monitorAgentGate';
 import { LocalStackService } from './localStack/service';
-import { ProjectAccess } from './projectAccess';
+import { ProjectAccess, cloudApiBase } from './projectAccess';
+import { ProjectAi } from './projectAi';
+import { AgentAiRelay } from './agentAiRelay';
+import { agentAiLaunch } from '../shared/agentAiRoute';
+import { targetOfAiRef } from '../shared/aiSources';
+import type { PsycheMethod } from '../shared/psycheAdmin';
+import type { ProjectAiSelection } from '../shared/ai';
 import { ProjectCopies } from './projectCopy';
 import type { ProjectCopyRequest } from '../shared/projectCopy';
 import { isProjectTarget, openProjectCommand, projectKey, type ProjectApiRequest, type ProjectTarget } from '../shared/projects';
@@ -653,6 +659,9 @@ function agentMcpEndpoint(): { url: string; token: string } | null {
 	return { url: `http://127.0.0.1:${mcpStore.port()}/mcp`, token: mcpStore.token() };
 }
 
+/** The agents' door to a project's AI gateway; made with the project doors, started on first use. */
+let agentAiRelay: AgentAiRelay | null = null;
+
 const agentConsole = new AgentConsole({
 	// The workspace root, never userData: the agent works where the user's .sql scripts live.
 	cwd: () => workspaceStore.root(),
@@ -662,6 +671,11 @@ const agentConsole = new AgentConsole({
 	extraArgs: (kind) => writeAgentConfig(kind, app.getPath('userData'), agentMcpEndpoint(), {
 		routeDatabaseThroughApp: agentConsoleStore.routesDatabaseThroughApp(),
 	}),
+	// A project's AI gateway, when the user pointed this agent at one (shared/agentAiRoute.ts).
+	aiLaunch: async (kind) => {
+		const route = agentConsoleStore.aiRoute(kind);
+		return route && agentAiRelay ? agentAiLaunch(kind, await agentAiRelay.endpoint(), route.model) : null;
+	},
 	enabled: (kind) => agentConsoleStore.isEnabled(kind),
 	decided: (kind) => agentConsoleStore.hasDecided(kind),
 	// A GUI launch does not inherit the user's PATH (macOS gives an app started by launchd four
@@ -1418,6 +1432,7 @@ function teardown(): void {
 	// A coding agent must never outlive the app that hosts it: it spawns its own children and
 	// an orphaned one keeps working (and spending) with no window to show for it.
 	agentConsole.stopAll();
+	agentAiRelay?.stop();
 	// Orbit's activity samplers query someone's database every couple of seconds; nothing should
 	// still be doing that while the app is on its way out.
 	orbitPulse.stopAll();
@@ -2573,6 +2588,43 @@ function registerIpc(): void {
 	ipcMain.handle('projectCopy:state', (_event, id: string) => projectCopies.state(String(id)));
 	ipcMain.handle('project:sql', (_event, which: unknown, sql: string) => projectAccess.sql(target(which), String(sql)));
 	ipcMain.handle('project:api', (_event, which: unknown, request: ProjectApiRequest) => projectAccess.api(target(which), request));
+	// A project's AI gateway (shared/psycheAdmin.ts). Neither key reaches the renderer.
+	aiService.setLocalProjects({
+		running: async () => (await localStack.list()).projects.filter((p) => p.state === 'running' || p.state === 'partial').map((p) => ({ id: p.id, name: p.name })),
+		target: (id) => localStack.target(id),
+	});
+	const projectAi = new ProjectAi({
+		psyche: (project, method, path, body) => projectAccess.psyche(project, method, path, body),
+		sources: (force) => aiService.projectAiSources(force),
+		settings: aiSettingsStore,
+		secrets: secretStore,
+		byokAllowed: () => aiService.isByokAllowed(),
+		forgetSources: () => aiService.forgetProjectSources(),
+	});
+	agentAiRelay = new AgentAiRelay({
+		upstream: (kind) => {
+			const route = agentConsoleStore.aiRoute(kind);
+			if (!route) {
+				return null;
+			}
+			const project = targetOfAiRef(route.ref);
+			const base = project.kind === 'local' ? `http://127.0.0.1:${localStack.target(project.id).apiPort}/ai` : `${cloudApiBase(project.ref)}/ai`;
+			return { base, key: (fresh) => projectAi.agentKey(route.ref, fresh) };
+		},
+		fetch: (input, init) => netFetch(input, init),
+	});
+	ipcMain.handle('project:ai', (_event, which: unknown, method: PsycheMethod, path: string, body?: unknown) => projectAccess.psyche(target(which), method, path, body));
+	ipcMain.handle('project:aiState', (_event, which: unknown) => {
+		const project = target(which);
+		return project.kind === 'local' ? localStack.ai(project.id) : projectAccess.cloudAiState(project.ref);
+	});
+	ipcMain.handle('project:setAi', (event, which: unknown, on: boolean) => {
+		const project = target(which);
+		return project.kind === 'local' ? localStack.setAi(project.id, on === true, localProgress(event)) : projectAccess.setCloudAi(project.ref, on === true);
+	});
+	ipcMain.handle('ai:movePreview', () => projectAi.movePreview());
+	ipcMain.handle('ai:moveTargets', () => projectAi.moveTargets());
+	ipcMain.handle('ai:moveKeys', (_event, ref: string, name: string) => projectAi.moveKeys(String(ref), String(name)));
 	ipcMain.handle('project:upload', async (event, which: unknown, bucket: string, prefix: string, upsert: boolean, dropped?: unknown) => {
 		const project = target(which);
 		// Files dropped on the bucket: the preload turned them into paths with webUtils, which
@@ -3675,6 +3727,13 @@ function registerIpc(): void {
 		return agentConsole.status(kind);
 	});
 	ipcMain.handle('agentConsole:attach', (_event, kind: string) => (isAgentKind(kind) ? agentConsole.attach(kind) : null));
+	ipcMain.handle('agentConsole:setAiRoute', (_event, kind: string, route: ProjectAiSelection | null) => {
+		if (isAgentKind(kind)) {
+			agentConsoleStore.setAiRoute(kind, route ?? undefined);
+			broadcast('agentConsole:changed');
+		}
+		return agentConsoleStore.config();
+	});
 	ipcMain.handle('agentConsole:start', async (_event, kind: string, size?: AgentConsoleSize) => {
 		if (!isAgentKind(kind)) {
 			return null;

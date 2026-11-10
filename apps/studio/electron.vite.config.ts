@@ -18,6 +18,8 @@ import { proDefines, proMainAliases, proPaths, proRendererAliases } from './scri
 // electron-builder to trip over, and vite bundles it straight into out/main. `npm run review:build`
 // produces it and every build/dev/test script here runs that first.
 const REVIEW_CORE = resolve(__dirname, '../../packages/review-core/dist/index.js');
+// The AI gateway's admin client: dependency-free TypeScript, compiled by whoever imports it.
+const PSYCHE_ADMIN = resolve(__dirname, '../../packages/psyche-admin/src/index.ts');
 // Moving a database: shared with the `snoutdata` CLI, wired the same way.
 const MOVE = resolve(__dirname, '../../packages/move/dist/index.js');
 // Its Node half (spawning pg_dump/pg_restore), for main only: a renderer must never reach it.
@@ -88,7 +90,7 @@ function monacoTranslations(): Plugin {
 export default defineConfig({
 	main: {
 		plugins: [externalizeDepsPlugin()],
-		resolve: { alias: { '@snoutdata/client': CLIENT, '@snout/review-core': REVIEW_CORE, '@snout/move': MOVE, '@snout/move-runner': MOVE_RUNNER, ...libyNameAlias(LIBY_PATHS), ...proMainAliases(PRO_PATHS) } },
+		resolve: { alias: { '@snoutdata/client': CLIENT, '@snout/psyche-admin': PSYCHE_ADMIN, '@snout/review-core': REVIEW_CORE, '@snout/move': MOVE, '@snout/move-runner': MOVE_RUNNER, ...libyNameAlias(LIBY_PATHS), ...proMainAliases(PRO_PATHS) } },
 		define: PRO_DEFINES,
 		build: {
 			rollupOptions: { input: resolve(__dirname, 'src/main/index.ts') },
@@ -105,10 +107,10 @@ export default defineConfig({
 		plugins: [react(), contentSecurityPolicy(), monacoTranslations()],
 		define: PRO_DEFINES,
 		resolve: {
-			alias: { '@snout/review-core': REVIEW_CORE, '@snout/move': MOVE, ...proRendererAliases(PRO_PATHS), ...LIBY_ALIASES },
+			alias: { '@snout/psyche-admin': PSYCHE_ADMIN, '@snout/review-core': REVIEW_CORE, '@snout/move': MOVE, ...proRendererAliases(PRO_PATHS), ...LIBY_ALIASES },
 			dedupe: ['react', 'react-dom', 'three'],
 		},
-		server: { fs: { allow: [__dirname, LIBY_PATHS.dir] } },
+		server: { fs: { allow: [__dirname, LIBY_PATHS.dir, resolve(__dirname, '../../packages/psyche-admin')] } },
 		build: {
 			/*
 			 * MINIFY THE RENDERER. electron-vite defaults `build.minify` to false, which is easy to
