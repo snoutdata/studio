@@ -398,6 +398,20 @@ export interface Group {
 	members: number
 }
 
+/** One user or one group a model that is `granted` is open to. */
+export interface Grant {
+	id: string
+	model: string
+	user_id: string | null
+	group_id: string | null
+	/** The group's name, for a group's grant. */
+	group_name: string | null
+	/** Milliseconds since the epoch. */
+	created_at: number
+}
+
+export type GrantInput = { model: string; user_id: string } | { model: string; group_id: string }
+
 export type UsageBy = 'day' | 'model' | 'provider' | 'operation' | 'key' | 'user' | 'group'
 
 export interface UsageRow {
@@ -591,6 +605,18 @@ export class PsycheAdmin {
 
 	groups(): Promise<Group[]> {
 		return this.list('admin/groups')
+	}
+
+	/** Who models are granted to; with a name, that model's only. */
+	grants(model?: string): Promise<Grant[]> {
+		return this.list(`admin/grants${queryString({ model })}`)
+	}
+	/** Grants a model to one user or one group; granting it again answers the grant there is. */
+	grant(input: GrantInput): Promise<Grant> {
+		return this.call('POST', 'admin/grants', input)
+	}
+	revokeGrant(id: string): Promise<void> {
+		return this.none('DELETE', `admin/grants/${segment(id)}`)
 	}
 
 	usage(query: UsageQuery = {}): Promise<Usage> {

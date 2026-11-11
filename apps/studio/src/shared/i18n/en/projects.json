@@ -101,6 +101,23 @@
 				"noData": "The account behind it keeps nothing from its calls"
 			}
 		},
+		"grants": {
+			"title": "Granted to",
+			"empty": "No one yet. Only the project's own keys can call it.",
+			"user": "User",
+			"group": "Group {name}",
+			"revoke": "Take back",
+			"to": "Grant it to",
+			"kind": {
+				"user": "A user",
+				"group": "A group"
+			},
+			"userId": "User ID",
+			"groupPick": "Group",
+			"choose": "Choose a group",
+			"hint": "A grant applies at once, without saving.",
+			"add": "Grant"
+		},
 		"routes": {
 			"hint": "A name callers send in place of a model. It tries its models in turn when one fails.",
 			"empty": "No routes yet.",

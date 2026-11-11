@@ -101,6 +101,23 @@
 				"noData": "A conta por trás dele não guarda nada de suas chamadas"
 			}
 		},
+		"grants": {
+			"title": "Concedido a",
+			"empty": "Ninguém ainda. Só as chaves do projeto podem chamá-lo.",
+			"user": "Usuário",
+			"group": "Grupo {name}",
+			"revoke": "Retirar",
+			"to": "Conceder a",
+			"kind": {
+				"user": "Um usuário",
+				"group": "Um grupo"
+			},
+			"userId": "ID do usuário",
+			"groupPick": "Grupo",
+			"choose": "Escolher um grupo",
+			"hint": "Um acesso vale na hora, sem salvar.",
+			"add": "Conceder"
+		},
 		"routes": {
 			"hint": "Um nome enviado no lugar de um modelo. Tenta seus modelos em sequência quando um falha.",
 			"empty": "Ainda não há rotas.",

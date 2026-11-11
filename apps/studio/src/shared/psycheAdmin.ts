@@ -13,7 +13,7 @@ import { PsycheError } from '@snout/psyche-admin';
 
 export { PsycheAdmin, PsycheError, dollars, modelInput, modelPath, routeInput } from '@snout/psyche-admin';
 export type {
-	Budget, BudgetInput, Credential, CredentialInput, KeyInput, Limit, LimitInput, Model, ModelInput, ModelInternet, Period, Price, Provider, ProviderInput,
+	Budget, BudgetInput, Credential, CredentialInput, Grant, GrantInput, Group, KeyInput, Limit, LimitInput, Model, ModelInput, ModelInternet, Period, Price, Provider, ProviderInput,
 	ProviderKind, Quota, Fits, MaxPrice, Route, RouteConstraints, RouteInput, RouteSort, UpstreamModel, Usage, UsageBy, UsageRow, Whom,
 	Key as PsycheKey, NewKey as NewPsycheKey, Transport as PsycheTransport,
 } from '@snout/psyche-admin';

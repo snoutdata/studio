@@ -43,6 +43,20 @@ test('each call names its method and path, and a model keeps the / in its name',
 	assert.deepEqual(calls[3][2], { api_key: 'x' })
 })
 
+test('grants are listed, made and taken back by id', async () => {
+	const { calls, send } = recording({ data: [] })
+	const admin = new PsycheAdmin(send)
+	await admin.grants()
+	await admin.grants('openai/gpt 4o')
+	await admin.grant({ model: 'big', user_id: 'u1' })
+	await admin.revokeGrant('g 1')
+	assert.deepEqual(
+		calls.map(([method, path]) => `${method} ${path}`),
+		['GET admin/grants', 'GET admin/grants?model=openai%2Fgpt%204o', 'POST admin/grants', 'DELETE admin/grants/g%201']
+	)
+	assert.deepEqual(calls[2][2], { model: 'big', user_id: 'u1' })
+})
+
 test('a list without data is empty, not a crash', async () => {
 	const admin = new PsycheAdmin(async () => null)
 	assert.deepEqual(await admin.keys(), [])

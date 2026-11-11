@@ -101,6 +101,23 @@
 				"noData": "Le compte derrière ce modèle ne conserve rien de ses appels"
 			}
 		},
+		"grants": {
+			"title": "Accordé à",
+			"empty": "Personne pour le moment. Seules les clés du projet peuvent l'appeler.",
+			"user": "Utilisateur",
+			"group": "Groupe {name}",
+			"revoke": "Retirer",
+			"to": "L'accorder à",
+			"kind": {
+				"user": "Un utilisateur",
+				"group": "Un groupe"
+			},
+			"userId": "ID de l'utilisateur",
+			"groupPick": "Groupe",
+			"choose": "Choisir un groupe",
+			"hint": "Un accès s'applique tout de suite, sans enregistrer.",
+			"add": "Accorder"
+		},
 		"routes": {
 			"hint": "Une route est un nom envoyé à la place d'un modèle. Elle essaie ses modèles tour à tour quand l'un d'eux échoue.",
 			"empty": "Aucune route pour l'instant.",

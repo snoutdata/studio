@@ -11,7 +11,7 @@ import { formatLocale, useT } from '../i18n';
 import type { ProjectTarget } from '../../../shared/projects';
 import {
 	PsycheAdmin, dollars, modelInput, notServing, psycheAnswer, routeInput,
-	type Budget, type Fits, type Limit, type MaxPrice, type Model, type ModelInput, type ModelInternet, type NewPsycheKey, type Period, type Price, type Provider, type ProviderKind, type PsycheKey, type Quota, type Route, type RouteConstraints, type RouteSort, type UpstreamModel, type UsageBy, type Whom,
+	type Budget, type Fits, type Grant, type Group, type Limit, type MaxPrice, type Model, type ModelInput, type ModelInternet, type NewPsycheKey, type Period, type Price, type Provider, type ProviderKind, type PsycheKey, type Quota, type Route, type RouteConstraints, type RouteSort, type UpstreamModel, type UsageBy, type Whom,
 } from '../../../shared/psycheAdmin';
 
 // The project's AI gateway, the dashboard's AI section in the project tab: the same calls, through
@@ -241,7 +241,7 @@ function ModelsTab({ admin, held, onChanged }: TabProps): JSX.Element {
 									<td className="mono">{model.name}</td>
 									<td><span className="mono">{model.upstream}</span> {t('projects.ai.models.on', { provider: model.provider })}</td>
 									<td>{priceText(model, t)}</td>
-									<td title={model.problem ?? undefined}>{model.served ? t('projects.ai.models.served') : model.enabled ? t('projects.ai.models.notServed') : t('projects.ai.models.off')}</td>
+									<td className="cloud-nowrap" title={model.problem ?? undefined}>{model.served ? t('projects.ai.models.served') : model.enabled ? t('projects.ai.models.notServed') : t('projects.ai.models.off')}</td>
 									<td>
 										<InternetSelect label={t('projects.ai.models.internetFor', { name: model.name })} value={model.internet ?? DEFAULT_INTERNET} disabled={busy} onChange={(level) => void setInternet(model, level)} />
 									</td>
@@ -386,8 +386,9 @@ function ModelForm({ admin, providers, model, onDone, onChanged }: { admin: Psyc
 						<option value="granted">{t('projects.ai.models.accessLevel.granted')}</option>
 					</select>
 				</label>
-				{model && <p className="field-hint">{t('projects.ai.models.grants', { count: model.grants })}</p>}
+				{model && access !== 'granted' && model.grants > 0 && <p className="field-hint">{t('projects.ai.models.grants', { count: model.grants })}</p>}
 			</fieldset>
+			{model && access === 'granted' && <ModelGrants admin={admin} model={model.name} />}
 			<fieldset>
 				<legend>{t('projects.ai.models.priceColumn')}</legend>
 				<label>{t('projects.ai.models.inputRate')}<input type="number" min={0} step="0.01" value={input} onChange={(e) => setInput(e.target.value)} /></label>
@@ -449,6 +450,89 @@ function ModelForm({ admin, providers, model, onDone, onChanged }: { admin: Psyc
 	);
 }
 
+/** Who a model that is granted only is open to. Each grant applies at once, without the form's save. */
+function ModelGrants({ admin, model }: { admin: PsycheAdmin; model: string }): JSX.Element {
+	const t = useT();
+	const { busy, said, act } = useAct();
+	const [grants, setGrants] = useState<Grant[] | null>(null);
+	const [groups, setGroups] = useState<Group[]>([]);
+	const [kind, setKind] = useState<'user' | 'group'>('user');
+	const [id, setId] = useState('');
+
+	const load = useCallback(async () => {
+		setGrants(await admin.grants(model));
+		// Only the picker and the names in the list read these.
+		setGroups(await admin.groups().catch(() => []));
+	}, [admin, model]);
+
+	useEffect(() => {
+		void act(load);
+	}, [act, load]);
+
+	async function add(): Promise<void> {
+		await act(async () => {
+			await admin.grant(kind === 'user' ? { model, user_id: id.trim() } : { model, group_id: id });
+			setId('');
+			await load();
+		});
+	}
+
+	async function revoke(grant: Grant): Promise<void> {
+		await act(async () => {
+			await admin.revokeGrant(grant.id);
+			await load();
+		});
+	}
+
+	return (
+		<fieldset>
+			<legend>{t('projects.ai.grants.title')}</legend>
+			{grants !== null && grants.length === 0 && <p className="field-hint">{t('projects.ai.grants.empty')}</p>}
+			{grants !== null && grants.length > 0 && (
+				<table className="cloud-table">
+					<tbody>
+						{grants.map((grant) => (
+							<tr key={grant.id}>
+								<td>{grant.group_id ? t('projects.ai.grants.group', { name: grant.group_name ?? grant.group_id }) : <>{t('projects.ai.grants.user')} <span className="mono">{grant.user_id}</span></>}</td>
+								<td className="cloud-table-action">
+									<button type="button" className="table-action" title={t('projects.ai.grants.revoke')} aria-label={t('projects.ai.grants.revoke')} disabled={busy} onClick={() => void revoke(grant)}><Icon name="trash" /></button>
+								</td>
+							</tr>
+						))}
+					</tbody>
+				</table>
+			)}
+			<label>{t('projects.ai.grants.to')}
+				<select
+					value={kind}
+					onChange={(e) => {
+						setKind(e.target.value as 'user' | 'group');
+						setId('');
+					}}
+				>
+					<option value="user">{t('projects.ai.grants.kind.user')}</option>
+					<option value="group">{t('projects.ai.grants.kind.group')}</option>
+				</select>
+			</label>
+			{kind === 'user'
+				? <label>{t('projects.ai.grants.userId')}<input value={id} spellCheck={false} onChange={(e) => setId(e.target.value)} /></label>
+				: (
+					<label>{t('projects.ai.grants.groupPick')}
+						<select value={id} onChange={(e) => setId(e.target.value)}>
+							<option value="">{t('projects.ai.grants.choose')}</option>
+							{groups.map((g) => <option key={g.id} value={g.id}>{g.name}</option>)}
+						</select>
+					</label>
+				)}
+			<p className="field-hint">{t('projects.ai.grants.hint')}</p>
+			<Status said={said} />
+			<div className="cloud-actions">
+				<button type="button" disabled={busy || id.trim() === ''} onClick={() => void add()}><Icon name="add" /> {t('projects.ai.grants.add')}</button>
+			</div>
+		</fieldset>
+	);
+}
+
 /** Adds a name to a list: a native select that goes back to its prompt after each choice. */
 function NamePicker({ label, names, onPick }: { label: string; names: string[]; onPick(name: string): void }): JSX.Element {
 	const t = useT();
@@ -506,7 +590,7 @@ function RoutesTab({ admin, held, onChanged }: TabProps): JSX.Element {
 										{route.skipped.length > 0 && <div className="field-hint">{t('projects.ai.routes.skips', { models: route.skipped.join(', ') })}</div>}
 									</td>
 									<td>{t(`projects.ai.routes.sortName.${route.sort}`)}</td>
-									<td>{route.served ? t('projects.ai.models.served') : t('projects.ai.models.notServed')}</td>
+									<td className="cloud-nowrap">{route.served ? t('projects.ai.models.served') : t('projects.ai.models.notServed')}</td>
 									<td className="cloud-table-action">
 										{route.origin === 'file'
 											? <span title={t('projects.ai.routes.fromFile')} aria-label={t('projects.ai.routes.fromFile')}><Icon name="lock" /></span>
