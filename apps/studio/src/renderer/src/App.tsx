@@ -1617,6 +1617,9 @@ export function App(): JSX.Element {
 			}
 		}
 	}
+	// doCloseTab reads `tabs` from its render, so a caller that has awaited something needs the latest.
+	const doCloseTabRef = useRef(doCloseTab);
+	doCloseTabRef.current = doCloseTab;
 
 	/*
 	 * A coding agent's own surface, when its console lives in the BOTTOM strip: what it shows opens
@@ -2933,6 +2936,21 @@ export function App(): JSX.Element {
 		setStatus(t('shell.status.appliedChanges'));
 		return { ok: true };
 	}, [setStatus]);
+
+	/** Drop a table from the schema tree. Its tab goes with it, unsaved edits included: there is no
+	 *  table left for them to apply to. */
+	async function dropTable(connectionId: string, table: TableInfo, sql: string): Promise<{ ok: boolean; error?: string }> {
+		const result = await runDdl(connectionId, sql);
+		if (result.ok) {
+			const open = [...tableTabsRef.current.entries()].find(
+				([, tab]) => tab.connectionId === connectionId && tab.table?.schema === table.schema && tab.table?.name === table.name,
+			);
+			if (open) {
+				doCloseTabRef.current(open[0]);
+			}
+		}
+		return result;
+	}
 
 	// Save the editable grid's batch of statements (DELETE/UPDATE/INSERT) as one logical save.
 	// The connection layer runs them one at a time (transactional per driver), so a multi-row
@@ -4996,6 +5014,8 @@ export function App(): JSX.Element {
 					onOpenTable={openTable}
 					onNewTable={openNewTable}
 					onNewCollection={(connectionId) => setNewCollection({ connectionId, name: '' })}
+					onDropTable={dropTable}
+					dropTableAllowed={(config) => policyFor(config.environment, { confirmDestructive: appSettings.confirmOnProd, allowGridActions: appSettings.allowProdGridActions || prodUnlocked.has(config.id) }, config.driver).allowsGridActions(true)}
 					onOpenSecurity={(connectionId) => openSecurity(connectionId)}
 					onOpenClickHouseOps={(connectionId) => openChOps(connectionId)}
 					onOpenClickHouseRemote={(connectionId) => openChRemote(connectionId)}

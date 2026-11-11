@@ -3,11 +3,14 @@
  *  Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
+import type { MouseEvent as ReactMouseEvent } from 'react';
 import { formatBytes } from '../formatBytes';
 import { Icon } from './Icon';
 import { formatLocale, t, useT } from '../i18n';
 import { ConnectionMarks, ConnectionTags } from './ConnectionMarks';
+import { DropTableDialog } from './DropTableDialog';
+import { TableContextMenu } from './TableContextMenu';
 import { ConnectArt } from '../art/Illustrations';
 import type { ConnectionConfig } from '../../../shared/connection';
 import type { ConnectionsState } from '../../../shared/forms';
@@ -42,6 +45,10 @@ interface SidebarProps {
 	onNewTable(connectionId: string, database: string): void;
 	/** Create a new collection in a document (MongoDB) connection's database (name prompt). */
 	onNewCollection(connectionId: string, database: string): void;
+	/** Run a table's DROP, and close its open tab once it is gone. */
+	onDropTable(connectionId: string, table: TableInfo, sql: string): Promise<{ ok: boolean; error?: string }>;
+	/** False on a production connection that has not been unlocked (the same rule as editing rows). */
+	dropTableAllowed(config: ConnectionConfig): boolean;
 	/** Open the Users & Privileges tab for a connection. */
 	onOpenSecurity(connectionId: string): void;
 	/** Open Remote data (the table functions) for a ClickHouse connection. */
@@ -127,7 +134,22 @@ export function Sidebar(props: SidebarProps): JSX.Element {
 	const connectingIds = props.connectingIds;
 	// The connection currently re-introspecting, so its refresh icon spins.
 	const [refreshingId, setRefreshingId] = useState<string | null>(null);
+	const [tableMenu, setTableMenu] = useState<{ config: ConnectionConfig; table: TableInfo; x: number; y: number } | null>(null);
+	const [droppingTable, setDroppingTable] = useState<{ config: ConnectionConfig; table: TableInfo } | null>(null);
 	const query = filter.trim().toLowerCase();
+
+	// Stable, because the menu and the dialog re-subscribe their key listeners when these change.
+	const closeTableMenu = useCallback(() => setTableMenu(null), []);
+	const closeDropDialog = useCallback(() => setDroppingTable(null), []);
+
+	async function dropTable(config: ConnectionConfig, table: TableInfo, sql: string): Promise<{ ok: boolean; error?: string }> {
+		const result = await props.onDropTable(config.id, table, sql);
+		if (result.ok) {
+			// Not awaited: the drop has happened, and a failed re-read must not report that it hasn't.
+			void window.sqlApi.getSchema(config.id).then((schema) => setSchemas((prev) => ({ ...prev, [config.id]: schema }))).catch(() => undefined);
+		}
+		return result;
+	}
 
 	// Re-introspect a connection and reload its cached schema (manual refresh button).
 	async function refresh(id: string): Promise<void> {
@@ -359,7 +381,9 @@ export function Sidebar(props: SidebarProps): JSX.Element {
 														: <button className="icon-btn" aria-label={newEntityLabel} onClick={() => props.onNewTable(config.id, database)}><Icon name="add" /></button>)}
 												</span>
 											</div>
-											{dbOpen && tables.map((table) => renderTable(config.id, database, table, expanded, toggle, props.onOpenTable, props.onOpenObject, byRef, childrenOf(table), props.onOpenSeriesMonitor))}
+											{dbOpen && tables.map((table) => renderTable(config.id, database, table, expanded, toggle, props.onOpenTable, props.onOpenObject, byRef, childrenOf(table), props.onOpenSeriesMonitor, newEntityLabel && !config.readOnly && backendKindForDriver(config.driver) !== 'document'
+												? (event, target) => { event.preventDefault(); setTableMenu({ config, table: target, x: event.clientX, y: event.clientY }); }
+												: undefined))}
 											{dbOpen && dictionaries.length > 0 && renderDictionaries(config.id, database, dictionaries, expanded, toggle, props.onOpenTable)}
 											{dbOpen && routines.length > 0 && renderRoutines(config.id, database, routines, expanded, toggle, props.onOpenObject)}
 										</div>
@@ -370,6 +394,23 @@ export function Sidebar(props: SidebarProps): JSX.Element {
 					);
 				})}
 			</div>
+			{tableMenu && (
+				<TableContextMenu
+					at={tableMenu}
+					dropLocked={!props.dropTableAllowed(tableMenu.config)}
+					onDrop={() => setDroppingTable({ config: tableMenu.config, table: tableMenu.table })}
+					onClose={closeTableMenu}
+				/>
+			)}
+			{droppingTable && (
+				<DropTableDialog
+					table={droppingTable.table}
+					driver={droppingTable.config.driver}
+					isProd={droppingTable.config.environment === 'prod'}
+					onDrop={(sql) => dropTable(droppingTable.config, droppingTable.table, sql)}
+					onClose={closeDropDialog}
+				/>
+			)}
 		</div>
 	);
 }
@@ -389,6 +430,7 @@ function renderTable(
 	byRef: Map<string, TableInfo>,
 	children: TableInfo[] = [],
 	onOpenSeriesMonitor?: (connectionId: string, table: TableInfo) => void,
+	onTableContextMenu?: (event: ReactMouseEvent, table: TableInfo) => void,
 ): JSX.Element {
 	const baseKey = `table:${connectionId}:${database}:${table.name}`;
 	const partitions = partitionRows(table, children);
@@ -410,6 +452,7 @@ function renderTable(
 				className="tree-row depth-2"
 				onClick={() => toggle(baseKey)}
 				onDoubleClick={() => onOpenTable(connectionId, table)}
+				onContextMenu={onTableContextMenu && table.kind === 'table' ? (event) => onTableContextMenu(event, table) : undefined}
 				title={t('shell.sidebar.doubleClickOpen')}
 			>
 				<span className="twisty"><Icon name={tableOpen ? 'chevron-down' : 'chevron-right'} /></span>

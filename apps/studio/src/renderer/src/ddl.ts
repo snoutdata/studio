@@ -335,6 +335,14 @@ export function dropIndexSql(index: { schema?: string; table: string; name: stri
 	return `DROP INDEX ${quoteIdent(index.name, driver)} ON ${qualified(index.schema, index.table, driver)};`;
 }
 
+/**
+ * DROP one table. Deliberately no CASCADE and no IF EXISTS: a table other objects still depend on
+ * should fail and say so, and a table that is already gone should not report a successful drop.
+ */
+export function dropTableSql(table: { schema?: string; name: string }, driver: string): string {
+	return `DROP TABLE ${qualified(table.schema, table.name, driver)};`;
+}
+
 /** Which table a primary-key statement is about. */
 export interface PrimaryKeyTarget {
 	schema?: string;

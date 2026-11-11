@@ -5,7 +5,7 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { addPrimaryKeySql, createTableSql, alterTableSql, dropPrimaryKeySql, notNullSql, tableDdl, createIndexSql, dropIndexSql, suggestIndexName, draftFromTable, seriesAlterSql, type TableDraft } from './ddl';
+import { addPrimaryKeySql, createTableSql, alterTableSql, dropPrimaryKeySql, notNullSql, tableDdl, createIndexSql, dropIndexSql, dropTableSql, suggestIndexName, draftFromTable, seriesAlterSql, type TableDraft } from './ddl';
 import type { TableInfo } from '../../shared/schema';
 
 function col(name: string, dataType: string, opts: Partial<{ nullable: boolean; isPrimaryKey: boolean; default: string | null; comment: string; autoIncrement: boolean }> = {}) {
@@ -129,6 +129,15 @@ test('quoteIdent / dropIndexSql (sqlserver): brackets, ON-table drop', () => {
 		'CREATE UNIQUE INDEX [IX_users_email] ON [dbo].[users] ([email]);');
 	assert.equal(dropIndexSql({ schema: 'dbo', table: 'users', name: 'IX_users_email' }, 'sqlserver'),
 		'DROP INDEX [IX_users_email] ON [dbo].[users];');
+});
+
+test('dropTableSql: qualified and quoted per driver, never CASCADE or IF EXISTS', () => {
+	assert.equal(dropTableSql({ schema: 'public', name: 'orders' }, 'postgres'), 'DROP TABLE "public"."orders";');
+	assert.equal(dropTableSql({ schema: 'shop', name: 'orders' }, 'mysql-aurora'), 'DROP TABLE `shop`.`orders`;');
+	assert.equal(dropTableSql({ schema: 'dbo', name: 'orders' }, 'sqlserver'), 'DROP TABLE [dbo].[orders];');
+	assert.equal(dropTableSql({ name: 'orders' }, 'sqlite'), 'DROP TABLE "orders";');
+	// A hostile name stays one identifier.
+	assert.equal(dropTableSql({ schema: 'public', name: 'a"; DROP TABLE b; --' }, 'postgres'), 'DROP TABLE "public"."a""; DROP TABLE b; --";');
 });
 
 test('alterTableSql returns empty when nothing changed', () => {
