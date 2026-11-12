@@ -3,6 +3,8 @@
  *  Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { decide, emptyGrants } from '@snout/harness';
+import { capabilityTool } from '@snout/harness/studio';
 import { t } from '../shared/i18n/core';
 import { asksEveryTime, type CapabilitySpec } from '../shared/capabilities';
 import type { ConnectionConfig, SshTunnelProfile } from '../shared/connection';
@@ -76,14 +78,15 @@ export const UNPUBLISHED_CAPABILITY_MESSAGE = 'That app action is not available 
  * known to read only, so that call is refused: fail closed. `autoApproved` is the user's standing
  * "always allow" for this action.
  */
-export function agentCallGate(spec: Pick<CapabilitySpec, 'mutates'> | undefined, detail: AgentActionDetail, autoApproved: boolean): AgentCallGate {
+export function agentCallGate(spec: Pick<CapabilitySpec, 'name' | 'description' | 'parameters' | 'domain' | 'mutates'> | undefined, detail: AgentActionDetail, autoApproved: boolean): AgentCallGate {
 	if (!spec) {
 		return { kind: 'refuse', error: UNPUBLISHED_CAPABILITY_MESSAGE };
 	}
-	if (spec.mutates && (detail.askEveryTime || !autoApproved)) {
-		return { kind: 'ask' };
-	}
-	return { kind: 'run' };
+	// The harness's rule, with Studio's answers: a read runs, a change asks unless the user always
+	// allows it, and a call this app asks about every time asks whatever the grant. Studio's grants
+	// are per action and never per project, so nothing here is a production project.
+	const tool = capabilityTool(spec, () => detail.askEveryTime === true);
+	return decide(tool, {}, emptyGrants(autoApproved ? [spec.name] : []), { production: false }) === 'ask' ? { kind: 'ask' } : { kind: 'run' };
 }
 
 export function agentActionDetail(

@@ -19,6 +19,8 @@ const REVIEW_CORE = resolve(process.cwd(), '../../packages/review-core/dist/inde
 const PSYCHE_ADMIN = resolve(process.cwd(), '../../packages/psyche-admin/src/index.ts');
 const MOVE = resolve(process.cwd(), '../../packages/move/dist/index.js');
 const MOVE_RUNNER = resolve(process.cwd(), '../../packages/move/dist/runner/index.js');
+const HARNESS = resolve(process.cwd(), '../../packages/harness/dist/index.js');
+const HARNESS_STUDIO = resolve(process.cwd(), '../../packages/harness/dist/studio.js');
 // `@snoutdata/client`, built from packages/client the same way (`npm run client:build`).
 const CLIENT = resolve(process.cwd(), '../../packages/client/dist/index.js');
 // Liby (her own package): TypeScript source, not a build. Only the test bundles reach it. Private: a
@@ -65,7 +67,7 @@ const common = {
 	// connection never loads a byte of them.
 	external: ['mysql2', 'pg', 'ssh2', 'mssql', 'oracledb', 'ibm_db', 'mongodb', 'snowflake-sdk', '@duckdb/node-api', '@sap/hana-client', 'electron',
 		'@aws-sdk/client-cloudwatch-logs', '@aws-sdk/credential-providers', '@azure/identity', 'google-auth-library'],
-	alias: { '@snoutdata/client': CLIENT, '@snout/psyche-admin': PSYCHE_ADMIN, '@snout/review-core': REVIEW_CORE, '@snout/move': MOVE, '@snout/move-runner': MOVE_RUNNER, ...libyNameAlias(LIBY_PATHS), ...proMainAliases(PRO_PATHS) },
+	alias: { '@snoutdata/client': CLIENT, '@snout/psyche-admin': PSYCHE_ADMIN, '@snout/review-core': REVIEW_CORE, '@snout/move': MOVE, '@snout/move-runner': MOVE_RUNNER, '@snout/harness/studio': HARNESS_STUDIO, '@snout/harness': HARNESS, ...libyNameAlias(LIBY_PATHS), ...proMainAliases(PRO_PATHS) },
 	define: proDefines(PRO_PATHS, process.cwd()),
 };
 

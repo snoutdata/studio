@@ -3,6 +3,7 @@
  *  Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { studioTools as T } from '@snout/harness/studio';
 import type { AiToolEvent, AiToolSettings, ToolCall, ToolResult, ToolSpec } from '../../ai';
 import type { DatabaseSchema, RoutineInfo, TableInfo } from '../../schema';
 import type { ExecuteQueryResult } from '../../protocol';
@@ -147,37 +148,37 @@ export function buildToolSpecs(settings: AiToolSettings, available: boolean, doc
 	if (hasSchema && settings.listTables) {
 		specs.push({
 			name: 'list_tables',
-			description: 'List the tables and views in the connected database (names, kind, column count). Use a filter on large databases.',
-			parameters: { type: 'object', properties: { filter: { type: 'string', description: 'Optional case-insensitive substring to filter table names.' }, connection: CONNECTION_PARAM } },
+			description: T.LIST_TABLES.description,
+			parameters: { type: 'object', properties: { filter: { type: 'string', description: T.LIST_TABLES.filter.description }, connection: CONNECTION_PARAM } },
 		});
 	}
 	if (hasSchema && settings.describeTable) {
 		specs.push({
 			name: 'describe_table',
-			description: "Get a table's columns, types, primary key, foreign keys and indexes (its structure/DDL). Call this before writing SQL against a table.",
-			parameters: { type: 'object', properties: { name: { type: 'string', description: 'Table name, optionally schema-qualified (e.g. "orders" or "public.orders").' }, connection: CONNECTION_PARAM }, required: ['name'] },
+			description: T.DESCRIBE_TABLE.description,
+			parameters: { type: 'object', properties: { name: { type: 'string', description: T.DESCRIBE_TABLE.name.description }, connection: CONNECTION_PARAM }, required: ['name'] },
 		});
 	}
 	if (hasSchema && settings.searchColumns) {
 		specs.push({
 			name: 'search_columns',
-			description: 'Find tables and columns whose name contains a term, across the whole schema. Useful when you do not know which table holds a field.',
-			parameters: { type: 'object', properties: { term: { type: 'string', description: 'Substring to search for in table and column names.' }, connection: CONNECTION_PARAM }, required: ['term'] },
+			description: T.SEARCH_COLUMNS.description,
+			parameters: { type: 'object', properties: { term: { type: 'string', description: T.SEARCH_COLUMNS.term.description }, connection: CONNECTION_PARAM }, required: ['term'] },
 		});
 	}
 	if (hasSchema && settings.runQuery) {
 		specs.push(documentMode ? {
 			name: 'run_query',
-			description: 'Run a single READ-ONLY query against the MongoDB database and return the documents. The user must approve each query before it runs. Results are row-limited. Provide a read-only aggregation pipeline as JSON in `sql`: an object {"collection":"<name>","pipeline":[<stages>]} (or a bare [<stages>] array plus the `collection` argument). No write stages ($out/$merge). Read-only SQL is also accepted and auto-translated.',
+			description: T.RUN_PIPELINE.description,
 			parameters: { type: 'object', properties: {
-				sql: { type: 'string', description: 'A MongoDB aggregation pipeline as JSON — {"collection":"orders","pipeline":[{"$match":{...}},{"$limit":20}]} — or a read-only SQL SELECT.' },
-				collection: { type: 'string', description: 'The collection to run the pipeline against (only needed when `sql` is a bare [stages] array).' },
+				sql: { type: 'string', description: T.RUN_PIPELINE.sql.description },
+				collection: { type: 'string', description: T.RUN_PIPELINE.collection.description },
 				connection: CONNECTION_PARAM,
 			}, required: ['sql'] },
 		} : {
 			name: 'run_query',
-			description: 'Run a single READ-ONLY query (SELECT/WITH/SHOW/DESCRIBE/EXPLAIN) against the database and return the rows. The user must approve each query before it runs. Results are row-limited.',
-			parameters: { type: 'object', properties: { sql: { type: 'string', description: 'One read-only SQL statement. Do not add a trailing semicolon or multiple statements.' }, connection: CONNECTION_PARAM }, required: ['sql'] },
+			description: T.RUN_QUERY.description,
+			parameters: { type: 'object', properties: { sql: { type: 'string', description: T.RUN_QUERY.sql.description }, connection: CONNECTION_PARAM }, required: ['sql'] },
 		});
 	}
 	return specs;
@@ -187,7 +188,7 @@ export function buildToolSpecs(settings: AiToolSettings, available: boolean, doc
  *  the active one (by id or label), so a single task can span two databases (compare prod vs dev,
  *  copy a column between them). Omit ⇒ the active connection. This replaces the model's old failed
  *  habit of "switching the active connection" — which the DB tools cannot actually follow. */
-const CONNECTION_PARAM = { type: 'string', description: 'Optional: the saved connection to run against, given as its id or label (from list_connections). Defaults to the ACTIVE connection. Set this to inspect or query a DIFFERENT database in the same task (e.g. compare prod vs dev, or copy a column between them). Do NOT try to "switch" the active connection — pass this argument instead.' } as const;
+const CONNECTION_PARAM = { type: 'string', description: T.CONNECTION_ARG.description };
 
 export function qualified(table: TableInfo): string {
 	return table.schema ? `${table.schema}.${table.name}` : table.name;

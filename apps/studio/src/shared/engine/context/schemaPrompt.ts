@@ -3,6 +3,7 @@
  *  Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { studioPrompt as P, studioScreen as S } from '@snout/harness/studio';
 import { ASSISTANT_IDENTITY, assistantIs } from '../../assistant';
 import type { DatabaseSchema, RoutineInfo, TableInfo } from '../../schema';
 import type { AmbientContext, ChatMessage } from '../../ai';
@@ -448,16 +449,14 @@ function routineLines(schema: DatabaseSchema, focus: string | undefined, limit: 
 		return [];
 	}
 	const shown = rankRoutines(all, focus).slice(0, limit);
-	const header = all.length > shown.length
-		? `Stored routines you may call (${all.length} exist; the ${shown.length} most relevant to the question):`
-		: `Stored routines you may call (${all.length}):`;
+	const header = all.length > shown.length ? P.ROUTINES_SOME(all.length, shown.length) : P.ROUTINES_ALL(all.length);
 	const lines = [header];
 	for (const routine of shown) {
 		lines.push(routine.kind === 'function'
 			? `- ${qualifiedName(routine.schema, routine.name, quote)}(${routineSignature(routine)}) → ${routine.returnType ?? 'value'} [function]`
 			: `- ${qualifiedName(routine.schema, routine.name, quote)}(${routineSignature(routine)}) [procedure]`);
 	}
-	lines.push('Call a function inline like FUNCTION(args) when it fits — e.g. lookupName(kind_id, ref_id) to resolve a name/label from an id, instead of a JOIN.');
+	lines.push(P.ROUTINES_CALL);
 	return lines;
 }
 
@@ -591,7 +590,7 @@ function schemaLines(fullSchema: DatabaseSchema, topTables: number, budget: numb
 
 	// Everything not detailed (including excluded decoys — they still exist) is announced by count.
 	const remaining = schema.tables.length - detailed.length;
-	const lines = [`Schema for database "${schema.database}" (${schema.tables.length} tables; top ${detailed.length} most relevant to the question described in detail below):`];
+	const lines = [P.SCHEMA_HEADER(schema.database, schema.tables.length, detailed.length)];
 	lines.push(...detailed);
 	if (remaining > 0) {
 		// One-line announcement, NOT a full enumeration of the other tables. A 458-entry tail
@@ -601,9 +600,7 @@ function schemaLines(fullSchema: DatabaseSchema, topTables: number, budget: numb
 		// (one-shot path) the model simply cannot see the other names, so it must say so and
 		// never present its visible list as complete (the over-claim that reads as the AI
 		// confidently knowing a schema it only partly sees).
-		lines.push('', hasTools
-			? `(${remaining} other tables exist in this database and are NOT detailed above — call list_tables(filter) to enumerate them, search_columns(term) to find a field by name, or describe_table(name) for a specific one. The detailed tables are only the most relevant, never the complete set: when asked which tables relate to a topic, search FIRST rather than answering from the detailed list alone.)`
-			: `(${remaining} other tables exist in this database and are NOT shown here — their names are not visible to you. The tables above are only the few most relevant to the question, never the complete set. So do not present them as an exhaustive list: say there are ${remaining} other tables you cannot see and offer to look up a specific one.)`);
+		lines.push('', hasTools ? P.OTHER_TABLES_TOOLS(remaining) : P.OTHER_TABLES_HIDDEN(remaining));
 	}
 	return lines;
 }
@@ -613,68 +610,36 @@ function schemaLines(fullSchema: DatabaseSchema, topTables: number, budget: numb
  *  `chartNoSql` is the full-screen AI Chat surface: there the chart is the deliverable, so the
  *  model renders it and skips the raw ```sql block (and never opens a tab just to chart). */
 function chartGuidance(chartNoSql: boolean, dbRestricted = false): string {
-	const intro =
-		'When the user asks for a chart, graph, or to "visualize"/"plot" data, reply with a ```chart fenced block whose body is a single JSON object: ' +
-		'{"type":"bar|line|area|pie|scatter","title":"...","x":"<category key>","series":[{"key":"<value key>","name":"..."}],"data":[{"<x>":...,"<value key>":...}, ...]}. ' +
-		'Put the data points inline in "data" (each row an object keyed by the x key and every series key); cap it at about 100 rows. Never invent values. ';
 	if (dbRestricted) {
 		// No connection this turn (the user declined): there's no way to fetch real numbers, so a
 		// data-backed chart is impossible — say so rather than charting made-up values.
-		return intro +
-			'However, no database is connected for this turn, so you CANNOT fetch real values and must not invent any. If the user wants a chart of their data, tell them to connect the database first, then you can query it and render the chart.';
+		return P.CHART_FORMAT + P.CHART_NO_DATA;
 	}
 	if (chartNoSql) {
 		// Full-screen AI Chat: no result grid is in view, so the chart itself is the whole
 		// deliverable — fetch the numbers with run_query and don't surface the SQL.
-		return intro +
-			'The chart IS the deliverable: reply with just the ```chart block and a short sentence about it, and do NOT include a ```sql block (the raw query is not shown on this surface). ' +
-			'Get the numbers yourself with run_query (read-only) — if you are unsure of a table or column, inspect it first with describe_table/search_columns, then run the aggregation. There is no result grid in view here, so do not rely on get_query_result.';
+		return P.CHART_FORMAT + P.CHART_FULL;
 	}
 	// Docked panel: the model may also show a ```sql block for the user to insert manually, but it
 	// must FETCH chart data itself with run_query (or read the grid already on screen) — it cannot
 	// run the editor.
-	return intro +
-		'For the numbers: if they are already in the result grid on screen, read them with get_query_result; otherwise fetch them yourself by calling run_query (inspect the schema with describe_table/search_columns first if you are unsure of a column). ' +
-		'You may include a ```sql block too (the user inserts it manually with the button under it) alongside the ```chart block.';
+	return P.CHART_FORMAT + P.CHART_DOCKED;
 }
 
 /** Shown when the user was asked to connect the selected database and declined: this turn has no
  *  DB access on purpose, so the model must answer generally and never fake data or nag to connect. */
-const DB_RESTRICTED_NOTE =
-	'The user has a database selected but chose NOT to connect it for this question, so you have NO access to its schema or data: you cannot run queries, inspect tables, or produce a data-backed answer. ' +
-	'Answer the general SQL question if you can. If the request needs live data (exact counts, a chart of real values, anything specific to their data), briefly tell the user you can\'t access precise data without a connection and that they can connect the database to get an accurate, data-backed answer. ' +
-	'Do not invent table names, column names, or data values, and do not keep asking them to connect.';
+const DB_RESTRICTED_NOTE = P.DB_RESTRICTED;
 
 /** Shown when no connection is selected and more than one is connected: the dialect is ambiguous,
  *  so the model must ask which database the user means rather than guessing (and writing SQL in the
  *  wrong dialect). The candidate list carries each connected DB's label + its SQL dialect. */
 function ambiguousDbNote(options: { label: string; dialect: string }[]): string {
-	const list = options.map((o) => `${o.label} (${o.dialect})`).join(', ');
-	return 'No database is selected and more than one is connected, so the SQL dialect is unknown. ' +
-		`Before writing ANY SQL, ask the user which of these connected databases they mean: ${list}. ` +
-		'Do NOT guess the dialect or write SQL for any of them until the user chooses.';
+	return P.AMBIGUOUS_DB(options.map((o) => `${o.label} (${o.dialect})`).join(', '));
 }
 
 /** The agent's tool list + protocol, shared by the connected prompt (after the schema block) and
  *  the connection-pending prompt (where no schema is loaded yet). */
-const AGENT_TOOL_PROTOCOL: string[] = [
-	'You have these tools:',
-	'  - describe_table(name): get a table\'s full columns/keys/indexes',
-	'  - list_tables(filter?): enumerate tables (use the filter on a large schema)',
-	'  - search_columns(term): find tables/columns by substring',
-	'  - run_query(sql): run ONE read-only statement (SELECT/WITH/SHOW/DESCRIBE/EXPLAIN); the user approves each call',
-	'  Every one of these also takes an optional connection argument (a saved connection\'s id or label from list_connections). Omit it to use the ACTIVE connection; set it to target a DIFFERENT database.',
-	'',
-	'Protocol:',
-	'  1. If the answer is obvious from the tables described in detail above, write the SQL directly — no tool calls.',
-	'  2. If you need a table that is listed by name only (no columns shown), call describe_table FIRST. Never guess column names.',
-	'  3. Issue tool calls via the structured tool API. Do NOT write things like "Tool Call: SELECT …" or "Query: …" in your prose — that is not a tool call and the loop ignores it.',
-	'  4. When a listed stored function resolves what is asked (e.g. a name/label from an id), CALL it — lookupName(kind_id, ref_id) — rather than returning the bare id or hand-joining.',
-	'  5. If a filtered query returns 0 rows, do not just report "no results". First check whether the filter is the cause — e.g. run MIN/MAX (or DISTINCT) on the filtered column — and tell the user the actual range/values (e.g. "the data only spans 2019–2023, so 2026 is empty").',
-	'  6. To work with a database OTHER than the active one (compare prod vs dev, copy a column between them), do NOT try to "switch" or "connect to" it as a way to redirect your queries — the tools always run against whichever connection you name. Instead pass the connection argument on each call, e.g. describe_table on prod with {"name":"customer_order","connection":"prod"} and again on dev with {"connection":"dev"}, then compare the two results. Call list_connections first if you are unsure of the exact id/label. The schema described in detail above is the ACTIVE connection only — never assume another connection has the same columns; inspect it with its own connection argument before claiming what it does or does not have.',
-	'',
-	'Example of a correct tool call: invoke describe_table with {"name": "orders"} — return the structured call, not prose about calling it.',
-];
+const AGENT_TOOL_PROTOCOL = P.AGENT_TOOL_PROTOCOL;
 
 /** Pushed onto the agent prompt only when an editor + results grid are on screen (the docked panel).
  *  Filling the grid is the USER's action (they click Run / Insert under a ```sql block, exactly like
@@ -683,8 +648,7 @@ const AGENT_TOOL_PROTOCOL: string[] = [
  *  the agentic path (rows go back to the MODEL, never to the grid) and is only for when the model
  *  itself needs the data to keep working. NOT used on the full-screen chat surface (no editor/grid,
  *  no Run button), where the model must fetch + present the data in its reply itself. */
-const RESULTS_IN_GRID_NOTE =
-	'An editor and a results grid are on screen, and every ```sql block in your final answer has Run / Insert buttons under it — running a query is the USER\'s action (one click, just like Copy), never yours. So when the request is simply to SEE or retrieve data ("show me…", "what are…", "list…", "the last N…", "get…"), give the final ```sql block and let the user run it — do NOT call run_query. Reserve run_query for when YOU need the rows to continue your own work: to compute, compare, or verify a value, find an anomaly, or gather numbers for a chart. run_query rows come back to you only (they do not appear in the user\'s grid), so when you do use it, answer in prose with the specific finding rather than pasting the whole result set back.';
+const RESULTS_IN_GRID_NOTE = P.RESULTS_IN_GRID;
 
 /** Performance/indexing discipline, baked into the agent system prompt so it persists for every turn
  *  of an optimization session (it must NOT ride the per-question message, or it evaporates the moment
@@ -697,31 +661,17 @@ const RESULTS_IN_GRID_NOTE =
  *  with that evidence first. A checklist it must fill is followed far more reliably than a principle.
  *  Only meaningful with tools, so it's pushed only on the connected agent path (run_query / EXPLAIN /
  *  describe_table / SHOW INDEX are real calls there). */
-const PERF_GUIDANCE: string[] = [
-	'## When the task is to speed up a query (performance / indexing)',
-	'First diagnose from the plan, not from memory: EXPLAIN the original. Before you trust any equality column as an index prefix, MEASURE its selectivity (COUNT(*) GROUP BY that column, or COUNT(DISTINCT col) vs COUNT(*)) — if one value is more than ~20% of the table (status / state / type flags are the usual trap: one value is most of the table), a leading index on it is useless or harmful, so do not propose it.',
-	'',
-	'## Hard gate — you may NOT emit a ```sql block for a performance fix until you have, IN THIS SESSION:',
-	'(a) Called describe_table on EVERY table whose indexes or columns you make a claim about. If you say a column is or is not indexed, the describe_table output proving it must be in THIS conversation. No "shown earlier", no memory.',
-	'(b) If you propose CREATE / ALTER INDEX: run SHOW INDEX FROM <table> first and confirmed the index does not already exist. A duplicate index is a wrong answer (the ALTER errors "Duplicate key name").',
-	'(c) Run EXPLAIN on your FINAL rewrite (not just the original) and shown its plan uses the intended index, drops the rows examined, and has no "Using filesort" / "Using temporary". A fix you did not EXPLAIN is unverified.',
-	'(d) Confirmed the rewrite returns the SAME rows AND the SAME order as the original: same SELECT list, same ORDER BY / LIMIT, reasoning about NULLs (NULL = x and NULL != x are both NULL) and duplicates (UNION dedups, UNION ALL does not). A UNION whose ORDER BY references a non-selected column MUST wrap the branches in a derived table — never silently change the ORDER BY column.',
-	'Before the ```sql block, print these four as a checklist with the ACTUAL evidence (the EXPLAIN line, the SHOW INDEX result), not a restatement. If you cannot complete one, say so and label the fix UNVERIFIED rather than presenting it as the answer.',
-];
+const PERF_GUIDANCE = P.PERF_GUIDANCE;
 
 /** Postgres 18's B-tree skip scan serves a filter with no equality on a multicolumn index's leading
  *  column, and does it best when that column has FEW distinct values, so the selectivity rule above
  *  is wrong there for a multicolumn index. 18 also rewrites `col = a OR col = b` into
  *  `col = ANY(...)` itself, so the OR-chain rewrite a model reaches for buys nothing. */
 const PG_SKIP_SCAN_VERSION = 180000;
-const PG18_PERF_NOTES: string[] = [
-	'This server is PostgreSQL 18 or later, which changes two of the usual moves:',
-	'- Skip scan: a multicolumn B-tree index is usable for a filter on its later columns even with no condition on the leading one, and works BEST when the leading column has few distinct values. So the selectivity rule above applies to a single-column index; a low-selectivity column (status, type, a flag) LEADING a multicolumn index is fine here. Before proposing a new index on a later column, check whether an existing multicolumn index already serves it by skip scan (EXPLAIN shows an Index Scan on it).',
-	'- An OR on one column (col = a OR col = b) is rewritten by the planner to col = ANY(...), so do not rewrite it to IN, ANY or UNION for speed. An OR across DIFFERENT columns is unchanged.',
-];
+const PG18_PERF_NOTES = P.PG18_PERF_NOTES;
 
 /** The performance rules for this connection: PG18_PERF_NOTES added when the server is 18+. */
-function perfGuidance(schema: DatabaseSchema): string[] {
+function perfGuidance(schema: DatabaseSchema): readonly string[] {
 	return (schema.serverVersionNum ?? 0) >= PG_SKIP_SCAN_VERSION ? [...PERF_GUIDANCE, '', ...PG18_PERF_NOTES] : PERF_GUIDANCE;
 }
 
@@ -729,28 +679,21 @@ function perfGuidance(schema: DatabaseSchema): string[] {
  *  Liby in the official one, plain "AI" in the open-source one), so the model knows the name the
  *  screen shows. The em-dash rule is the app's, whoever the assistant is. Kept short: it rides every
  *  turn. */
-const ASSISTANT_LINE = `${ASSISTANT_IDENTITY} Never write an em-dash; use a comma, a period or a colon.`;
+const ASSISTANT_LINE = `${ASSISTANT_IDENTITY} ${P.NO_EM_DASH}`;
 
 /** The intro lines for the document (MongoDB) one-shot prompt: the assistant proposes a native
  *  aggregation pipeline in a ```json block. Mirrors the SQL intro's discipline (one final block,
  *  no invented identifiers, prose for "what exists" questions), reworded for collections/pipelines.
  *  The schema/ambient/thinking sections are shared with the SQL path, so only the framing differs. */
 function documentIntroLines(): string[] {
-	return [
-		`You are ${assistantIs('MongoDB assistant in SnoutData Studio')}, a database IDE. The active database is MongoDB, a document database queried with aggregation pipelines (not SQL).`,
-		ASSISTANT_LINE,
-		'When the user wants to query data, propose ONE MongoDB aggregation pipeline in a single ```json fenced code block: a JSON array of stages that runs against ONE collection. Example: ```json\n[{"$match": {"status": "active"}}, {"$sort": {"createdAt": -1}}, {"$limit": 20}]\n```. Use only the collections and fields described below — never invent identifiers. Be concise.',
-		'The UI shows an "Insert into pipeline" button under EVERY ```json block. So put only the FINAL pipeline you want the user to run in a ```json block — at most one. Show any incorrect, "before", or example pipeline as inline code with single backticks (or a plain ```text fence), never as ```json, so the user is never offered to run the wrong one.',
-		'Not every question needs a pipeline: when asked which collections or fields exist or relate to a topic, answer in prose by naming the relevant ones from the schema below.',
-		'IMPORTANT: the collections described in detail below are only the few most relevant to the question — NOT the whole database. Other collections exist whose names are not shown to you. So never present a list of collections as complete or exhaustive: name the relevant ones you can see, then state that more exist. Never claim a collection does or does not exist based only on what is shown here.',
-	];
+	return [P.DOCUMENT_INTRO(assistantIs(P.DOCUMENT_ROLE)), ASSISTANT_LINE, ...P.DOCUMENT_RULES];
 }
 
 /** A one-line directive telling the model to quote reserved-word identifiers, with a concrete
  *  dialect-correct example, so it copies `"order"` / `` `order` `` / `[order]` from the schema
  *  below instead of emitting a bare reserved word (a syntax error). SQL paths only. */
 function reservedWordGuidance(dialect: string, quote: Quoter): string {
-	return `Some identifiers are reserved words and MUST be quoted to be valid ${dialect}: a table or column literally named "order" has to be written ${quote('order')}, never bare order (a syntax error). Any such name is already shown quoted in the schema below; reuse it exactly as written, quotes included.`;
+	return P.RESERVED_WORDS(dialect, quote('order'));
 }
 
 /** System prompt grounding the assistant in the active connection's dialect + schema.
@@ -759,12 +702,9 @@ export function buildSystemPrompt(dialect: string, schema: DatabaseSchema | null
 	const extra = opts.instructions?.trim();
 	const quote = quoterFor(opts);
 	const lines: string[] = opts.documentMode ? documentIntroLines() : [
-		`You are ${assistantIs('SQL assistant in SnoutData Studio')}, a SQL IDE. The active database is ${dialect}.`,
+		P.SQL_INTRO(assistantIs(P.SQL_ROLE), dialect),
 		ASSISTANT_LINE,
-		`Write correct, runnable ${dialect} SQL. Put any runnable SQL in a single \`\`\`sql fenced code block, and prefer one statement. Use only the tables and columns described below — never invent identifiers. Be concise.`,
-		`The UI shows an "Insert into editor" button under EVERY \`\`\`sql block. So put only the final SQL you want the user to run in a \`\`\`sql block — at most one. Show any incorrect, "before", or example-of-the-bug SQL as inline code with single backticks (or a plain \`\`\`text fence), never as \`\`\`sql, so the user is never offered to run the wrong query.`,
-		`Not every question needs SQL: when asked which tables or columns exist or relate to a topic, answer in prose by naming the relevant ones from the schema below. Never write a query to discover tables — no SELECT against the database name, information_schema, or sys.* (the database name is not a table).`,
-		`IMPORTANT: the tables described in detail below are only the few most relevant to the question — NOT the whole database. Many other tables exist and their names are not shown to you. So never present a list of tables (or "the tables related to X") as complete or exhaustive: name the relevant ones you can see, then state that more tables exist that aren't shown and offer to search for a specific one. Never claim a table does or does not exist based only on what is shown here.`,
+		...P.ASK_RULES(dialect),
 		chartGuidance(opts.chartNoSql ?? false, opts.dbRestricted ?? false),
 	];
 	if (!opts.documentMode) {
@@ -778,7 +718,7 @@ export function buildSystemPrompt(dialect: string, schema: DatabaseSchema | null
 		if (opts.ambiguousConnections && opts.ambiguousConnections.length > 0) {
 			lines.push(ambiguousDbNote(opts.ambiguousConnections));
 		} else {
-			lines.push(opts.dbRestricted ? DB_RESTRICTED_NOTE : 'No schema is available (no active connection). Ask the user to connect, or answer generally.');
+			lines.push(opts.dbRestricted ? DB_RESTRICTED_NOTE : P.NO_SCHEMA);
 		}
 		return lines.join('\n');
 	}
@@ -804,14 +744,11 @@ export function buildAgentPrompt(dialect: string, schema: DatabaseSchema | null,
 	const quote = quoterFor(opts);
 	const lines: string[] = opts.documentMode ? [
 		...documentIntroLines(),
-		'You also have tools to inspect the database (described below); tool calls go through the structured tool API, NOT fenced blocks. Only the final pipeline you want the user to run goes in a ```json block.',
+		P.DOCUMENT_TOOLS,
 	] : [
-		`You are ${assistantIs('SQL assistant in SnoutData Studio')}, a SQL IDE. The active database is ${dialect}.`,
+		P.SQL_INTRO(assistantIs(P.SQL_ROLE), dialect),
 		ASSISTANT_LINE,
-		`Write correct, runnable ${dialect} SQL. Put any runnable SQL in a single \`\`\`sql fenced code block, and prefer one statement. Use only the tables and columns you have seen — never invent identifiers. Be concise.`,
-		`The UI shows an "Insert into editor" button under EVERY \`\`\`sql block in your final answer. So put only the final SQL you want the user to run in a \`\`\`sql block — at most one. Show any incorrect, "before", or example-of-the-bug SQL as inline code with single backticks (or a plain \`\`\`text fence), never as \`\`\`sql, so the user is never offered to run the wrong query. (This is about your prose answer; tool calls like run_query go through the structured tool API, not fenced blocks.)`,
-		`Not every question needs SQL: when asked which tables or columns exist or relate to a topic, answer in prose by naming the relevant ones. Never write a query to discover tables — no SELECT against the database name, information_schema, or sys.* (the database name is not a table). For tables shown by name only, or not shown, use search_columns/list_tables/describe_table instead.`,
-		`The detailed tables below are only the few most relevant to the question, NOT the whole database. When the question is to enumerate which tables relate to a topic (e.g. "what tables are related to users"), you MUST call search_columns/list_tables to find ALL matches before answering — never answer such a question from the detailed list alone, and never present it as complete when other tables exist.`,
+		...P.AGENT_RULES(dialect),
 		chartGuidance(opts.chartNoSql ?? false, opts.dbRestricted ?? false),
 	];
 	if (!opts.documentMode) {
@@ -836,17 +773,13 @@ export function buildAgentPrompt(dialect: string, schema: DatabaseSchema | null,
 		if (opts.connectionPending) {
 			// A connection is selected but offline: the tools still work — the first DB tool call asks
 			// the user to connect, then runs. The schema isn't loaded yet, so the model must explore it.
-			lines.push(
-				'A database connection is SELECTED but not connected yet, so its schema is not loaded. Your tools still work: the FIRST DB tool call (list_tables, describe_table, search_columns, run_query) will ask the user for permission to connect, then run. Use list_tables/describe_table/search_columns to learn the schema before writing SQL — never guess table or column names.',
-				'',
-				...AGENT_TOOL_PROTOCOL,
-			);
+			lines.push(P.CONNECTION_PENDING, '', ...AGENT_TOOL_PROTOCOL);
 			if (opts.gridInView) {
 				lines.push('', RESULTS_IN_GRID_NOTE);
 			}
 			return lines.join('\n');
 		}
-		lines.push('No database is connected, so the tools are unavailable. Ask the user to connect, or answer generally.');
+		lines.push(P.NO_CONNECTION);
 		return lines.join('\n');
 	}
 
@@ -904,12 +837,7 @@ export function buildGlossaryBlock(glossary: KnowledgeNote[]): string {
 	if (omitted > 0) {
 		lines.push(`- (${omitted} more note${omitted === 1 ? '' : 's'} not shown here.)`);
 	}
-	return [
-		'## What the user has taught you about THIS database (durable notes, treat as authoritative)',
-		'These are facts the user has explicitly taught the assistant about their own database. Trust them over your own assumptions about naming — e.g. if a note says sales data lives in a differently-named table, use that table.',
-		'',
-		lines.join('\n'),
-	].join('\n');
+	return [...P.GLOSSARY_HEADER, '', lines.join('\n')].join('\n');
 }
 
 /** The max length we ask the model to keep a drafted fact under, and the hard clip we apply to
@@ -1041,7 +969,7 @@ function sampleTable(ambient: AmbientContext): string {
 	if (shown === 0) {
 		return '';
 	}
-	return `A sample of the result rows currently shown (the first ${shown}, exactly as the grid displays them):\n${lines.join('\n')}`;
+	return `${S.SAMPLE(shown)}\n${lines.join('\n')}`;
 }
 
 /**
@@ -1065,21 +993,17 @@ export function buildAmbientComment(ambient: AmbientContext): string {
 		}).join('\n');
 		const more = ambient.connections.length > AMBIENT_MAX_CONNECTIONS
 			? `\n- … (${ambient.connections.length - AMBIENT_MAX_CONNECTIONS} more)` : '';
-		sections.push([
-			'The user\'s saved database connections (the "active" one is what this chat is grounded on):',
-			roster + more,
-			'To act on an environment ("prod", "staging", "dev") or a connection the user names: match it against this list by its environment tag OR by its label containing that word (case-insensitive), so a connection labelled "Production" counts as prod even with no tag. If a name-only match conflicts with its tag (e.g. labelled "prod-mirror" but tagged dev), ask the user which they mean rather than guessing. If the chosen connection is not connected, open it with the connect capability (this asks the user\'s permission) and leave it open. If nothing matches, tell the user there is no such connection and ask which one they mean.',
-		].join('\n'));
+		sections.push([S.CONNECTIONS, roster + more, S.CONNECTIONS_RULE].join('\n'));
 	}
 	if (ambient.focusedTable?.name) {
 		const t = ambient.focusedTable;
 		const qualified = t.schema ? `${t.schema}.${t.name}` : t.name;
-		sections.push(`The user is viewing the table \`${qualified}\` (open in a table tab). "this table" / "here" refers to it; its columns are in the schema above.`);
+		sections.push(S.TABLE(qualified));
 	}
 	if (ambient.focusedObject?.name) {
 		const o = ambient.focusedObject;
 		const qualified = o.schema ? `${o.schema}.${o.name}` : o.name;
-		let line = `The user is viewing the ${o.kind} \`${qualified}\` (open in an object tab). "this ${o.kind}" refers to it.`;
+		let line = S.OBJECT(o.kind, qualified);
 		const ddl = o.ddl?.trim();
 		if (ddl) {
 			line += `\n\`\`\`sql\n${clip(ddl, AMBIENT_OBJECT_DDL_CHARS)}\n\`\`\``;
@@ -1088,21 +1012,21 @@ export function buildAmbientComment(ambient: AmbientContext): string {
 	}
 	if (ambient.flowWizard) {
 		const flow = ambient.flowWizard;
-		const lines = [`The user has the Data Flow wizard open, on its "${flow.step}" step. A data flow reads rows from a source, shapes them, and writes them to a destination; the wizard sets one up step by step.`];
+		const lines = [S.FLOW(flow.step)];
 		if (flow.stepNote) {
 			lines.push(flow.stepNote);
 		}
 		if (flow.source) {
-			lines.push(`Source: ${flow.source}.`);
+			lines.push(S.FLOW_SOURCE(flow.source));
 		}
 		if (flow.destination) {
-			lines.push(`Destination: ${flow.destination}.`);
+			lines.push(S.FLOW_DESTINATION(flow.destination));
 		}
 		if (flow.outcome) {
-			lines.push(`The user said this data is for: ${flow.outcome}.`);
+			lines.push(S.FLOW_OUTCOME(flow.outcome));
 		}
 		if (flow.estimatedRows !== undefined) {
-			lines.push(`The full run is estimated at about ${flow.estimatedRows} rows.`);
+			lines.push(S.FLOW_ROWS(flow.estimatedRows));
 		}
 		if (flow.columns && flow.columns.length > 0) {
 			const roster = flow.columns.slice(0, AMBIENT_MAX_FLOW_COLUMNS).map((column) => {
@@ -1111,66 +1035,61 @@ export function buildAmbientComment(ambient: AmbientContext): string {
 			}).join('\n');
 			const more = flow.columns.length > AMBIENT_MAX_FLOW_COLUMNS
 				? `\n- … (${flow.columns.length - AMBIENT_MAX_FLOW_COLUMNS} more)` : '';
-			lines.push(`The columns the wizard currently proposes:\n${roster}${more}`);
+			lines.push(`${S.FLOW_COLUMNS}\n${roster}${more}`);
 		}
 		if (flow.warnings && flow.warnings.length > 0) {
-			lines.push(`Warnings the wizard is showing:\n${flow.warnings.slice(0, AMBIENT_MAX_FLOW_WARNINGS).map((w) => `- ${clip(w, AMBIENT_FLOW_WARNING_CHARS)}`).join('\n')}`);
+			lines.push(`${S.FLOW_WARNINGS}\n${flow.warnings.slice(0, AMBIENT_MAX_FLOW_WARNINGS).map((w) => `- ${clip(w, AMBIENT_FLOW_WARNING_CHARS)}`).join('\n')}`);
 		}
 		if (flow.generation) {
 			lines.push(flow.generation);
 		}
-		lines.push('"this flow", "these columns", "the file" and "the destination" refer to the wizard state above. Advise concretely against it — better names or types for specific columns, whether the key choice is sound, whether the destination fits the stated purpose — as a short list the user can apply in the wizard. Nothing is saved until they run it.');
+		lines.push(S.FLOW_ADVICE);
 		sections.push(lines.join('\n'));
 	}
 	const buffer = ambient.editorBuffer?.trim();
 	if (buffer) {
-		sections.push(`The SQL currently open in the editor:\n\`\`\`sql\n${clip(buffer, AMBIENT_BUFFER_CHARS)}\n\`\`\``);
+		sections.push(`${S.EDITOR}\n\`\`\`sql\n${clip(buffer, AMBIENT_BUFFER_CHARS)}\n\`\`\``);
 	}
 	const selection = ambient.selection?.trim();
 	if (selection && selection !== buffer) {
-		sections.push(`The text the user has highlighted in the editor:\n\`\`\`sql\n${clip(selection, AMBIENT_SELECTION_CHARS)}\n\`\`\``);
+		sections.push(`${S.SELECTION}\n\`\`\`sql\n${clip(selection, AMBIENT_SELECTION_CHARS)}\n\`\`\``);
 	}
 	const otherTabs = (ambient.otherTabs ?? []).filter((t) => t.sql.trim()).slice(0, AMBIENT_MAX_OTHER_TABS);
 	if (otherTabs.length > 0) {
 		const blocks = otherTabs.map((t) => `"${t.title}":\n\`\`\`sql\n${clip(t.sql.trim(), AMBIENT_OTHER_TAB_CHARS)}\n\`\`\``).join('\n\n');
-		sections.push(`The user's other open editor tabs (so "my other query" / "the query in my other tab" refers to one of these):\n\n${blocks}`);
+		sections.push(`${S.OTHER_TABS}\n\n${blocks}`);
 	}
 	if (ambient.resultColumns && ambient.resultColumns.length > 0) {
 		const cols = ambient.resultColumns.slice(0, AMBIENT_MAX_COLUMNS)
 			.map((f) => (f.dataType ? `${f.name} (${f.dataType})` : f.name)).join(', ');
 		const more = ambient.resultColumns.length > AMBIENT_MAX_COLUMNS ? `, … (${ambient.resultColumns.length - AMBIENT_MAX_COLUMNS} more)` : '';
-		sections.push(`The result grid currently shown has these columns: ${cols}${more}.`);
+		sections.push(S.RESULT_COLUMNS(`${cols}${more}`));
 	}
 	const sample = sampleTable(ambient);
 	if (sample) {
 		sections.push(sample);
 	}
 	if (ambient.selectedCell) {
-		sections.push(`The user has selected the cell "${ambient.selectedCell.column}" = ${ambient.selectedCell.value} in the result grid.`);
+		sections.push(S.CELL(ambient.selectedCell.column, ambient.selectedCell.value));
 	}
 	if (ambient.selectedRow && ambient.selectedRow.length > 0) {
 		const row = ambient.selectedRow.slice(0, AMBIENT_MAX_COLUMNS)
 			.map((c) => `${c.column}=${c.value}`).join(', ');
 		const more = ambient.selectedRow.length > AMBIENT_MAX_COLUMNS ? `, … (${ambient.selectedRow.length - AMBIENT_MAX_COLUMNS} more)` : '';
-		sections.push(`The full row that cell is in: ${row}${more}.`);
+		sections.push(S.ROW(`${row}${more}`));
 	}
 	const error = ambient.lastError?.trim();
 	if (error) {
-		sections.push(`The most recent query failed with this error:\n${clip(error, AMBIENT_ERROR_CHARS)}`);
+		sections.push(`${S.ERROR}\n${clip(error, AMBIENT_ERROR_CHARS)}`);
 	}
 	const memoryNote = ambient.memoryNote?.trim();
 	if (memoryNote) {
-		sections.push(`From this database's failure history (a deterministic record of past failures, not a guess): ${memoryNote}`);
+		sections.push(S.MEMORY(memoryNote));
 	}
 	if (sections.length === 0) {
 		return '';
 	}
-	return [
-		'## What the user is looking at right now (live app state, not typed into chat)',
-		'Use this directly to answer — do NOT ask the user to paste or restate the query, the error, or the result. It is already in front of them. If the user says "this query", "this error", or "these results", they mean the items below.',
-		'',
-		sections.join('\n\n'),
-	].join('\n');
+	return [...S.HEADER, '', sections.join('\n\n')].join('\n');
 }
 
 /**

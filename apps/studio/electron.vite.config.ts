@@ -24,6 +24,18 @@ const PSYCHE_ADMIN = resolve(__dirname, '../../packages/psyche-admin/src/index.t
 const MOVE = resolve(__dirname, '../../packages/move/dist/index.js');
 // Its Node half (spawning pg_dump/pg_restore), for main only: a renderer must never reach it.
 const MOVE_RUNNER = resolve(__dirname, '../../packages/move/dist/runner/index.js');
+// The assistant harness (the tool loop and the text tool-call parser), shared with the Cloud
+// dashboard: wired the same way, for main only (the renderer does not import it).
+const HARNESS = resolve(__dirname, '../../packages/harness/dist/index.js');
+// Its Studio surface: the text the assistant is told. The engine's prompt builders import it, so the
+// renderer resolves it too (the engine index reaches it; the prompts are built in main).
+const HARNESS_STUDIO = resolve(__dirname, '../../packages/harness/dist/studio.js');
+// `SNOUT_HARNESS_DIST` points a DEV run's main at another build of the package (a candidate text
+// being measured against the real assistant, through SNOUT_AI_DEBUG's endpoint). A build refuses it.
+if (process.env.SNOUT_HARNESS_DIST && !process.argv.includes('dev')) {
+	throw new Error('SNOUT_HARNESS_DIST is for `npm run dev` only (the harness lab); unset it to build.');
+}
+const MAIN_HARNESS_STUDIO = process.env.SNOUT_HARNESS_DIST ? resolve(process.env.SNOUT_HARNESS_DIST, 'studio.js') : HARNESS_STUDIO;
 // `@snoutdata/client` (packages/client), wired the same way: built from this monorepo's source by
 // `npm run client:build`, never taken from npm, so the app always carries the client as it is
 // here. It is ESM with no dependencies and is bundled into main, so nothing about loading it
@@ -90,7 +102,7 @@ function monacoTranslations(): Plugin {
 export default defineConfig({
 	main: {
 		plugins: [externalizeDepsPlugin()],
-		resolve: { alias: { '@snoutdata/client': CLIENT, '@snout/psyche-admin': PSYCHE_ADMIN, '@snout/review-core': REVIEW_CORE, '@snout/move': MOVE, '@snout/move-runner': MOVE_RUNNER, ...libyNameAlias(LIBY_PATHS), ...proMainAliases(PRO_PATHS) } },
+		resolve: { alias: { '@snoutdata/client': CLIENT, '@snout/psyche-admin': PSYCHE_ADMIN, '@snout/review-core': REVIEW_CORE, '@snout/move': MOVE, '@snout/move-runner': MOVE_RUNNER, '@snout/harness/studio': MAIN_HARNESS_STUDIO, '@snout/harness': HARNESS, ...libyNameAlias(LIBY_PATHS), ...proMainAliases(PRO_PATHS) } },
 		define: PRO_DEFINES,
 		build: {
 			rollupOptions: { input: resolve(__dirname, 'src/main/index.ts') },
@@ -107,7 +119,7 @@ export default defineConfig({
 		plugins: [react(), contentSecurityPolicy(), monacoTranslations()],
 		define: PRO_DEFINES,
 		resolve: {
-			alias: { '@snout/psyche-admin': PSYCHE_ADMIN, '@snout/review-core': REVIEW_CORE, '@snout/move': MOVE, ...proRendererAliases(PRO_PATHS), ...LIBY_ALIASES },
+			alias: { '@snout/psyche-admin': PSYCHE_ADMIN, '@snout/review-core': REVIEW_CORE, '@snout/move': MOVE, '@snout/harness/studio': HARNESS_STUDIO, ...proRendererAliases(PRO_PATHS), ...LIBY_ALIASES },
 			dedupe: ['react', 'react-dom', 'three'],
 		},
 		server: { fs: { allow: [__dirname, LIBY_PATHS.dir, resolve(__dirname, '../../packages/psyche-admin')] } },

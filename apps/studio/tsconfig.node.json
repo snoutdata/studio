@@ -19,7 +19,9 @@
 			"@snout/studio-pro/main": ["../../packages/studio-pro-stub/main.ts"],
 			"@snout/studio/*": ["./src/*"],
 			"@snoutdata/client": ["../../packages/client/dist/index.d.ts"],
-			"@snout/move-runner": ["../../packages/move/dist/runner/index.d.ts"]
+			"@snout/move-runner": ["../../packages/move/dist/runner/index.d.ts"],
+			"@snout/harness": ["../../packages/harness/dist/index.d.ts"],
+			"@snout/harness/studio": ["../../packages/harness/dist/studio.d.ts"]
 		}
 	},
 	"include": [

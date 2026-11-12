@@ -4,6 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { randomUUID } from 'node:crypto';
+import { studioPrompt } from '@snout/harness/studio';
 
 import { GATEWAY_EMBED_MODEL, observerModelFor } from '../shared/ai';
 import { gatewayRefusal, refusalSentence } from '../shared/gatewayRefusal';
@@ -214,7 +215,7 @@ function editFocus(params: AiEditParams): string {
 /** Always appended to the system prompt: a brief plan-before-answering nudge. A prompt-level
  *  instruction rather than a provider reasoning flag, so it works with any BYO model — local
  *  or cloud — without special-casing a backend. */
-const THINKING_INSTRUCTION = 'Think step by step before answering. First reason through the request in a brief "Reasoning:" section — restate the goal, identify the relevant tables and columns, and note edge cases or ambiguities — then give your final answer and SQL.';
+const THINKING_INSTRUCTION = studioPrompt.THINKING;
 
 /** Inline completion fires (debounced) on keystrokes against a small code model over two
  *  network hops, so its prompt must stay tiny — a fraction of the chat schema budget — or
@@ -267,7 +268,7 @@ const REPLY_LANGUAGES: Record<Exclude<Locale, 'en'>, string> = { fr: 'French', e
 
 /** The app's language, for the model's prose. Nothing for English, which is what the prompt is already in. */
 function replyLanguageLine(locale: Locale): string | null {
-	return locale === 'en' ? null : `Write your answers to the user in ${REPLY_LANGUAGES[locale]}, even when these instructions are in English. SQL, code and identifiers stay exactly as they are.`;
+	return locale === 'en' ? null : studioPrompt.REPLY_LANGUAGE(REPLY_LANGUAGES[locale]);
 }
 
 export class AiService {

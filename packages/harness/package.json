@@ -1,0 +1,39 @@
+{
+	"name": "@snout/harness",
+	"version": "0.1.0",
+	"private": true,
+	"description": "The assistant harness the SnoutData dashboard and Studio share: the tool loop, the text tool-call parser, the grant rules, the stream reader, the trace format, and the editable surface (prompt sections and tool descriptions). No I/O, no node:, no DOM.",
+	"license": "Apache-2.0",
+	"author": "SnoutData <security@snoutdata.com>",
+	"type": "module",
+	"main": "./dist/index.js",
+	"types": "./dist/index.d.ts",
+	"exports": {
+		".": {
+			"types": "./dist/index.d.ts",
+			"default": "./dist/index.js"
+		},
+		"./cloud": {
+			"types": "./dist/cloud.d.ts",
+			"default": "./dist/cloud.js"
+		},
+		"./studio": {
+			"types": "./dist/studio.d.ts",
+			"default": "./dist/studio.js"
+		},
+		"./src/*": "./src/*"
+	},
+	"files": [
+		"dist",
+		"src"
+	],
+	"scripts": {
+		"build": "tsc -p tsconfig.json",
+		"typecheck": "tsc -p tsconfig.json --noEmit",
+		"test": "tsc -p tsconfig.json && node --test \"dist/**/*.test.js\""
+	},
+	"devDependencies": {
+		"@types/node": "^22.10.0",
+		"typescript": "^5.7.0"
+	}
+}

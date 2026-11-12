@@ -24,6 +24,7 @@
  * shows its banner while it is unset.
  */
 
+import { studioPrompt } from '@snout/harness/studio';
 import type { AmbientContext } from '../../ai';
 import { t } from '../../i18n/core';
 import { valueFreeError } from '../memory/errorClass';
@@ -238,8 +239,8 @@ export function dataAccessPromptNote(level: DataAccessLevel): string {
 		case 'queries':
 			return '';
 		case 'screen':
-			return 'DATA ACCESS: the user has allowed you the schema and what is on screen (a few rows of the shown result, the selected cell or row), but NOT running queries of your own. If an answer needs more rows than that, say so plainly, give the SQL for the user to run, and mention they can allow read-only queries in Settings → AI or in this connection\'s settings. Never invent values.';
+			return studioPrompt.DATA_ACCESS_SCREEN;
 		case 'schema':
-			return 'DATA ACCESS: the user has allowed you the SCHEMA ONLY. You cannot see any values from their database, including the result grid on screen, and you cannot run queries. If a question depends on the data, say you cannot see it at their current setting, answer from the schema (give the SQL for them to run), and mention they can change it in Settings → AI or in this connection\'s settings. Never invent values.';
+			return studioPrompt.DATA_ACCESS_SCHEMA;
 	}
 }

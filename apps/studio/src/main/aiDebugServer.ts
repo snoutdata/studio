@@ -6,6 +6,7 @@
 import { randomBytes, timingSafeEqual } from 'node:crypto';
 import { createServer, type IncomingHttpHeaders, type IncomingMessage, type Server, type ServerResponse } from 'node:http';
 
+import { studioSurfaceDigest } from '@snout/harness/studio';
 import type { AiProviderId } from '../shared/ai';
 import type { AiService, AiDebugChatRequest, AiDebugEditRequest } from './aiService';
 import type { ConnectionManager } from './connectionManager';
@@ -119,7 +120,7 @@ function resolveConnection(connections: ConnectionManager, body: ConnBody): { co
  * records every round-trip to aiDebug.jsonl along the way. Started only in dev (see main).
  *
  * Routes:
- *   GET  /ai/info        → saved provider/model, connected ids, the benchmark model list
+ *   GET  /ai/info        → saved provider/model, connected ids, the benchmark model list, the surface fingerprint
  *   POST /ai/chat        → { question, provider?, model?, connectionId?, agent? } → one result
  *   POST /ai/benchmark   → { question, connectionId?, agent? } → one result per benchmark model
  *   POST /ai/edit        → { instruction, selection?, document?, provider?, model?, benchmark? }
@@ -166,6 +167,9 @@ async function handle(req: IncomingMessage, res: ServerResponse, aiService: AiSe
 			// Why a chat/action isn't landing in the audit log: recording needs BOTH the tier
 			// entitlement (auditAllowed) and the kind being enabled in Settings (auditKinds).
 			audit: aiService.auditState(),
+			// The fingerprint of the assistant's surface text this app was built with, so a tuning run
+			// can tell whether it is serving the candidate text it is about to measure.
+			surface: studioSurfaceDigest(),
 		});
 		return;
 	}

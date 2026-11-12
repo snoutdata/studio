@@ -52,8 +52,8 @@ jobs:
           cache: npm
           cache-dependency-path: apps/studio/package-lock.json
 
-      # Also installs packages/review-core, packages/move and packages/client (the app's postinstall),
-      # and rebuilds the native modules for Electron.
+      # Also installs packages/review-core, packages/move, packages/harness and packages/client (the
+      # app's postinstall), and rebuilds the native modules for Electron.
       - name: Install dependencies
         run: npm ci
 

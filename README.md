@@ -261,6 +261,7 @@ dialect, guard, schema context) that runs unchanged in the window, the main proc
 | `apps/studio` | The app: `src/main` (Electron main), `src/preload`, `src/renderer` (React + Monaco), `src/server` (the SQL language server), `src/shared` (contracts and the engine every query and prompt passes through), `e2e` |
 | `packages/review-core` | Rules that check a SQL migration against a live database, a library with no I/O |
 | `packages/move` | Moving a database, shared with the `snoutdata` CLI |
+| `packages/harness` | The assistant's tool loop and its tool-call parser, shared with the SnoutData Cloud dashboard |
 | `packages/client` | `@snoutdata/client`, the JavaScript client for a SnoutData Cloud project, built from this source (also published to npm) |
 | `packages/studio-pro-stub` | Stands in for Data Flows: the same interface, with only the placeholder behind it |
 | `packages/liby-stub` | Stands in for Liby: every call is a no-op and nothing of hers is in it |
