@@ -27,6 +27,7 @@ import {
 	placementOf,
 	reorderTool,
 	resizeArea,
+	scaleDocks,
 	setCollapsed,
 	showTool,
 	toggleTool,
@@ -396,4 +397,34 @@ test('a layout saved with the old Projects tool id keeps the panel where the use
 	assert.ok(docks.right.tools.includes('dashboard'));
 	assert.equal(docks.right.active, 'dashboard');
 	assert.ok(!docks.left.tools.includes('dashboard'), 'moved, not duplicated into its home area');
+});
+
+// --- the docks keep their share of the window across launches ---------------
+
+test('saved dock sizes scale with the window they reopen in', () => {
+	const docks = cloneDocks(DEFAULT_DOCKS);
+	docks.left.size = 400;
+	docks.right.size = 800;
+	docks.bottom.size = 300;
+	const scaled = scaleDocks(docks, { width: 2000, height: 1200 }, { width: 1000, height: 900 });
+	assert.equal(scaled.left.size, 200);
+	assert.equal(scaled.right.size, 400);
+	assert.equal(scaled.bottom.size, 225);
+	assert.equal(docks.left.size, 400, 'the input is not mutated');
+});
+
+test('a scaled dock still respects the new window\'s floor and ceiling', () => {
+	const docks = cloneDocks(DEFAULT_DOCKS);
+	docks.left.size = AREA_MIN.left;
+	docks.bottom.size = 700;
+	const scaled = scaleDocks(docks, { width: 1000, height: 1000 }, { width: 500, height: 1000 });
+	assert.ok(scaled.left.size >= minSizeFor('left', scaled.left.active));
+	assert.ok(scaled.bottom.size <= areaMax('bottom', 500, 1000));
+});
+
+test('a layout saved without its window size, or in the same window, is left as it is', () => {
+	const docks = cloneDocks(DEFAULT_DOCKS);
+	assert.equal(scaleDocks(docks, undefined, { width: 800, height: 600 }), docks);
+	assert.equal(scaleDocks(docks, { width: 0, height: 600 }, { width: 800, height: 600 }), docks);
+	assert.equal(scaleDocks(docks, { width: 800, height: 600 }, { width: 800, height: 600 }), docks);
 });

@@ -355,6 +355,27 @@ export function resizeArea(docks: DockLayout, area: DockArea, size: number, wind
 	return next;
 }
 
+/** The window's inner size when a layout was saved. */
+export interface DockWindow { width: number; height: number }
+
+/**
+ * Keep each area's SHARE of the window across launches: left/right scale by the width ratio,
+ * bottom by the height ratio, then clamp to the new window as a drag would. A layout saved before
+ * the window size was recorded (or with a nonsense one) is returned unchanged.
+ */
+export function scaleDocks(docks: DockLayout, saved: DockWindow | undefined, now: DockWindow): DockLayout {
+	const valid = (w: DockWindow | undefined): w is DockWindow => !!w && Number.isFinite(w.width) && Number.isFinite(w.height) && w.width > 0 && w.height > 0;
+	if (!valid(saved) || !valid(now) || (saved.width === now.width && saved.height === now.height)) {
+		return docks;
+	}
+	let next = docks;
+	for (const area of DOCK_AREAS) {
+		const ratio = area === 'bottom' ? now.height / saved.height : now.width / saved.width;
+		next = resizeArea(next, area, next[area].size * ratio, now.width, now.height);
+	}
+	return next;
+}
+
 export function setCollapsed(docks: DockLayout, area: DockArea, collapsed: boolean): DockLayout {
 	const next = cloneDocks(docks);
 	next[area].collapsed = collapsed;

@@ -1303,6 +1303,18 @@ export function App(): JSX.Element {
 
 	useEffect(() => {
 		saveLayout(layout);
+		// The saved layout records the window it was laid out in; a resize alone changes that, so
+		// save again once the resize settles.
+		let timer: ReturnType<typeof setTimeout> | undefined;
+		const onResize = (): void => {
+			clearTimeout(timer);
+			timer = setTimeout(() => saveLayout(layout), 400);
+		};
+		window.addEventListener('resize', onResize);
+		return () => {
+			clearTimeout(timer);
+			window.removeEventListener('resize', onResize);
+		};
 	}, [layout]);
 
 	useEffect(() => {

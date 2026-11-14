@@ -3,7 +3,7 @@
  *  Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { DEFAULT_DOCKS, cloneDocks, migrateLegacy, normalise, type DockLayout, type LegacyPlacement } from './docking';
+import { DEFAULT_DOCKS, cloneDocks, migrateLegacy, normalise, scaleDocks, type DockLayout, type DockWindow, type LegacyPlacement } from './docking';
 
 /** Which view the left side bar shows; chosen from the activity bar. Still the id a side panel
  *  is known by, but WHERE it shows is now the dock layout's business. */
@@ -33,6 +33,14 @@ export interface Layout {
 
 const STORAGE_KEY = 'positron-db.layout';
 
+/** What is stored: the layout plus the window it was laid out in, so the docks keep their share
+ *  of the window when the next launch opens it at another size. */
+type StoredLayout = Partial<Layout> & LegacyPlacement & { dockWindow?: DockWindow };
+
+function currentWindow(): DockWindow {
+	return { width: window.innerWidth, height: window.innerHeight };
+}
+
 export const DEFAULT_LAYOUT: Layout = {
 	docks: DEFAULT_DOCKS,
 	resultsHeight: 300,
@@ -48,12 +56,12 @@ export function loadLayout(): Layout {
 	try {
 		const raw = localStorage.getItem(STORAGE_KEY);
 		if (raw) {
-			const stored = JSON.parse(raw) as Partial<Layout> & LegacyPlacement;
+			const stored = JSON.parse(raw) as StoredLayout;
 			// Field by field, deliberately: spreading `stored` would carry the pre-docking flat
 			// fields (sidebarWidth, sideView, console*) straight back into the object we save next,
 			// which is the second source of truth this migration exists to remove.
 			return {
-				docks: normalise(stored.docks ?? migrateLegacy(stored)),
+				docks: scaleDocks(normalise(stored.docks ?? migrateLegacy(stored)), stored.dockWindow, currentWindow()),
 				resultsHeight: stored.resultsHeight ?? DEFAULT_LAYOUT.resultsHeight,
 				resultsCollapsed: stored.resultsCollapsed ?? DEFAULT_LAYOUT.resultsCollapsed,
 				composerHeight: stored.composerHeight ?? DEFAULT_LAYOUT.composerHeight,
@@ -69,7 +77,8 @@ export function loadLayout(): Layout {
 
 export function saveLayout(layout: Layout): void {
 	try {
-		localStorage.setItem(STORAGE_KEY, JSON.stringify(layout));
+		const stored: StoredLayout = { ...layout, dockWindow: currentWindow() };
+		localStorage.setItem(STORAGE_KEY, JSON.stringify(stored));
 	} catch {
 		// ignore write failures (private mode, quota)
 	}
