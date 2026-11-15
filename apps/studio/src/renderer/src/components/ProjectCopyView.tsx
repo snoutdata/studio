@@ -20,6 +20,7 @@ import type { ProjectTarget } from '../../../shared/projects';
 import { formatBytes } from '../formatBytes';
 import { Icon } from './Icon';
 import { t, useT } from '../i18n';
+import { asProjectName, isProjectName, PROJECT_NAME_MAX } from '../../../shared/projectName';
 import { FIX_LABEL, MoveProgressPanel, MoveRoute, SEVERITY, type RouteEnd } from './MoveView';
 
 type Step = 'choose' | 'check' | 'review' | 'copying';
@@ -77,7 +78,7 @@ export function ProjectCopyView(props: ProjectCopyViewProps): JSX.Element {
 	const [options, setOptions] = useState<Option[] | null>(null);
 	const [optionsNote, setOptionsNote] = useState<string | null>(null);
 	const [targetValue, setTargetValue] = useState<string>(toCloud ? NEW_CLOUD : '');
-	const [newName, setNewName] = useState<string>(props.sourceName);
+	const [newName, setNewName] = useState<string>(() => asProjectName(props.sourceName));
 	const [parts, setParts] = useState<Set<ProjectCopyPart>>(() => new Set(PROJECT_COPY_PARTS.filter((part) => !partUnavailable(part, source.kind, toCloud ? 'cloud' : 'local'))));
 	const [check, setCheck] = useState<ProjectCopyCheck | null>(null);
 	const [typed, setTyped] = useState('');
@@ -146,7 +147,7 @@ export function ProjectCopyView(props: ProjectCopyViewProps): JSX.Element {
 	const chosen = options?.find((o) => o.value === targetValue);
 	const creating = targetValue === NEW_CLOUD;
 	const destination: ProjectCopyDestination | null = creating
-		? (newName.trim() ? { kind: 'newCloud', name: newName.trim(), region: NEW_CLOUD_REGION } : null)
+		? (isProjectName(newName.trim()) ? { kind: 'newCloud', name: newName.trim(), region: NEW_CLOUD_REGION } : null)
 		: chosen?.target ?? null;
 	const request: ProjectCopyRequest | null = destination ? { id: idRef.current, source, target: destination, parts: PROJECT_COPY_PARTS.filter((p) => parts.has(p)) } : null;
 	const sourceEnd: RouteEnd = { label: props.sourceName, icon: toCloud ? 'device-desktop' : 'cloud' };
@@ -295,7 +296,8 @@ export function ProjectCopyView(props: ProjectCopyViewProps): JSX.Element {
 								)}
 								{creating && (
 									<>
-										<input className="move-new-name" value={newName} placeholder={t('move.projectName')} aria-label={t('move.newProjectName')} maxLength={60} spellCheck={false} onChange={(event) => setNewName(event.target.value)} />
+										<input className="move-new-name" value={newName} placeholder={t('move.projectName')} aria-label={t('move.newProjectName')} maxLength={PROJECT_NAME_MAX} spellCheck={false} aria-invalid={newName.trim() !== '' && !isProjectName(newName.trim())} onChange={(event) => setNewName(event.target.value)} />
+										<span className={newName.trim() !== '' && !isProjectName(newName.trim()) ? 'move-end-hint warn' : 'move-end-hint'}>{t('projects.common.nameRule')}</span>
 										<span className="move-end-hint">{t('move.copy.createdInRegion', { region: NEW_CLOUD_REGION })}</span>
 									</>
 								)}

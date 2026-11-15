@@ -38,7 +38,7 @@
 		"cloud": "In SnoutData Cloud",
 		"creating": "Creating…",
 		"local": "Local, in Docker on this computer",
-		"placeholder": "orders, staging, my side project",
+		"placeholder": "orders, staging, my-side-project",
 		"prodHint": "A production project is never paused, whether you ask or the idle policy does. Plus, Pro and Business only.",
 		"signIn": "Sign in to create a cloud project"
 	},

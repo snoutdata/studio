@@ -38,7 +38,7 @@
 		"cloud": "Dans SnoutData Cloud",
 		"creating": "Création…",
 		"local": "Local, dans Docker sur cet ordinateur",
-		"placeholder": "commandes, staging, mon projet perso",
+		"placeholder": "commandes, staging, mon-projet",
 		"prodHint": "Un projet de production n'est jamais mis en pause, ni à votre demande ni par la politique d'inactivité. Plus, Pro et Business uniquement.",
 		"signIn": "Connectez-vous pour créer un projet cloud"
 	},

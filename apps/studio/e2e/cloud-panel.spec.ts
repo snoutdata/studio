@@ -386,15 +386,15 @@ test('a project created from the panel is a connection at once, and a delete is 
 	await showCloud();
 	await cloudHeader().locator('button[aria-label="New project"]').click();
 	await handle.page.click('.panel-menu-item:has-text("In SnoutData Cloud")');
-	await handle.page.fill('.modal input[placeholder^="orders"]', "made here");
+	await handle.page.fill('.modal input[placeholder^="orders"]', "made-here");
 	await handle.page.click('.modal-actions button:has-text("Create")');
 
 	await expect(handle.page.locator('.sidebar')).toContainText('Created fffffffffffff and added it as a connection');
-	await expect(handle.page.locator('.tree-row:has-text("made here")')).toHaveCount(1);
+	await expect(handle.page.locator('.tree-row:has-text("made-here")')).toHaveCount(1);
 	await handle.page.screenshot({ path: 'test-results/cloud-created.png' });
 
 	await showConnections();
-	await expect(handle.page.locator('.sidebar')).toContainText("made here");
+	await expect(handle.page.locator('.sidebar')).toContainText("made-here");
 
 	// A project mid-create offers no delete, like any other in-flight state; let it finish.
 	projects = projects.map((p) => (p.ref === 'fffffffffffff' ? { ...p, state: 'ready' } : p));
@@ -404,17 +404,17 @@ test('a project created from the panel is a connection at once, and a delete is 
 	// line goes, instead of sitting above a green dot saying the opposite.
 	await expect(handle.page.locator('.sidebar')).not.toContainText('Created fffffffffffff');
 	// Deleting is in the project's Settings, as on the online dashboard, never in the panel.
-	await handle.page.click('.tree-row:has-text("made here")');
+	await handle.page.click('.tree-row:has-text("made-here")');
 	await expect(handle.page.locator('.cloud-detail button:has-text("Delete")')).toHaveCount(0);
 	await handle.page.locator('.sidebar .tree-row:has-text("Settings")').last().click();
 	await handle.page.locator('.cloud-project-view button:has-text("Delete project")').click();
 	await handle.page.click('.modal.confirm button:has-text("Delete")');
 	await expect.poll(() => asked.some((a) => a.action === 'delete' && a.ref === 'fffffffffffff')).toBe(true);
-	await expect(handle.page.locator('.tree-row:has-text("made here")')).toHaveCount(0);
+	await expect(handle.page.locator('.tree-row:has-text("made-here")')).toHaveCount(0);
 
 	// Deleting a project takes its connection with it.
 	await showConnections();
-	await expect(handle.page.locator('.sidebar')).not.toContainText('made here');
+	await expect(handle.page.locator('.sidebar')).not.toContainText('made-here');
 });
 
 test('a project expands into what belongs to it, and its database opens in Connections with the butterfly', async () => {

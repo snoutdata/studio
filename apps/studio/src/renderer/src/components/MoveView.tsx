@@ -41,6 +41,7 @@ import type { ConnectionConfig } from '../../../shared/connection';
 import type { MoveCheck } from '../../../shared/move';
 import { Icon } from './Icon';
 import { t, useT } from '../i18n';
+import { isProjectName, PROJECT_NAME_MAX } from '../../../shared/projectName';
 
 type Step = 'choose' | 'check' | 'review' | 'moving';
 
@@ -167,7 +168,8 @@ export function MoveView(props: MoveViewProps): JSX.Element {
 	const targetEnd: RouteEnd | undefined = creating
 		? { label: newName.trim() || (newCloud ? t('move.newCloudProject') : t('move.newDatabase')), icon: newCloud ? 'cloud' : 'database' }
 		: endOf(target);
-	const targetChosen = creating ? newName.trim().length > 0 : target !== undefined;
+	const badCloudName = newCloud && newName.trim() !== '' && !isProjectName(newName.trim());
+	const targetChosen = creating ? newName.trim().length > 0 && !badCloudName : target !== undefined;
 
 	// Every change on the first step invalidates a check made before it.
 	useEffect(() => {
@@ -397,10 +399,12 @@ export function MoveView(props: MoveViewProps): JSX.Element {
 											value={newName}
 											placeholder={newCloud ? t('move.projectName') : t('move.databaseName')}
 											aria-label={newCloud ? t('move.newProjectName') : t('move.newDatabaseName')}
-											maxLength={newCloud ? 60 : 63}
+											maxLength={newCloud ? PROJECT_NAME_MAX : 63}
+											aria-invalid={badCloudName}
 											spellCheck={false}
 											onChange={(event) => setNewName(event.target.value)}
 										/>
+										{newCloud && <span className={badCloudName ? 'move-end-hint warn' : 'move-end-hint'}>{t('projects.common.nameRule')}</span>}
 										<span className="move-end-hint">
 											{newCloud ? t('move.createdInRegion', { region: NEW_CLOUD_REGION }) : t('move.createdOnServer')}
 										</span>

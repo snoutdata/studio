@@ -8,6 +8,7 @@ import { Icon } from './Icon';
 import { useConfirm } from './ConfirmDialog';
 import { CLOUD_REGIONS, type CloudActionOutcome, type CloudCreateOutcome, type CloudProjectRow, type CloudProjectsView } from '../../../shared/cloudProjects';
 import type { LocalActionOutcome, LocalProjectRow, LocalProjectsView } from '../../../shared/localStack';
+import { isProjectName, PROJECT_NAME_MAX } from '../../../shared/projectName';
 import { PROJECT_SECTION_GROUPS, PROJECT_SECTIONS, type ProjectSection, type ProjectTarget } from '../../../shared/projects';
 import { localStateLabel, localTone } from '../localProjects';
 import { ProjectsArt } from '../art/Illustrations';
@@ -589,8 +590,12 @@ function NewCloudProject(props: { onClose(): void; onCreated(outcome: CloudCreat
 	const [production, setProduction] = useState(false);
 	const [busy, setBusy] = useState(false);
 	const [error, setError] = useState<CloudActionOutcome | null>(null);
+	const nameOk = isProjectName(name.trim());
 
 	async function submit(): Promise<void> {
+		if (!nameOk) {
+			return;
+		}
 		setBusy(true);
 		setError(null);
 		try {
@@ -620,8 +625,9 @@ function NewCloudProject(props: { onClose(): void; onCreated(outcome: CloudCreat
 				<h2>{t('dashboard.list.newProject')}</h2>
 				<label>
 					{t('projects.common.name')}
-					<input value={name} onChange={(e) => setName(e.target.value)} placeholder={t('dashboard.new.placeholder')} maxLength={60} autoFocus />
+					<input value={name} onChange={(e) => setName(e.target.value)} placeholder={t('dashboard.new.placeholder')} maxLength={PROJECT_NAME_MAX} spellCheck={false} aria-invalid={name.trim() !== '' && !nameOk} autoFocus />
 				</label>
+				<p className={name.trim() !== '' && !nameOk ? 'field-hint warn' : 'field-hint'}>{t('projects.common.nameRule')}</p>
 				<label>
 					{t('cloudProjects.status.region')}
 					<select value={region} onChange={(e) => setRegion(e.target.value)}>
@@ -637,7 +643,7 @@ function NewCloudProject(props: { onClose(): void; onCreated(outcome: CloudCreat
 				<div className="modal-actions">
 					<span className="spacer" />
 					<button type="button" className="secondary" onClick={props.onClose} disabled={busy}><Icon name="close" /> {t('projects.common.cancel')}</button>
-					<button type="submit" disabled={busy || name.trim() === ''}><Icon name="add" /> {busy ? t('dashboard.new.creating') : t('projects.common.create')}</button>
+					<button type="submit" disabled={busy || !nameOk}><Icon name="add" /> {busy ? t('dashboard.new.creating') : t('projects.common.create')}</button>
 				</div>
 			</form>
 		</div>

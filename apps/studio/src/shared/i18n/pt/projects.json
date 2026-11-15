@@ -275,6 +275,7 @@
 		"choose": "Escolha um para adicionar"
 	},
 	"common": {
+		"nameRule": "Use apenas de A a Z, de 0 a 9, hifens e sublinhados, começando com uma letra ou um número. Sem espaços.",
 		"docs": "Docs",
 		"address": "Endereço",
 		"appKey": "Chave de app",

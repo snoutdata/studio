@@ -275,6 +275,7 @@
 		"choose": "Choisir pour ajouter"
 	},
 	"common": {
+		"nameRule": "Utilisez uniquement A à Z, 0 à 9, tirets et tirets bas, en commençant par une lettre ou un chiffre. Sans espaces.",
 		"docs": "Docs",
 		"address": "Adresse",
 		"appKey": "Clé d'application",

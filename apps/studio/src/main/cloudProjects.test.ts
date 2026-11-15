@@ -224,6 +224,18 @@ test('create adds the project as a connection and says so', async () => {
 	assert.equal(connected, 'newref');
 });
 
+test('a name with a space or a special character is refused before the control plane is asked', async () => {
+	for (const name of ["my project", "orders!", "-lead"]) {
+		const outcome = await createCloudProject(
+			api({ create: async () => { throw new Error('must not create'); } }),
+			{ name, region: 'us-west-2', production: false },
+			async () => { throw new Error('must not connect'); },
+		);
+		assert.equal(outcome.ok, false, name);
+		assert.equal(outcome.refused, true, name);
+	}
+});
+
 test('a create refused by the control plane is a refusal in its own words, and nothing is connected', async () => {
 	const outcome = await createCloudProject(
 		api({ create: async () => { throw new CloudRequestError("Your plan allows 1 project", 403); } }),

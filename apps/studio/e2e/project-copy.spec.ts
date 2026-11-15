@@ -168,7 +168,7 @@ test('a local project copies its functions and secrets into a new cloud project'
 	await expect(view).toBeVisible();
 	// A new cloud project, named after the source, is the default target.
 	await expect(view.locator('.move-new-name')).toHaveValue('shop');
-	await view.locator('.move-new-name').fill('shop cloud');
+	await view.locator('.move-new-name').fill('shop-cloud');
 	// Only the two parts that need neither Docker nor a real cloud database.
 	for (const part of ['users', 'database', 'files']) {
 		await view.locator(`.copy-parts label.check[data-part="${part}"] input`).uncheck();
@@ -181,7 +181,7 @@ test('a local project copies its functions and secrets into a new cloud project'
 	await expect(view.locator('.move-finding', { hasText: 'Function secrets' })).toContainText('SNOUT_INTERNAL is reserved');
 	await handle.page.screenshot({ path: 'test-results/project-copy-check.png' });
 	await view.locator('button', { hasText: 'Review' }).click();
-	await expect(view).toContainText('Create the SnoutData Cloud project "shop cloud"');
+	await expect(view).toContainText('Create the SnoutData Cloud project "shop-cloud"');
 	await expect(view.locator('.copy-review.not')).toContainText('API keys');
 	expect(created).toEqual([]);
 
@@ -189,12 +189,12 @@ test('a local project copies its functions and secrets into a new cloud project'
 	await expect(view.locator('.move-result')).toContainText('Copied', { timeout: 30_000 });
 	await handle.page.screenshot({ path: 'test-results/project-copy-done.png' });
 
-	expect(created).toEqual(['shop cloud']);
+	expect(created).toEqual(['shop-cloud']);
 	expect(deployed).toHaveLength(1);
 	expect(deployed[0]).toMatchObject({ ref: 'fffffffffffff', name: 'hello', verifyJwt: false });
 	expect(deployed[0].bundle.entrypoint).toBe('index.ts');
 	expect(deployed[0].bundle.files.map((f) => f.path)).toEqual(['index.ts']);
 	// The value went from the local .env to the cloud, and the reserved one stayed behind.
 	expect(secretsSet).toEqual([{ ref: 'fffffffffffff', name: 'STRIPE_KEY', value: 'sk_test_123' }]);
-	await expect(view.locator('button', { hasText: 'Open shop cloud' })).toBeVisible();
+	await expect(view.locator('button', { hasText: 'Open shop-cloud' })).toBeVisible();
 });

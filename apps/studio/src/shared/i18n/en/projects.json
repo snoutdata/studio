@@ -275,6 +275,7 @@
 		"choose": "Choose one to add"
 	},
 	"common": {
+		"nameRule": "Use only A to Z, 0 to 9, hyphens and underscores, starting with a letter or number. No spaces.",
 		"docs": "Docs",
 		"address": "Address",
 		"appKey": "App key",

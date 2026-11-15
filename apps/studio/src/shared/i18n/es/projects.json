@@ -275,6 +275,7 @@
 		"choose": "Elige uno para añadir"
 	},
 	"common": {
+		"nameRule": "Usa solo de la A a la Z, del 0 al 9, guiones y guiones bajos, empezando por una letra o un número. Sin espacios.",
 		"docs": "Docs",
 		"address": "Dirección",
 		"appKey": "Clave de app",

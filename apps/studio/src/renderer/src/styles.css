@@ -15503,6 +15503,12 @@ kbd {
 	color: var(--fg-dim);
 }
 
+/* A name the control plane would refuse: the rule under the field turns to the warning colour. */
+.modal .field-hint.warn,
+.move-end-hint.warn {
+	color: var(--warn);
+}
+
 .move-end select,
 .move-new-name,
 .move-confirm input {

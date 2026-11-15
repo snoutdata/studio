@@ -4,6 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { t } from '../shared/i18n/core';
+import { isProjectName } from '../shared/projectName';
 import { CloudRequestError, detailFrom, type CloudApi, type CloudProjectSummary } from './cloudApi';
 import type { CloudActionOutcome, CloudCreateForm, CloudCreateOutcome, CloudProjectRow, CloudProjectsView } from '../shared/cloudProjects';
 
@@ -226,6 +227,9 @@ export async function createCloudProject(
 	const name = form.name.trim();
 	if (!name) {
 		return { ok: false, refused: true, message: t('mainProjects.needsName') };
+	}
+	if (!isProjectName(name)) {
+		return { ok: false, refused: true, message: t('projects.common.nameRule') };
 	}
 	let ref: string;
 	try {
