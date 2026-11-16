@@ -151,6 +151,19 @@ ${statement('snoutpod_grant_new_schema', 'snout_ext')}`);
 	assert.deepEqual(failures.map((failure) => failure.harmless), [true, true, true]);
 });
 
+test('the alias-roles trigger is harmless with its own tags, and not with another trigger\'s', () => {
+	const statement = (tags: string): string => `Command was: CREATE EVENT TRIGGER snoutpod_alias_roles_follow ON ddl_command_end
+         WHEN TAG IN (${tags})
+   EXECUTE FUNCTION snout_ext.snoutpod_alias_roles_follow();`;
+	const failed = (tags: string): boolean[] => read(`pg_restore: from TOC entry 4183; 3466 17002 EVENT TRIGGER snoutpod_alias_roles_follow db_owner
+pg_restore: error: could not execute query: ERROR:  permission denied to create event trigger "snoutpod_alias_roles_follow"
+HINT:  Must be superuser to create an event trigger.
+${statement(tags)}`).log.failures().map((failure) => failure.harmless);
+	assert.deepEqual(failed("'CREATE POLICY', 'ALTER POLICY', 'GRANT'"), [true]);
+	assert.deepEqual(failed("'CREATE SCHEMA'"), [false]);
+	assert.deepEqual(failed("'CREATE POLICY', 'ALTER POLICY', 'GRANT', 'DROP TABLE'"), [false]);
+});
+
 test('an event trigger of the customer\'s own, or one calling a function elsewhere, still counts', () => {
 	const own = read(`pg_restore: from TOC entry 4180; 3466 16999 EVENT TRIGGER audit_ddl postgres
 pg_restore: error: could not execute query: ERROR:  schema "snout_ext" does not exist

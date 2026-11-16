@@ -49,7 +49,14 @@ export const HOSTED_POSTGRES_PLATFORM: PlatformProfile = {
  * is missing on a plain Postgres, the trigger already exists on another SnoutData database, and only
  * a superuser may create one. Measured 2026-10-15, moving a project out of Cloud.
  */
-export const PLATFORM_EVENT_TRIGGERS: readonly string[] = ['snoutpod_grant_new_schema', 'snoutpod_oauth_read_new_schema'];
+export const PLATFORM_EVENT_TRIGGERS: readonly string[] = ['snoutpod_grant_new_schema', 'snoutpod_oauth_read_new_schema', 'snoutpod_alias_roles_follow'];
+
+/** The tags each of those fires on, as `pg_dump` writes them (`WHEN TAG IN (…)`). */
+export const PLATFORM_EVENT_TRIGGER_TAGS: Readonly<Record<string, string>> = {
+	snoutpod_grant_new_schema: "'CREATE SCHEMA'",
+	snoutpod_oauth_read_new_schema: "'CREATE SCHEMA'",
+	snoutpod_alias_roles_follow: "'CREATE POLICY', 'ALTER POLICY', 'GRANT'"
+};
 
 /** The schemas those triggers' functions live in. */
 export const PLATFORM_FUNCTION_SCHEMAS: readonly string[] = ['extensions', 'snout_ext'];

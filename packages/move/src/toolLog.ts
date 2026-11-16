@@ -18,7 +18,7 @@
  * (the snoutdata CLI's restore records the same finding).
  */
 
-import { PLATFORM_EVENT_TRIGGERS, PLATFORM_FUNCTION_SCHEMAS } from './platform.js';
+import { PLATFORM_EVENT_TRIGGERS, PLATFORM_EVENT_TRIGGER_TAGS, PLATFORM_FUNCTION_SCHEMAS } from './platform.js';
 import { redactSecrets } from './redact.js';
 
 export type ToolLogEvent =
@@ -92,8 +92,9 @@ function platformEventTrigger(failure: OpenFailure): boolean {
 	if (!expected) {
 		return false;
 	}
-	const command = /^CREATE EVENT TRIGGER ([a-z_]+) ON ddl_command_end\s+WHEN TAG IN \('CREATE SCHEMA'\)\s+EXECUTE FUNCTION ([a-z_]+)\.([a-z_]+)\(\);$/.exec(failure.command.trim());
-	return command !== null && command[1] === name && command[3] === name && PLATFORM_FUNCTION_SCHEMAS.includes(command[2]);
+	const command = /^CREATE EVENT TRIGGER ([a-z_]+) ON ddl_command_end\s+WHEN TAG IN \(((?:'[A-Z ]+'(?:, )?)+)\)\s+EXECUTE FUNCTION ([a-z_]+)\.([a-z_]+)\(\);$/.exec(failure.command.trim());
+	return command !== null && command[1] === name && command[2] === PLATFORM_EVENT_TRIGGER_TAGS[name]
+		&& command[4] === name && PLATFORM_FUNCTION_SCHEMAS.includes(command[3]);
 }
 
 interface OpenFailure {
