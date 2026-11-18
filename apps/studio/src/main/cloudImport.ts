@@ -73,9 +73,9 @@ function noteFor(project: CloudProjectSummary, existing: ConnectionConfig | unde
 	}
 	if (project.readOnly) {
 		parts.push(t('mainProjects.overQuota'));
-	} else if (project.state === 'paused' || !project.wakesInstantly) {
-		// Worth saying because the first connection will be slow and look broken
-		// otherwise; the front door wakes it while the client waits.
+	} else if (project.state === 'paused') {
+		// Worth saying because a paused project refuses connections until it is resumed
+		// (2026-11-18), and the refusal would otherwise look like a broken connection.
 		parts.push(t('mainProjects.pausedWakes'));
 	} else if (project.state !== 'ready') {
 		parts.push(project.state);

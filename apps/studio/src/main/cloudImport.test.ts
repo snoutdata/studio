@@ -117,12 +117,12 @@ test('a project over its storage quota comes in read-only, because the database 
 	assert.match(scan.items[0].note ?? '', /refusing writes/);
 });
 
-test('a paused project says the first connection will be slow, rather than looking broken', async () => {
+test('a paused project says to resume it first, rather than looking broken', async () => {
 	const scan = await scanSnoutdataCloud(
 		api({ list: async () => [project({ state: 'paused', wakesInstantly: false })] }),
 		[],
 	);
-	assert.match(scan.items[0].note ?? '', /wakes it and takes a few seconds/);
+	assert.match(scan.items[0].note ?? '', /resume it first/);
 });
 
 test('a deleted project is not offered', async () => {
