@@ -92,7 +92,7 @@
 	"makeCluster": "En faire un cluster",
 	"loading": "Chargement…",
 	"routerStarting": "Le routeur démarre à côté de la base de données, ce qui prend une vingtaine de secondes.",
-	"routerPaused": "Le projet est en pause. Le routeur se réveille avec lui à la prochaine connexion.",
+	"routerPaused": "Le projet est en pause. Le routeur redémarre avec lui quand le projet est relancé.",
 	"dropRest": "Abandonner le reste",
 	"facts": {
 		"projectSlots": "Emplacements de projet",

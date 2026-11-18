@@ -37,7 +37,7 @@
 	"savedTo": "Guardado en {file}.",
 	"updatesLabel": "actualiza \"{label}\"",
 	"overQuota": "superó su cuota de almacenamiento, así que rechaza escrituras",
-	"pausedWakes": "en pausa, así que la primera conexión lo despierta y tarda unos segundos",
+	"pausedWakes": "en pausa: reanúdalo primero, en el panel o con snoutdata projects resume",
 	"signInToImport": "Inicia sesión en SnoutData para importar tus bases de datos alojadas.",
 	"noHostedCreate": "Esta cuenta aún no tiene bases de datos alojadas. Crea una desde el panel Cloud.",
 	"aiOn": "Pasarela de IA activada. Tarda alrededor de un minuto en responder.",

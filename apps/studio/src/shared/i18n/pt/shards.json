@@ -92,7 +92,7 @@
 	"makeCluster": "Transformar em cluster",
 	"loading": "Carregando…",
 	"routerStarting": "O roteador está iniciando ao lado do banco de dados, o que leva cerca de vinte segundos.",
-	"routerPaused": "O projeto está pausado. O roteador acorda com ele na próxima conexão.",
+	"routerPaused": "O projeto está pausado. O roteador inicia com ele quando o projeto é retomado.",
 	"dropRest": "Descartar o resto",
 	"facts": {
 		"projectSlots": "Vagas de projeto",

@@ -3,7 +3,7 @@
 	"replicaFailed": "Its replica could not take its place",
 	"routerDown": "Not answering",
 	"routerStarting": "Starting",
-	"routerPaused": "Paused, wakes on the next connection",
+	"routerPaused": "Paused, starts when the project is resumed",
 	"routerOk": "Sends every query",
 	"router": "Router",
 	"serves": "Serves its share",

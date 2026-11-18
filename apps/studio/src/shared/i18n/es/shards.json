@@ -92,7 +92,7 @@
 	"makeCluster": "Convertir en clúster",
 	"loading": "Cargando…",
 	"routerStarting": "El router arranca junto a la base de datos, lo que tarda unos veinte segundos.",
-	"routerPaused": "El proyecto está en pausa. El router despierta con él en la próxima conexión.",
+	"routerPaused": "El proyecto está en pausa. El router arranca con él cuando se reanuda el proyecto.",
 	"dropRest": "Descartar el resto",
 	"facts": {
 		"projectSlots": "Plazas de proyecto",

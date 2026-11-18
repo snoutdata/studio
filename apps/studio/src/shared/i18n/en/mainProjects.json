@@ -37,7 +37,7 @@
 	"savedTo": "Saved to {file}.",
 	"updatesLabel": "updates \"{label}\"",
 	"overQuota": "over its storage quota, so it is refusing writes",
-	"pausedWakes": "paused, so the first connection wakes it and takes a few seconds",
+	"pausedWakes": "paused: resume it first, on the dashboard or with snoutdata projects resume",
 	"signInToImport": "Sign in to SnoutData to import your hosted databases.",
 	"noHostedCreate": "This account has no hosted databases yet. Create one from the Cloud panel.",
 	"aiOn": "AI gateway switched on. It takes about a minute to answer.",

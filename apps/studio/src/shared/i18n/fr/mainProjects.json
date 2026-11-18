@@ -37,7 +37,7 @@
 	"savedTo": "Enregistré dans {file}.",
 	"updatesLabel": "met à jour « {label} »",
 	"overQuota": "quota de stockage dépassé : il refuse les écritures",
-	"pausedWakes": "en pause : la première connexion le réveille et prend quelques secondes",
+	"pausedWakes": "en pause : relancez-le d'abord, depuis le tableau de bord ou avec snoutdata projects resume",
 	"signInToImport": "Connectez-vous à SnoutData pour importer vos bases de données hébergées.",
 	"noHostedCreate": "Ce compte n'a pas encore de base de données hébergée. Créez-en une depuis le panneau Cloud.",
 	"aiOn": "Passerelle IA activée. Elle répond au bout d'une minute environ.",

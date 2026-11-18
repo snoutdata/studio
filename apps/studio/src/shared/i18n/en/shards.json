@@ -92,7 +92,7 @@
 	"makeCluster": "Make it a cluster",
 	"loading": "Loading…",
 	"routerStarting": "The router is starting beside the database, which takes about twenty seconds.",
-	"routerPaused": "The project is paused. The router wakes with it on the next connection.",
+	"routerPaused": "The project is paused. The router starts with it when the project is resumed.",
 	"dropRest": "Drop the rest",
 	"facts": {
 		"projectSlots": "Project slots",

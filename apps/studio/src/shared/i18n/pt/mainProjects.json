@@ -37,7 +37,7 @@
 	"savedTo": "Salvo em {file}.",
 	"updatesLabel": "atualiza \"{label}\"",
 	"overQuota": "acima da cota de armazenamento, então está recusando gravações",
-	"pausedWakes": "pausado, então a primeira conexão o desperta e leva alguns segundos",
+	"pausedWakes": "pausado: retome-o primeiro, pelo painel ou com snoutdata projects resume",
 	"signInToImport": "Entre no SnoutData para importar seus bancos de dados hospedados.",
 	"noHostedCreate": "Esta conta ainda não tem bancos de dados hospedados. Crie um no painel Cloud.",
 	"aiOn": "Gateway de IA ativado. Ele leva cerca de um minuto para responder.",
