@@ -124,6 +124,10 @@ test('a local database moves into a new one and back over it, with every count m
 test('a hostile name stays inside its literal through psql with standard_conforming_strings off', { skip }, async () => {
 	// Under `off` a plain literal would let psql read `\!` as a meta-command and run a shell.
 	const name = "\\' \\! echo escaped\n";
-	const answer = await sql('postgres', `set standard_conforming_strings = off;\nselect ${quoteLiteral(name)};`);
+	// Postgres 19 forces it on and refuses the `set`; a move still reads 17 and 18 servers, so the
+	// off case is kept wherever the server can still be put in it, and 19 checks the literal alone.
+	const forcedOn = Number(await sql('postgres', 'show server_version_num')) >= 190000;
+	const set = forcedOn ? '' : 'set standard_conforming_strings = off;\n';
+	const answer = await sql('postgres', `${set}select ${quoteLiteral(name)};`);
 	assert.equal(answer, name.trim());
 });
