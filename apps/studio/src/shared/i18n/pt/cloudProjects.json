@@ -183,6 +183,7 @@
 		"providers": "Os provedores são configurados no painel.",
 		"pushHint": "Notificações para iPhone, Android e a web. Roda ao lado do seu banco de dados, e os dispositivos, o log e as chaves ficam no schema push do seu banco. Ativar reinicia o banco de dados uma vez.",
 		"pushKeys": "As chaves da Apple e do Firebase são definidas no painel, ou com `snoutdata push credentials`. Elas são verificadas e depois guardadas no seu próprio banco de dados.",
+		"realtimeHint": "Os sinais e o roster em todos os planos, e mudanças de tabelas no Plus, Pro e Business. Desativar mantém sua publicação e suas tabelas.",
 		"scheduled": "Envios agendados",
 		"servedAt": "Servido em `https://{ref}.api.snoutdata.com{path}`.",
 		"storageHint": "Arquivos para o seu app, guardados no armazenamento do seu projeto.",

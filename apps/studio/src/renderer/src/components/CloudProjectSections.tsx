@@ -448,15 +448,16 @@ export function CloudUsageSection({ projectRef }: { projectRef: string }): JSX.E
 }
 
 // Each service's path, as a cloud project's door serves it (shared/ownLayout.ts).
-const SERVICE_COPY: Record<'auth' | 'storage' | 'dataApi' | 'push', { legend: string; hint: string; path: string }> = {
+const SERVICE_COPY: Record<'auth' | 'storage' | 'dataApi' | 'push' | 'realtime', { legend: string; hint: string; path: string }> = {
 	auth: { legend: "Auth", get hint() { return t('cloudProjects.svc.authHint'); }, path: prefix('identity', CLOUD_VOCABULARY) },
 	storage: { get legend() { return t('localProjects.settings.storage'); }, get hint() { return t('cloudProjects.svc.storageHint'); }, path: prefix('files', CLOUD_VOCABULARY) },
 	dataApi: { get legend() { return t('projects.common.dataApi'); }, get hint() { return t('cloudProjects.svc.dataHint'); }, path: prefix('data', CLOUD_VOCABULARY) },
 	push: { legend: "Push", get hint() { return t('cloudProjects.svc.pushHint'); }, path: '/push/v1' },
+	realtime: { get legend() { return t('engineShared.project.realtime'); }, get hint() { return t('cloudProjects.svc.realtimeHint'); }, path: prefix('live', CLOUD_VOCABULARY) },
 };
 
-/** A product's switch on the control plane (auth, storage, the data API, push), with what the plan says. */
-export function CloudService({ projectRef, service, onState }: { projectRef: string; service: 'auth' | 'storage' | 'dataApi' | 'push'; onState?(enabled: boolean): void }): JSX.Element {
+/** A product's switch on the control plane (auth, storage, the data API, push, Realtime), with what the plan says. */
+export function CloudService({ projectRef, service, onState }: { projectRef: string; service: 'auth' | 'storage' | 'dataApi' | 'push' | 'realtime'; onState?(enabled: boolean): void }): JSX.Element {
 	const t = useT();
 	const [said, setSaid] = useState<Said>(null);
 	const [busy, setBusy] = useState(false);

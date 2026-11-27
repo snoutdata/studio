@@ -17,6 +17,8 @@
 	"keysStopWorking": "Every key already in use stops working.",
 	"pushUnavailable": "Push is not available on SnoutData Cloud yet.",
 	"pushRestarts": "Turned on. Push runs beside the database, so the database restarts once, within a minute.",
+	"realtimeStarts": "Turned on. Realtime starts within a minute, when the host picks up the change.",
+	"realtimeOff": "Turned off. Your publication and tables stay as they are.",
 	"imageOrBuild": "A deploy is an image or a build, not both.",
 	"nameImage": "Name the image to deploy.",
 	"noPassword": "You sign in to this project as yourself, so it has no password to copy.",

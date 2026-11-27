@@ -58,7 +58,7 @@ const ContainersSection = lazyView(() => import('./ContainersSection').then((m) 
 const ProjectAiSection = lazyView(() => import('./ProjectAiSection').then((m) => ({ default: m.ProjectAiSection })));
 
 /** Sections that read the database or the gateway, so they wait until the project can answer. */
-const NEEDS_RUNNING: ReadonlySet<ProjectSection> = new Set(['extensions', 'cron', 'timeSeries', 'realtime']);
+const NEEDS_RUNNING: ReadonlySet<ProjectSection> = new Set(['extensions', 'cron', 'timeSeries']);
 
 export function ProjectView(props: ProjectViewProps): JSX.Element {
 	const t = useT();
@@ -243,7 +243,9 @@ function Section(props: SectionProps): JSX.Element | null {
 					</fieldset>
 				);
 		case 'realtime':
-			return <RealtimeSection project={project} />;
+			return local
+				? whenRunning(<RealtimeSection project={project} />)
+				: <><CloudService projectRef={cloud!.ref} service="realtime" onState={setProductOn} />{productOn && whenRunning(<RealtimeSection project={project} />)}</>;
 		case 'push':
 			return local ? <LocalPush /> : <CloudService projectRef={cloud!.ref} service="push" />;
 		case 'ai':

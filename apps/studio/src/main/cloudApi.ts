@@ -104,6 +104,7 @@ export type CloudProjectFunction =
 	| 'cloud-project-storage'
 	| 'cloud-project-data-api'
 	| 'cloud-project-push'
+	| 'cloud-project-realtime-switch'
 	| 'cloud-project-functions'
 	| 'cloud-project-secrets'
 	| 'cloud-project-domain'

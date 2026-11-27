@@ -17,6 +17,8 @@
 	"keysStopWorking": "Toute clé déjà utilisée cesse de fonctionner.",
 	"pushUnavailable": "Push n'est pas encore disponible sur SnoutData Cloud.",
 	"pushRestarts": "Activé. Push fonctionne à côté de la base de données : elle redémarre une fois, en moins d'une minute.",
+	"realtimeStarts": "Activé. Realtime démarre en moins d'une minute, quand l'hôte prend en compte le changement.",
+	"realtimeOff": "Désactivé. Votre publication et vos tables restent telles quelles.",
 	"imageOrBuild": "Un déploiement est une image ou un build, pas les deux.",
 	"nameImage": "Indiquez l'image à déployer.",
 	"noPassword": "Vous vous connectez à ce projet avec votre propre compte : il n'y a pas de mot de passe à copier.",

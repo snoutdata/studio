@@ -183,6 +183,7 @@
 		"providers": "Les fournisseurs se configurent sur le tableau de bord.",
 		"pushHint": "Des notifications sur iPhone, Android et le web. Elles tournent à côté de votre base de données, et leurs appareils, journal et clés restent dans le schéma push de votre base. Les activer redémarre une fois la base de données.",
 		"pushKeys": "Les clés Apple et Firebase se définissent sur le tableau de bord, ou avec `snoutdata push credentials`. Elles sont vérifiées, puis conservées dans votre propre base de données.",
+		"realtimeHint": "Les signaux et le roster sur tous les forfaits, et les changements de tables sur Plus, Pro et Business. Le désactiver garde votre publication et ses tables.",
 		"scheduled": "Envois planifiés",
 		"servedAt": "Servi à `https://{ref}.api.snoutdata.com{path}`.",
 		"storageHint": "Des fichiers pour votre application, conservés dans le stockage de votre projet.",

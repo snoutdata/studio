@@ -150,8 +150,10 @@ export interface CloudServices {
 	dataApi: { enabled: boolean; allowed: boolean } | null;
 	/** Snout Push: on or off, and whether this plan may schedule sends. */
 	push: { enabled: boolean; scheduling: boolean } | null;
+	/** Realtime: on or off. What the plan gives when it is on is the same on every project. */
+	realtime: { enabled: boolean; enabledAt: string | null; disabledAt: string | null } | null;
 	/** Per service, why it could not be read, when it could not. */
-	errors: Partial<Record<'auth' | 'storage' | 'dataApi' | 'push', string>>;
+	errors: Partial<Record<'auth' | 'storage' | 'dataApi' | 'push' | 'realtime', string>>;
 }
 
 export interface CloudFunctionRow {
@@ -235,7 +237,7 @@ export interface CloudProjectOps {
 	requestExport: { args: { ref: string }; result: CloudExport };
 	restore: { args: { ref: string; at: string; name?: string }; result: { ref: string; name: string } };
 	services: { args: { ref: string }; result: CloudServices };
-	setService: { args: { ref: string; service: 'auth' | 'storage' | 'dataApi' | 'push'; enable: boolean }; result: { note: string | null } };
+	setService: { args: { ref: string; service: 'auth' | 'storage' | 'dataApi' | 'push' | 'realtime'; enable: boolean }; result: { note: string | null } };
 	functions: { args: { ref: string }; result: CloudFunctions };
 	sizeFunction: { args: { ref: string; name: string; memoryMb?: number; concurrency?: number; reset?: boolean }; result: CloudFunctions };
 	setSecret: { args: { ref: string; name: string; value: string }; result: CloudSecretRow[] };

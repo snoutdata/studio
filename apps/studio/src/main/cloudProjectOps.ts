@@ -125,7 +125,7 @@ function handlers(api: CloudApi, host: CloudProjectHost): Handlers {
 
 		async services({ ref }) {
 			const errors: CloudServices['errors'] = {};
-			const [auth, storage, dataApi, push] = await Promise.all([
+			const [auth, storage, dataApi, push, realtime] = await Promise.all([
 				api.request<{ enabled?: boolean; google?: { enabled?: boolean }; saml?: { enabled?: boolean } }>('cloud-project-auth', { ref, action: 'status' })
 					.then((a) => ({ enabled: a.enabled === true, googleEnabled: a.google?.enabled === true, samlEnabled: a.saml?.enabled === true }))
 					.catch((e) => { errors.auth = detailFrom(e); return null; }),
@@ -142,8 +142,11 @@ function handlers(api: CloudApi, host: CloudProjectHost): Handlers {
 					// A control plane older than push has no such function and answers 404: that is
 					// "not available yet", said plainly, not an error to puzzle over.
 					.catch((e) => { errors.push = e instanceof CloudRequestError && e.status === 404 ? t('mainProjects.pushUnavailable') : detailFrom(e); return null; }),
+				api.request<{ realtime?: { enabled: boolean; enabledAt: string | null; disabledAt: string | null } }>('cloud-project-realtime-switch', { ref })
+					.then((a) => a.realtime ? { enabled: a.realtime.enabled, enabledAt: a.realtime.enabledAt ?? null, disabledAt: a.realtime.disabledAt ?? null } : null)
+					.catch((e) => { errors.realtime = detailFrom(e); return null; }),
 			]);
-			return { auth, storage, dataApi, push, errors };
+			return { auth, storage, dataApi, push, realtime, errors };
 		},
 
 		async setService({ ref, service, enable }) {
@@ -154,6 +157,11 @@ function handlers(api: CloudApi, host: CloudProjectHost): Handlers {
 			if (service === 'push') {
 				await api.request('cloud-project-push', { ref, enable });
 				return { note: enable ? t('mainProjects.pushRestarts') : null };
+			}
+			if (service === 'realtime') {
+				await api.request('cloud-project-realtime-switch', { ref, enable });
+				// Turning it on is a desire: the host registers the project within about a minute.
+				return { note: t(enable ? 'mainProjects.realtimeStarts' : 'mainProjects.realtimeOff') };
 			}
 			await api.request(service === 'storage' ? 'cloud-project-storage' : 'cloud-project-data-api', { ref, enable });
 			return { note: null };

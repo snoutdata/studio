@@ -82,7 +82,7 @@ test('a password reset updates the local connections and never returns the passw
 	assert.deepEqual(passwords, ['new-one']);
 });
 
-test('services reads all three, and one refusing does not hide the others', async () => {
+test('services reads each product, and one refusing does not hide the others', async () => {
 	const { api, host } = setup(async (fn) => {
 		if (fn === 'cloud-project-auth') {
 			throw new CloudRequestError('not yours', 403);
@@ -121,6 +121,25 @@ test('push is read beside the others and switched through its own function, sayi
 	assert.ok(on.ok);
 	assert.match(on.data.note ?? '', /restarts once/);
 	assert.deepEqual(asked.at(-1), ['cloud-project-push', { ref: 'r1', enable: true }]);
+});
+
+test('realtime is read beside the others and switched through its own function', async () => {
+	const asked: unknown[] = [];
+	const { api, host } = setup(async (fn, body) => {
+		asked.push([fn, body]);
+		return (fn === 'cloud-project-realtime-switch' ? { ref: 'r1', realtime: { enabled: false, enabledAt: null, disabledAt: '2026-11-27T10:00:00Z' } } : {}) as never;
+	});
+	const read = await runCloudProjectOp(api, host, 'services', { ref: 'r1' });
+	assert.ok(read.ok);
+	assert.deepEqual(read.data.realtime, { enabled: false, enabledAt: null, disabledAt: '2026-11-27T10:00:00Z' });
+	const on = await runCloudProjectOp(api, host, 'setService', { ref: 'r1', service: 'realtime', enable: true });
+	assert.ok(on.ok);
+	assert.match(on.data.note ?? '', /within a minute/);
+	assert.deepEqual(asked.at(-1), ['cloud-project-realtime-switch', { ref: 'r1', enable: true }]);
+	const off = await runCloudProjectOp(api, host, 'setService', { ref: 'r1', service: 'realtime', enable: false });
+	assert.ok(off.ok);
+	assert.match(off.data.note ?? '', /publication and tables stay/);
+	assert.deepEqual(asked.at(-1), ['cloud-project-realtime-switch', { ref: 'r1', enable: false }]);
 });
 
 test('a control plane without push says it is not available yet, and the others still read', async () => {

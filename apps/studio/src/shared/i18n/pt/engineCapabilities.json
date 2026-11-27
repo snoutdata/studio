@@ -70,7 +70,7 @@
 		"start_cloud_project": "Iniciar um projeto SnoutData Cloud pausado.",
 		"stop_cloud_project": "Parar (pausar) um projeto SnoutData Cloud.",
 		"delete_cloud_project": "Excluir um projeto SnoutData Cloud e seus dados, e remover a conexão dele.",
-		"set_cloud_product": "Ligar ou desligar um produto SnoutData Cloud (auth, armazenamento ou API de dados) em um projeto.",
+		"set_cloud_product": "Ligar ou desligar um produto SnoutData Cloud (auth, armazenamento, API de dados ou Realtime) em um projeto.",
 		"remove_cloud_secret": "Remover um secret de ambiente das funções de um projeto SnoutData Cloud.",
 		"size_cloud_function": "Alterar a memória e o número de workers de uma função SnoutData Cloud.",
 		"export_cloud_project": "Fazer uma exportação pg_dump de um projeto SnoutData Cloud.",

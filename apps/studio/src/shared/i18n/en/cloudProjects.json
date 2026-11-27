@@ -183,6 +183,7 @@
 		"providers": "Providers are set up in the dashboard.",
 		"pushHint": "Notifications to iPhone, Android and the web. It runs beside your database, and its devices, log and keys stay in your database's push schema. Turning it on restarts the database once.",
 		"pushKeys": "Apple and Firebase keys are set in the dashboard, or with `snoutdata push credentials`. They are checked, then kept in your own database.",
+		"realtimeHint": "Signals and the roster on every plan, and table changes on Plus, Pro and Business. Turning it off keeps your publication and its tables.",
 		"scheduled": "Scheduled sends",
 		"servedAt": "Served at `https://{ref}.api.snoutdata.com{path}`.",
 		"storageHint": "Files for your app, stored in your project's storage.",

@@ -246,13 +246,13 @@ export const cloudCapabilities: CapabilityHandler[] = [
 	{
 		spec: {
 			name: 'set_cloud_product',
-			consentLabel: 'Turn a SnoutData Cloud product (auth, storage or data API) on or off for a project.',
-			description: 'Turn one of a SnoutData Cloud project\'s products on or off: "auth" (user sign-up/sign-in), "storage" (files) or "dataApi" (REST and GraphQL over the tables, on every plan). It starts within about a minute.',
+			consentLabel: 'Turn a SnoutData Cloud product (auth, storage, data API or Realtime) on or off for a project.',
+			description: 'Turn one of a SnoutData Cloud project\'s products on or off: "auth" (user sign-up/sign-in), "storage" (files), "dataApi" (REST and GraphQL over the tables, on every plan) or "realtime" (signals and the roster on every plan, table changes on Plus, Pro and Business; turning it off keeps the publication and its tables). It starts within about a minute.',
 			parameters: {
 				type: 'object',
 				properties: {
 					project: PROJECT_PARAM,
-					product: { type: 'string', enum: ['auth', 'storage', 'dataApi'] },
+					product: { type: 'string', enum: ['auth', 'storage', 'dataApi', 'realtime'] },
 					enable: { type: 'boolean', description: 'true to turn it on, false to turn it off.' },
 				},
 				required: ['project', 'product', 'enable'],
@@ -266,8 +266,8 @@ export const cloudCapabilities: CapabilityHandler[] = [
 		connections: projectConnections,
 		run: async (args, ctx) => {
 			const product = args.product;
-			if (product !== 'auth' && product !== 'storage' && product !== 'dataApi') {
-				return { ok: false, summary: '', error: 'product must be auth, storage or dataApi.' };
+			if (product !== 'auth' && product !== 'storage' && product !== 'dataApi' && product !== 'realtime') {
+				return { ok: false, summary: '', error: 'product must be auth, storage, dataApi or realtime.' };
 			}
 			if (typeof args.enable !== 'boolean') {
 				return { ok: false, summary: '', error: 'enable must be true or false.' };
